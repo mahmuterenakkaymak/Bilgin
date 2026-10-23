@@ -27,3 +27,5 @@
 2026-10-23 12:12:11 | ORCH   | T08: PASSED (hands)
 2026-10-23 12:12:11 | BRAIN  | M1: review merged - 0 fix task(s) added
 2026-10-23 12:12:28 | HANDS  | T09 try 1: policy TOP injection (outermost SELECT; top-level UNION wrapped as SELECT TOP n * FROM (...) AS _q; existing TOP kept) + tests/data/malicious.jsonl with >=20 cases (multi-statement, comment injection, UPDATE/DELETE in CTE, sys via UNION, CTE shadowing, [bracket]/"quoted" names, case tricks, SELECT INTO, EXEC, cross-db, OPENROWSET, TVF) all rejected with non-empty reason
+2026-10-23 12:15:44 | ORCH   | T09: PASSED (hands)
+2026-10-23 12:15:45 | HANDS  | T10 try 1: nl2sql/engine/result.py (Budget, Result, ExecError per Contracts) + nl2sql/engine/_sqlite.py private backend: read-only URI connection, run transpiled SQL, fetch max_rows+count, truncated flag, timeout via progress handler -> ExecError timeout, sqlite errors -> ExecError sql; test a write through the ro connection fails
