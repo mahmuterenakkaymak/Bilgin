@@ -56,7 +56,9 @@ NO_ANSWER = "Cevap gönderilmedi: {}"
 # R2-14: arama araçlarının cevabı modele gider, ekrana değil; adımda kaç birim döndüğü ve
 # uyarısı durur. Araç adının sığacağı genişlik de modların araç listesinden gelir.
 TOOL_WIDTH = max(len(tool["function"]["name"]) for mode in MODES.values() for tool in mode.tools)
-LEADING_WORD = re.compile(r"[A-Za-z0-9_]+")  # bir satırın ilk sözcüğü: arama sonucunun tablo adı
+# Gerçek bir arama sonucu: "TABLO — ..." ya da çıplak "TABLO". Cümleler ("Eşleşen tablo yok.",
+# "Hata: ...") eşleşmez; adları onların ilk sözcüğünden çıkarmak uydurma ad üretirdi (R2-14).
+SCHEMA_HIT = re.compile(r"([A-Z][A-Z0-9_]*)(?: — .*)?$")
 DETAIL_HEAD = re.compile(r"^[A-Z][A-Z0-9_]* — ", re.MULTILINE)  # detay bloğunun başlık satırı
 JOIN_LINE = re.compile(r"\S+ = ")  # bir join satırı: A.X = B.Y (fk 1.0)
 WARNING_MARK = "⚠"
@@ -508,7 +510,7 @@ def _search_notes(tool: str, summary: str) -> list[str]:
     """
     lines = [line.strip() for line in summary.splitlines() if line.strip()]
     if tool == "search_schema":
-        names = [match.group() for line in lines if (match := LEADING_WORD.match(line))]
+        names = [match.group(1) for line in lines if (match := SCHEMA_HIT.match(line))]
         note = f"→ {', '.join(names)}" if names else ""
     elif tool == "get_table_details":
         count = len(DETAIL_HEAD.findall(summary))
