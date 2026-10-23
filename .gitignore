@@ -1,5 +1,6 @@
 .venv/
 data/*.db
+db/mssql/build_test_db.sql
 eval_out/
 logs/
 .env

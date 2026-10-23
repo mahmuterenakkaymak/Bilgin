@@ -65,3 +65,5 @@
 2026-10-23 13:12:43 | HANDS  | T22 try 1: Delight 4: eval prints one live progress line per finished question (id, ✓/✗, outcome, tool calls, seconds, tokens like 8.1K) via a callback from run_eval; test captures the lines for a 3-question fake run
 2026-10-23 13:15:43 | ORCH   | T22: PASSED (hands)
 2026-10-23 13:15:45 | HANDS  | T23 try 1: Delight 5: report.py reads previous eval_out/latest/report.json before overwriting, stores "previous" score in report.json and writes a "Önceki koşuya göre" section in report.md (score delta + flipped questions); test with two consecutive fake runs
+2026-10-23 13:18:06 | ORCH   | T23: PASSED (hands)
+2026-10-23 13:18:07 | HANDS  | T24 try 1: README.md (build-db, ask, eval; running against Strata 127.0.0.1:8080 and llama.cpp 27B; env vars; reading report.md) + tests/test_smoke.py running `python -m nl2sql build-db`, `eval --llm fake`, `ask ... --llm fake` as subprocesses from the project root (outputs are gitignored), asserting exit 0, report.md score 10/10 and README mentions every subcommand
