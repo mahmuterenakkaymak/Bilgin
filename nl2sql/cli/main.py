@@ -3,13 +3,16 @@
 Üç komut da aynı parçaları kullanır ve hiçbir yola sahip çıkmaz: SQLite dosyası, audit kaydı ve
 rapor klasörü parametredir, varsayılanı config'den gelir, testler kendi tmp yolunu verir. ``ask``
 koşuyu adım adım dökerek ekrana yazdırır (Delight 6), ``eval`` raporu yazıp skoru söyler; skor veri
-olduğu için çıkış koduna geçmez, yalnız cevap gönderilmeyen bir soru 1 döner.
+olduğu için çıkış koduna geçmez, yalnız cevap gönderilmeyen bir soru 1 döner. Kullanıcının
+düzeltebileceği iki arıza iz dökümüyle değil tek cümleyle çıkar (Delight 3): veritabanı dosyası
+yoksa kod 2 ve "önce kur", uç nokta hiç çalışmıyorsa kod 3 ve hangi adresin patladığı.
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from nl2sql import config
 from nl2sql.agent import fake
@@ -30,6 +33,14 @@ AUDIT_SOURCE = "ask"
 PROSE = "yanıt"
 SQL_TOOLS = ("run_sql", "submit_sql")
 NO_ANSWER = "Cevap gönderilmedi: {}"
+
+ENV_URL = "NL2SQL_LLM_BASE_URL"
+NO_DB = "Veritabanı yok: {path}\nÖnce `python -m nl2sql build-db` çalıştırın."
+LLM_HINT = f"Öneri: Strata'nın açık olup olmadığına bakın; adres farklıysa {ENV_URL} ile doğruyu verin."
+# ASSUMPTION: uç nokta hiçbir soruyu yanıtlamadıysa ortada ölçülen bir şey yoktur; koşu tamamlanmış
+# sayılmaz (PLAN Decision 13'deki crash hali), o yüzden rapor yazılmadan kod 3 ile çıkılır.
+EXIT_NO_DB = 2
+EXIT_LLM = 3
 
 
 def build_database(
@@ -54,15 +65,20 @@ def ask(question: str, llm, db_path: str = config.DB_PATH, audit_path: str = con
     yanıtı metin olarak görür, satırları ekrana basacak biçimde elinde tutmaz.
     """
     _utf8_stdout()
+    if _db_missing(db_path):
+        return _no_db(db_path)
     executor = LocalExecutor(db_path=db_path, audit_path=audit_path)
     run = run_agent(question, llm, executor, doc.load_schema(), AUDIT_SOURCE)
 
     print(f"Soru: {question}\n")
-    print("Adımlar:")
-    for step in run.steps:
-        for line in _step_lines(step):
-            print(line)
-    print()
+    if run.steps:  # daha ilk turda düşen bir uç noktanın gösterecek adımı yok
+        print("Adımlar:")
+        for step in run.steps:
+            for line in _step_lines(step):
+                print(line)
+        print()
+    if run.status == "llm_error":
+        return _llm_failed(run.stop_reason)
     if not run.submitted_sql:
         print(NO_ANSWER.format(run.stop_reason or "submit_sql hiç çağrılmadı."))
         _cost(run)
@@ -86,9 +102,14 @@ def evaluate(
 ) -> int:
     """Altın soruları koşar, raporu yazar, skoru söyler; koşu tamamlandıysa kod 0'dır."""
     _utf8_stdout()
+    if _db_missing(db_path):
+        return _no_db(db_path)
     results = runner.run_eval(
         lambda: llm, LocalExecutor(db_path=db_path, audit_path=audit_path), only=only
     )
+    if results and all(result.outcome == "llm_error" for result in results):
+        print(f"Uç nokta {len(results)} sorunun hiçbirini yanıtlamadı; rapor yazılmadı.\n")
+        return _llm_failed(results[0].reason)
     passed = sum(1 for result in results if result.outcome == "pass")
     model = "fake" if isinstance(llm, fake.FakeLLM) else config.llm_settings().model
     run_dir = report.write_report(
@@ -157,6 +178,25 @@ def _cost(run: AgentRun) -> None:
     total = run.total_prompt_tokens + run.total_completion_tokens
     print(f"Token: {total} (istem {run.total_prompt_tokens} + cevap {run.total_completion_tokens})")
     print(f"Süre: {run.elapsed_s:.1f} sn")
+
+
+def _db_missing(db_path: str | Path) -> bool:
+    """SQLite dosyası yoksa komutun yürütecek bir şeyi yok; mssql tarafı yerel dosyaya bakmaz."""
+    return config.backend() == "sqlite" and not Path(db_path).exists()
+
+
+def _no_db(db_path: str | Path) -> int:
+    """Eksik veritabanı bir sorgu hatası gibi düşmesin: tek cümle, ne yapılacağı, kod 2."""
+    print(NO_DB.format(path=db_path))
+    return EXIT_NO_DB
+
+
+def _llm_failed(reason: str) -> int:
+    """Ölü uç nokta: adres ve sebep cümlesini llm.py üretir, eksik kalırsa öneri buradan eklenir."""
+    print(f"Hata: {reason}")
+    if ENV_URL not in reason:
+        print(LLM_HINT)
+    return EXIT_LLM
 
 
 def _first_line(text: str) -> str:

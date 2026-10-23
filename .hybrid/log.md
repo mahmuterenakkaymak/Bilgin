@@ -59,3 +59,5 @@
 2026-10-23 12:58:50 | HANDS  | T19 try 1: nl2sql/cli/table.py format_table(result) -> aligned text table with Turkish number format (1.234,56; display only) and right-aligned numeric columns, NULL shown as "-", notices "Sonuç boş (0 satır)" and "İlk N satır gösteriliyor (toplam M)" when truncated (Delight 1+2)
 2026-10-23 13:00:38 | ORCH   | T19: PASSED (hands)
 2026-10-23 13:00:39 | HANDS  | T20 try 1: nl2sql/cli/main.py + nl2sql/__main__.py argparse: build-db [--seed], ask "<soru>" [--llm fake|openai], eval [--llm fake|openai] [--only Q03]; UTF-8 stdout; ask prints numbered steps with ✓/✗ marker, latency and inline policy reject reason (Delight 6), final SQL, table via format_table, tokens and seconds, Turkish labels; audit source "ask"; tests run the CLI in-process with tmp paths and FakeLLM and check output + audit entry without rows
+2026-10-23 13:08:51 | ORCH   | T20: PASSED (hands)
+2026-10-23 13:08:52 | HANDS  | T21 try 1: Delight 3: friendly errors in CLI - missing DB prints "Önce `python -m nl2sql build-db` çalıştırın" and exits 2; LLMError on ask/eval prints the failing base URL and a hint about Strata / NL2SQL_LLM_BASE_URL with no traceback
