@@ -220,6 +220,7 @@ def _stok_fiyat(dataset: dict, columns: dict, rng: random.Random) -> None:
     urunler = dataset["TBLSTSABIT"]
     degisen = set(rng.sample(range(len(urunler)), max(1, len(urunler) // 3)))
     satirlar: list[dict] = []
+    kullanilan: set[tuple[str, str, str]] = set()
     for i, urun in enumerate(urunler):
         taban = urun["BIRIM_FIYAT"] or round(rng.uniform(10.0, 200.0), 2)
         plan: list[tuple] = []
@@ -232,10 +233,26 @@ def _stok_fiyat(dataset: dict, columns: dict, rng: random.Random) -> None:
         for _ in range(rng.randint(2, 4) - len(plan)):
             plan.append((rng.choice(FIYAT_TIPLERI), _tarih(rng, FIYAT_BAS, FIYAT_BITIM), round(taban * rng.uniform(0.85, 1.15), 2)))
         for tip, tarih, fiyat in plan:
+            tarih = _benzersiz_tarih(urun["STOK_KODU"], tip, tarih, kullanilan)
             satirlar.append({"STOK_KODU": urun["STOK_KODU"], "FIYAT_TIPI": tip, "FIYAT": fiyat, "GECERLILIK_TARIHI": tarih})
     for j, satir in enumerate(satirlar, start=1):
         satir["FIAT_ID"] = j
     _fill(dataset, "TBLSTOKFIAT", columns.get("TBLSTOKFIAT"), satirlar)
+
+
+def _benzersiz_tarih(kod: str, tip: str, tarih: str, kullanilan: set) -> str:
+    """Aynı (ürün, fiyat tipi, tarih) iki kez yazılmaz; R2-3'ün "en son geçerlik tarihli satırı" belirsiz kalmasın.
+
+    ASSUMPTION: çakışan tarih, satırın kendi aralığındaki (dönem içi satırlar Haziran-Eylül 2026 içinde
+    kalır) ilk boş güne kayar; rng'ye dokunulmadığı için çakışma olmayan tohumların satırları değişmez.
+    """
+    bas, bitim = (OLCUM_BAS, OLCUM_BITIM) if OLCUM_BAS <= dt.date.fromisoformat(tarih) <= OLCUM_BITIM else (FIYAT_BAS, FIYAT_BITIM)
+    ara, gun = (bitim - bas).days + 1, (dt.date.fromisoformat(tarih) - bas).days
+    while (kod, tip, (bas + dt.timedelta(days=gun)).isoformat()) in kullanilan:
+        gun = (gun + 1) % ara
+    tarih = (bas + dt.timedelta(days=gun)).isoformat()
+    kullanilan.add((kod, tip, tarih))
+    return tarih
 
 
 def _doviz_kur(dataset: dict, columns: dict, rng: random.Random) -> None:
