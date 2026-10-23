@@ -68,7 +68,7 @@ def cell(value):
 
 
 def comparable(rows, ordered):
-    """ordered=True sırayı da karşılaştırır (PLAN'da yalnız Q02); değilse çok küme."""
+    """ordered=True sırayı da karşılaştırır (Q02 ve Q13); değilse çok küme."""
     values = [tuple(map(cell, row)) for row in rows]
     return values if ordered else sorted(values, key=repr)
 
@@ -83,8 +83,8 @@ def assert_same_result(qid, db, dataset):
 # ----------------------------------------------------------------- golden file shape
 
 
-def test_golden_has_the_ten_planned_questions():
-    assert IDS == [f"Q{i:02d}" for i in range(1, 11)]
+def test_golden_has_the_planned_questions():
+    assert IDS == [f"Q{i:02d}" for i in range(1, 21)]
     assert len(set(IDS)) == len(IDS)
 
 

@@ -19,7 +19,7 @@
       "definition": "Satış miktarından satış iadelerinin (STHAR_HTUR='I') düşüldüğü hal; miktar bazlıdır, iade ayrı bir fiyatla hesaplanmaz. Ciro'dan farkı iadenin düşülmesidir; KDV dahil bir tutar değildir.",
       "sql_hint": "SUM(CASE WHEN s.STHAR_HTUR = 'S' THEN s.STHAR_GCMIK ELSE 0 END) - SUM(CASE WHEN s.STHAR_HTUR = 'I' THEN s.STHAR_GCMIK ELSE 0 END)",
       "tables": ["TBLSTHAR"],
-      "markers": []
+      "markers": ["STHAR_HTUR\\s*=\\s*'S'", "STHAR_HTUR\\s*=\\s*'I'"]
     },
     {
       "id": "brut_satis",
@@ -28,7 +28,7 @@
       "definition": "Faturaların genel toplamı: TBLFATUIRS.GENELTOPLAM KDV dahil olduğu için ciroya eşit değildir. Yalnız satış faturaları (FTIRSIP=1) sayılır; iptal edilenler ve satış iade faturaları (FTIRSIP=3) brüt satışa girmez.",
       "sql_hint": "SUM(f.GENELTOPLAM) FROM TBLFATUIRS f WHERE f.FTIRSIP = 1 AND f.IPTAL = 'H'",
       "tables": ["TBLFATUIRS"],
-      "markers": []
+      "markers": ["FTIRSIP\\s*=\\s*1", "SUM\\s*\\(\\s*\\w+\\.GENELTOPLAM\\s*\\)"]
     },
     {
       "id": "iade_orani",
@@ -109,7 +109,7 @@
       "definition": "TBLSTOKFIAT aynı ürün için tarih aralıklı birden çok fiyat satırı tutar; satış tarafı FIYAT_TIPI='S'. 'Güncel liste fiyatı' GECERLILIK_TARIHI en son olan satırdır; hareketin fiili fiyatı STHAR_NF ile karıştırılmaz.",
       "sql_hint": "WHERE f.FIYAT_TIPI = 'S' ve en son GECERLILIK_TARIHI",
       "tables": ["TBLSTOKFIAT"],
-      "markers": []
+      "markers": ["TBLSTOKFIAT", "FIYAT_TIPI\\s*=\\s*'S'", "GECERLILIK_TARIHI"]
     },
     {
       "id": "doviz_tl",
@@ -127,7 +127,7 @@
       "definition": "TBLKAMPANYA bir ürün için tarih aralıklı indirim tanımlar; BASLANGIC ve BITIS günleri dahildir. Kampanyalı satış, hareket tarihi kampanya aralığına düşen satış hareketidir. INDIRIM_ORANI yüzde olarak durur ve STHAR_NF'ye zaten yansımıştır, bir kez daha uygulanmaz.",
       "sql_hint": "JOIN TBLKAMPANYA k ON k.STOK_KODU = s.STOK_KODU AND s.STHAR_TARIH BETWEEN k.BASLANGIC AND k.BITIS",
       "tables": ["TBLKAMPANYA", "TBLSTHAR"],
-      "markers": []
+      "markers": ["TBLKAMPANYA", "STHAR_TARIH\\s+BETWEEN\\s+\\w+\\.BASLANGIC\\s+AND\\s+\\w+\\.BITIS"]
     },
     {
       "id": "teslim_bekleyen",

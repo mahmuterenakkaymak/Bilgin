@@ -144,3 +144,8 @@ REFERENCES: dict[str, Callable[[Dataset], list[tuple]]] = {
     "Q09": q09,
     "Q10": q10,
 }
+
+# Run 2 soruları (Q11-) kendi modülünde üretilir; doğrular tek sözlükte görünsün diye burada birleşir.
+from eval.reference_run2 import REFERENCES as REFERENCES_RUN2  # noqa: E402
+
+REFERENCES.update(REFERENCES_RUN2)
