@@ -1,13 +1,19 @@
 # NL2SQL - Run 3: schema map import (Excel + live DB) and PII protection
 
-> DRAFT - waiting for Eren's approval of the scope. Builds on Run 1 (Phase 0) and Run 2 (Phase 2 retrieval + A/B
-> eval). This run = the rest of Phase 1 (getting a customer's schema in without hand-writing `schema.json`) and the
-> rest of Phase 4 (PII masking, DB-level read-only script), plus a test clean-up. Web UI, charts and written reports
-> are Run 4.
+> Approved by Eren 2026-10-23. Builds on Run 1 (Phase 0) and Run 2 (Phase 2 retrieval + A/B eval). This run = the
+> rest of Phase 1 (getting a customer's schema in without hand-writing `schema.json`), the rest of Phase 4 (PII
+> masking, DB-level read-only script), retrieval improvements measured by the A/B eval, and a test clean-up. Web UI,
+> charts and written reports are Run 4. Product name: **Bilgin** (package and CLI stay `nl2sql`).
 
 ## 0. Input from earlier runs
 
 - Run 1: 7/10 on Strata; all failures = business-definition ambiguity -> rules matter.
+- Run 2 A/B eval on Strata (40 questions, 83 tables, full schema text 14.1K tokens):
+  `full` 23/40 (peak 23.6K tokens, 14 s/q), `full_rules` **31/40** (26.0K, 10 s/q), `rag` **30/40** (**6.5K**, 38 s/q,
+  6.7 tool calls). Rules are worth +8 questions. rag ties full_rules within noise (single run) but loses on
+  `multi_join` (7/15 vs 10/15) and is 3.7x slower; it needs 4x less context, which is what a 27B box with a 16-24K
+  budget or a real ERP with hundreds of tables needs. Retrieval recall@5 (EmbeddingGemma): hybrid 0.67, BM25 0.64,
+  dense 0.56 - the right tables are often not found.
 - Run 2: `schema/schema.json` (83 tables, hand-made by the agents) is the only way a schema enters the system today.
   A customer will bring an Excel map (any layout) and a live SQL Server. The plan's promise is "5 dakikada bağlıyorum":
   a skeleton from the live DB works without Excel; Excel only enriches.
@@ -99,6 +105,22 @@ SQL Server.
   allowlist and on PII columns (column-level DENY), `DENY VIEW DEFINITION`, `DENY EXECUTE`; header comments explain
   that views/synonyms/TVFs can bypass a parser allowlist, so this script is what really limits access. Tests parse the
   script with sqlglot tsql and check the DENY lines match the schema.
+- **Retrieval improvements, measured (do not tune the eval to make RAG win):**
+  - Neighbour expansion: `search_schema` returns its top-k tables plus their 1-hop join-graph neighbours that are
+    data tables (config: on/off, max extra), marked as "komşu"; `eval-retrieval` reports recall@k with and without it.
+  - Query rewriting without an LLM: rule synonyms (`rules.json` synonyms -> rule tables) are added to the BM25 query;
+    measured the same way.
+  - Embedding model is configuration only: `eval-retrieval --embed-model <name>` and `build-index --embed-model`;
+    the index meta stores the model; README documents running bge-m3 (MIT) with llama-server `--embedding` on CPU at
+    another port. (Downloading bge-m3 and the real comparison are done by hand after the run - tests use fakes.)
+  - `rag` prompt: tell the model to call `find_join_path` before writing a 3+ table join (multi_join was the loss).
+- **Automatic mode selection:** `--mode auto` (new default for `ask`; eval keeps explicit modes) picks `full_rules`
+  when the estimated tokens of schema text + rules + system prompt are <= `AUTO_FULL_MAX_TOKENS` (config, default
+  12000 = a 16-24K context box) and `rag` otherwise; the chosen mode and the estimate are printed and logged. Tests for
+  both sides of the threshold.
+- **Repeat runs to measure noise:** `eval --compare --repeat N` runs each mode N times and reports mean, min and max
+  score per mode and per tag, and how many questions flip between repeats of the same mode; the verdict line uses the
+  means and says "fark gürültü içinde" when the mode means differ by less than the max-min spread.
 - **Real-data checklist** in README: how Eren runs `introspect`, `import-map`, `diff-map`, `ask`, `eval` against a
   Netsis **copy** with the generated read-only login; nothing in this run connects to a real server.
 
@@ -118,7 +140,7 @@ ask/eval --> agent --> Executor: policy (tables, PII filters) -> run -> PII mask
 
 ## 4. Stack and environment
 
-- Python 3.11 `.venv` as before (sqlglot 30.24.0, openai 3.37.0, pytest 9.1.1, pyodbc 5.3.0) **plus openpyxl**
+- Python 3.11 `.venv` as before (sqlglot 30.24.0, openai 3.37.0, pytest 9.1.1, pyodbc 5.3.0) **plus openpyxl 3.1.5**
   (MIT, pure Python; installed into `.venv` before the run, version pinned in pyproject). No pandas, no other new
   dependency.
 - LLM / embeddings as Run 2 (Strata :8080, EmbeddingGemma on CPU :8891). Tests: fakes only.
@@ -149,6 +171,10 @@ Privacy class: public/synthetic.
 8. Login script: DENY lines match allowlist and PII columns; password is a placeholder.
 9. Smoke: build-db, build-index --embed fake, import-map (fixture, --accept, --llm fake), introspect, diff-map,
    eval --compare --llm fake exit 0. Smokes for later milestones tagged with "from".
+10. Retrieval: neighbour expansion and synonym rewriting each have recall@k with/without in the retrieval report;
+    with FakeEmbedder on the golden set neither lowers recall@5.
+11. `--mode auto` picks full_rules below and rag above the threshold; `--repeat 2 --llm fake` writes mean/min/max
+    and the noise wording.
 
 ## 8. Milestones
 
@@ -157,8 +183,10 @@ Privacy class: public/synthetic.
 - **M8 - Live schema:** introspect (SQLite + MSSQL), merge, diff, `eval --schema`, tests 4-6.
 - **M9 - PII + DB script:** PII classes + synthetic PII data, lineage masking, filter rules, bypass set, audit,
   login script, README real-data checklist, tests 7-9.
+- **M10 - Retrieval + modes:** neighbour expansion, synonym rewriting, embed model config, rag prompt join hint,
+  `--mode auto`, `--repeat`, tests 10-11.
 
-Keep it to **at most ~32 tasks**.
+Keep it to **at most ~38 tasks**.
 
 ## 9. Open questions / risks
 
