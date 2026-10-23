@@ -111,16 +111,21 @@ def write_compare(report: dict, out_dir: str | Path = COMPARE_OUT) -> Path:
     return run_dir
 
 
-def reusable(report_json: dict | None, fingerprint: dict) -> bool:
+def reusable(report_json: dict | None, fingerprint: dict, embedder: str | None = None) -> bool:
     """R2-12: bir modun ``latest``i ancak imzası bu koşunun imzasıyla birebir eşitse yeniden koşulmaz.
 
     İmza modu, modeli, altın kümenin ve şemanın özetini taşır; birinin bile değişmesi iki koşuyu
-    kıyaslanamaz kılar, o yüzden burada yarım tolerans yok.
+    kıyaslanamaz kılar, o yüzden burada yarım tolerans yok. ``embedder`` verildiyse rag'in vektör
+    uzayı da kayıtlı koşununkiyle aynı olmalı: ``NL2SQL_EMBED_MODEL`` değişip indeks yeniden
+    kurulunca içerik imzası aynı kalıyor, yani uzaysız karar bayat bir koşuyla kurulurdu.
     """
     if not isinstance(report_json, dict) or not isinstance(fingerprint, dict):
         return False
-    stored = (report_json.get("config") or {}).get("fingerprint")
-    return isinstance(stored, dict) and bool(fingerprint) and stored == fingerprint
+    settings = report_json.get("config") or {}
+    stored = settings.get("fingerprint")
+    if not (isinstance(stored, dict) and fingerprint) or stored != fingerprint:
+        return False
+    return embedder is None or settings.get("embedder", "") == embedder
 
 
 # ------------------------------------------------------------------ parçalar

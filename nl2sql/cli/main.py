@@ -13,6 +13,7 @@ adresin patladığı.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sqlite3
 import sys
@@ -35,7 +36,13 @@ from nl2sql.graph.profile import load_profile
 from nl2sql.index.docs import COLLECTIONS, build_documents
 from nl2sql.index.embed import EmbedError, make_embedder
 from nl2sql.index.search import build_search, load_search
-from nl2sql.index.store import FileStore, MissingIndexError, StaleIndexError, content_hash
+from nl2sql.index.store import (
+    META_FILE,
+    FileStore,
+    MissingIndexError,
+    StaleIndexError,
+    content_hash,
+)
 from nl2sql.schema_map import build, doc
 from nl2sql.schema_map.rules import load_rules
 
@@ -297,6 +304,7 @@ def evaluate(
         config={
             "backend": config.backend(),
             "llm": model,
+            "embedder": _embedder_id(mode, index_dir),
             "fingerprint": _fingerprint(mode, kind, model, lines, results, schema, rules),
         },
         mode=mode,
@@ -318,8 +326,9 @@ def compare_modes(
 
     ``llm_factory(mode)`` modun kendi kaydını oynatan istemciyi verir; ``fake`` mod başına farklı
     bir konuşma oynattığı için istemci burada üretilir. R2-12: bir modun ``<out>/<mode>/latest``i
-    imzası bu koşunun imzasıyla birebir eşitse yeniden koşulmaz ve satırı ``(önceki koşu)`` ile
-    çıkar; ``fresh`` o kolaylığı bir kenara bırakır. Koşan mod raporunu kendi klasörüne yazar,
+    imzası ve (rag için) vektör uzayı bu koşununkiyle birebir eşitse yeniden koşulmaz ve satırı
+    ``(önceki koşu)`` ile çıkar; ``fresh`` o kolaylığı bir kenara bırakır. Koşan mod raporunu
+    kendi klasörüne yazar,
     karşılaştırma ``<out>/compare`` altına gider (R2-14).
     """
     _utf8_stdout()
@@ -334,9 +343,12 @@ def compare_modes(
     fingerprints = {
         mode: _mode_fingerprint(mode, kind, model, lines, schema, rules) for mode in config.MODES
     }
+    spaces = {mode: _embedder_id(mode, index_dir) for mode in config.MODES}
     stored = {mode: _mode_report(out_dir, mode) for mode in config.MODES}
     reused = {
-        mode for mode in config.MODES if not fresh and reusable(stored[mode], fingerprints[mode])
+        mode
+        for mode in config.MODES
+        if not fresh and reusable(stored[mode], fingerprints[mode], spaces[mode])
     }
     if "rag" not in reused:
         # rag koşacaksa indeksi baştan denetle; iki mod boşuna koşulduktan sonra red edilmesin.
@@ -368,6 +380,7 @@ def compare_modes(
             config={
                 "backend": config.backend(),
                 "llm": model,
+                "embedder": spaces[mode],
                 "fingerprint": fingerprints[mode],
             },
             mode=mode,
@@ -594,6 +607,30 @@ def _mode_fingerprint(
         index_hash=content_hash(schema, rules) if mode == "rag" else "",
         max_tool_calls=get_mode(mode).max_tool_calls,
     )
+
+
+# ASSUMPTION: imzanın alan listesi Contracts'ta sabit, o yüzden vektör uzayı imzaya değil raporun
+# ayar satırına yazılır; ``reusable`` imzayla birlikte onu da doğrular.
+def _embedder_id(mode: str, index_dir: str | Path) -> str:
+    """Koşunun vektör uzayı (``fake:64`` gibi): rag ölçümü indeksin vektörleriyle yapılır, diğerleri boş.
+
+    ``NL2SQL_EMBED_MODEL`` değişip indeks yeniden kurulunca içerik imzası aynı kalıyor, o yüzden
+    rag'in ``latest``i bayatken yeniden kullanılıp R2-13 kararı o bayat koşuyla kuruluyordu.
+    """
+    return _index_embedder(index_dir) if mode == "rag" else ""
+
+
+def _index_embedder(index_dir: str | Path) -> str:
+    """Kurulu indeksin ``meta.json``daki ``embedder`` alanı; indeks yoksa ya da bozuksa boş.
+
+    Yalnız küçük imza dosyası okunur; vektörler burada gerekmez. İndeks eksikse rag'in
+    koşamayacağını zaten ``_context`` söyler.
+    """
+    try:
+        meta = json.loads((Path(index_dir) / META_FILE).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    return str(meta.get("embedder") or "")
 
 
 def _client_kind(llm) -> tuple[str, str]:
