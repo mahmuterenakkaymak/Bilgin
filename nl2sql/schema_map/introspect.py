@@ -9,7 +9,7 @@ from pathlib import Path
 from nl2sql import config
 # ASSUMPTION: the connection string has a single owner in this project, engine/_mssql, so the env var
 # name, the forced read-only intent and the sentence naming the variable are imported, not repeated.
-from nl2sql.engine._mssql import CONN_ENV, MISSING_CONN, _read_only
+from nl2sql.engine._mssql import CONN_ENV, MISSING_CONN, NO_MODULE, _read_only
 from nl2sql.engine.result import Budget
 
 class IntrospectError(RuntimeError):
@@ -148,18 +148,36 @@ def rows_to_skeleton(table_rows, column_rows, fk_rows) -> dict:
 
 
 def mssql_skeleton(conn_str: str | None = None) -> dict:
-    """Live SQL Server -> skeleton, over a read-only session; pyodbc is imported only here (R3-4)."""
+    """Live SQL Server -> skeleton, over a read-only session; pyodbc is imported only here (R3-4).
+
+    A missing driver and a server that will not answer are both things the user can fix, so each
+    becomes an IntrospectError carrying the driver's own sentence, the way engine/_mssql reports
+    the same failures (Delight 3); the CLI prints that one line instead of a traceback.
+    """
     dsn = (conn_str or os.environ.get(CONN_ENV, "")).strip()
     if not dsn:
         raise IntrospectError(MISSING_CONN)
-    import pyodbc
-
-    conn = pyodbc.connect(_read_only(dsn))
     try:
-        rows = {name: _fetch(conn, sql) for name, sql in MSSQL_QUERIES.items()}
-    finally:
-        conn.close()
+        import pyodbc
+    except ImportError as exc:
+        raise IntrospectError(NO_MODULE) from exc
+
+    try:
+        conn = pyodbc.connect(_read_only(dsn))
+        try:
+            rows = {name: _fetch(conn, sql) for name, sql in MSSQL_QUERIES.items()}
+        finally:
+            conn.close()
+    except pyodbc.Error as exc:
+        raise IntrospectError(_driver_failure(exc)) from exc
     return rows_to_skeleton(rows["tables"], rows["columns"], rows["foreign_keys"])
+
+
+def _driver_failure(exc: Exception) -> str:
+    """The driver says what refused it; the sentence keeps that text and adds the variable to check."""
+    head = f"SQL Server yoklanamadı; {CONN_ENV} ortam değişkenini ve sunucuyu denetleyin"
+    text = " ".join(str(exc).split())
+    return f"{head}: {text}" if text else f"{head}."
 
 
 def _mssql_type(data_type: str, max_length, precision, scale) -> str:
