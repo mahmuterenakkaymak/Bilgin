@@ -554,6 +554,390 @@
           "nullable": true
         }
       ]
+    },
+    {
+      "name": "TBLSTOKFIAT",
+      "description": "Ürün fiyat satırları; aynı ürün için tarih aralıklı birden fazla fiyat bulunabilir. 'Liste fiyatı' sorulduğunda sorulan tarihe kadar geçerli olan en yeni satır alınır, stok kartının BIRIM_FIYAT alanı değil.",
+      "module": "Stok",
+      "kind": "data",
+      "keywords": ["fiyat", "liste fiyatı", "fiyat geçmişi", "zam", "birim fiyat"],
+      "columns": [
+        {
+          "name": "FIAT_ID",
+          "type": "INT",
+          "description": "Fiyat satırı numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Fiyatı tutulan ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FIYAT_TIPI",
+          "type": "VARCHAR(1)",
+          "description": "Fiyatın ait olduğu yön kodu; satış fiyatı ile alış fiyatı aynı üründe ayrı satırlardır.",
+          "fk": null,
+          "values": {
+            "S": "satış fiyatı",
+            "A": "alış fiyatı"
+          },
+          "nullable": false
+        },
+        {
+          "name": "FIYAT",
+          "type": "DECIMAL(18,2)",
+          "description": "Birim fiyat (KDV hariç).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "GECERLILIK_TARIHI",
+          "type": "DATE",
+          "description": "Satırın geçerli olmaya başladığı tarih (YYYY-MM-DD); aynı üründeki daha eski satırın yerini alır.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLSTHAR_ARSIV",
+      "description": "2025 yılı stok hareketleri arşivi; sütunları ve kodları TBLSTHAR ile birebir aynıdır. 2026 hareketleri burada, 2025 hareketleri TBLSTHAR'da yoktur: 2025 soruları yalnız bu tablodan, 2026 soruları yalnız TBLSTHAR'dan cevaplanır.",
+      "module": "Stok",
+      "kind": "data",
+      "keywords": ["arşiv", "2025", "geçen yıl", "stok hareketi", "devir"],
+      "columns": [
+        {
+          "name": "STHAR_ID",
+          "type": "INT",
+          "description": "Hareket numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Harekete konu ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPO_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Hareketin yapıldığı depo.",
+          "fk": "TBLDEPO.DEPO_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STHAR_GCKOD",
+          "type": "VARCHAR(1)",
+          "description": "Giriş/çıkış yönü kodu.",
+          "fk": null,
+          "values": {
+            "G": "giriş",
+            "C": "çıkış"
+          },
+          "nullable": false
+        },
+        {
+          "name": "STHAR_GCMIK",
+          "type": "DECIMAL(18,2)",
+          "description": "Hareket miktarı (daima pozitif; yön STHAR_GCKOD ile belirlenir).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STHAR_NF",
+          "type": "DECIMAL(18,2)",
+          "description": "Hareketin net birim fiyatı (KDV hariç). Aynı ürün tarih veya müşteriye göre farklı fiyat taşıyabilir; ciro için kart fiyatı değil bu alan kullanılır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "STHAR_TARIH",
+          "type": "DATE",
+          "description": "Hareket tarihi (YYYY-MM-DD); arşivde tümü 2025 yılına aittir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STHAR_HTUR",
+          "type": "VARCHAR(1)",
+          "description": "Hareket türü kodu; yön STHAR_GCKOD ile birlikte okunur.",
+          "fk": null,
+          "values": {
+            "S": "satış (çıkış)",
+            "A": "alış (giriş)",
+            "I": "satış iadesi (giriş) - satıştan düşülür",
+            "T": "depo transferi (çıkış + giriş çifti, faturasız)",
+            "D": "sayım/devir (giriş, faturasız)"
+          },
+          "nullable": false
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Hareketi doğuran belge numarası; faturasız hareketlerde NULL, arşiv kayıtlarında 'ARS' ile başlayan arşiv numarası. TBLFATUIRS'e bağlanmaz, 2026 faturalarıyla join edilmez.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Hareketin cari tarafı; faturasız hareketlerde NULL.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLDOVKUR",
+      "description": "Günlük döviz kurları; her gün ve her döviz kodu için tek satır. Döviz tutarının TL karşılığı, işlemin tarihindeki satırın ALIS veya SATIS kurundan hesaplanır.",
+      "module": "Döviz",
+      "kind": "data",
+      "keywords": ["döviz", "kur", "dolar", "euro", "tl karşılığı", "çevrim"],
+      "columns": [
+        {
+          "name": "KUR_TARIH",
+          "type": "DATE",
+          "description": "Kur tarihi (YYYY-MM-DD); DOVIZ_KODU ile birlikte satırı benzersiz kılar, birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DOVIZ_KODU",
+          "type": "VARCHAR(3)",
+          "description": "Döviz kodu; aynı günde her kod için bir satır bulunur.",
+          "fk": null,
+          "values": {
+            "USD": "ABD doları",
+            "EUR": "euro"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ALIS",
+          "type": "DECIMAL(18,2)",
+          "description": "Dövizin alış kuru (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SATIS",
+          "type": "DECIMAL(18,2)",
+          "description": "Dövizin satış kuru (TL); aynı günün ALIS kurundan yüksektir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLCARISUBE",
+      "description": "Cari şubeleri; bir carinin birden çok şubesi olabilir ya da hiç şubesi olmayabilir. Şubenin ili cari kartının IL alanından farklı olabilir, bu yüzden il filtrelerinde hangi tablodaki il alanının kullanılacağına dikkat edilir.",
+      "module": "Cari",
+      "kind": "data",
+      "keywords": ["şube", "şubeler", "il", "ilçe", "aktif şube"],
+      "columns": [
+        {
+          "name": "SUBE_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Şube kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KOD",
+          "type": "VARCHAR(20)",
+          "description": "Şubenin bağlı olduğu cari.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SUBE_ADI",
+          "type": "NVARCHAR(100)",
+          "description": "Şubenin adı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IL",
+          "type": "NVARCHAR(40)",
+          "description": "Şubenin bulunduğu il (büyük harfle, ör. İSTANBUL); carinin kendi IL alanından farklı olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ILCE",
+          "type": "NVARCHAR(40)",
+          "description": "Şubenin bulunduğu ilçe; girilmemişse NULL.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "AKTIF",
+          "type": "VARCHAR(1)",
+          "description": "Şubenin durumu; kapalı şubeler tarihçede kalır.",
+          "fk": null,
+          "values": {
+            "E": "aktif şube",
+            "H": "kapalı şube"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLKAMPANYA",
+      "description": "Kampanya tanımları; bir ürün için belirli bir tarih aralığında uygulanan indirim oranı. Kampanyalı satış aranırken hareket tarihinin BASLANGIC ile BITIS arasına düştüğüne bakılır, ürünün kampanya satırının olması o satışın kampanyalı olduğu anlamına gelmez.",
+      "module": "Kampanya",
+      "kind": "data",
+      "keywords": ["kampanya", "kampanyalı satış", "indirim", "indirim oranı"],
+      "columns": [
+        {
+          "name": "KAMPANYA_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Kampanya kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "KAMPANYA_ADI",
+          "type": "NVARCHAR(100)",
+          "description": "Kampanyanın adı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Kampanyaya konu ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BASLANGIC",
+          "type": "DATE",
+          "description": "Kampanyanın başladığı tarih (YYYY-MM-DD), o gün dahil.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BITIS",
+          "type": "DATE",
+          "description": "Kampanyanın bittiği tarih (YYYY-MM-DD), o gün dahil.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "INDIRIM_ORANI",
+          "type": "DECIMAL(18,2)",
+          "description": "Uygulanan indirim oranı, yüzde olarak (ör. 15,00).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLMUHFIS",
+      "description": "Muhasebe fiş satırları; faturaların hesap kodlu kayıtları. İptal edilmiş faturaların kayıtları da burada durur ve KDV satırı ayrı bir satırdır, bu yüzden ciro için TBLSTHAR yerine bu tablo kullanılırsa iptaller ve KDV toplama girer.",
+      "module": "Muhasebe",
+      "kind": "data",
+      "keywords": ["muhasebe", "fiş", "hesap kodu", "mizanisa", "kayıt"],
+      "columns": [
+        {
+          "name": "MUHFIS_ID",
+          "type": "INT",
+          "description": "Fiş satırı numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FIS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Muhasebe fiş numarası; aynı fişin borç ve alacak satırları bu numarada toplanır.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Fiş tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "HESAP_KODU",
+          "type": "VARCHAR(6)",
+          "description": "Muhasebe hesap kodu; satış geliri ile KDV ve maliyet hesapları ayrı satırlardır.",
+          "fk": null,
+          "values": {
+            "600": "yurtiçi satış",
+            "610": "satış iadesi",
+            "153": "ticari mallar",
+            "391": "hesaplanan KDV"
+          },
+          "nullable": false
+        },
+        {
+          "name": "BA",
+          "type": "VARCHAR(1)",
+          "description": "Satırın borç/alacak yönü.",
+          "fk": null,
+          "values": {
+            "B": "borç",
+            "A": "alacak"
+          },
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Fiş satırı tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FATIRS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Kaydı doğuran fatura numarası; iptal edilmiş faturaların kayıtları da bu numarada bulunur.",
+          "fk": "TBLFATUIRS.FATIRS_NO",
+          "values": {},
+          "nullable": true
+        }
+      ]
     }
   ]
 }

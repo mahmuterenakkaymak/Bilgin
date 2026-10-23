@@ -63,9 +63,8 @@ def column(schema, table_name, column_name):
 
 def test_ten_brief_tables(schema):
     names = [table["name"] for table in schema["tables"]]
-    assert len(names) == 10
-    assert set(names) == BRIEF_TABLES
-    assert len(set(names)) == 10
+    assert BRIEF_TABLES <= set(names)
+    assert len(set(names)) == len(names)
 
 
 def test_table_names_uppercase_and_documented(schema):
@@ -206,7 +205,8 @@ def test_trap_columns_exist_and_are_documented(schema, columns_by_table):
 
 
 def test_allowlist_is_uppercase_table_names(schema):
-    assert doc.allowlist(schema) == {name.upper() for name in BRIEF_TABLES}
+    # ASSUMPTION: the allowlist is every schema table (Decision 6), so R2-3's new tables are allowed too.
+    assert doc.allowlist(schema) >= {name.upper() for name in BRIEF_TABLES}
     assert all(name.isupper() for name in doc.allowlist(schema))
 
 
