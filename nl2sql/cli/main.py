@@ -1,6 +1,6 @@
-"""Komut satırı: veritabanını kur, indeksi kur, tek bir soru sor, altın soruları koş.
+"""Komut satırı: veritabanını kur, indeksi kur, geri çağırmayı ölç, tek bir soru sor, altın soruları koş.
 
-Dört komut da aynı parçaları kullanır ve hiçbir yola sahip çıkmaz: SQLite dosyası, audit kaydı,
+Komutlar aynı parçaları kullanır ve hiçbir yola sahip çıkmaz: SQLite dosyası, audit kaydı,
 rapor klasörü ve indeks klasörü parametredir, varsayılanı config'den gelir, testler kendi tmp
 yolunu verir. ``ask``
 koşuyu adım adım dökerek ekrana yazdırır (Delight 6), ``eval`` raporu yazıp skoru söyler; skor veri
@@ -25,9 +25,10 @@ from nl2sql.agent.loop import AgentRun, Step, run_agent
 from nl2sql.cli.table import format_table
 from nl2sql.engine.executor import LocalExecutor
 from nl2sql.engine.result import Budget
-from nl2sql.eval import report, runner
+from nl2sql.eval import report, retrieval, runner
 from nl2sql.index.docs import COLLECTIONS, build_documents
 from nl2sql.index.embed import EmbedError, make_embedder
+from nl2sql.index.search import build_search
 from nl2sql.index.store import FileStore, content_hash
 from nl2sql.schema_map import build, doc
 from nl2sql.schema_map.rules import load_rules
@@ -130,6 +131,38 @@ def build_index(
     return 0
 
 
+def eval_retrieval(
+    embed: str = DEFAULT_EMBED,
+    k: int = config.SEARCH_K,
+    out_dir: str | Path = retrieval.RETRIEVAL_OUT,
+    schema_path: str = config.SCHEMA_PATH,
+    rules_path: str = config.RULES_PATH,
+    golden_path: str = config.GOLDEN_PATH,
+) -> int:
+    """Aramanın geri çağırmasını altın sorular üzerinde ölçer ve raporu yazar (R2-14).
+
+    İndeks bellekte kurulur (R2-9): ölçüm diskteki indekse ya da veritabanına bakmaz, temiz bir
+    koşumda da çalışır. Ekran soru başına bir satır, metod ve etiket ortalamalarıdır; sayıların
+    kendisi ``eval_out/retrieval`` altındaki raporda da durur.
+    """
+    _utf8_stdout()
+    started = time.perf_counter()
+    schema = doc.load_schema(schema_path)
+    rules = load_rules(rules_path)
+    try:
+        search = build_search(schema, rules, make_embedder(embed))
+    except EmbedError as exc:
+        return _embed_failed(str(exc))
+    result = retrieval.run_retrieval(search, runner.load_golden(golden_path), k)
+    print()
+    for line in retrieval.console_lines(result):
+        print(line)
+    print(f"\nSüre: {time.perf_counter() - started:.1f} sn")
+    run_dir = retrieval.write_retrieval(result, out_dir)
+    print(f"Rapor: {run_dir / 'report.md'}")
+    return 0
+
+
 def ask(question: str, llm, db_path: str = config.DB_PATH, audit_path: str = config.AUDIT_LOG) -> int:
     """Bir soru: adımları işaretle ve gecikmesiyle dök, gönderilen SQL'i ve tabloyu göster.
 
@@ -222,6 +255,19 @@ def main(argv: list[str] | None = None) -> int:
         help="embedder kaynağı (varsayılan %(default)s)",
     )
 
+    retrieval_cmd = commands.add_parser(
+        "eval-retrieval", help="altın sorularında aramanın geri çağırmasını ölçer"
+    )
+    retrieval_cmd.add_argument(
+        "--embed",
+        choices=EMBEDS,
+        default=DEFAULT_EMBED,
+        help="embedder kaynağı (varsayılan %(default)s)",
+    )
+    retrieval_cmd.add_argument(
+        "--k", type=int, default=config.SEARCH_K, help="kaç tablo (varsayılan %(default)s)"
+    )
+
     ask_cmd = commands.add_parser("ask", help="tek bir soruyu modelden geçirip cevabı gösterir")
     ask_cmd.add_argument("question", help='Türkçe soru, örn. "Geçen ayın cirosu ne kadar?"')
     ask_cmd.add_argument(
@@ -241,6 +287,8 @@ def main(argv: list[str] | None = None) -> int:
         return build_database(seed=args.seed)
     if args.command == "build-index":
         return build_index(embed=args.embed)
+    if args.command == "eval-retrieval":
+        return eval_retrieval(embed=args.embed, k=args.k)
     if args.command == "ask":
         return ask(question=args.question, llm=make_client(args.llm))
     return evaluate(llm=make_client(args.llm), only=args.only)
