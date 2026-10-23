@@ -1,0 +1,14 @@
+{
+  "name": "netsis",
+  "pairs": [
+    { "left": "STOK_KODU", "right": "STOK_KODU", "confidence": 0.9 },
+    { "left": "DEPO_KODU", "right": "DEPO_KODU", "confidence": 0.9 },
+    { "left": "CARI_KOD", "right": "CARI_KODU", "confidence": 0.8 },
+    { "left": "FISNO", "right": "FATIRS_NO", "confidence": 0.8 },
+    { "left": "PLASIYER_KODU", "right": "PLASIYER_KODU", "confidence": 0.8 },
+    { "left": "SIPARIS_NO", "right": "SIPARIS_NO", "confidence": 0.8 },
+    { "left": "GRUP_KODU", "right": "GRUP_KODU", "confidence": 0.7 },
+    { "left": "TARIH", "right": "KUR_TARIH", "confidence": 0.7 },
+    { "left": "CARI_KOD", "right": "CARI_KOD", "confidence": 0.6 }
+  ]
+}
