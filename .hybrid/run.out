@@ -9,3 +9,5 @@
 2026-10-23 11:50:50 | ORCH   | T04: PASSED (hands)
 2026-10-23 11:50:51 | HANDS  | T05 try 1: nl2sql/schema_map/build.py: write_sqlite(dataset, schema, path) (DDL from schema.json types), write_mssql_script(dataset, schema, path) (CREATE TABLE + batched INSERT, N'' strings, NULL, ISO dates), checksum(path) over ordered table dumps, build_db(seed, db_path, sql_path); tests: identical checksum for same seed, differs for other seed, row counts match dataset, every statement of the T-SQL script parses with sqlglot tsql
 2026-10-23 11:53:32 | ORCH   | T05 hands edited TASKS.md - restored
+2026-10-23 11:53:34 | ORCH   | T05: PASSED (hands)
+2026-10-23 11:53:34 | HANDS  | T06 try 1: eval/golden.jsonl (10 questions per PLAN trap map, review "pending") + eval/reference.py REFERENCES computed in pure Python from Dataset; integration test: generate -> build_db(tmp) -> each golden SQL transpiled tsql->sqlite and run on the built DB == reference (rounded 2 dp, order-aware only when ordered)

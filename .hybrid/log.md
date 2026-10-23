@@ -17,3 +17,5 @@
 2026-10-23 11:53:32 | ORCH   | T05 hands edited TASKS.md - restored
 2026-10-23 11:53:34 | ORCH   | T05: PASSED (hands)
 2026-10-23 11:53:34 | HANDS  | T06 try 1: eval/golden.jsonl (10 questions per PLAN trap map, review "pending") + eval/reference.py REFERENCES computed in pure Python from Dataset; integration test: generate -> build_db(tmp) -> each golden SQL transpiled tsql->sqlite and run on the built DB == reference (rounded 2 dp, order-aware only when ordered)
+2026-10-23 11:58:39 | ORCH   | T06: PASSED (hands)
+2026-10-23 11:58:40 | HANDS  | T07 try 1: eval/traps.jsonl with one naive SQL per trap (8 traps, mapped to qid per PLAN); test: every trap is present in the Dataset and its naive SQL result on the built DB differs from the golden result of its question
