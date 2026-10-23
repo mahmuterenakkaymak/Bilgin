@@ -290,6 +290,11 @@ def _cari_sube(dataset: dict, columns: dict, rng: random.Random) -> None:
                 "IL": il,
                 "ILCE": None if rng.random() < 0.3 else rng.choice(ILCELER),
                 "AKTIF": "H" if rng.random() < 0.25 else "E",
+                # ASSUMPTION: değerlerini extend_run3 yazar (R3-7); _fill şema sütun kümesinin birebir
+                # eşitliğini istediği için burada NULL dururlar, yoksa tüm şubeler silinirdi.
+                "ADRES": None,
+                "TELEFON": None,
+                "E_POSTA": None,
             })
     satirlar[0]["AKTIF"] = "H"
     for j, satir in enumerate(satirlar, start=1):

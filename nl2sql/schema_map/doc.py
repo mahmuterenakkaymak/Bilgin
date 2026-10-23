@@ -26,6 +26,7 @@ def load_schema(path: str | Path = config.SCHEMA_PATH) -> dict:
             column.setdefault("fk", None)
             column.setdefault("values", {})
             column.setdefault("nullable", True)
+            column.setdefault("pii", None)
     return schema
 
 

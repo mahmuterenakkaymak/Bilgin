@@ -806,6 +806,33 @@
             "H": "kapalı şube"
           },
           "nullable": false
+        },
+        {
+          "name": "ADRES",
+          "type": "NVARCHAR(200)",
+          "description": "Şubenin açık adresi; il, ilçe ve sokak virgülle ayrılır.",
+          "pii": "address",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TELEFON",
+          "type": "VARCHAR(20)",
+          "description": "Şube telefon numarası.",
+          "pii": "phone",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "E_POSTA",
+          "type": "NVARCHAR(100)",
+          "description": "Şube e-posta adresi.",
+          "pii": "email",
+          "fk": null,
+          "values": {},
+          "nullable": true
         }
       ]
     },
@@ -2627,6 +2654,7 @@
           "name": "AD_SOYAD",
           "type": "NVARCHAR(100)",
           "description": "Personelin adı ve soyadı.",
+          "pii": "person_name",
           "fk": null,
           "values": {},
           "nullable": false
@@ -2659,6 +2687,7 @@
           "name": "TELEFON",
           "type": "VARCHAR(20)",
           "description": "İletişim numarası; boş olabilir.",
+          "pii": "phone",
           "fk": null,
           "values": {},
           "nullable": true
@@ -2673,6 +2702,51 @@
             "H": "pasif"
           },
           "nullable": false
+        },
+        {
+          "name": "TCKN",
+          "type": "VARCHAR(11)",
+          "description": "T.C. kimlik numarası; 11 haneli sayı.",
+          "pii": "tckn",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "VKN",
+          "type": "VARCHAR(11)",
+          "description": "Vergi kimlik numarası; girilmemişse boş.",
+          "pii": "vkn",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "IBAN",
+          "type": "VARCHAR(34)",
+          "description": "Maaşın yattığı hesap (TR ile başlayan IBAN).",
+          "pii": "iban",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "E_POSTA",
+          "type": "NVARCHAR(100)",
+          "description": "E-posta adresi.",
+          "pii": "email",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ADRES",
+          "type": "NVARCHAR(200)",
+          "description": "Açık ev adresi; il, ilçe, mahalle ve sokak virgülle ayrılır.",
+          "pii": "address",
+          "fk": null,
+          "values": {},
+          "nullable": true
         }
       ]
     },
@@ -2850,6 +2924,7 @@
           "name": "BRUT_TUTAR",
           "type": "DECIMAL(18,2)",
           "description": "Brüt ücret (TL).",
+          "pii": "salary",
           "fk": null,
           "values": {},
           "nullable": false
@@ -2858,6 +2933,7 @@
           "name": "KESINTI_TUTAR",
           "type": "DECIMAL(18,2)",
           "description": "Vergi ve sigorta kesintileri toplamı (TL).",
+          "pii": "salary",
           "fk": null,
           "values": {},
           "nullable": false
@@ -2866,6 +2942,7 @@
           "name": "NET_TUTAR",
           "type": "DECIMAL(18,2)",
           "description": "Ödenen net tutar (TL).",
+          "pii": "salary",
           "fk": null,
           "values": {},
           "nullable": false
@@ -2931,6 +3008,7 @@
           "name": "TUTAR",
           "type": "DECIMAL(18,2)",
           "description": "Kalem tutarı (TL).",
+          "pii": "salary",
           "fk": null,
           "values": {},
           "nullable": false
