@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from nl2sql import config
 from nl2sql.agent import prompt, tools
 from nl2sql.agent.llm import LLMError
-from nl2sql.agent.tools import ERROR_PREFIX, dispatch
+from nl2sql.agent.tools import answer_is_ok, dispatch
 from nl2sql.schema_map import doc
 
 # Sözleşmede adı geçen dördüncü bir sınır yok; bu yalnızca hiç araç çağırmayıp metin üreten bir
@@ -106,7 +106,7 @@ def run_agent(
                     return finish("no_submission", TOOL_STOP.format(limit=config.MAX_TOOL_CALLS))
                 tool_calls += 1
                 answer = dispatch(call.name, call.arguments, audited, schema)
-                ok = not answer.startswith(ERROR_PREFIX)
+                ok = answer_is_ok(answer)
                 _count_turn(run, response)
                 run.steps.append(
                     Step(

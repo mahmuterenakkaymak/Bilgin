@@ -12,8 +12,11 @@ from __future__ import annotations
 from nl2sql.engine.result import Budget
 from nl2sql.schema_map import doc
 
-# Reddi anlatan satırın sabit başlangıcı; döngü buradan okuduğu için metin değişirse o da değişir.
+# Reddi anlatan satırların sabit başlangıçları; döngü bunları okuduğu için metin değişirse burada da değişir.
 ERROR_PREFIX = "Hata"
+BLANK_SQL_PREFIX = "Sorgu boş"
+UNKNOWN_TOOL_PREFIX = "Bilinmeyen araç"
+REFUSALS = (ERROR_PREFIX, BLANK_SQL_PREFIX, UNKNOWN_TOOL_PREFIX)
 
 GET_SCHEMA = {
     "type": "function",
@@ -83,7 +86,12 @@ def dispatch(name: str, args: dict, executor, schema: dict) -> str:
         return _get_schema(schema, args.get("tables"))
     if name in ("run_sql", "submit_sql"):
         return _run(name, str(args.get("sql") or ""), executor)
-    return f"Bilinmeyen araç: {name}. Kullanabileceklerin: {', '.join(TOOL_NAMES)}."
+    return f"{UNKNOWN_TOOL_PREFIX}: {name}. Kullanabileceklerin: {', '.join(TOOL_NAMES)}."
+
+
+def answer_is_ok(answer: str) -> bool:
+    """Kabul edilmiş bir cevap mı; red döngüde başarısız sayılır ve modele yeniden denetir."""
+    return not answer.startswith(REFUSALS)
 
 
 def _get_schema(schema: dict, tables) -> str:
@@ -100,9 +108,9 @@ def _table_names(tables) -> list[str]:
 def _run(name: str, sql: str, executor) -> str:
     # ASSUMPTION: submit_sql de sorguyu policy'den geçirip çalıştırır (policy'nin tek kapısı
     # executor), böylece reddedilen bir cevap modele geri söylenir; dispatch yalnız metin
-    # döndürdüğü için döngü reddi ERROR_PREFIX ile, kabulü o sabitin yokluğuyla anlar.
+    # döndürdüğü için döngü reddi REFUSALS başlangıçlarından, kabulü onların yokluğundan anlar.
     if not sql.strip():
-        return "Sorgu boş: tek bir T-SQL SELECT yazın."
+        return f"{BLANK_SQL_PREFIX}: tek bir T-SQL SELECT yazın."
     result = executor.execute(sql, Budget())
     if result.error is not None:
         return f"{ERROR_PREFIX} ({result.error.kind}): {result.error.message}"
