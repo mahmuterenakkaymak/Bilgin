@@ -1,11 +1,12 @@
 {
- "tasks": 0,
- "first_try": 0,
+ "tasks": 30,
+ "first_try": 30,
  "local_retries": 0,
  "rescues": 0,
  "failed": [],
- "reviews": 0,
- "minutes": 5.0,
- "brain_calls": 2,
+ "reviews": 3,
+ "checks": "green",
+ "minutes": 113.8,
+ "brain_calls": 5,
  "brain": "cloud"
 }
