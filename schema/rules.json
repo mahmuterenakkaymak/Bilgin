@@ -118,7 +118,7 @@
       "definition": "TBLDOVKUR her gün ve her döviz kodu için tek satır tutar (ALIS/SATIS TL kuru). Kur, hareketin ya da faturanın tarihiyle eşleşen satırdan alınır; ortalama kur kullanılmaz. Tutarlar TL olarak saklandığı için dövize geçerken kura bölünür.",
       "sql_hint": "JOIN TBLDOVKUR k ON k.KUR_TARIH = f.TARIH AND k.DOVIZ_KODU = 'USD'",
       "tables": ["TBLDOVKUR"],
-      "markers": []
+      "markers": ["TBLDOVKUR", "KUR_TARIH\\s*=\\s*\\w+\\.TARIH"]
     },
     {
       "id": "kampanyali_satis",
@@ -136,7 +136,7 @@
       "definition": "TBLSIPATRA.TESLIM_TARIHI NULL ise teslim tarihi henüz belirlenmemiştir; bu satırlar IS NULL ile bulunur, boş metinle değil. Bir siparişin satırlarının bir kısmı faturaya dönüşmüş olabilir, bu yüzden satır saymak ile sipariş saymak farklıdır.",
       "sql_hint": "WHERE a.TESLIM_TARIHI IS NULL",
       "tables": ["TBLSIPATRA", "TBLSIPAMAS"],
-      "markers": []
+      "markers": ["TESLIM_TARIHI\\s+IS\\s+NULL"]
     }
   ]
 }

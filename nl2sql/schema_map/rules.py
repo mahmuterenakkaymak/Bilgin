@@ -12,9 +12,9 @@ from pathlib import Path
 
 from nl2sql import config
 
-# ASSUMPTION: markers bir kuralı yalnız onu rules alanına yazan golden SQL'de sınanır (R2-11), o
-# yüzden henüz hiçbir sorunun citemediği kurallarda boş durur; önceden yazılmış bir işaretçi
-# ileride uydurma bir beklenti olurdu.
+# markers boş kalırsa R2-11'in "her işaretçi kuralı iddia eden SQL'de geçmeli" testi o kural için
+# hiç çalışmıyor (boş döngü), yani kural metni ile golden SQL arasındaki bağ sessizce kopabiliyor.
+# Her kural bu yüzden en az bir işaretçi taşır; tests/test_rules_markers.py bunu zorlar.
 _LIST_FIELDS = ("synonyms", "tables", "markers")
 
 
