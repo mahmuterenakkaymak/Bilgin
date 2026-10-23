@@ -19,3 +19,8 @@
 2026-10-23 11:53:34 | HANDS  | T06 try 1: eval/golden.jsonl (10 questions per PLAN trap map, review "pending") + eval/reference.py REFERENCES computed in pure Python from Dataset; integration test: generate -> build_db(tmp) -> each golden SQL transpiled tsql->sqlite and run on the built DB == reference (rounded 2 dp, order-aware only when ordered)
 2026-10-23 11:58:39 | ORCH   | T06: PASSED (hands)
 2026-10-23 11:58:40 | HANDS  | T07 try 1: eval/traps.jsonl with one naive SQL per trap (8 traps, mapped to qid per PLAN); test: every trap is present in the Dataset and its naive SQL result on the built DB differs from the golden result of its question
+2026-10-23 12:01:39 | ORCH   | T07: PASSED (hands)
+2026-10-23 12:01:39 | ORCH   | M1: whole-project checks
+2026-10-23 12:01:41 | ORCH   | M1: whole-project checks RED: ['.venv\\Scripts\\python -m nl2sql build-db --seed 42', '.venv\\Scripts\\python -m nl2sql eval --llm fake', '.venv\\Scripts\\python -m nl2sql ask "Eylül ayında en çok satan 5 ürün" --llm fake']
+2026-10-23 12:01:53 | BRAIN  | M1: review with sonnet in the background - hands keep building
+2026-10-23 12:01:53 | HANDS  | T08 try 1: nl2sql/policy/policy.py check(sql, allowlist, top_n) -> PolicyResult: sqlglot tsql parse, exactly one statement, SELECT/CTE/UNION-of-SELECT only, default-deny allowlist on real table refs (CTE-scope aware, shadowing cannot hide a real table), reject db/server-qualified names, sys/INFORMATION_SCHEMA, xp_/sp_, OPENROWSET/OPENQUERY/OPENDATASOURCE, SELECT INTO, table-valued functions; short reasons; all 10 golden SQLs pass
