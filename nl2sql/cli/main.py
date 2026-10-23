@@ -11,6 +11,7 @@ yoksa kod 2 ve "önce kur", uç nokta hiç çalışmıyorsa kod 3 ve hangi adres
 from __future__ import annotations
 
 import argparse
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -48,12 +49,20 @@ def build_database(
     db_path: str = config.DB_PATH,
     sql_path: str = config.MSSQL_SCRIPT,
 ) -> int:
-    """Sentetik veriyle SQLite dosyasını ve T-SQL kurulum betiğini üretir."""
+    """Sentetik veriyle SQLite dosyasını ve T-SQL kurulum betiğini üretir.
+
+    Ekran ölçümün iki girdisini de söyler (R2-14): kaç tabloda gerçekten satır olduğu (distractor
+    tabloların bir kısmı şemada öylece durur) ve ``full`` modun şema metninin bağlam maliyeti.
+    """
     _utf8_stdout()
     digest = build.build_db(seed, db_path, sql_path)
     print(f"Tohum: {seed}")
     print(f"Veritabanı: {db_path}")
     print(f"T-SQL betiği: {sql_path}")
+    toplam, dolu = _table_counts(db_path)
+    print(f"Tablolar: {toplam} (veri {dolu}, şema-yalnız {toplam - dolu})")
+    schema_text = doc.full_text(doc.load_schema())
+    print(f"Şema metni (full mod): {len(schema_text)} karakter ≈ {doc.estimate_tokens(schema_text)} token")
     print(f"Sağlama (sha256): {digest[:12]}")
     return 0
 
@@ -182,6 +191,22 @@ def _cost(run: AgentRun) -> None:
     total = run.total_prompt_tokens + run.total_completion_tokens
     print(f"Token: {total} (istem {run.total_prompt_tokens} + cevap {run.total_completion_tokens})")
     print(f"Süre: {run.elapsed_s:.1f} sn")
+
+
+def _table_counts(db_path: str | Path) -> tuple[int, int]:
+    """Kurulu dosyada: tablo sayısı ve en az bir satırı olan tablo sayısı; şema-yalnız = farkı."""
+    conn = sqlite3.connect(db_path)
+    try:
+        names = [
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+            )
+        ]
+        dolu = sum(1 for name in names if conn.execute(f'SELECT 1 FROM "{name}" LIMIT 1').fetchone())
+    finally:
+        conn.close()
+    return len(names), dolu
 
 
 def _db_missing(db_path: str | Path) -> bool:

@@ -1,7 +1,7 @@
 """Run 2 ek verisi: fiyat geçmişi, günlük döviz kuru, cari şubesi, kampanya, arşiv ve muhasebe fişleri.
 
 Run 1 akışından bağımsız kendi rastgele akışıyla çalışır; Run 1 satırlarını ve Run 1 rng'sini
-okumaz, değiştirmez. Yalnız Run 2 için eklenen veri tablolarını doldurur.
+okumaz, değiştirmez. Run 2 için eklenen veri tablolarını ve distractor satırlarını doldurur.
 """
 
 from __future__ import annotations
@@ -36,17 +36,174 @@ FIYAT_BITIM = dt.date(2026, 9, 30)
 ARSIV_BAS = dt.date(2025, 1, 1)
 ARSIV_BITIM = dt.date(2025, 12, 31)
 
+# Yakın kopyalar (R2-4): gerçek tablonun satırlarından türerler ama cevabı bilinçli olarak saptırırlar;
+# bu yüzden sayıları DISTRACTOR_ROWS'tan bağımsızdır, her zaman üretilirler.
+YAKIN_KOPYALAR = ("TBLSTHAR_LOG", "TBLFATUIRS_TASLAK", "TBLCASABIT_YEDEK", "TBLSTSABIT_ESKI", "TBLSIPATRA_TMP")
+LOG_KOPYA = 30
+TASLAK_MIN, TASLAK_MAX = 5, 10
+KOPYA_ARALIGI = 3  # kartın her üçüncü satırı yedeğe/eski sürüme girer
+KULLANICI_ADLARI = ("admin", "muhasebe", "depo", "satis1", "servis")
+DOLGU_METIN = ("Eski kayıt", "Arşiv kaydı", "Manuel giriş", "Sistem kaydı", "Kontrol listesi")
+# Diğer distractor tabloların dolgu satırı sayısı üst sınırı (0-5); 0 = tablo şemada kaldığı gibi kalır.
+DISTRACTOR_ROWS = 0
+DOLGU_BAS = dt.date(2026, 1, 1)
+DOLGU_BITIM = dt.date(2026, 12, 31)
+
 
 def extend(dataset: dict, seed: int) -> None:
     """Run 2 tablolarını kendi akışıyla doldurur; yerinde değiştirir, Run 1'e dokunmaz."""
     rng = random.Random(f"{seed}:run2")
-    columns = {table["name"]: [c["name"] for c in table["columns"]] for table in doc.load_schema()["tables"]}
+    schema = doc.load_schema()
+    columns = {table["name"]: [c["name"] for c in table["columns"]] for table in schema["tables"]}
     _stok_fiyat(dataset, columns, rng)
     _doviz_kur(dataset, columns, rng)
     _cari_sube(dataset, columns, rng)
     _kampanya(dataset, columns, rng)
     _arsiv(dataset, columns, rng)
     _muhfis(dataset, columns, rng)
+    distractor_rows(dataset, schema, rng)
+
+
+def distractor_rows(dataset: dict, schema: dict, rng: random.Random) -> None:
+    """Distractor tablolarını doldurur: yakın kopyalar gerçek cevaptan sapar, diğerleri dolgu alır."""
+    columns = {table["name"]: [c["name"] for c in table["columns"]] for table in schema["tables"]}
+    _sthar_log(dataset, columns.get("TBLSTHAR_LOG"), rng)
+    _fatuir_taslak(dataset, columns.get("TBLFATUIRS_TASLAK"), rng)
+    _cari_yedek(dataset, columns.get("TBLCASABIT_YEDEK"), rng)
+    _stok_eski(dataset, columns.get("TBLSTSABIT_ESKI"), rng)
+    _sipatra_tmp(dataset, columns.get("TBLSIPATRA_TMP"), rng)
+
+    kodlar = {
+        "STOK_KODU": [urun["STOK_KODU"] for urun in dataset["TBLSTSABIT"]],
+        "CARI_KOD": [cari["CARI_KOD"] for cari in dataset["TBLCASABIT"]],
+        "CARI_KODU": [cari["CARI_KOD"] for cari in dataset["TBLCASABIT"]],
+        "DEPO_KODU": [depo["DEPO_KODU"] for depo in dataset["TBLDEPO"]],
+        "_dataset": dataset,
+    }
+    dolgu = {t["name"]: t for t in schema["tables"] if t.get("kind") == "distractor" and t["name"] not in YAKIN_KOPYALAR}
+    yapildi: set[str] = set()
+
+    def doldur(table: dict) -> None:
+        name = table["name"]
+        if name in yapildi:
+            return
+        yapildi.add(name)
+        for c in table["columns"]:  # fk hedefi de dolgu tablosuysa önce o dolsun
+            hedef = c["fk"].split(".")[0] if c.get("fk") else None
+            if hedef in dolgu:
+                doldur(dolgu[hedef])
+        adet = 1 + rng.randint(0, min(DISTRACTOR_ROWS, 4))  # en az bir satır: dataset ile betik eşleşsin
+        degerler = [
+            {c["name"]: _dolgu_degeri(c, rng, kodlar, i) for c in table["columns"]} for i in range(1, adet + 1)
+        ]
+        _fill(dataset, name, columns.get(name), degerler)
+
+    for table in dolgu.values():
+        doldur(table)
+
+
+def _sthar_log(dataset: dict, cols: list[str] | None, rng: random.Random) -> None:
+    """Eylül 2026 hareketlerinin ~30 kopyası; bir kısmının miktarı düzenlenmiş, bir kısmı iki kez yazılmış."""
+    eylul = [h for h in dataset["TBLSTHAR"] if EYLUL[0] <= h["STHAR_TARIH"] <= EYLUL[1]]
+    kopya = rng.sample(eylul, min(LOG_KOPYA, len(eylul)))
+    # Satış toplamı gerçek tabloyla aynı kalmasın: kopyadaki ilk satış hareketi mutlaka düzenlenir.
+    hedef = next((i for i, h in enumerate(kopya) if h["STHAR_HTUR"] == "S"), None)
+    satirlar: list[dict] = []
+    for i, hareket in enumerate(kopya):
+        satir = dict(hareket)
+        satir["ISLEM"] = "D" if i == hedef or i % 5 == 0 else "E"
+        if satir["ISLEM"] == "D":
+            satir["STHAR_GCMIK"] = round(hareket["STHAR_GCMIK"] * 1.1, 2)
+        satir["LOG_TARIH"] = hareket["STHAR_TARIH"]
+        satirlar.append(satir)
+        if i % 7 == 0:
+            satirlar.append(dict(satir, ISLEM="D"))
+    _fill(dataset, "TBLSTHAR_LOG", cols, satirlar)
+
+
+def _fatuir_taslak(dataset: dict, cols: list[str] | None, rng: random.Random) -> None:
+    """Eylül 2026'nın onaylanmamış fatura taslakları: ONAY_TARIHI boş, numaraları gerçek faturalarla çakışmaz."""
+    alicilar = [c["CARI_KOD"] for c in dataset["TBLCASABIT"] if c["CARI_TIP"] in ("A", "H")]
+    adet = rng.randint(TASLAK_MIN, TASLAK_MAX) if alicilar else 0
+    satirlar: list[dict] = []
+    for i in range(adet):
+        satirlar.append({
+            "FTIRSIP": 1,
+            "FATIRS_NO": f"TSS{i + 1:05d}",
+            "CARI_KODU": rng.choice(alicilar),
+            "TARIH": _tarih(rng, dt.date(2026, 9, 1), dt.date(2026, 9, 30)),
+            "GENELTOPLAM": round(rng.uniform(500.0, 40000.0), 2),
+            "IPTAL": "H",
+            "ONAY_TARIHI": None,
+            "KULLANICI": rng.choice(KULLANICI_ADLARI),
+        })
+    _fill(dataset, "TBLFATUIRS_TASLAK", cols, satirlar)
+
+
+def _cari_yedek(dataset: dict, cols: list[str] | None, rng: random.Random) -> None:
+    """Kartların 2025 yedeği; yedeklerin bir kısmının ili güncel kartla uyuşmaz."""
+    satirlar: list[dict] = []
+    for i, cari in enumerate(dataset["TBLCASABIT"]):
+        if i % KOPYA_ARALIGI:
+            continue
+        satir = dict(cari)
+        if (i // KOPYA_ARALIGI) % 2 == 0:
+            satir["IL"] = rng.choice([il for il in generator.CITIES if il != cari["IL"]])
+        satir["KAYIT_TARIHI"] = _tarih(rng, ARSIV_BAS, ARSIV_BITIM)
+        satir["ACIKLAMA"] = None if rng.random() < 0.4 else "Eski kart kaydı"
+        satirlar.append(satir)
+    _fill(dataset, "TBLCASABIT_YEDEK", cols, satirlar)
+
+
+def _stok_eski(dataset: dict, cols: list[str] | None, rng: random.Random) -> None:
+    """Ürün kartlarının eski sürümü: liste fiyatı bugünkünden düşük, VERSIYON 1."""
+    satirlar: list[dict] = []
+    for i, urun in enumerate(dataset["TBLSTSABIT"]):
+        if i % KOPYA_ARALIGI:
+            continue
+        satir = dict(urun)
+        if urun["BIRIM_FIYAT"] is not None:
+            satir["BIRIM_FIYAT"] = round(urun["BIRIM_FIYAT"] * 0.9, 2)
+        satir["KAYIT_TARIHI"] = _tarih(rng, ARSIV_BAS, ARSIV_BITIM)
+        satir["VERSIYON"] = 1
+        satirlar.append(satir)
+    _fill(dataset, "TBLSTSABIT_ESKI", cols, satirlar)
+
+
+def _sipatra_tmp(dataset: dict, cols: list[str] | None, rng: random.Random) -> None:
+    """Sipariş satırlarının ara kaydı: aynı satırlar, bir kısmı vazgeçilmiş."""
+    satirlar: list[dict] = []
+    for i, satir in enumerate(dataset["TBLSIPATRA"]):
+        if i % KOPYA_ARALIGI:
+            continue
+        satirlar.append(dict(satir, DURUM=rng.choice(("B", "O", "V")), EKLEYEN=rng.choice(KULLANICI_ADLARI)))
+    _fill(dataset, "TBLSIPATRA_TMP", cols, satirlar)
+
+
+def _dolgu_degeri(column: dict, rng: random.Random, kodlar: dict, sira: int):
+    """Dolgu satırı değeri: gerçek kod, şemadaki kod kümesi ya da türe uygun rastgele değer."""
+    if column.get("fk"):
+        hedef_tablo, hedef_sutun = column["fk"].split(".")
+        degerler = [satir[hedef_sutun] for satir in kodlar["_dataset"].get(hedef_tablo, [])]
+        return rng.choice(degerler) if degerler else None
+    if column["nullable"] and rng.random() < 0.25:
+        return None
+    havuz = kodlar.get(column["name"])
+    if havuz:
+        return rng.choice(havuz)
+    tip = column["type"].split("(")[0].upper()
+    if column["values"]:
+        kod = rng.choice(sorted(column["values"]))
+        return int(kod) if tip == "INT" and kod.isdigit() else kod
+    if tip == "DATE":
+        return _tarih(rng, DOLGU_BAS, DOLGU_BITIM)
+    if tip == "INT":
+        return sira
+    if tip == "DECIMAL":
+        return round(rng.uniform(1.0, 25000.0), 2)
+    if tip == "NVARCHAR":
+        return rng.choice(DOLGU_METIN)
+    return f"{column['name'][:6]}{sira:04d}"
 
 
 def _stok_fiyat(dataset: dict, columns: dict, rng: random.Random) -> None:
