@@ -1,11 +1,13 @@
-"""Komut satırı: veritabanını kur, tek bir soru sor, altın soruları koş.
+"""Komut satırı: veritabanını kur, indeksi kur, tek bir soru sor, altın soruları koş.
 
-Üç komut da aynı parçaları kullanır ve hiçbir yola sahip çıkmaz: SQLite dosyası, audit kaydı ve
-rapor klasörü parametredir, varsayılanı config'den gelir, testler kendi tmp yolunu verir. ``ask``
+Dört komut da aynı parçaları kullanır ve hiçbir yola sahip çıkmaz: SQLite dosyası, audit kaydı,
+rapor klasörü ve indeks klasörü parametredir, varsayılanı config'den gelir, testler kendi tmp
+yolunu verir. ``ask``
 koşuyu adım adım dökerek ekrana yazdırır (Delight 6), ``eval`` raporu yazıp skoru söyler; skor veri
 olduğu için çıkış koduna geçmez, yalnız cevap gönderilmeyen bir soru 1 döner. Kullanıcının
-düzeltebileceği iki arıza iz dökümüyle değil tek cümleyle çıkar (Delight 3): veritabanı dosyası
-yoksa kod 2 ve "önce kur", uç nokta hiç çalışmıyorsa kod 3 ve hangi adresin patladığı.
+düzeltebileceği üç arıza iz dökümüyle değil tek cümleyle çıkar (Delight 3): veritabanı dosyası
+yoksa kod 2 ve "önce kur", uç nokta ya da embedding sunucusu hiç çalışmıyorsa kod 3 ve hangi
+adresin patladığı.
 """
 
 from __future__ import annotations
@@ -13,6 +15,7 @@ from __future__ import annotations
 import argparse
 import sqlite3
 import sys
+import time
 from pathlib import Path
 
 from nl2sql import config
@@ -23,12 +26,20 @@ from nl2sql.cli.table import format_table
 from nl2sql.engine.executor import LocalExecutor
 from nl2sql.engine.result import Budget
 from nl2sql.eval import report, runner
+from nl2sql.index.docs import COLLECTIONS, build_documents
+from nl2sql.index.embed import EmbedError, make_embedder
+from nl2sql.index.store import FileStore, content_hash
 from nl2sql.schema_map import build, doc
+from nl2sql.schema_map.rules import load_rules
 
 LLMS = ("fake", "openai")
 # ASSUMPTION: ölçüm aracının varsayılanı gerçek endpoint'tir; --llm fake model istemeyen ölçüm
 # yolu olduğu için kendisi söylenerek seçilir.
 DEFAULT_LLM = "openai"
+EMBEDS = ("fake", "openai")
+# ASSUMPTION: indeksin varsayılanı da gerçek embedding sunucusudur; --embed fake aramanın
+# davranışını model olmadan ölçmek isteyen yol olduğu için kendisi söylenerek seçilir.
+DEFAULT_EMBED = "openai"
 
 AUDIT_SOURCE = "ask"
 PROSE = "yanıt"
@@ -36,12 +47,19 @@ SQL_TOOLS = ("run_sql", "submit_sql")
 NO_ANSWER = "Cevap gönderilmedi: {}"
 
 ENV_URL = "NL2SQL_LLM_BASE_URL"
+EMBED_ENV_URL = "NL2SQL_EMBED_BASE_URL"
 NO_DB = "Veritabanı yok: {path}\nÖnce `python -m nl2sql build-db` çalıştırın."
 LLM_HINT = f"Öneri: Strata'nın açık olup olmadığına bakın; adres farklıysa {ENV_URL} ile doğruyu verin."
+EMBED_HINT = (
+    f"Öneri: embedding sunucusunun açık olup olmadığına bakın; "
+    f"adres farklıysa {EMBED_ENV_URL} ile doğruyu verin."
+)
 # ASSUMPTION: uç nokta hiçbir soruyu yanıtlamadıysa ortada ölçülen bir şey yoktur; koşu tamamlanmış
 # sayılmaz (PLAN Decision 13'deki crash hali), o yüzden rapor yazılmadan kod 3 ile çıkılır.
 EXIT_NO_DB = 2
 EXIT_LLM = 3
+# ASSUMPTION: ölü bir embedding sunucusu da aynı hali anlatır; indeks yazılmadan çıkılır (R2-14).
+EXIT_EMBED = 3
 
 
 def build_database(
@@ -64,6 +82,51 @@ def build_database(
     schema_text = doc.full_text(doc.load_schema())
     print(f"Şema metni (full mod): {len(schema_text)} karakter ≈ {doc.estimate_tokens(schema_text)} token")
     print(f"Sağlama (sha256): {digest[:12]}")
+    return 0
+
+
+def build_index(
+    embed: str = DEFAULT_EMBED,
+    index_dir: str = config.INDEX_DIR,
+    schema_path: str = config.SCHEMA_PATH,
+    rules_path: str = config.RULES_PATH,
+) -> int:
+    """Şema ile kurallardan arama indeksini kurar: dokümanlar, vektörler, imza (R2-14).
+
+    Ekran dört şeyi söyler: kaç doküman yazıldığı (koleksiyon koleksiyon), vektörlerin kimin ve
+    kaç genişlikte olduğu, içeriğin imzasının başı ve ne kadar sürdü. İmza, ``ask`` tarafının bayat
+    indeksi reddetmesinin kendisi olduğu için burada ekrana da çıkıyor.
+    """
+    _utf8_stdout()
+    started = time.perf_counter()
+    schema = doc.load_schema(schema_path)
+    rules = load_rules(rules_path)
+    docs = build_documents(schema, rules)
+    embedder = make_embedder(embed)
+    try:
+        vectors = embedder.embed([item.text for item in docs])
+    except EmbedError as exc:
+        return _embed_failed(str(exc))
+    seconds = time.perf_counter() - started
+    digest = content_hash(schema, rules)
+    FileStore(index_dir).save(
+        docs,
+        vectors,
+        {"content_hash": digest, "embedder": embedder.id, "dim": embedder.dim},
+    )
+    print(f"Şema: {schema_path} ({len(schema['tables'])} tablo)")
+    print(f"Kurallar: {rules_path} ({len(rules)} kural)")
+    print(
+        "Dokümanlar: "
+        + ", ".join(
+            f"{name} {sum(1 for item in docs if item.collection == name)}" for name in COLLECTIONS
+        )
+        + f" (toplam {len(docs)})"
+    )
+    print(f"Embedder: {embedder.id} (dim {embedder.dim})")
+    print(f"İmza: {digest[:12]}")
+    print(f"Süre: {seconds:.1f} sn")
+    print(f"İndeks: {index_dir}")
     return 0
 
 
@@ -151,6 +214,14 @@ def main(argv: list[str] | None = None) -> int:
         "--seed", type=int, default=config.SEED, help="üretici tohumu (varsayılan %(default)s)"
     )
 
+    index_cmd = commands.add_parser("build-index", help="şema ve kurallardan arama indeksini kurar")
+    index_cmd.add_argument(
+        "--embed",
+        choices=EMBEDS,
+        default=DEFAULT_EMBED,
+        help="embedder kaynağı (varsayılan %(default)s)",
+    )
+
     ask_cmd = commands.add_parser("ask", help="tek bir soruyu modelden geçirip cevabı gösterir")
     ask_cmd.add_argument("question", help='Türkçe soru, örn. "Geçen ayın cirosu ne kadar?"')
     ask_cmd.add_argument(
@@ -168,6 +239,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "build-db":
         return build_database(seed=args.seed)
+    if args.command == "build-index":
+        return build_index(embed=args.embed)
     if args.command == "ask":
         return ask(question=args.question, llm=make_client(args.llm))
     return evaluate(llm=make_client(args.llm), only=args.only)
@@ -226,6 +299,14 @@ def _llm_failed(reason: str) -> int:
     if ENV_URL not in reason:
         print(LLM_HINT)
     return EXIT_LLM
+
+
+def _embed_failed(reason: str) -> int:
+    """Ölü embedding sunucusu: adresi ve çözümü embed.py söyler; indeks hiç yazılmadan çıkılır."""
+    print(f"Hata: {reason}")
+    if EMBED_ENV_URL not in reason:
+        print(EMBED_HINT)
+    return EXIT_EMBED
 
 
 def _first_line(text: str) -> str:
