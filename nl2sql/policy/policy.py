@@ -154,9 +154,7 @@ def _system_part(table) -> str:
 def _with_top(tree, top_n):
     """Satır sayısını sınırlar: en dıştaki SELECT'e TOP eklenir, UNION dışarıdan sarılır."""
     if isinstance(tree, exp.Select):
-        if _has_row_limit(tree):
-            return tree.sql(dialect="tsql")
-        tree.set("limit", exp.Limit(expression=exp.Literal.number(top_n)))
+        _cap_rows(tree, top_n)
         return tree.sql(dialect="tsql")
     # ASSUMPTION: T-SQL türetilmiş tabloda ORDER BY'yı TOP olmadan reddettiği için UNION'ın
     # sıralaması dış sarmalayıcıya taşınır; sonuç sırası değişmez.
@@ -169,5 +167,31 @@ def _with_top(tree, top_n):
     return wrapper.sql(dialect="tsql")
 
 
-def _has_row_limit(tree) -> bool:
-    return any(tree.args.get(name) is not None for name in ("limit", "offset", "fetch"))
+def _cap_rows(tree, top_n) -> None:
+    """En dıştaki SELECT'i en fazla top_n satırda bırakır; ağacı yerinde değiştirir.
+
+    Mevcut bir TOP/FETCH sayısı ikisinin küçüğüne çekilir; @n gibi çözümlenemeyen bir sayı
+    tavana sabitlenir. OFFSET tek başına satır sayısını sınırlamadığı için yanına FETCH NEXT
+    eklenir.
+    """
+    cap = exp.Literal.number(top_n)
+    limit = tree.args.get("limit")
+    if isinstance(limit, exp.Fetch):
+        key = "count"
+    elif limit is not None:
+        key = "expression"
+    else:
+        if tree.args.get("offset") is not None:
+            fetch = exp.Fetch(direction="NEXT", count=cap, limit_options=exp.LimitOptions(rows=True))
+            tree.set("limit", fetch)
+        else:
+            tree.set("limit", exp.Limit(expression=cap))
+        return
+    if not _within_cap(limit.args.get(key), top_n):
+        limit.set(key, cap)
+        # TOP 1000 PERCENT ya da WITH TIES yerine düz bir sayı: tavan geçerli kalsın.
+        limit.set("limit_options", None)
+
+
+def _within_cap(node, top_n) -> bool:
+    return isinstance(node, exp.Literal) and not node.is_string and float(node.this) <= top_n
