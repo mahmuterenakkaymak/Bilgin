@@ -543,7 +543,11 @@ def introspect_schema(
             return _no_db(db_path)
         skeleton = introspect.sqlite_skeleton(db_path)
     if sample:
-        executor = LocalExecutor(db_path=db_path, audit_path=audit_path)
+        # Allowlist yoklanan iskeletin kendisi: R3-14 gereği introspect bir Netsis kopyasında
+        # schema.json yazılmadan önce koşar, varsayılan liste o kopyanın tablolarını bilmez.
+        executor = LocalExecutor(
+            db_path=db_path, audit_path=audit_path, allowlist=doc.allowlist(skeleton)
+        )
         introspect.sample_hints(db_path, skeleton, executor)
     _write_json(out, skeleton)
     tables = skeleton["tables"]
