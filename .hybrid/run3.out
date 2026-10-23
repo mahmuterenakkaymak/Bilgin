@@ -1,0 +1,5 @@
+2026-10-23 17:59:09 | ORCH   | brain: cloud Claude (panel: cloud)
+2026-10-23 17:59:09 | ORCH   | M4: whole-project checks
+2026-10-23 17:59:32 | ORCH   | M4: whole-project checks green (2 command(s))
+2026-10-23 17:59:32 | BRAIN  | M4: review with sonnet in the background - hands keep building
+2026-10-23 17:59:35 | HANDS  | T47 try 1: nl2sql/index/__init__.py + nl2sql/index/text.py (PLAN R2-8): fold(text) (İ->i, I->ı, then lower), tokens(text) (\w+ after folding plus the parts of `_`-joined names, digits kept), shingles(tokens, n) -> set of n-token tuples; add tests/test_index_text.py (new file: İSTANBUL == istanbul, ILAÇ -> ılaç, IŞIK -> ışık, CARI_KOD -> cari_kod, cari, kod; punctuation dropped; shingles of a short list)

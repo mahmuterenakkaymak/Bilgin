@@ -133,3 +133,8 @@
 2026-10-23 17:54:19 | HANDS  | T46 try 2: integration tests/test_integration_m4.py (new file, no fakes): generate(42) -> build_db(tmp) -> LocalExecutor -> all 40 golden SQLs pass the policy and equal eval.reference.REFERENCES; Run 1 pin holds; every schema.json table exists in the built DB; every rules.json rule is cited by >=1 golden line and its markers match; R2-15 tag targets met; then fix whatever the whole suite shows red
 2026-10-23 17:56:52 | ORCH   | T46: existing tests changed ['tests/test_eval_runner.py::test_a_real_golden_run_reports_ten_out_of_ten', 'tests/test_golden_reference.py::test_golden_has_the_planned_questions'] - restored ['tests/test_eval_runner.py', 'tests/test_golden_reference.py']
 2026-10-23 17:56:53 | BRAIN  | T46: rescue with sonnet
+2026-10-23 17:59:09 | ORCH   | brain: cloud Claude (panel: cloud)
+2026-10-23 17:59:09 | ORCH   | M4: whole-project checks
+2026-10-23 17:59:32 | ORCH   | M4: whole-project checks green (2 command(s))
+2026-10-23 17:59:32 | BRAIN  | M4: review with sonnet in the background - hands keep building
+2026-10-23 17:59:35 | HANDS  | T47 try 1: nl2sql/index/__init__.py + nl2sql/index/text.py (PLAN R2-8): fold(text) (İ->i, I->ı, then lower), tokens(text) (\w+ after folding plus the parts of `_`-joined names, digits kept), shingles(tokens, n) -> set of n-token tuples; add tests/test_index_text.py (new file: İSTANBUL == istanbul, ILAÇ -> ılaç, IŞIK -> ışık, CARI_KOD -> cari_kod, cari, kod; punctuation dropped; shingles of a short list)
