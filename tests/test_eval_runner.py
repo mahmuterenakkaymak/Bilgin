@@ -202,10 +202,10 @@ def test_a_real_golden_run_reports_ten_out_of_ten(tmp_path, executor):
         run(executor, for_golden(GOLDEN)), tmp_path / "eval_out", model="fake", config={"backend": "sqlite"}
     )
     data = written(run_dir)
-    assert data["score"] == {"passed": 10, "total": 10}
+    assert data["score"] == {"passed": 40, "total": 40}
     assert data["context"]["max_prompt_tokens"] > 0
 
     markdown = (run_dir / "report.md").read_text(encoding="utf-8")
-    assert "Skor: 10/10" in markdown
+    assert "Skor: 40/40" in markdown
     assert all(f"### {qid} — ✓ pass" in markdown for qid in IDS)
     assert (tmp_path / "eval_out" / "latest" / "report.md").exists()

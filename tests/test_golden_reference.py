@@ -84,7 +84,7 @@ def assert_same_result(qid, db, dataset):
 
 
 def test_golden_has_the_planned_questions():
-    assert IDS == [f"Q{i:02d}" for i in range(1, 21)]
+    assert IDS == [f"Q{i:02d}" for i in range(1, 41)]
     assert len(set(IDS)) == len(IDS)
 
 
