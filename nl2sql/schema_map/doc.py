@@ -1,8 +1,9 @@
-"""Schema document: loader, policy allowlist and the two text forms the model sees."""
+"""Schema document: loader, policy allowlist and the text forms the model sees."""
 
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 from nl2sql import config
@@ -18,6 +19,8 @@ def load_schema(path: str | Path = config.SCHEMA_PATH) -> dict:
     for table in schema["tables"]:
         table.setdefault("description", "")
         table.setdefault("module", "")
+        table.setdefault("kind", "data")
+        table.setdefault("keywords", [])
         for column in table["columns"]:
             column.setdefault("description", "")
             column.setdefault("fk", None)
@@ -34,6 +37,14 @@ def allowlist(schema: dict) -> set[str]:
 def compact_text(schema: dict) -> str:
     """One line per table: name, description, module."""
     return "\n".join(_table_header(table) for table in schema["tables"])
+
+
+def name_list(schema: dict) -> str:
+    """Table names grouped by module, one line per module: the `rag` prompt has no room for descriptions."""
+    modules: dict[str, list[str]] = {}
+    for table in schema["tables"]:
+        modules.setdefault(table["module"], []).append(table["name"])
+    return "\n".join(f"{module}: {', '.join(names)}" for module, names in modules.items())
 
 
 def table_detail(schema: dict, tables: list[str]) -> str:
@@ -58,7 +69,18 @@ def table_detail(schema: dict, tables: list[str]) -> str:
     )
 
 
+def full_text(schema: dict) -> str:
+    """Every table in full detail - the `full` mode prompt (R2-5); estimate the cost with estimate_tokens."""
+    return table_detail(schema, [table["name"] for table in schema["tables"]])
+
+
+def estimate_tokens(text: str) -> int:
+    """Char-based token estimate for prompt budgets (PLAN R2-5)."""
+    return math.ceil(len(text) / config.CHARS_PER_TOKEN)
+
+
 def _table_header(table: dict) -> str:
+    # kind/keywords (R2-2) stay out of every model-facing text: a real ERP schema has no such flags.
     module = f" [{table['module']}]" if table["module"] else ""
     return f"{table['name']} — {table['description']}{module}"
 

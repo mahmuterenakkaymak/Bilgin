@@ -117,7 +117,7 @@ def generate(seed: int = config.SEED) -> dict[str, list[dict]]:
     invoices, movements, cari_movements, orders, order_lines = _documents(
         rng, columns, products, depots, caris
     )
-    return {
+    dataset = {
         "TBLSTGRUP": groups,
         "TBLSTSABIT": products,
         "TBLDEPO": depots,
@@ -129,6 +129,10 @@ def generate(seed: int = config.SEED) -> dict[str, list[dict]]:
         "TBLSIPAMAS": orders,
         "TBLSIPATRA": order_lines,
     }
+    # R2-1: her şema tablosunun anahtarı vardır; burada doldurmadıklarımız boş liste kalır.
+    for name in columns:
+        dataset.setdefault(name, [])
+    return dataset
 
 
 def _groups(rng: random.Random, names: list[str]) -> list[dict]:
