@@ -122,14 +122,23 @@ sonunda tüm proje kontrol ediliyor. Run 3'te bulut limiti dolunca beyin rolün�
 
 ## 8. Yol haritası
 
+Öncelik (24 Ekim): public bir veritabanında ve müşteri kutusu modelinde (27B) ölçmek. Run 3 → 4 → 5 otomatik zincirle
+art arda çalışır.
+
 1. **Run 3 tamamlanır** → testler, PII ve politika kontrolü.
-2. **Altın soru incelemesi (Eren):** 40 sorunun niyeti ve iş tanımları.
-3. **27B karşılaştırması:** aynı A/B eval, Qwen3.8-27B ile 16-24K context'te (müşteri kutusu senaryosu).
-4. **Gerçek veri testi:** read-only login, Netsis/Odoo kopyası, Eren'in 20-30 sorusu.
-5. **Run 4:** web arayüzü (soru → cevap → rapor), number guard'lı yazılı Türkçe yorum, grafik spec + ECharts,
-   Excel/CSV dışa aktarma, iş kuralı tanımlama ekranı.
-6. **Odoo profili ve demosu:** public vitrin ve ilk pazar.
-7. **Topoloji C (sonra):** LLM kutusu + müşteri tarafında read-only runner ("o kutu senin DB'ne bağlanamaz").
+2. **Run 4:** veri seti ve model ayarlanabilir; public veritabanı **WideWorldImporters** (Microsoft örneği; 25+ altın
+   soru, iş kuralları, PII); model profilleri ve context bütçesi (Flash-Next, 27B 24K, 27B 16K); model × mod
+   karşılaştırma eval'i.
+3. **27B karşılaştırması (elle, Run 4 sonrası):** WideWorldImporters ve sentetik sette Flash-Next vs Qwen3.8-27B,
+   16K ve 24K context, `full_rules` vs `rag` (müşteri kutusu senaryosu).
+4. **Altın soru incelemesi (Eren):** 40 sorunun niyeti ve iş tanımları.
+5. **Gerçek veri testi:** read-only login, dolu demo Netsis veritabanı, Eren'in 20-30 sorusu.
+6. **Run 5:** web arayüzü (soru → cevap → rapor), number guard'lı yazılı Türkçe yorum, grafik spec + ECharts,
+   Excel/CSV dışa aktarma, iş kuralı tanımlama ekranı, "netleştir" davranışı ve ölçümü.
+7. **Public yayın (karar verilince, iş sözleşmesi kontrolünden sonra):** AGPL-3.0, sonuçlar WideWorldImporters
+   üzerinde, Netsis'e ait hiçbir şey yok (`docs/PUBLIC-RELEASE-PLAN.md`).
+8. **Odoo profili ve demosu (geri planda):** PostgreSQL desteği gerektirir.
+9. **Topoloji C (sonra):** LLM kutusu + müşteri tarafında read-only runner ("o kutu senin DB'ne bağlanamaz").
 
 ## 9. Konumlandırma
 

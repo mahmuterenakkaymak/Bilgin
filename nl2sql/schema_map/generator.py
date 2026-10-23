@@ -134,6 +134,8 @@ def generate(seed: int = config.SEED) -> dict[str, list[dict]]:
         dataset.setdefault(name, [])
     # R2-3: Run 2 ek verisi kendi akışıyla en sonda eklenir; Run 1 satırlarını değiştirmez.
     extra.extend(dataset, seed)
+    # R3-7: Run 3'ün uydurma PII verisi kendi akışıyla en sonda eklenir; Run 1/Run 2 satırları aynı kalır.
+    extra.extend_run3(dataset, seed)
     return dataset
 
 

@@ -2,10 +2,12 @@
 
 Run 1 akışından bağımsız kendi rastgele akışıyla çalışır; Run 1 satırlarını ve Run 1 rng'sini
 okumaz, değiştirmez. Run 2 için eklenen veri tablolarını ve distractor satırlarını doldurur.
+`extend_run3` aynı mantıkla Run 3'ün uydurma PII verisini ayrı bir akışla en sonda ekler.
 """
 
 from __future__ import annotations
 
+import calendar
 import datetime as dt
 import random
 from collections import defaultdict
@@ -48,6 +50,31 @@ DOLGU_METIN = ("Eski kayıt", "Arşiv kaydı", "Manuel giriş", "Sistem kaydı",
 DISTRACTOR_ROWS = 0
 DOLGU_BAS = dt.date(2026, 1, 1)
 DOLGU_BITIM = dt.date(2026, 12, 31)
+
+# R3-7: Run 3'ün uydurma PII verisi. Kişiler tamamen kurgudur; TCKN ve IBAN yalnız kuralını
+# (kontrol hanesi) taşır, gerçek bir kimliğe ya da hesaba karşılık gelmez.
+PERSONEL_MIN, PERSONEL_MAX = 30, 60
+MAAS_DONEM = ("2026-06", "2026-07", "2026-08", "2026-09")
+BRUT_ARALIK = (28000.0, 95000.0)
+KESINTI_ARALIK = (0.30, 0.38)
+ADLAR = (
+    "Ahmet", "Ayşe", "Mehmet", "Fatma", "Mustafa", "Hatice", "Ali", "Elif", "Hüseyin", "Zehra",
+    "İbrahim", "Merve", "Osman", "Sümeyye", "Yusuf", "Büşra", "Kadir", "Nur", "Serkan", "Derya",
+)
+SOYADLAR = (
+    "Aydın", "Barut", "Coşkun", "Çetinkaya", "Demirtaş", "Erdem", "Fırat", "Güngör", "Işık",
+    "Kılıçarslan", "Levent", "Mermer", "Nasuhoğlu", "Okumuş", "Polat", "Sancak", "Taşkın",
+    "Uysal", "Yaman", "Zorlu",
+)
+GOREVLER = (
+    "Satış temsilcisi", "Depo sorumlusu", "Muhasebe uzmanı", "Bölge müdürü", "Sevkıyat görevlisi",
+    "Stok kontrolörü", "İnsan kaynakları uzmanı", "Bilgi işlem sorumlusu",
+)
+MAHALLELER = ("Cumhuriyet", "Fatih", "Atatürk", "Zafer", "Yeşilova", "Barış", "İstiklal", "Ordu")
+SOKAKLAR = ("Çınar", "Lale", "Gül", "Yıldız", "Deniz", "Şafak", "Menekşe", "Akasya")
+E_POSTA_ALANLARI = ("ornek.test", "market.test", "firma.test")
+KAZANC_KALEMI = "Aylık brüt ücret"
+KESINTI_KALEMLERI = ("SGK işçi primi", "Gelir vergisi", "Damga vergisi", "Bireysel emeklilik", "İcra kesintisi")
 
 
 def extend(dataset: dict, seed: int) -> None:
@@ -406,6 +433,116 @@ def _muhfis(dataset: dict, columns: dict, rng: random.Random) -> None:
                 "FATIRS_NO": fatura["FATIRS_NO"],
             })
     _fill(dataset, "TBLMUHFIS", columns.get("TBLMUHFIS"), satirlar)
+
+
+def extend_run3(dataset: dict, seed: int) -> None:
+    """Run 3 PII verisi: şube iletişim alanları, personel kartları ve bordrolar; Run 1/Run 2'ye dokunmaz."""
+    rng = random.Random(f"{seed}:run3")
+    schema = doc.load_schema()
+    columns = {table["name"]: [c["name"] for c in table["columns"]] for table in schema["tables"]}
+    _sube_iletisim(dataset, rng)
+    personel = _personel(dataset, columns, rng)
+    _maas(dataset, columns, rng, personel)
+
+
+def _sube_iletisim(dataset: dict, rng: random.Random) -> None:
+    """Run 2'nin NULL bıraktığı şube adres/telefon/e-posta alanlarını doldurur; öbür alanlar aynı kalır."""
+    for sube in dataset["TBLCARISUBE"]:
+        sokak = f"{rng.choice(SOKAKLAR)} Sok. No: {rng.randint(1, 80)}"
+        sube["ADRES"] = ", ".join(parca for parca in (sube["IL"], sube["ILCE"], sokak) if parca)
+        sube["TELEFON"] = None if rng.random() < 0.25 else _telefon(rng)
+        sube["E_POSTA"] = None if rng.random() < 0.35 else f"{sube['SUBE_KODU'].lower()}@{rng.choice(E_POSTA_ALANLARI)}"
+
+
+def _personel(dataset: dict, columns: dict, rng: random.Random) -> list[dict]:
+    """30-60 kurgu personel kartı; TCKN ve IBAN kontrol kurallarını tutar.
+
+    ASSUMPTION: TBLDEPARTMAN şema-yalnız kaldığı için (DISTRACTOR_ROWS = 0) DEPARTMAN_KODU NULL
+    yazılır; boş hedefe uçan bir fk yerine nullable sütun boş kalır.
+    """
+    satirlar: list[dict] = []
+    for i in range(rng.randint(PERSONEL_MIN, PERSONEL_MAX)):
+        il = rng.choice(generator.CITIES)
+        satirlar.append({
+            "PERSONEL_KODU": f"PRS{i + 1:04d}",
+            "AD_SOYAD": f"{rng.choice(ADLAR)} {rng.choice(SOYADLAR)}",
+            "DEPARTMAN_KODU": None,
+            "IL": il,
+            "GOREV_UNVANI": rng.choice(GOREVLER),
+            "TELEFON": None if rng.random() < 0.2 else _telefon(rng),
+            "AKTIF": "H" if rng.random() < 0.15 else "E",
+            "TCKN": _kimlik_no(rng),
+            "VKN": None if rng.random() < 0.7 else _kimlik_no(rng),
+            "IBAN": _iban(rng),
+            "E_POSTA": None if rng.random() < 0.2 else f"calisan{i + 1:04d}@{rng.choice(E_POSTA_ALANLARI)}",
+            "ADRES": f"{il}, {rng.choice(ILCELER)}, {rng.choice(MAHALLELER)}, "
+                     f"{rng.choice(SOKAKLAR)} Sok. No: {rng.randint(1, 80)}",
+        })
+    _fill(dataset, "TBLPERSONEL", columns.get("TBLPERSONEL"), satirlar)
+    return dataset["TBLPERSONEL"]
+
+
+def _maas(dataset: dict, columns: dict, rng: random.Random, personel: list[dict]) -> None:
+    """Personel başına dönem başına tek bordro; kalemlerin işaretli toplamı net tutarı tam verir."""
+    bordrolar, kalemler = [], []
+    for kisi in personel:
+        taban = round(rng.uniform(*BRUT_ARALIK), 2)
+        for donem in MAAS_DONEM:
+            brut = round(taban * rng.uniform(1.0, 1.12), 2)
+            kesinti = round(brut * rng.uniform(*KESINTI_ARALIK), 2)
+            net = round(brut - kesinti, 2)
+            maas_id = len(bordrolar) + 1
+            bordrolar.append({
+                "MAAS_ID": maas_id,
+                "PERSONEL_KODU": kisi["PERSONEL_KODU"],
+                "DONEM": donem,
+                "TARIH": _ay_sonu(donem),
+                "BRUT_TUTAR": brut,
+                "KESINTI_TUTAR": kesinti,
+                "NET_TUTAR": net,
+                "FISNO": None,
+            })
+            kalemler.append({"MAASDETAY_ID": len(kalemler) + 1, "MAAS_ID": maas_id, "TUR": "K",
+                             "KALEM_ADI": KAZANC_KALEMI, "TUTAR": brut})
+            adlar = rng.sample(KESINTI_KALEMLERI, rng.randint(1, 3))
+            for ad, tutar in zip(adlar, _paylar(kesinti, len(adlar), rng)):
+                kalemler.append({"MAASDETAY_ID": len(kalemler) + 1, "MAAS_ID": maas_id, "TUR": "S",
+                                 "KALEM_ADI": ad, "TUTAR": tutar})
+    _fill(dataset, "TBLMAAS", columns.get("TBLMAAS"), bordrolar)
+    _fill(dataset, "TBLMAASDETAY", columns.get("TBLMAASDETAY"), kalemler)
+
+
+def _paylar(toplam: float, adet: int, rng: random.Random) -> list[float]:
+    """toplamı adet pozitif parçaya böler; kuruş üzerinden, yuvarlama kaybı olmadan."""
+    if adet <= 1:
+        return [toplam]
+    kurus = round(toplam * 100)
+    esik = sorted(rng.sample(range(1, kurus), adet - 1))
+    return [round((ust - alt) / 100, 2) for alt, ust in zip((0, *esik), (*esik, kurus))]
+
+
+def _kimlik_no(rng: random.Random) -> str:
+    """11 haneli uydurma TCKN/VKN: ilk hane 0 değil, 10. hane tek-çift ağırlıklı, 11. hane rakamlar toplamı kontrolü."""
+    hane = [rng.randint(1, 9)] + [rng.randint(0, 9) for _ in range(8)]
+    hane.append((sum(hane[0::2]) * 7 - sum(hane[1::2])) % 10)
+    hane.append(sum(hane) % 10)
+    return "".join(str(basamak) for basamak in hane)
+
+
+def _iban(rng: random.Random) -> str:
+    """mod-97 kontrolünü tutan uydurma IBAN: TR + 2 kontrol hanesi + 22 hane (5 banka + 1 rezerv + 16 hesap)."""
+    bban = f"{rng.randint(10000, 99999)}0{''.join(str(rng.randint(0, 9)) for _ in range(16))}"
+    sayi = int("".join(str(int(karakter, 36)) for karakter in f"{bban}TR00"))
+    return f"TR{98 - sayi % 97:02d}{bban}"
+
+
+def _telefon(rng: random.Random) -> str:
+    return f"0{rng.randint(212, 555)} {rng.randint(200, 899)} {rng.randint(10, 99)} {rng.randint(10, 99)}"
+
+
+def _ay_sonu(donem: str) -> str:
+    yil, ay = int(donem[:4]), int(donem[5:])
+    return f"{donem}-{calendar.monthrange(yil, ay)[1]:02d}"
 
 
 def _tarih(rng: random.Random, bas: dt.date, bitim: dt.date) -> str:
