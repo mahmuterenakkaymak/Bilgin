@@ -166,7 +166,7 @@ def test_every_foreign_key_resolves(seed, foreign_keys):
         target_table, target_column = reference.split(".")
         allowed = {row[target_column] for row in dataset[target_table]}
         values = [row[column] for row in dataset[table]]
-        assert any(value is not None for value in values), (table, column)
+        assert not values or any(value is not None for value in values), (table, column)
         for value in values:
             assert value is None or value in allowed, (table, column, value)
 

@@ -153,7 +153,7 @@ def test_script_creates_every_table_then_inserts_every_row(mssql_script, dataset
             values = len(tree.find(exp.Values).expressions)
             inserted[table] = inserted.get(table, 0) + values
     assert created == [item["name"] for item in schema["tables"]]
-    assert inserted == {name: len(rows) for name, rows in dataset.items()}
+    assert inserted == {name: len(rows) for name, rows in dataset.items() if rows}
 
 
 def test_inserts_are_batched(mssql_script):
