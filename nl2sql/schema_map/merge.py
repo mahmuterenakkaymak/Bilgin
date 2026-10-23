@@ -8,6 +8,8 @@ Neither side is complete, and neither side is trusted outside its own half.
 from __future__ import annotations
 
 import copy
+import json
+from pathlib import Path
 
 # Table-level fields the map decides; everything else on a table (name, kind) came with the skeleton.
 TABLE_MEANING = ("description", "module", "keywords")
@@ -57,3 +59,115 @@ def _by_name(items: list) -> dict:
 
 def _key(name: str) -> str:
     return str(name).strip().upper()
+
+
+def diff_map(excel: dict, db: dict) -> dict:
+    """Every disagreement between the map and the database; the merge drops these, the diff reports them (R3-5).
+
+    Names are matched the way the schema names them (upper-cased, trimmed), and a table both sides name
+    is reported under the database's own name, so a case difference never reads as two separate tables.
+    """
+    excel_tables = _by_name(excel.get("tables") or [])
+    db_tables = _by_name(db.get("tables") or [])
+    report = {
+        "excel_only_tables": [
+            table.get("name", "")
+            for table in excel.get("tables") or []
+            if _key(table.get("name", "")) not in db_tables
+        ],
+        "db_only_tables": [
+            table.get("name", "")
+            for table in db.get("tables") or []
+            if _key(table.get("name", "")) not in excel_tables
+        ],
+        "excel_only_columns": [],
+        "db_only_columns": [],
+        "type_mismatches": [],
+        "fk_missing_in_db": [],
+    }
+    for table in db.get("tables") or []:
+        other = excel_tables.get(_key(table.get("name", "")))
+        if other is None:
+            continue
+        name = table.get("name", "")
+        excel_columns = _by_name(other.get("columns") or [])
+        db_columns = _by_name(table.get("columns") or [])
+        for column in other.get("columns") or []:
+            if _key(column.get("name", "")) not in db_columns:
+                report["excel_only_columns"].append({"table": name, "column": column.get("name", "")})
+        for column in table.get("columns") or []:
+            excel_column = excel_columns.get(_key(column.get("name", "")))
+            if excel_column is None:
+                report["db_only_columns"].append({"table": name, "column": column.get("name", "")})
+                continue
+            if _type_key(excel_column.get("type")) != _type_key(column.get("type")):
+                report["type_mismatches"].append({
+                    "table": name,
+                    "column": column.get("name", ""),
+                    "excel": excel_column.get("type", ""),
+                    "db": column.get("type", ""),
+                })
+            if excel_column.get("fk") and not column.get("fk"):
+                report["fk_missing_in_db"].append({
+                    "table": name,
+                    "column": column.get("name", ""),
+                    "fk": excel_column.get("fk"),
+                })
+    return report
+
+
+def render_diff(report: dict) -> str:
+    """DiffReport -> markdown: her bölüm kendi başlığı ve sayısıyla; boş bölüm yazılmaz."""
+    lines = ["# Şema fark raporu", ""]
+    for key, title, render in SECTIONS:
+        items = report.get(key) or []
+        if not items:
+            continue
+        lines.append(f"## {title} ({len(items)})")
+        lines.extend(f"- {render(item)}" for item in items)
+        lines.append("")
+    if len(lines) == 2:
+        lines.append("Fark yok.")
+    return "\n".join(lines) + "\n"
+
+
+def save_diff(report: dict, json_path: str | Path, md_path: str | Path) -> None:
+    """DiffReport'u makinenin (json) ve insanın (md) okuyacağı iki dosyaya yazar."""
+    _write_json(json_path, report)
+    target = Path(md_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(render_diff(report), encoding="utf-8")
+
+
+def _column_ref(item: dict) -> str:
+    return f"{item.get('table', '')}.{item.get('column', '')}"
+
+
+def _type_mismatch(item: dict) -> str:
+    return f"{_column_ref(item)}: excel={item.get('excel', '')} db={item.get('db', '')}"
+
+
+def _fk_ref(item: dict) -> str:
+    return f"{_column_ref(item)} → {item.get('fk', '')}"
+
+
+# The six sections of a DiffReport, in report order: key, Turkish title, one-line renderer. render_diff
+# and the CLI's count lines both read this, so a section is named in exactly one place.
+SECTIONS = (
+    ("excel_only_tables", "Tablo yalnız Excel'de", str),
+    ("db_only_tables", "Tablo yalnız veritabanında", str),
+    ("excel_only_columns", "Kolon yalnız Excel'de", _column_ref),
+    ("db_only_columns", "Kolon yalnız veritabanında", _column_ref),
+    ("type_mismatches", "Tip uyuşmazlığı", _type_mismatch),
+    ("fk_missing_in_db", "Veritabanında olmayan foreign key", _fk_ref),
+)
+
+
+def _type_key(type_name) -> str:
+    return str(type_name or "").strip().upper()
+
+
+def _write_json(path: str | Path, payload: dict) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

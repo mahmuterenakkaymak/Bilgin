@@ -46,7 +46,7 @@ from nl2sql.index.store import (
     StaleIndexError,
     content_hash,
 )
-from nl2sql.schema_map import build, doc, excel, introspect
+from nl2sql.schema_map import build, doc, excel, introspect, merge
 from nl2sql.schema_map.rules import load_rules
 
 LLMS = ("fake", "openai")
@@ -114,6 +114,10 @@ IMPORT_HINT = (
     "Devam: --accept ile şemayı yazdırın; "
     "eşlemeyi elle düzeltmek isterseniz --mapping ile geri verin."
 )
+
+# R3-13: diff-map'ın satırları — boş fark tek cümleyle, dolu fark bölüm bölüm sayıyla söylenir.
+BAD_SCHEMA = "Şema dosyası okunamadı: {path}"
+NO_DIFF = "Fark yok."
 
 
 def build_database(
@@ -522,6 +526,47 @@ def introspect_schema(
     return 0
 
 
+def diff_map(
+    excel_path: str | Path,
+    db_schema: str | Path | None = None,
+    db_path: str | Path = config.DB_PATH,
+    json_out: str | Path = config.DIFF_JSON_PATH,
+    md_out: str | Path = config.DIFF_MD_PATH,
+) -> int:
+    """Excel haritası ile veritabanı iskeletini karşılaştırır; farkı diff.json + diff.md olarak yazar (R3-5).
+
+    Veritabanı tarafı ya hazır bir iskelet dosyasından okunur (``db_schema``) ya da canlı yoklanır. Ekran
+    bölüm bölüm sayıları, sonra iki çıktı yolunu söyler; fark yoksa "Fark yok." (R3-13).
+    """
+    _utf8_stdout()
+    excel_doc = _read_schema(excel_path)
+    if excel_doc is None:
+        return EXIT_BAD_INPUT
+    if db_schema:
+        db_doc = _read_schema(db_schema)
+        source = str(db_schema)
+    else:
+        db_doc = _introspect_db(db_path)
+        source = f"canlı ({db_path})"
+    if db_doc is None:
+        return EXIT_BAD_INPUT
+
+    report = merge.diff_map(excel_doc, db_doc)
+    merge.save_diff(report, json_out, md_out)
+
+    print(f"Excel: {excel_path}")
+    print(f"Veritabanı: {source}\n")
+    counts = [(title, len(report[key])) for key, title, _ in merge.SECTIONS if report.get(key)]
+    if counts:
+        for title, count in counts:
+            print(f"{title}: {count}")
+    else:
+        print(NO_DIFF)
+    print(f"\nJSON: {json_out}")
+    print(f"Markdown: {md_out}")
+    return 0
+
+
 def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE):
     """``--llm`` değerini istemciye çevirir: fake altın kaydı oynatır, openai config'teki endpoint'e gider.
 
@@ -613,6 +658,18 @@ def main(argv: list[str] | None = None) -> int:
         help=f"kısa metin kolonlarına en fazla {config.SAMPLE_HINT_N} örnek değer ekler",
     )
 
+    diff_cmd = commands.add_parser(
+        "diff-map", help="Excel haritası ile veritabanını karşılaştırır, farkı diff.json/md yazar"
+    )
+    diff_cmd.add_argument(
+        "--excel", required=True, metavar="SEMA.json", help="Excel'den üretilmiş şema dosyası"
+    )
+    db_source = diff_cmd.add_mutually_exclusive_group(required=True)
+    db_source.add_argument("--db", action="store_true", help="karşı taraf: canlı veritabanını yoklar")
+    db_source.add_argument(
+        "--db-schema", metavar="ISKELET.json", help="karşı taraf: hazır iskelet dosyası"
+    )
+
     ask_cmd = commands.add_parser("ask", help="tek bir soruyu modelden geçirip cevabı gösterir")
     ask_cmd.add_argument("question", help='Türkçe soru, örn. "Geçen ayın cirosu ne kadar?"')
     ask_cmd.add_argument(
@@ -669,6 +726,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.command == "introspect":
         return introspect_schema(out=args.out, sample=args.sample)
+    if args.command == "diff-map":
+        return diff_map(args.excel, db_schema=args.db_schema)
     if args.command == "ask":
         mode = args.mode or _ask_mode()
         return ask(question=args.question, llm=make_client(args.llm, mode), mode=mode)
@@ -771,6 +830,19 @@ def _read_mapping(path: str | Path) -> dict | None:
         print(f'{BAD_MAPPING.format(path=path)}\nÜst düzey bir JSON nesnesi olmalı: {{"sheets": [...]}}.')
         return None
     return chosen
+
+
+def _read_schema(path: str | Path) -> dict | None:
+    """Şema/iskelet dosyası; okunamazsa ya da üst düzey nesne değilse None (yarı yolda düşmez)."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        print(f"{BAD_SCHEMA.format(path=path)}\n{exc}")
+        return None
+    if not isinstance(data, dict):
+        print(f'{BAD_SCHEMA.format(path=path)}\nÜst düzey bir JSON nesnesi olmalı: {{"tables": [...]}}.')
+        return None
+    return data
 
 
 def _write_json(path: str | Path, payload: dict) -> None:
@@ -918,6 +990,20 @@ def _no_db(db_path: str | Path) -> int:
     """Eksik veritabanı bir sorgu hatası gibi düşmesin: tek cümle, ne yapılacağı, kod 2."""
     print(NO_DB.format(path=db_path))
     return EXIT_NO_DB
+
+
+def _introspect_db(db_path: str | Path) -> dict | None:
+    """Canlı veritabanının iskeleti; yoklama yapılamıyorsa sebep ekrana, None döner (yarı yolda düşmez)."""
+    if config.backend() == "mssql":
+        try:
+            return introspect.mssql_skeleton()
+        except introspect.IntrospectError as exc:
+            print(f"Hata: {exc}")
+            return None
+    if _db_missing(db_path):
+        _no_db(db_path)
+        return None
+    return introspect.sqlite_skeleton(db_path)
 
 
 def _index_failed(reason: str) -> int:
