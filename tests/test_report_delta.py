@@ -102,7 +102,8 @@ def test_a_shorter_run_compares_only_the_shared_questions(tmp_path):
     run_dir = twice(tmp_path, first=FIRST, second={"Q02": "wrong_result", "Q03": "wrong_result"})
     previous = written(run_dir)["previous"]
     assert previous["flipped"] == [{"id": "Q02", "from": "pass", "to": "wrong_result"}]
-    assert previous["delta"] == -2
+    # Ortak Q02/Q03: Q02 pass -> wrong_result, Q03 iki tarafta da wrong_result.
+    assert previous["delta"] == -1
 
 
 def test_an_unreadable_previous_report_is_skipped_not_guessed(tmp_path):

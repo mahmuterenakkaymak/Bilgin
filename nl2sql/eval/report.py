@@ -87,7 +87,8 @@ def _delta(previous: dict | None, results: list[QuestionResult]) -> dict | None:
     """Önceki koşuya göre değişim: skor farkı ve sonucu dönen sorular.
 
     Önceki rapor yoksa ya da skor satırı yarım/bozuksa None döner; uydurma bir fark göstermektense
-    bölüm hiç yazılmaz. ``--only`` ile kısalan koşuda iki tarafta da olan sorular karşılaştırılır.
+    bölüm hiç yazılmaz. ``--only`` ile kısalan koşuda iki tarafta da olan sorular karşılaştırılır
+    ve ``delta`` yalnız o ortak sorular üzerinden hesaplanır; diğer koşunun toplamı değildir.
     """
     score = (previous or {}).get("score")
     score = score if isinstance(score, dict) else {}
@@ -99,12 +100,15 @@ def _delta(previous: dict | None, results: list[QuestionResult]) -> dict | None:
         for question in previous.get("questions") or []
         if isinstance(question, dict) and question.get("id")
     }
-    now = sum(1 for result in results if result.outcome == "pass")
+    shared = {result.id for result in results if result.id in before}
+    now = sum(1 for result in results if result.id in shared and result.outcome == "pass")
+    was = sum(1 for qid in shared if before[qid] == "pass")
     return {
         "timestamp": previous.get("timestamp") or "",
         "model": previous.get("model") or "",
         "score": {"passed": passed, "total": total},
-        "delta": now - passed,
+        "shared": len(shared),
+        "delta": now - was,
         "flipped": [
             {"id": result.id, "from": before[result.id], "to": result.outcome}
             for result in results
@@ -187,6 +191,7 @@ def _delta_lines(report: dict) -> list[str]:
     )
     delta = previous["delta"]
     change = f"**{delta:+d}** soru ({was} → {now})" if delta else f"değişmedi ({now})"
+    change += _shared_note(previous, score)
     flipped = [
         f"- {item['id']} {_mark(item['from'])} {item['from']} → {_mark(item['to'])} {item['to']}"
         for item in previous["flipped"]
@@ -196,6 +201,14 @@ def _delta_lines(report: dict) -> list[str]:
         f"- Skor değişimi: {change}",
         *(flipped or ["- Soru sonuçları aynı."]),
     ]
+
+
+def _shared_note(previous: dict, score: dict) -> str:
+    """Fark iki koşunun tamamı üzerinden değilse kaç soru kıyaslandığını söyle; yoksa hiçbir şey."""
+    shared = previous["shared"]
+    if shared == previous["score"]["total"] and shared == score["total"]:
+        return ""
+    return f" — {shared} ortak soru üzerinden"
 
 
 def _mark(outcome: str) -> str:
