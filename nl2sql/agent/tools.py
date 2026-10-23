@@ -9,8 +9,11 @@ and the database, so it is also where a missing argument stops instead of reachi
 
 from __future__ import annotations
 
+from nl2sql import config
 from nl2sql.engine.result import Budget
+from nl2sql.graph.graph import GraphError, join_text
 from nl2sql.schema_map import doc
+from nl2sql.schema_map.rules import rule_text
 
 # Reddi anlatan satırların sabit başlangıçları; döngü bunları okuduğu için metin değişirse burada da değişir.
 ERROR_PREFIX = "Hata"
@@ -189,13 +192,82 @@ TOOLS = [GET_SCHEMA, RUN_SQL, SUBMIT_SQL]
 TOOL_NAMES = [tool["function"]["name"] for tool in TOOLS]
 
 
-def dispatch(name: str, args: dict, executor, schema: dict) -> str:
+def dispatch(name: str, args: dict, ctx_or_executor, schema: dict | None = None) -> str:
     """Run one tool call and return the model-readable answer; never raises for a bad call."""
+    # ASSUMPTION: modes buradan import ediliyor: modes, tools'u üst satırdan import ettiği için
+    # burada da üstte import edilse ikisi birbirini hiç kuramaz.
+    from nl2sql.agent import modes
+
+    ctx = ctx_or_executor
+    if not isinstance(ctx, modes.ToolContext):
+        ctx = modes.ToolContext(executor=ctx, schema=schema or {})  # Run 1 biçimi: (executor, schema)
+    known = [tool["function"]["name"] for tool in modes.get_mode(ctx.mode).tools]
+    if name not in known:
+        return _unknown(name, known)
     if name == "get_schema":
-        return _get_schema(schema, args.get("tables"))
+        # ASSUMPTION: şema özeti kap dışı: 83 tablonun özeti TOOL_RESULT_MAX_CHARS'ı aşıyor ve
+        # özetin tamamı Run 1'den beri sözleşme; kap, aşağıdaki arama ve çalıştırma cevaplarında.
+        return _get_schema(ctx.schema, args.get("tables"))
     if name in ("run_sql", "submit_sql"):
-        return _run(name, str(args.get("sql") or ""), executor)
-    return f"{UNKNOWN_TOOL_PREFIX}: {name}. Kullanabileceklerin: {', '.join(TOOL_NAMES)}."
+        answer = _run(name, str(args.get("sql") or ""), ctx.executor)
+    elif name == "search_schema":
+        answer = _search_schema(ctx, str(args.get("query") or ""))
+    elif name == "get_table_details":
+        answer = doc.table_detail(ctx.schema, _table_names(args.get("tables")))
+    elif name == "search_rules":
+        answer = _search_rules(ctx, str(args.get("query") or ""))
+    elif name == "find_join_path":
+        answer = _find_join_path(ctx, _table_names(args.get("tables")))
+    else:
+        # Modun listesinde ama dispatch'e henüz bağlı değil: sample_values (T60).
+        return _unknown(name, known)
+    return cap_text(answer, config.TOOL_RESULT_MAX_CHARS)
+
+
+def cap_text(text: str, limit: int) -> str:
+    """Cevabı modele gitmeden önce kırp (R2-6); N kırpılan karakter sayısıdır."""
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit]}… (kırpıldı: {len(text) - limit} karakter)"
+
+
+def _unknown(name: str, known: list[str]) -> str:
+    return f"{UNKNOWN_TOOL_PREFIX}: {name}. Kullanabileceklerin: {', '.join(known)}."
+
+
+def _search_schema(ctx, query: str) -> str:
+    hits = ctx.search.search(query, collection="tables", k=config.SEARCH_K)
+    if not hits:
+        return "Eşleşen tablo yok."
+    tables = {table["name"]: table for table in ctx.schema.get("tables", [])}
+    return "\n".join(_hit_line(tables.get(hit.title), hit.title) for hit in hits)
+
+
+def _hit_line(table: dict | None, name: str) -> str:
+    """Bir tablo sonucu: başlık satırı ile kolon adları, yani modelin aradığı iki bilgi birden."""
+    if table is None:
+        return name
+    module = f" [{table['module']}]" if table.get("module") else ""
+    columns = ", ".join(column["name"] for column in table.get("columns", []))
+    return f"{name} — {table.get('description', '')}{module}: {columns}"
+
+
+def _search_rules(ctx, query: str) -> str:
+    hits = ctx.search.search(query, collection="rules", k=config.RULES_K)
+    if not hits:
+        return "Eşleşen kural yok."
+    known = {rule["id"]: rule for rule in ctx.rules}
+    return "\n\n".join(
+        rule_text(known.get(hit.doc_id.removeprefix("rule:"), {"term": hit.title})) for hit in hits
+    )
+
+
+def _find_join_path(ctx, tables: list[str]) -> str:
+    try:
+        path = ctx.graph.find_join_path(tables)
+    except GraphError as error:
+        return f"{ERROR_PREFIX}: {error}"
+    return join_text(path)
 
 
 def answer_is_ok(answer: str) -> bool:
