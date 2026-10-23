@@ -21,6 +21,7 @@ from nl2sql.agent.modes import ToolContext
 from nl2sql.engine.result import Budget, Result
 from nl2sql.eval.compare import compare
 from nl2sql.schema_map import doc
+from nl2sql.schema_map.rules import load_rules
 
 OUTCOMES = (
     "pass",
@@ -112,6 +113,10 @@ def run_eval(
         wanted = {str(tag).strip() for tag in tags}
         lines = [line for line in lines if wanted & set(line.get("tags") or [])]
     document = doc.load_schema() if schema is None else schema
+    if context is None and mode == "full_rules":
+        # The loop refuses a contextless full_rules run on purpose - an empty rules list makes its
+        # prompt identical to full's - so the runner wires the rules a caller did not pass.
+        context = ToolContext(executor=executor, schema=document, rules=load_rules(), mode=mode)
     truths = [_truth(line, executor) for line in lines]
     results = []
     for line, truth in zip(lines, truths):
