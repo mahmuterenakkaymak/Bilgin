@@ -6,7 +6,7 @@ import datetime as dt
 import random
 
 from nl2sql import config
-from nl2sql.schema_map import doc
+from nl2sql.schema_map import doc, extra
 
 CITIES = ["ANKARA", "İSTANBUL", "İZMİR", "BURSA", "KONYA", "SAMSUN", "ANTALYA"]
 VAT_RATES = (10.0, 20.0)
@@ -132,6 +132,8 @@ def generate(seed: int = config.SEED) -> dict[str, list[dict]]:
     # R2-1: her şema tablosunun anahtarı vardır; burada doldurmadıklarımız boş liste kalır.
     for name in columns:
         dataset.setdefault(name, [])
+    # R2-3: Run 2 ek verisi kendi akışıyla en sonda eklenir; Run 1 satırlarını değiştirmez.
+    extra.extend(dataset, seed)
     return dataset
 
 
