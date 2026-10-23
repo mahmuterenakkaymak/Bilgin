@@ -1,13 +1,13 @@
-# REVIEW M6 (T62-T66, T72)
+# REVIEW M6 (T62-T66, T72-T75)
 
-Base 5a36efb (M5 review) -> HEAD 5d3b780. Suite and smoke pass. T72 (M5 fix) is in and tested; the package from T71 is now tracked.
+Base 5a36efb (M5 review) -> HEAD c060ed1. Suite: 2143 passed, 1 red (stale test, below). T73/T74/T75 fixes from the first M6 review are in and tested.
 
-- **BUG (T73)**: `cli/main.py` `_search_notes` uses `LEADING_WORD = [A-Za-z0-9_]+` with `.match`; the empty answer "Eşleşen tablo yok." starts with `E`, so `ask --mode rag` prints `→ E` instead of the R2-14 empty state (same for "Hata: ..." -> `→ Hata`). Not covered by any test.
-- **BUG (T74)**: the `--compare` reuse fingerprint (`_mode_fingerprint`, `_fingerprint`) sets `index_hash = content_hash(schema, rules)`, which ignores the embedder. README tells the user to swap to `NL2SQL_EMBED_MODEL=bge-m3` and rebuild; the schema/rules hash is unchanged, so `eval --compare` reuses the old rag report as "(önceki koşu)" and the verdict compares a stale rag run. Profile, prompts and tool limits are also outside the fingerprint (risk below).
-- **BUG (T75)**: `.gitignore` still has `index/` (T71 is unchecked); the package is tracked only because it was force-added. `tests/test_repo_tracked.py` passes without the fix, since `git check-ignore` skips tracked files; a new file under `nl2sql/index/` is silently ignored again.
-- ASSUMPTIONs checked OK: loop `_context` (context schema wins), runner wires `rules` for contextless `full_rules`, EXIT_NO_INDEX/EXIT_NO_TAG = 2, `_modes` order, verdict condition order (score, then context) matches R2-13. `compare_modes._summary` report path is built from `config.EVAL_OUT`, correct only because the CLI never overrides `out_dir` there.
-- Risk: `get_schema` is still uncapped (R2-6 says every answer) and sits in the `full_rules` tool list; a `full_rules` run that calls it inflates its peak, which makes the verdict's "rag peak < full_rules peak" easier to win. Open since M5.
-- Risk: `eval --compare` silently ignores `--only`, `--tag` and `--mode`; the user gets 40 questions x 3 modes.
-- Risk: when both verdict conditions fail only the score line is shown; the context numbers are in the table, not the line.
-- Risk (open from M4/M5): rules' `sql_hint` ~ golden SQL, so `full_rules` and `rag` have an easier job than in a real ERP; `SAMPLE_VALUES_N` comment is stale.
-- Missing tests: `_search_notes` for empty/error answers of each tool; reuse after an embedder change; `.gitignore` root-only rule via `git check-ignore --no-index`; `--compare` with `--only`.
+- **RED (T76)**: tests/test_config_run2.py `test_index_dir_is_build_output_and_ignored` asserts the line `index/`; T75 intentionally changed it to `/index/`. Code is right, the test is stale -> T76 edits only that test.
+- Bookkeeping: T71 is still `[ ]` in TASKS.md although T75 says it closes it (package tracked, .gitignore root-only). Tick it.
+- ASSUMPTIONs rechecked: `_embedder_id` (embedder stored in report config, not in the fingerprint) is consistent across `evaluate`, `compare_modes` and `reusable`; non-rag modes store "" and compare equal. OK.
+- Risk: `SCHEMA_HIT` accepts only upper-case names; fine for Netsis (TBLSTHAR), a lower-case schema would show "-> <first line>" instead of names.
+- Risk: with no index `_index_embedder` returns ""; rag cannot run then (`_context` exits 2), so a "" match is harmless.
+- Risk: `get_schema` is still uncapped and in the `full_rules` tool list; it inflates the full_rules peak and favours the verdict's "rag peak < full_rules peak" (open since M5).
+- Risk: `eval --compare` silently ignores `--only`, `--tag`, `--mode`; only the score line shows when both verdict conditions fail.
+- Risk (open from M4/M5): rules' `sql_hint` ~ golden SQL makes `full_rules` and `rag` easier than a real ERP; the `SAMPLE_VALUES_N` comment is stale.
+- Missing tests: `--compare` with `--only`; `_search_notes` for get_table_details/find_join_path error answers.
