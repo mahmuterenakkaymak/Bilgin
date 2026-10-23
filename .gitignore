@@ -8,3 +8,8 @@ logs/
 __pycache__/
 .pytest_cache/
 .hybrid/agents/
+/schema/mapping.*.json
+/schema/imported.json
+/schema/skeleton.json
+/schema/diff.json
+/schema/diff.md

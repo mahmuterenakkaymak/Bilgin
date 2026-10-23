@@ -25,6 +25,22 @@ SAMPLE_VALUES_N = 20  # distinct sample values per column in the index text
 LOW_CONFIDENCE = 0.7  # join-path score below which the answer warns the model
 CHARS_PER_TOKEN = 4  # rough char->token estimate for the prompt budget
 
+# ---------------------------------------------------------------- Run 3: import + auto mode
+EXCEL_PREVIEW_ROWS = 20  # rows of a sheet shown in the import preview
+AUTO_FULL_MAX_TOKENS = 12000  # prompt budget above which auto mode falls back to rag
+SAMPLE_HINT_N = 5  # sample values shown inline in the schema doc
+SAMPLE_HINT_MAX_LEN = 100  # longer values are left out of the inline hint
+
+# ---------------------------------------------------------------- Run 3: retrieval
+NEIGHBOUR_EXPANSION = True  # join neighbours of a hit table join the context
+NEIGHBOUR_MAX = 3  # neighbours added per hit table
+SYNONYM_REWRITE = True  # expand the query with profile synonyms before BM25
+
+# ---------------------------------------------------------------- Run 3: PII
+PII_FILTER = frozenset(
+    {"tckn", "vkn", "iban", "phone", "email", "address", "salary", "person_name"}
+)
+
 # ---------------------------------------------------------------- reference date
 # "geçen ay" / "bu yıl" are always relative to this date, never to the real clock.
 AS_OF = "2026-09-30"
@@ -58,6 +74,13 @@ AUDIT_LOG = ROOT / "logs" / "audit.jsonl"
 RULES_PATH = ROOT / "schema" / "rules.json"
 PROFILE_PATH = ROOT / "profiles" / "netsis.json"
 INDEX_DIR = ROOT / "index"
+# ASSUMPTION: Run 3 paths sit here for the same reason — they need ROOT.
+SCHEMA_DIR = ROOT / "schema"
+IMPORTED_PATH = SCHEMA_DIR / "imported.json"
+SKELETON_PATH = SCHEMA_DIR / "skeleton.json"
+DIFF_JSON_PATH = SCHEMA_DIR / "diff.json"
+DIFF_MD_PATH = SCHEMA_DIR / "diff.md"
+LOGIN_SCRIPT_PATH = ROOT / "db" / "mssql" / "readonly_login.sql"
 
 # ---------------------------------------------------------------- env defaults
 DEFAULT_LLM_BASE_URL = "http://127.0.0.1:8080/v1"
@@ -114,3 +137,8 @@ def backend() -> str:
     if name not in BACKENDS:
         raise ValueError(f"NL2SQL_BACKEND='{name}' geçersiz; {list(BACKENDS)} olmalı.")
     return name
+
+
+def mapping_path(name: str) -> Path:
+    """Column mapping of one imported source: schema/mapping.<name>.json."""
+    return SCHEMA_DIR / f"mapping.{name}.json"
