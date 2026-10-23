@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime as dt
 import random
+from collections import defaultdict
 
 from nl2sql.schema_map import doc, generator
 
@@ -18,7 +19,14 @@ ILCELER = ["Merkez", "Çankaya", "Kadıköy", "Konak", "Nilüfer", "Muratpaşa",
 KAMPANYA_AD = ["Yaz", "Kış", "Bahar", "Bayram", "Okula Dönüş", "Sezon Sonu", "Hafta Sonu", "Süper"]
 MUH_HESAP = {1: ("600", "A"), 3: ("610", "B"), 2: ("153", "B")}
 KDV_ORANI = 0.20
-ARSIV_HAREKET = 300
+# Arşiv hareket sayısı (T iki satır üretir) ve hareket tipinin Run 1 ile aynı çıkış/giriş eşleşmesi.
+ARSIV_MIN, ARSIV_MAX = 240, 320
+ARSIV_TURLER = ("S", "S", "S", "S", "A", "A", "I", "T", "T", "D")
+ARSIV_GCKOD = {"S": "C", "A": "G", "I": "G"}
+# 2025 şampiyonu Eylül 2026'nınki olmasın: diğer ürünlerin en yüksek satış toplamının üstüne taşınır.
+SAMPIYON_SATIR = 12
+SAMPIYON_FARK = 500.0
+EYLUL = ("2026-09-01", "2026-09-30")
 
 # Ölçüm dönemi Haziran-Eylül 2026; fiyat geçmişi 2025 Ocak'tan dönem sonuna kadar uzanır.
 OLCUM_BAS = dt.date(2026, 6, 1)
@@ -37,8 +45,6 @@ def extend(dataset: dict, seed: int) -> None:
     _doviz_kur(dataset, columns, rng)
     _cari_sube(dataset, columns, rng)
     _kampanya(dataset, columns, rng)
-    # ASSUMPTION: arşiv ve muhasebe fişi satırlarının şema FK sözleşmesini kurması için burada;
-    # ölçüm için gereken özel durumlar (2025 şampiyon ürünü, iptal tuzağı) sonra zenginleştirilir.
     _arsiv(dataset, columns, rng)
     _muhfis(dataset, columns, rng)
 
@@ -129,23 +135,70 @@ def _kampanya(dataset: dict, columns: dict, rng: random.Random) -> None:
 
 
 def _arsiv(dataset: dict, columns: dict, rng: random.Random) -> None:
-    """Run 1 hareketlerinin bir bölümünün 2025 tarihli arşiv kopyaları; tüm kodlar Run 1'den."""
-    hareketler = dataset["TBLSTHAR"]
+    """2025 Ocak-Aralık hareketleri; kartlar Run 1'den, faturasız tipler (T/D) FISNO NULL kalır."""
+    urunler = dataset["TBLSTSABIT"]
+    depolar = dataset["TBLDEPO"]
+    alicilar = [c for c in dataset["TBLCASABIT"] if c["CARI_TIP"] in ("A", "H")]
+    saticilar = [c for c in dataset["TBLCASABIT"] if c["CARI_TIP"] in ("S", "H")]
     satirlar: list[dict] = []
-    for i, hareket in enumerate(rng.sample(hareketler, min(ARSIV_HAREKET, len(hareketler))), start=1):
+    belge = 0
+
+    def satir(urun, depo, gckod, miktar, nf, tarih, htur, fisno, cari) -> None:
         satirlar.append({
-            "STHAR_ID": i,
-            "STOK_KODU": hareket["STOK_KODU"],
-            "DEPO_KODU": hareket["DEPO_KODU"],
-            "STHAR_GCKOD": hareket["STHAR_GCKOD"],
-            "STHAR_GCMIK": hareket["STHAR_GCMIK"],
-            "STHAR_NF": hareket["STHAR_NF"],
-            "STHAR_TARIH": _tarih(rng, ARSIV_BAS, ARSIV_BITIM),
-            "STHAR_HTUR": hareket["STHAR_HTUR"],
-            "FISNO": None if hareket["FISNO"] is None else f"ARS{i:06d}",
-            "CARI_KODU": hareket["CARI_KODU"],
+            "STHAR_ID": len(satirlar) + 1,
+            "STOK_KODU": urun["STOK_KODU"],
+            "DEPO_KODU": depo["DEPO_KODU"],
+            "STHAR_GCKOD": gckod,
+            "STHAR_GCMIK": miktar,
+            "STHAR_NF": nf,
+            "STHAR_TARIH": tarih,
+            "STHAR_HTUR": htur,
+            "FISNO": fisno,
+            "CARI_KODU": cari,
         })
+
+    amac = rng.randint(ARSIV_MIN, ARSIV_MAX)
+    while len(satirlar) < amac:
+        urun = rng.choice(urunler)
+        tarih = _tarih(rng, ARSIV_BAS, ARSIV_BITIM)
+        miktar = generator._miktar(rng, urun)
+        htur = rng.choice(ARSIV_TURLER)
+        if htur == "T":
+            kaynak, varis = rng.sample(depolar, 2)
+            for depo, gckod in ((kaynak, "C"), (varis, "G")):
+                satir(urun, depo, gckod, miktar, None, tarih, htur, None, None)
+        elif htur == "D":
+            satir(urun, rng.choice(depolar), "G", miktar, None, tarih, htur, None, None)
+        else:
+            cari = rng.choice(alicilar if htur in ("S", "I") else saticilar)
+            belge += 1
+            satir(urun, rng.choice(depolar), ARSIV_GCKOD[htur], miktar, generator._fiyat(rng, urun),
+                  tarih, htur, f"ARS{belge:06d}", cari["CARI_KOD"])
+
+    # Arşiv tuzağı: "en çok satan ürün" sorusunun cevabı kaynağa göre değişsin, o yüzden 2025'in
+    # şampiyonu Eylül 2026'da birinci olmayan bir üründür ve öbür tüm ürünleri açık ara geçer.
+    eylul = _satis_toplami(dataset["TBLSTHAR"], EYLUL[0], EYLUL[1])
+    en_yuksek = max(eylul.values(), default=0.0)
+    adaylar = [u for u in urunler if eylul.get(u["STOK_KODU"], 0.0) < en_yuksek] or urunler
+    sampiyon = rng.choice(adaylar)
+    arsiv = _satis_toplami(satirlar, ARSIV_BAS.isoformat(), ARSIV_BITIM.isoformat())
+    tavan = max((adet for kod, adet in arsiv.items() if kod != sampiyon["STOK_KODU"]), default=0.0)
+    miktar = round((tavan + SAMPIYON_FARK) / SAMPIYON_SATIR, 2)
+    for _ in range(SAMPIYON_SATIR):
+        belge += 1
+        satir(sampiyon, rng.choice(depolar), "C", miktar, generator._fiyat(rng, sampiyon),
+              _tarih(rng, ARSIV_BAS, ARSIV_BITIM), "S", f"ARS{belge:06d}", rng.choice(alicilar)["CARI_KOD"])
+
     _fill(dataset, "TBLSTHAR_ARSIV", columns.get("TBLSTHAR_ARSIV"), satirlar)
+
+
+def _satis_toplami(hareketler: list[dict], bas: str, bitim: str) -> dict:
+    """Dönem içindeki satış (S) çıkışlarının ürün bazında miktar toplamı."""
+    toplam: dict[str, float] = defaultdict(float)
+    for hareket in hareketler:
+        if hareket["STHAR_HTUR"] == "S" and bas <= hareket["STHAR_TARIH"] <= bitim:
+            toplam[hareket["STOK_KODU"]] += hareket["STHAR_GCMIK"]
+    return toplam
 
 
 def _muhfis(dataset: dict, columns: dict, rng: random.Random) -> None:
