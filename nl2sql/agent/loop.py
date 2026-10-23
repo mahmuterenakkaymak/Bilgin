@@ -3,22 +3,26 @@
 The loop is the only part that owns a run's shape. It keeps the transcript in the OpenAI form the
 endpoint expects (one assistant message per turn, then a tool message per call), records a Step for
 every tool call and every prose-only turn so the CLI can show what happened, and enforces the three
-limits that stop a run from spending forever: MAX_TOOL_CALLS, MAX_FAILED_RUNS and AGENT_TIMEOUT_S.
-A model that never calls submit_sql ends as no_submission; an endpoint that is down ends as
-llm_error, because the LLMError it raises is caught here rather than allowed to reach the console.
+limits that stop a run from spending forever: the mode's tool-call limit, MAX_FAILED_RUNS and
+AGENT_TIMEOUT_S. A model that never calls submit_sql ends as no_submission; an endpoint that is down
+ends as llm_error, because the LLMError it raises is caught here rather than allowed to reach the
+console.
+
+The mode (PLAN R2-5) decides the rest of the run: the system prompt, the tools the model is shown
+and the tool-call limit all come from ``modes.get_mode``, so the three arms of the A/B differ in
+nothing but the context and the tools they hand the model.
 """
 
 from __future__ import annotations
 
 import json
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from nl2sql import config
-from nl2sql.agent import prompt, tools
+from nl2sql.agent import modes
 from nl2sql.agent.llm import LLMError
 from nl2sql.agent.tools import answer_is_ok, dispatch
-from nl2sql.schema_map import doc
 
 # Sözleşmede adı geçen dördüncü bir sınır yok; bu yalnızca hiç araç çağırmayıp metin üreten bir
 # modelin sonsuz dönmemesi için bir emniyet.
@@ -51,6 +55,7 @@ class AgentRun:
     """A finished run: the steps, what was submitted (if anything), why it stopped, what it cost."""
 
     question: str
+    mode: str = "full"
     steps: list[Step] = field(default_factory=list)
     submitted_sql: str | None = None
     status: str = "no_submission"  # submitted | no_submission | timeout | llm_error
@@ -68,16 +73,21 @@ def run_agent(
     schema: dict,
     source: str = "",
     *,
+    mode: str = "full",
+    context: modes.ToolContext | None = None,
     max_turns: int = DEFAULT_MAX_TURNS,
     timeout_s: float = config.AGENT_TIMEOUT_S,
 ) -> AgentRun:
-    """Drive one question to a submitted SQL, a limit, or a model failure."""
+    """Drive one question to a submitted SQL, a limit, or a model failure, in one mode."""
     started = time.perf_counter()
     deadline = started + timeout_s
-    run = AgentRun(question=question)
+    mode_def = modes.get_mode(mode)
+    limit = mode_def.max_tool_calls
+    run = AgentRun(question=question, mode=mode)
     audited = _Audited(executor, source)
+    ctx = _context(context, audited, schema, mode)
     messages = [
-        {"role": "system", "content": prompt.system_prompt(config.AS_OF, doc.compact_text(schema))},
+        {"role": "system", "content": mode_def.system_prompt(ctx)},
         {"role": "user", "content": question},
     ]
     tool_calls = failed_runs = 0
@@ -91,11 +101,11 @@ def run_agent(
     for _ in range(max_turns):
         if time.perf_counter() >= deadline:
             return finish("timeout", TIMEOUT_STOP.format(seconds=timeout_s))
-        if tool_calls >= config.MAX_TOOL_CALLS:
-            return finish("no_submission", TOOL_STOP.format(limit=config.MAX_TOOL_CALLS))
+        if tool_calls >= limit:
+            return finish("no_submission", TOOL_STOP.format(limit=limit))
 
         try:
-            response = llm.chat(messages, tools.TOOLS)
+            response = llm.chat(messages, mode_def.tools)
         except LLMError as exc:
             return finish("llm_error", str(exc))
 
@@ -106,10 +116,10 @@ def run_agent(
         if response.tool_calls:
             messages.append(_assistant_message(response))
             for index, call in enumerate(response.tool_calls):
-                if tool_calls >= config.MAX_TOOL_CALLS:
-                    return finish("no_submission", TOOL_STOP.format(limit=config.MAX_TOOL_CALLS))
+                if tool_calls >= limit:
+                    return finish("no_submission", TOOL_STOP.format(limit=limit))
                 tool_calls += 1
-                answer = dispatch(call.name, call.arguments, audited, schema)
+                answer = dispatch(call.name, call.arguments, ctx)
                 ok = answer_is_ok(answer)
                 run.steps.append(
                     Step(
@@ -147,6 +157,15 @@ def run_agent(
             messages.append({"role": "assistant", "content": response.content})
 
     return finish("no_submission", TURN_STOP.format(turns=max_turns))
+
+
+def _context(context, audited, schema: dict, mode: str) -> modes.ToolContext:
+    """This run's dispatch world: the caller's index and graph, the audited executor, this mode."""
+    if context is None:
+        return modes.ToolContext(executor=audited, schema=schema, mode=mode)
+    # ASSUMPTION: bağlamın kendi şeması varsa o kazanır; run_agent'ın şema argümanı yalnız
+    # bağlam verilmeyince devreye girer, böylece ikisi çelişirse sessiz olan yutulmaz.
+    return replace(context, executor=audited, schema=context.schema or schema, mode=mode)
 
 
 class _Audited:

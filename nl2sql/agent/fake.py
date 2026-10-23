@@ -104,21 +104,50 @@ def unreachable() -> list[Turn]:
     return [LLMError(UNREACHABLE.format(url=FAKE_URL))]
 
 
-def for_golden(golden_lines: Iterable[dict], fallback_sql: str = FALLBACK_SQL) -> FakeLLM:
+def rag_replay(line: dict) -> list[Turn]:
+    """The `rag` path: ask the index for the tables, read them, join them, then the golden SQL.
+
+    A `rag` model sees only table names, so it has to earn every column: the search finds the
+    tables, the detail hands back their columns, and a join path is only worth asking for when the
+    answer really combines more than one of them.
+    """
+    question = str(line.get("question") or "").strip()
+    sql = str(line.get("sql") or "").strip()
+    tables = [str(name).strip() for name in (line.get("requires_tables") or []) if str(name).strip()]
+    turns = [_ask("search_schema", query=question), _ask("get_table_details", tables=tables)]
+    if len(tables) > 1:
+        turns.append(_ask("find_join_path", tables=tables))
+    return [*turns, _ask("run_sql", sql=sql), _ask("submit_sql", sql=sql)]
+
+
+def for_golden(
+    golden_lines: Iterable[dict], fallback_sql: str = FALLBACK_SQL, mode: str = "full"
+) -> FakeLLM:
     """One client for every question: golden replay when the question text matches, stock query else.
 
     A golden line with no question or no SQL is not registered, so it can never be answered with
-    an empty query; such a question falls back to the stock one.
+    an empty query; such a question falls back to the stock one. In `rag` mode both paths go
+    through the retrieval tools, because searching is all that mode can do.
     """
     by_question = {}
     for line in golden_lines:
         question = str(line.get("question") or "").strip()
         sql = str(line.get("sql") or "").strip()
         if question and sql:
-            by_question[question] = sql
+            by_question[question] = line
 
     def script(messages: list[dict]) -> list[Turn]:
-        return golden_replay(by_question.get(_question(messages), fallback_sql))
+        question = _question(messages)
+        line = by_question.get(question)
+        if mode != "rag":
+            return golden_replay(line["sql"] if line else fallback_sql)
+        if line is not None:
+            return rag_replay(line)
+        return [
+            _ask("search_schema", query=question),
+            _ask("run_sql", sql=fallback_sql),
+            _ask("submit_sql", sql=fallback_sql),
+        ]
 
     return FakeLLM(script)
 
