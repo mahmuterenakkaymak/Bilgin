@@ -1,15 +1,12 @@
-# REVIEW M2 (T08-T12)
+# REVIEW M3 (T13-T24, plus fixes T25-T27)
 
-Base 365bc7e (end of M1; T08 landed before the M1 review commit f5c6cb4) -> HEAD 98dd11e. Full suite: 502 passed.
+Base 89bbcef (M2 review) -> HEAD c589ed6. Full suite: 714 passed. T25/T26/T27 fixes verified in diff (executor.py date/LEFT rewrites, policy.py `_cap_rows`); the M2 smoke failure is gone.
 
-- **Smoke RED (`No module named nl2sql.__main__`)**: not a regression, no stale test. `nl2sql/__main__.py` and `nl2sql/cli` were never created (git log: only PLAN mentions them); T20/T24 own it. No fix task.
-- **BUG (T25)**: `DATEDIFF(day, a, b)` through LocalExecutor is always 0 on SQLite. policy re-renders tsql with `CAST(x AS DATETIME2)`, transpiled to `CAST(x AS TIMESTAMP)` = numeric cast ('2026-02-01' -> 2026). `CONVERT(varchar(7), d, 120)` also silently returns the full datetime. Wrong number, no error - the worst kind.
-- **BUG (T26)**: policy keeps any existing row limit: `TOP 99999999`, `TOP (@n)`, `OFFSET n ROWS` without FETCH are not capped to TOP_N (1000); the backend still counts every row.
-- **BUG (T27)**: `MONTH()/YEAR()/DAY()/LEFT()/DATEPART()` fail on the SQLite backend ("no such function") while valid on SQL Server; "Eylül ayında ..." style questions will hit it in M3.
-- ASSUMPTION _sqlite.py:46 (row_count = true total): OK, but capped at TOP_N by the policy, so "toplam" is never above 1000.
-- ASSUMPTION executor.py:39 (allowlist from schema.json when None): OK, matches PLAN Decision 6.
-- ASSUMPTION policy.py:94 (EXCEPT/INTERSECT denied) and :161 (UNION ORDER BY moved to outer wrapper): OK, verified on a UNION+ORDER BY case.
-- Risk: `COMPARE_MAX_ROWS=100000` (Decision 8) is unreachable - TOP_N=1000 is injected into golden and predicted SQL alike; fine for the 10 goldens, decide in M3 if the runner should pass a larger top_n.
-- Risk: scalar UDFs / `@@version` / `FOR XML` / `OPTION(...)` pass the policy (read-only anyway); sqlglot prints "Unsupported query option" to stderr and drops it.
-- Risk: audit write failure (read-only dir) raises out of `execute` after the query ran; MSSQL backend untested (no server), pyodbc rows may be `Decimal` - compare.py (T17) must handle it.
-- Missing tests: executor on date/string functions, TOP cap with large literals, mssql `_read_only()` string handling beyond the env check.
+- **BUG (T28)**: blank `submit_sql` (also `{}` after bad tool JSON) gets "Sorgu boş: ..." without ERROR_PREFIX, so loop.py counts it ok -> run ends `submitted` with SQL `""`, no retry; `ask` then prints "submit_sql hiç çağrılmadı". Blank `run_sql` / unknown tool never count toward MAX_FAILED_RUNS. Reproduced with FakeLLM.
+- **BUG (T29)**: `_count_turn` runs once per tool call, not once per response (docstring says once). A turn with 2 tool calls doubles its tokens: got 400/25, expected 300/15. Inflates total_tokens in progress lines and report.md. Reproduced.
+- **BUG (T30)**: report `_delta` = passes now (all questions) minus previous passes (whole previous run), while `flipped` uses shared ids only. After `eval --only Q03` (overwrites `latest`) a full run shows a fake +9. tests/test_report_delta.py::test_a_shorter_run_compares_only_the_shared_questions asserts the wrong `-2`.
+- ASSUMPTIONs checked OK: loop.py DEFAULT_MAX_TURNS, tools.py `_run` (submit_sql goes through the policy), runner.py `_truth` (broken golden -> RuntimeError) and `_outcome` (last attempt re-executed), compare.py (`ordered` affects row order only), cli/main.py (all llm_error -> exit 3, no report).
+- Risk: COMPARE_MAX_ROWS=100000 is still dead, policy injects TOP_N=1000 on golden and predicted alike (open since M2); fine for the 10 goldens.
+- Risk: report dirs use second-resolution stamps, two runs in one second overwrite each other. compare.py pairs columns by value multiset, identical-valued columns can pair wrongly (score unaffected).
+- Risk: table.py prints int codes/years with thousands dots ("2.026"); prompt rule 2 still forbids MONTH/YEAR although T27 made them work.
+- Missing tests: multi-tool-call turns, blank/unknown tool answers, `--only` then full-run delta, MSSQL path of ask/eval (no server).
