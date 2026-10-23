@@ -10,6 +10,7 @@ from nl2sql import config
 # ASSUMPTION: the connection string has a single owner in this project, engine/_mssql, so the env var
 # name, the forced read-only intent and the sentence naming the variable are imported, not repeated.
 from nl2sql.engine._mssql import CONN_ENV, MISSING_CONN, _read_only
+from nl2sql.engine.result import Budget
 
 class IntrospectError(RuntimeError):
     """Introspection cannot run at all; the message names what the user has to fix."""
@@ -173,3 +174,48 @@ def _mssql_type(data_type: str, max_length, precision, scale) -> str:
 
 def _fetch(conn, sql: str) -> list[tuple]:
     return [tuple(row) for row in conn.execute(sql)]
+
+
+# ------------------------------------------------------------------ --sample (R3-4)
+SAMPLE_SOURCE = "introspect"
+TEXT_TYPES = frozenset({"CHAR", "VARCHAR", "NCHAR", "NVARCHAR"})
+
+
+# ASSUMPTION: R3-4 hands db_path to the sampler next to the executor; the executor is what owns the
+# connection (policy and audit inside), so the path is never opened here and execute stays the only door.
+def sample_hints(db_path: str | Path, schema: dict, executor) -> dict:
+    """Adds up to config.SAMPLE_HINT_N distinct values per short text column; returns the same schema.
+
+    Every value comes from ``executor.execute``, so a sample query runs the same policy and leaves the
+    same audit line as a model query. A column whose ``pii`` is set is never queried at all (R3-6), and
+    a column whose query fails is left without a hint: a skeleton worth reading is worth more than a
+    failed sample, so nothing here raises.
+    """
+    for table in schema["tables"]:
+        for column in table["columns"]:
+            if column.get("pii") or not _short_text(column["type"]):
+                continue
+            values = _distinct(executor, table["name"], column["name"])
+            if values:
+                column["sample"] = values
+    return schema
+
+
+def _short_text(type_name: str) -> bool:
+    """Character type whose declared length fits the inline hint; a SQLite skeleton declares no length."""
+    base, _, rest = str(type_name).strip().upper().partition("(")
+    if base not in TEXT_TYPES:
+        return False
+    if not rest.endswith(")"):
+        return True
+    length = rest[:-1]
+    return length.isdigit() and int(length) <= config.SAMPLE_HINT_MAX_LEN
+
+
+def _distinct(executor, table: str, column: str) -> list:
+    sql = (
+        f"SELECT DISTINCT TOP {config.SAMPLE_HINT_N} [{column}] FROM [{table}]"
+        f" WHERE [{column}] IS NOT NULL ORDER BY [{column}]"
+    )
+    result = executor.execute(sql, Budget(max_rows=config.SAMPLE_HINT_N), SAMPLE_SOURCE)
+    return [] if result.error is not None else [row[0] for row in result.rows]

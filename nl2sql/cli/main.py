@@ -1,4 +1,4 @@
-"""Komut satırı: veritabanını kur, indeksi kur, bir Excel haritasını şemaya eşle, geri çağırmayı ölç, tek bir soru sor, altın soruları koş.
+"""Komut satırı: veritabanını kur, indeksi kur, bir Excel haritasını şemaya eşle, veritabanını yokla, geri çağırmayı ölç, tek bir soru sor, altın soruları koş.
 
 Komutlar aynı parçaları kullanır ve hiçbir yola sahip çıkmaz: SQLite dosyası, audit kaydı,
 rapor klasörü ve indeks klasörü parametredir, varsayılanı config'den gelir, testler kendi tmp
@@ -46,7 +46,7 @@ from nl2sql.index.store import (
     StaleIndexError,
     content_hash,
 )
-from nl2sql.schema_map import build, doc, excel
+from nl2sql.schema_map import build, doc, excel, introspect
 from nl2sql.schema_map.rules import load_rules
 
 LLMS = ("fake", "openai")
@@ -105,6 +105,7 @@ DISAGREEMENT = "⚠ uyuşmuyor: {sheet}.{column} {field}: llm={llm} fallback={fa
 SCHEMA_WRITTEN = (
     "Şema yazıldı: {path} ({tables} tablo, {columns} kolon, {skipped} atlanan satır)"
 )
+SKELETON_WRITTEN = "İskelet: {tables} tablo, {columns} kolon -> {path}"
 UNMAPPED = "hiçbir alan"
 NONE = "-"
 NO_FILE = "Excel dosyası yok: {path}"
@@ -483,6 +484,44 @@ def import_map(
     return 0
 
 
+def introspect_schema(
+    out: str | Path = config.SKELETON_PATH,
+    sample: bool = False,
+    db_path: str | Path = config.DB_PATH,
+    audit_path: str | Path = config.AUDIT_LOG,
+) -> int:
+    """Veritabanını yoklayıp iskelet şemayı yazar; ``--sample`` kısa metin kolonlarına değer ipucu ekler (R3-4).
+
+    İpucu yoksa iskelet yalnız yapı taşır: ad, tip, nullability ve fk. Anlamı Excel haritası sonra
+    ekler (R3-5), o yüzden burada boş açıklamalar bir eksik değil. ``--sample``ın sorguları da
+    LocalExecutor'dan geçer, yani politika ve denetim kaydı model sorgularıyla aynı kapıdan yürür.
+    """
+    _utf8_stdout()
+    if config.backend() == "mssql":
+        try:
+            skeleton = introspect.mssql_skeleton()
+        except introspect.IntrospectError as exc:
+            print(f"Hata: {exc}")
+            return EXIT_BAD_INPUT
+    else:
+        if _db_missing(db_path):
+            return _no_db(db_path)
+        skeleton = introspect.sqlite_skeleton(db_path)
+    if sample:
+        executor = LocalExecutor(db_path=db_path, audit_path=audit_path)
+        introspect.sample_hints(db_path, skeleton, executor)
+    _write_json(out, skeleton)
+    tables = skeleton["tables"]
+    print(
+        SKELETON_WRITTEN.format(
+            tables=len(tables),
+            columns=sum(len(table["columns"]) for table in tables),
+            path=out,
+        )
+    )
+    return 0
+
+
 def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE):
     """``--llm`` değerini istemciye çevirir: fake altın kaydı oynatır, openai config'teki endpoint'e gider.
 
@@ -560,6 +599,20 @@ def main(argv: list[str] | None = None) -> int:
         help="yazılacak şema dosyası (varsayılan %(default)s)",
     )
 
+    introspect_cmd = commands.add_parser(
+        "introspect", help="veritabanını yoklar ve iskelet şemayı yazar"
+    )
+    introspect_cmd.add_argument(
+        "--out",
+        default=str(config.SKELETON_PATH),
+        help="yazılacak iskelet dosyası (varsayılan %(default)s)",
+    )
+    introspect_cmd.add_argument(
+        "--sample",
+        action="store_true",
+        help=f"kısa metin kolonlarına en fazla {config.SAMPLE_HINT_N} örnek değer ekler",
+    )
+
     ask_cmd = commands.add_parser("ask", help="tek bir soruyu modelden geçirip cevabı gösterir")
     ask_cmd.add_argument("question", help='Türkçe soru, örn. "Geçen ayın cirosu ne kadar?"')
     ask_cmd.add_argument(
@@ -614,6 +667,8 @@ def main(argv: list[str] | None = None) -> int:
             mapping=args.mapping,
             out=args.out,
         )
+    if args.command == "introspect":
+        return introspect_schema(out=args.out, sample=args.sample)
     if args.command == "ask":
         mode = args.mode or _ask_mode()
         return ask(question=args.question, llm=make_client(args.llm, mode), mode=mode)
