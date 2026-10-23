@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from pathlib import Path
 
 from nl2sql import config
+# ASSUMPTION: the connection string has a single owner in this project, engine/_mssql, so the env var
+# name, the forced read-only intent and the sentence naming the variable are imported, not repeated.
+from nl2sql.engine._mssql import CONN_ENV, MISSING_CONN, _read_only
+
+class IntrospectError(RuntimeError):
+    """Introspection cannot run at all; the message names what the user has to fix."""
+
 
 # build.py collapses every T-SQL type onto one SQLite affinity, so the inverse can only name that
 # affinity's T-SQL type; a length the file does declare (one not built by build.py) is carried through.
@@ -68,3 +76,100 @@ def _read_fks(conn: sqlite3.Connection, name: str, columns: list[dict]) -> None:
 
 def _quote(name: str) -> str:
     return '"' + name.replace('"', '""') + '"'
+
+
+# The only place a SQL Server introspection statement is written (R3-4); the tests parse each one with
+# sqlglot instead of running them. Rows come back in the column order selected below:
+#   tables         (schema, table)
+#   columns        (schema, table, column, data type, max length, precision, scale, "YES"/"NO")
+#   foreign_keys   (schema, table, column, referenced schema, referenced table, referenced column)
+# ASSUMPTION: a Netsis database keeps its tables in one schema, so the skeleton carries bare table
+# names as schema.json does; two same-named tables in different schemas are not told apart by name.
+MSSQL_QUERIES = {
+    "tables": (
+        "SELECT TABLE_SCHEMA, TABLE_NAME"
+        " FROM INFORMATION_SCHEMA.TABLES"
+        " WHERE TABLE_TYPE = 'BASE TABLE'"
+        " ORDER BY TABLE_SCHEMA, TABLE_NAME"
+    ),
+    "columns": (
+        "SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE,"
+        " CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, IS_NULLABLE"
+        " FROM INFORMATION_SCHEMA.COLUMNS"
+        " ORDER BY TABLE_SCHEMA, TABLE_NAME, ORDINAL_POSITION"
+    ),
+    "foreign_keys": (
+        "SELECT OBJECT_SCHEMA_NAME(fk.parent_object_id), OBJECT_NAME(fk.parent_object_id), pc.name,"
+        " OBJECT_SCHEMA_NAME(fk.referenced_object_id), OBJECT_NAME(fk.referenced_object_id), rc.name"
+        " FROM sys.foreign_keys AS fk"
+        " JOIN sys.foreign_key_columns AS fkc ON fkc.constraint_object_id = fk.object_id"
+        " JOIN sys.columns AS pc ON pc.object_id = fk.parent_object_id AND pc.column_id = fkc.parent_column_id"
+        " JOIN sys.columns AS rc ON rc.object_id = fk.referenced_object_id AND rc.column_id = fkc.referenced_column_id"
+        " ORDER BY OBJECT_SCHEMA_NAME(fk.parent_object_id), OBJECT_NAME(fk.parent_object_id), pc.name"
+    ),
+}
+
+
+def rows_to_skeleton(table_rows, column_rows, fk_rows) -> dict:
+    """Introspection rows -> canonical skeleton; pure, so the unit test hands it rows directly."""
+    tables = {
+        (schema, table): {
+            "name": table,
+            "description": "",
+            "module": "",
+            "kind": "unknown",
+            "columns": [],
+        }
+        for schema, table in table_rows
+    }
+    for row in column_rows:
+        table = tables.get((row[0], row[1]))
+        # ASSUMPTION: INFORMATION_SCHEMA.COLUMNS also lists view columns, and views are not part of a
+        # skeleton, so a column of a table the table query did not return is dropped.
+        if table is None:
+            continue
+        table["columns"].append(
+            {
+                "name": row[2],
+                "type": _mssql_type(row[3], row[4], row[5], row[6]),
+                "description": "",
+                "fk": None,
+                "values": {},
+                "nullable": str(row[7]).upper() == "YES",
+            }
+        )
+    index = {key: {column["name"]: column for column in table["columns"]} for key, table in tables.items()}
+    for schema, table, column_name, _, ref_table, ref_column in fk_rows:
+        column = index.get((schema, table), {}).get(column_name)
+        if column is not None:
+            column["fk"] = f"{ref_table}.{ref_column}"
+    return {"tables": list(tables.values())}
+
+
+def mssql_skeleton(conn_str: str | None = None) -> dict:
+    """Live SQL Server -> skeleton, over a read-only session; pyodbc is imported only here (R3-4)."""
+    dsn = (conn_str or os.environ.get(CONN_ENV, "")).strip()
+    if not dsn:
+        raise IntrospectError(MISSING_CONN)
+    import pyodbc
+
+    conn = pyodbc.connect(_read_only(dsn))
+    try:
+        rows = {name: _fetch(conn, sql) for name, sql in MSSQL_QUERIES.items()}
+    finally:
+        conn.close()
+    return rows_to_skeleton(rows["tables"], rows["columns"], rows["foreign_keys"])
+
+
+def _mssql_type(data_type: str, max_length, precision, scale) -> str:
+    """INFORMATION_SCHEMA keeps the size in its own columns; schema.json writes it inside the name."""
+    name = str(data_type).upper()
+    if name in ("CHAR", "VARCHAR", "NCHAR", "NVARCHAR"):
+        return f"{name}(MAX)" if max_length == -1 else f"{name}({max_length})"
+    if name in ("DECIMAL", "NUMERIC"):
+        return f"{name}({precision},{scale})"
+    return name
+
+
+def _fetch(conn, sql: str) -> list[tuple]:
+    return [tuple(row) for row in conn.execute(sql)]
