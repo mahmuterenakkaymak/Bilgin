@@ -1,0 +1,10 @@
+{
+  "table_name": ["TABLO", "TABLE", "TABLO ADI"],
+  "column_name": ["KOLON", "ALAN", "FIELD"],
+  "data_type": ["TİP", "TIP", "TYPE", "TÜR", "TUR"],
+  "description": ["AÇIKLAMA", "ACIKLAMA", "DESCRIPTION"],
+  "fk_target": ["REFERANS", "FK"],
+  "values": ["DEĞER", "DEGER", "VALUES"],
+  "nullable": ["NULL", "NULLABLE", "BOŞ", "BOS"],
+  "module": ["MODÜL", "MODUL", "MODULE"]
+}
