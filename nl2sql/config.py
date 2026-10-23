@@ -81,6 +81,7 @@ IMPORTED_PATH = SCHEMA_DIR / "imported.json"
 SKELETON_PATH = SCHEMA_DIR / "skeleton.json"
 DIFF_JSON_PATH = SCHEMA_DIR / "diff.json"
 DIFF_MD_PATH = SCHEMA_DIR / "diff.md"
+MERGED_PATH = SCHEMA_DIR / "merged.json"
 LOGIN_SCRIPT_PATH = ROOT / "db" / "mssql" / "readonly_login.sql"
 
 # ---------------------------------------------------------------- env defaults

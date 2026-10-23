@@ -119,6 +119,11 @@ IMPORT_HINT = (
 BAD_SCHEMA = "Şema dosyası okunamadı: {path}"
 NO_DIFF = "Fark yok."
 
+# R3-5: eval hangi şema dosyasıyla ölçtüğünü canlı satırlardan önce söyler (imzanın başı, yani iki
+# koşunun aynı şemayı ölçüp ölçmediği ekrandan okunur); merge-map birleşik şemanın nereye yazıldığını.
+SCHEMA_LINE = "Şema: {path} ({hash8})"
+MERGED_WRITTEN = "Birleşik şema yazıldı: {path} ({tables} tablo, {columns} kolon)"
+
 
 def build_database(
     seed: int = config.SEED,
@@ -278,6 +283,7 @@ def evaluate(
     audit_path: str = config.AUDIT_LOG,
     out_dir: str = config.EVAL_OUT,
     index_dir: str = config.INDEX_DIR,
+    schema_path: str | Path = config.SCHEMA_PATH,
 ) -> int:
     """Altın soruları bir modda koşar, her soru biter bitmez tek satır dökerek (Delight 4)
     ilerler, raporu ``out_dir`` altına yazar (CLI ona ``eval_out/<mode>`` verir, R2-12), skoru söyler; koşu tamamlandıysa kod 0'dır.
@@ -286,10 +292,18 @@ def evaluate(
     ``rag`` diskteki indeks ile join graphını yükler (R2-9: bayat indeks reddedilir, sessizce
     yeniden kurulmaz). Rapor modun kendi klasörüne gider ki fark iki farklı mod arasında
     kıyaslanmasın (R2-12); imza da o yüzden raporun içinde durur.
+
+    ``schema_path`` de koşunun kendisini tanımlar (R3-5): allowlist, modelin gördüğü şema metni,
+    join graphı ve indeks imzası hepsi okunan dosyadan gelir; yolu ve imzasının başı ekrana, yolu ve
+    imzası rapora yazılır, böylece iki koşu ancak aynı şemayı ölçtüyse birbirinin devamı sayılır.
     """
     _utf8_stdout()
     if _db_missing(db_path):
         return _no_db(db_path)
+    schema_file = _schema_file(schema_path)
+    schema = _load_schema(schema_file)
+    if schema is None:
+        return EXIT_BAD_INPUT
     lines = runner.load_golden()
     absent = _absent_tags(lines, tags)
     if absent:
@@ -297,10 +311,13 @@ def evaluate(
             print(NO_TAG.format(tag=tag))
         return EXIT_NO_TAG
 
-    print(f"Mod: {mode}\n")
-    schema = doc.load_schema()
+    info = report.schema_info(schema_file, schema)
+    print(f"Mod: {mode}")
+    print(SCHEMA_LINE.format(path=info["path"], hash8=info["hash"][:8]) + "\n")
     rules = load_rules()
-    executor = LocalExecutor(db_path=db_path, audit_path=audit_path)
+    executor = LocalExecutor(
+        db_path=db_path, allowlist=doc.allowlist(schema), audit_path=audit_path
+    )
     try:
         context = _context(mode, executor, schema, rules, index_dir)
     except (MissingIndexError, StaleIndexError) as exc:
@@ -334,6 +351,7 @@ def evaluate(
             "fingerprint": _fingerprint(mode, kind, model, lines, results, schema, rules),
         },
         mode=mode,
+        schema_info=info,
     )
     print(f"Skor: {passed}/{len(results)}")
     print(f"Rapor: {run_dir / 'report.md'}")
@@ -567,6 +585,47 @@ def diff_map(
     return 0
 
 
+def merge_map(
+    excel_path: str | Path,
+    db_schema: str | Path | None = None,
+    db_path: str | Path = config.DB_PATH,
+    out: str | Path = config.MERGED_PATH,
+) -> int:
+    """Excel haritası ile veritabanı iskeletini tek şemada birleştirir ve ``out``a yazar (R3-5).
+
+    Veritabanı tarafı varlığı, tipleri, nullability ve foreign keyleri taşır; Excel tarafı açıklamayı,
+    değerleri ve modülü. Excel'in veritabanında olmayan tablosu buraya değil diff'in içine gider
+    (R3-5), o yüzden merge-map diff-map'ın yerini almaz. Yazılan dosya ``eval --schema`` ile
+    koşulabilir: ölçüm artık hangi şemayla yapıldıysa onunla yapılır.
+    """
+    _utf8_stdout()
+    excel_doc = _read_schema(excel_path)
+    if excel_doc is None:
+        return EXIT_BAD_INPUT
+    if db_schema:
+        db_doc = _read_schema(db_schema)
+        source = str(db_schema)
+    else:
+        db_doc = _introspect_db(db_path)
+        source = f"canlı ({db_path})"
+    if db_doc is None:
+        return EXIT_BAD_INPUT
+
+    schema = merge.merge_map(excel_doc, db_doc)
+    _write_json(out, schema)
+    tables = schema["tables"]
+    print(f"Excel: {excel_path}")
+    print(f"Veritabanı: {source}\n")
+    print(
+        MERGED_WRITTEN.format(
+            path=out,
+            tables=len(tables),
+            columns=sum(len(table["columns"]) for table in tables),
+        )
+    )
+    return 0
+
+
 def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE):
     """``--llm`` değerini istemciye çevirir: fake altın kaydı oynatır, openai config'teki endpoint'e gider.
 
@@ -670,6 +729,23 @@ def main(argv: list[str] | None = None) -> int:
         "--db-schema", metavar="ISKELET.json", help="karşı taraf: hazır iskelet dosyası"
     )
 
+    merge_cmd = commands.add_parser(
+        "merge-map", help="Excel haritası ile veritabanını birleştirir, şemayı --outa yazar"
+    )
+    merge_cmd.add_argument(
+        "--excel", required=True, metavar="SEMA.json", help="Excel'den üretilmiş şema dosyası"
+    )
+    merge_source = merge_cmd.add_mutually_exclusive_group(required=True)
+    merge_source.add_argument("--db", action="store_true", help="birleşecek taraf: canlı veritabanını yoklar")
+    merge_source.add_argument(
+        "--db-schema", metavar="ISKELET.json", help="birleşecek taraf: hazır iskelet dosyası"
+    )
+    merge_cmd.add_argument(
+        "--out",
+        default=str(config.MERGED_PATH),
+        help="yazılacak birleşik şema dosyası (varsayılan %(default)s)",
+    )
+
     ask_cmd = commands.add_parser("ask", help="tek bir soruyu modelden geçirip cevabı gösterir")
     ask_cmd.add_argument("question", help='Türkçe soru, örn. "Geçen ayın cirosu ne kadar?"')
     ask_cmd.add_argument(
@@ -708,6 +784,12 @@ def main(argv: list[str] | None = None) -> int:
     eval_cmd.add_argument(
         "--fresh", action="store_true", help="--compare ile yeniden koşmayan modları da koşar"
     )
+    eval_cmd.add_argument(
+        "--schema",
+        default="full",
+        metavar="DOSYA|full|skeleton",
+        help="ölçümün şeması: tam ad ya da yol (varsayılan %(default)s)",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "build-db":
@@ -728,6 +810,8 @@ def main(argv: list[str] | None = None) -> int:
         return introspect_schema(out=args.out, sample=args.sample)
     if args.command == "diff-map":
         return diff_map(args.excel, db_schema=args.db_schema)
+    if args.command == "merge-map":
+        return merge_map(args.excel, db_schema=args.db_schema, out=args.out)
     if args.command == "ask":
         mode = args.mode or _ask_mode()
         return ask(question=args.question, llm=make_client(args.llm, mode), mode=mode)
@@ -739,6 +823,7 @@ def main(argv: list[str] | None = None) -> int:
         tags=args.tag,
         mode=args.mode,
         out_dir=Path(config.EVAL_OUT) / args.mode,
+        schema_path=args.schema,
     )
 
 
@@ -843,6 +928,28 @@ def _read_schema(path: str | Path) -> dict | None:
         print(f'{BAD_SCHEMA.format(path=path)}\nÜst düzey bir JSON nesnesi olmalı: {{"tables": [...]}}.')
         return None
     return data
+
+
+def _schema_file(value: str | Path) -> Path:
+    """``--schema`` değeri: ``full`` ve ``skeleton`` config'in iki dosyasının adı, başkası yolun kendisi (R3-5).
+
+    Yollar çağrı anında alınır; bir test ``config.SKELETON_PATH``ı kendi tmp kopyasına çevirebilir.
+    """
+    aliases = {"full": config.SCHEMA_PATH, "skeleton": config.SKELETON_PATH}
+    return Path(aliases.get(str(value), value))
+
+
+def _load_schema(path: str | Path) -> dict | None:
+    """``--schema`` dosyası sözleşme varsayılanlarıyla yüklenir; okunamazsa tek cümle ve None (Delight 3).
+
+    Üst düzeyi nesne olmayan ya da ``tables`` taşımayan bir dosya da (yanlış yola verilmiş bir
+    eşleme gibi) aynı cümleyle döner: kullanıcının düzelteceği bir eksik, iz dökümü değil.
+    """
+    try:
+        return doc.load_schema(path)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        print(f"{BAD_SCHEMA.format(path=path)}\n{exc}")
+        return None
 
 
 def _write_json(path: str | Path, payload: dict) -> None:

@@ -37,6 +37,7 @@ def write_report(
     model: str = "",
     config: dict | None = None,
     mode: str = "full",
+    schema_info: dict | None = None,
 ) -> Path:
     """Write ``<out_dir>/<timestamp>/report.json`` + ``report.md``, copy them to ``<out_dir>/latest``.
 
@@ -44,11 +45,14 @@ def write_report(
     the run-to-run delta can come from. Since the delta is only honest between equal measurements,
     the caller hands in the mode's own directory (``eval_out/<mode>``, PLAN R2-12) and ``out_dir``
     itself keeps the plain ``<ts>`` + ``latest`` shape.
+
+    ``schema_info`` (``schema_info()`` below) is what the run was measured against; a caller that
+    does not name one leaves the field out rather than writing an empty schema nobody loaded.
     """
     stamp = datetime.now()
     out = Path(out_dir)
     previous = _load(out / "latest" / REPORT_FILES[0])
-    report = _report(results, model, config, stamp, previous, mode)
+    report = _report(results, model, config, stamp, previous, mode, schema_info)
     run_dir = out / stamp.strftime(STAMP)
     _write(run_dir, report)
     _write(out / "latest", report)
@@ -95,6 +99,15 @@ def fingerprint(
     }
 
 
+def schema_info(path: str | Path, schema: dict) -> dict:
+    """The ``schema`` field of report.json (PLAN R3-5): which file the run measured, and its digest.
+
+    The hash is over the schema document as loaded, so two copies of the same content agree and a
+    merged or introspected schema never reads as if ``schema.json`` had been used.
+    """
+    return {"path": str(path), "hash": _digest(schema)}
+
+
 def _digest(value) -> str:
     """Kanonik JSON'un sha256'sı; anahtar sırası ve biçim imzayı değiştirmez."""
     canonical = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -117,6 +130,7 @@ def _report(
     stamp: datetime,
     previous: dict | None = None,
     mode: str = "full",
+    schema_info: dict | None = None,
 ) -> dict:
     passed = sum(1 for result in results if result.outcome == "pass")
     peaks = [result.max_prompt_tokens for result in results]
@@ -124,6 +138,7 @@ def _report(
         "timestamp": stamp.isoformat(sep=" ", timespec="seconds"),
         "model": model,
         "mode": mode,
+        **({"schema": schema_info} if schema_info else {}),
         "config": dict(settings or {}),
         "score": {"passed": passed, "total": len(results)},
         "tags": _tags(results),
@@ -214,6 +229,8 @@ def _markdown(report: dict) -> str:
         f"- Model: `{report['model'] or '-'}`",
         f"- Mod: {report['mode']}",
     ]
+    if report.get("schema"):
+        lines.append(f"- Şema: {_schema_note(report['schema'])}")
     if report["config"]:
         settings = ", ".join(f"`{key}={value}`" for key, value in report["config"].items())
         lines.append(f"- Ayar: {settings}")
@@ -291,6 +308,13 @@ def _shared_note(previous: dict, score: dict) -> str:
     if shared == previous["score"]["total"] and shared == score["total"]:
         return ""
     return f" — {shared} ortak soru üzerinden"
+
+
+def _schema_note(info: dict) -> str:
+    """Şema hanesi tek satırda: koşan dosya ve imzasının başı; eksik alan satırı kırmaz."""
+    digest = str(info.get("hash") or "")[:8]
+    path = f"`{info.get('path') or '-'}`"
+    return f"{path} ({digest})" if digest else path
 
 
 def _mark(outcome: str) -> str:

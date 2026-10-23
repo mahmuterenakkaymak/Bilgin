@@ -13,3 +13,4 @@ __pycache__/
 /schema/skeleton.json
 /schema/diff.json
 /schema/diff.md
+/schema/merged.json
