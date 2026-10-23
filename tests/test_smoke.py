@@ -51,7 +51,7 @@ def test_eval_scores_the_fake_model_full_marks(built):
     result = run("eval", "--llm", "fake")
     assert result.returncode == 0, result.stdout + result.stderr
 
-    report = (config.EVAL_OUT / "latest" / "report.md").read_text(encoding="utf-8")
+    report = (config.EVAL_OUT / "full" / "latest" / "report.md").read_text(encoding="utf-8")
     assert f"Skor: {len(GOLDEN)}/{len(GOLDEN)}" in result.stdout
     assert SCORE in report
     assert "Devam" in report

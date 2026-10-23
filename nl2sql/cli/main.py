@@ -22,14 +22,17 @@ from nl2sql import config
 from nl2sql.agent import fake
 from nl2sql.agent.llm import OpenAIClient
 from nl2sql.agent.loop import AgentRun, Step, run_agent
+from nl2sql.agent.modes import ToolContext, get_mode
 from nl2sql.cli.table import format_table
 from nl2sql.engine.executor import LocalExecutor
 from nl2sql.engine.result import Budget
 from nl2sql.eval import report, retrieval, runner
+from nl2sql.graph.graph import build_graph
+from nl2sql.graph.profile import load_profile
 from nl2sql.index.docs import COLLECTIONS, build_documents
 from nl2sql.index.embed import EmbedError, make_embedder
-from nl2sql.index.search import build_search
-from nl2sql.index.store import FileStore, content_hash
+from nl2sql.index.search import build_search, load_search
+from nl2sql.index.store import FileStore, MissingIndexError, StaleIndexError, content_hash
 from nl2sql.schema_map import build, doc
 from nl2sql.schema_map.rules import load_rules
 
@@ -50,6 +53,7 @@ NO_ANSWER = "Cevap gönderilmedi: {}"
 ENV_URL = "NL2SQL_LLM_BASE_URL"
 EMBED_ENV_URL = "NL2SQL_EMBED_BASE_URL"
 NO_DB = "Veritabanı yok: {path}\nÖnce `python -m nl2sql build-db` çalıştırın."
+NO_TAG = "Bu etiketle soru yok: {tag}"
 LLM_HINT = f"Öneri: Strata'nın açık olup olmadığına bakın; adres farklıysa {ENV_URL} ile doğruyu verin."
 EMBED_HINT = (
     f"Öneri: embedding sunucusunun açık olup olmadığına bakın; "
@@ -61,6 +65,10 @@ EXIT_NO_DB = 2
 EXIT_LLM = 3
 # ASSUMPTION: ölü bir embedding sunucusu da aynı hali anlatır; indeks yazılmadan çıkılır (R2-14).
 EXIT_EMBED = 3
+# ASSUMPTION: rag'in indeksi yok ya da bayat; düzeltmesi kullanıcının elinde olan bir eksiklik,
+# yani veritabanı gibi kod 2 (R2-9). Boş bir etiket seçimi de koşacak bir şey bırakmaz.
+EXIT_NO_INDEX = 2
+EXIT_NO_TAG = 2
 
 
 def build_database(
@@ -201,38 +209,80 @@ def ask(question: str, llm, db_path: str = config.DB_PATH, audit_path: str = con
 def evaluate(
     llm,
     only: list[str] | None = None,
+    tags: list[str] | None = None,
+    mode: str = config.DEFAULT_EVAL_MODE,
     db_path: str = config.DB_PATH,
     audit_path: str = config.AUDIT_LOG,
     out_dir: str = config.EVAL_OUT,
+    index_dir: str = config.INDEX_DIR,
 ) -> int:
-    """Altın soruları koşar, her soru biter bitmez tek satır dökerek (Delight 4) ilerler,
-    raporu yazar, skoru söyler; koşu tamamlandıysa kod 0'dır."""
+    """Altın soruları bir modda koşar, her soru biter bitmez tek satır dökerek (Delight 4)
+    ilerler, raporu ``out_dir`` altına yazar (CLI ona ``eval_out/<mode>`` verir, R2-12), skoru söyler; koşu tamamlandıysa kod 0'dır.
+
+    Mod yalnızca bir etiket değil, koşunun kendisi: ``full_rules`` kuralları bağlamdan ister,
+    ``rag`` diskteki indeks ile join graphını yükler (R2-9: bayat indeks reddedilir, sessizce
+    yeniden kurulmaz). Rapor modun kendi klasörüne gider ki fark iki farklı mod arasında
+    kıyaslanmasın (R2-12); imza da o yüzden raporun içinde durur.
+    """
     _utf8_stdout()
     if _db_missing(db_path):
         return _no_db(db_path)
+    lines = runner.load_golden()
+    absent = _absent_tags(lines, tags)
+    if absent:
+        for tag in absent:
+            print(NO_TAG.format(tag=tag))
+        return EXIT_NO_TAG
+
+    print(f"Mod: {mode}\n")
+    schema = doc.load_schema()
+    rules = load_rules()
+    executor = LocalExecutor(db_path=db_path, audit_path=audit_path)
+    try:
+        context = _context(mode, executor, schema, rules, index_dir)
+    except (MissingIndexError, StaleIndexError) as exc:
+        return _index_failed(str(exc))
+
     results = runner.run_eval(
         lambda: llm,
-        LocalExecutor(db_path=db_path, audit_path=audit_path),
+        executor,
+        golden=lines,
         only=only,
+        schema=schema,
+        mode=mode,
+        tags=tags,
+        context=context,
         on_progress=lambda result: print(runner.progress_line(result)),
     )
     if results and all(result.outcome == "llm_error" for result in results):
         print(f"Uç nokta {len(results)} sorunun hiçbirini yanıtlamadı; rapor yazılmadı.\n")
         return _llm_failed(results[0].reason)
     passed = sum(1 for result in results if result.outcome == "pass")
-    model = "fake" if isinstance(llm, fake.FakeLLM) else config.llm_settings().model
+    kind = "fake" if isinstance(llm, fake.FakeLLM) else "openai"
+    model = "fake" if kind == "fake" else config.llm_settings().model
     run_dir = report.write_report(
-        results, out_dir, model=model, config={"backend": config.backend(), "llm": model}
+        results,
+        out_dir,
+        model=model,
+        config={
+            "backend": config.backend(),
+            "llm": model,
+            "fingerprint": _fingerprint(mode, kind, model, lines, results, schema, rules),
+        },
+        mode=mode,
     )
     print(f"Skor: {passed}/{len(results)}")
     print(f"Rapor: {run_dir / 'report.md'}")
     return 0
 
 
-def make_client(kind: str):
-    """``--llm`` değerini istemciye çevirir: fake altın kaydı oynatır, openai config'teki endpoint'e gider."""
+def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE):
+    """``--llm`` değerini istemciye çevirir: fake altın kaydı oynatır, openai config'teki endpoint'e gider.
+
+    Sahte istemci oynatacağı kaydı moddan alır: ``rag`` aramadan geçerek, diğerleri şemadan.
+    """
     if kind == "fake":
-        return fake.for_golden(runner.load_golden())
+        return fake.for_golden(runner.load_golden(), mode=mode)
     settings = config.llm_settings()
     return OpenAIClient(settings.base_url, settings.model, settings.api_key)
 
@@ -281,6 +331,18 @@ def main(argv: list[str] | None = None) -> int:
     eval_cmd.add_argument(
         "--only", nargs="+", metavar="Q03", help="yalnız bu soru kimlikleri (boşlukla ayrılır)"
     )
+    eval_cmd.add_argument(
+        "--tag",
+        nargs="+",
+        metavar="archive",
+        help="yalnız bu etiketlerden birini taşıyan sorular (boşlukla ayrılır)",
+    )
+    eval_cmd.add_argument(
+        "--mode",
+        choices=config.MODES,
+        default=config.DEFAULT_EVAL_MODE,
+        help="bağlam modu (varsayılan %(default)s)",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "build-db":
@@ -291,7 +353,13 @@ def main(argv: list[str] | None = None) -> int:
         return eval_retrieval(embed=args.embed, k=args.k)
     if args.command == "ask":
         return ask(question=args.question, llm=make_client(args.llm))
-    return evaluate(llm=make_client(args.llm), only=args.only)
+    return evaluate(
+        llm=make_client(args.llm, args.mode),
+        only=args.only,
+        tags=args.tag,
+        mode=args.mode,
+        out_dir=Path(config.EVAL_OUT) / args.mode,
+    )
 
 
 def _step_lines(step: Step) -> list[str]:
@@ -312,6 +380,48 @@ def _cost(run: AgentRun) -> None:
     total = run.total_prompt_tokens + run.total_completion_tokens
     print(f"Token: {total} (istem {run.total_prompt_tokens} + cevap {run.total_completion_tokens})")
     print(f"Süre: {run.elapsed_s:.1f} sn")
+
+
+def _context(mode: str, executor, schema: dict, rules: list[dict], index_dir: str | Path):
+    """Modun bağlamı: üçü de kuralları taşır, rag bir de diskteki indeksi ve join graphını ister.
+
+    İndeks yoksa ya da bayatsa yükleyici yükseltir; R2-9 onun sessizce yeniden kurulmasını
+    yasaklıyor, çünkü bayat vektörler bulunamayan tabloyu modelin hatası gibi gösterir.
+    """
+    search = graph = None
+    if mode == "rag":
+        search = load_search(index_dir, schema, rules)
+        graph = build_graph(schema, load_profile())
+    return ToolContext(
+        executor=executor, schema=schema, rules=rules, search=search, graph=graph, mode=mode
+    )
+
+
+def _fingerprint(mode: str, kind: str, model: str, lines: list[dict], results, schema, rules) -> dict:
+    """Koşunun neyi ölçtüğünün imzası (R2-12); iki koşu ancak eşitse birbirinin devamı sayılır.
+
+    İmza yalnız koşan soruları taşır; ``--only`` ile kısalan bir koşu hepsini ölçmüş gibi aynı
+    imzayı verirse yeniden koşmak gerekip gerekmediği yanlış okunur.
+    """
+    ran = {result.id for result in results}
+    return report.fingerprint(
+        mode=mode,
+        llm=kind,
+        model=model,
+        golden=[line for line in lines if line["id"] in ran],
+        schema=schema,
+        rules=rules,
+        index_hash=content_hash(schema, rules) if mode == "rag" else "",
+        max_tool_calls=get_mode(mode).max_tool_calls,
+    )
+
+
+def _absent_tags(lines: list[dict], tags: list[str] | None) -> list[str]:
+    """İstenen etiketlerden hiçbir sorunun taşımadığı; sessiz boş bir koşu yerine adı söyle."""
+    if not tags:
+        return []
+    carried = {tag for line in lines for tag in line.get("tags") or []}
+    return [tag for tag in tags if tag not in carried]
 
 
 def _table_counts(db_path: str | Path) -> tuple[int, int]:
@@ -339,6 +449,12 @@ def _no_db(db_path: str | Path) -> int:
     """Eksik veritabanı bir sorgu hatası gibi düşmesin: tek cümle, ne yapılacağı, kod 2."""
     print(NO_DB.format(path=db_path))
     return EXIT_NO_DB
+
+
+def _index_failed(reason: str) -> int:
+    """Rag'in indeksi yok ya da bayat: cümleyi store kurar, içinde hangi komutun çözdüğü de durur."""
+    print(reason)
+    return EXIT_NO_INDEX
 
 
 def _llm_failed(reason: str) -> int:
