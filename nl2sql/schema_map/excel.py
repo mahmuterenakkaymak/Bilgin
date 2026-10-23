@@ -356,11 +356,23 @@ def convert(path: str | Path, mapping: dict) -> dict:
 
 def _convert_sheet(sheet: Worksheet, entry: dict, state: dict) -> None:
     rows = list(sheet.iter_rows(values_only=True))
-    header_row = _header_row(rows, sheet.title)
+    header_row = _entry_header_row(entry, rows, sheet.title)
     fields = _field_columns(sheet.title, entry, [_text(value) for value in rows[header_row - 1]])
     table = ""
     for number, row in enumerate(rows[header_row:], start=header_row + 1):
         table = _convert_row(sheet.title, number, row, fields, state, table)
+
+
+def _entry_header_row(entry: dict, rows: list[tuple[Any, ...]], title: str) -> int:
+    """Eşlemedeki 1-tabanlı başlık satırı; kullanıcı düzelttiyse dönüşüm onu uygular.
+
+    ASSUMPTION: sayı olmayan ya da sayfaya sığmayan header_row (elle düzeltilmiş JSON) yok sayılır
+    ve otomatik seçim devralır; ucu açık bir numaranın satırı aranmaz.
+    """
+    number = entry.get("header_row")
+    if isinstance(number, int) and 1 <= number <= len(rows):
+        return number
+    return _header_row(rows, title)
 
 
 def _field_columns(sheet: str, entry: dict, headers: list[str]) -> dict[str, int]:
