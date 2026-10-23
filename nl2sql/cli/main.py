@@ -939,13 +939,17 @@ def _read_mapping(path: str | Path) -> dict | None:
 
 
 def _read_schema(path: str | Path) -> dict | None:
-    """Şema/iskelet dosyası; okunamazsa ya da üst düzey nesne değilse None (yarı yolda düşmez)."""
+    """Şema/iskelet dosyası; okunamazsa ya da ``tables`` listesi taşımıyorsa None (yarı yolda düşmez).
+
+    ``tables``sız bir dosya (yanlış yola verilmiş bir eşleme gibi) şema değildir: merge-map iskeleti
+    tek başına birleştirip yazar, diff-map her tabloyu veritabanına özgü sayardı - ikisi de sessizce.
+    """
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         print(f"{BAD_SCHEMA.format(path=path)}\n{exc}")
         return None
-    if not isinstance(data, dict):
+    if not isinstance(data, dict) or not isinstance(data.get("tables"), list):
         print(f'{BAD_SCHEMA.format(path=path)}\nÜst düzey bir JSON nesnesi olmalı: {{"tables": [...]}}.')
         return None
     return data
@@ -968,7 +972,7 @@ def _load_schema(path: str | Path) -> dict | None:
     """
     try:
         return doc.load_schema(path)
-    except (OSError, ValueError, KeyError, TypeError) as exc:
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
         print(f"{BAD_SCHEMA.format(path=path)}\n{exc}")
         return None
 
