@@ -94,6 +94,20 @@ _MASKERS = {
 }
 
 
+def column_map(schema: dict) -> dict[tuple[str, str], str]:
+    """{(TABLE, COLUMN): class} for every column the schema marks with a `pii` class.
+
+    The classes are carried as the schema wrote them: a mark the maskers do not know is the
+    caller's signal to hide the value entirely, never a reason to show it.
+    """
+    return {
+        (table["name"].upper(), column["name"].upper()): column["pii"]
+        for table in schema["tables"]
+        for column in table["columns"]
+        if column.get("pii")
+    }
+
+
 # ----------------------------------------------------------------- lineage
 
 

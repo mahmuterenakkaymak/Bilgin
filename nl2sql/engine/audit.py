@@ -16,7 +16,7 @@ from nl2sql.engine.result import Result
 
 
 def record(sql: str, source: str, result: Result, path: str | Path = config.AUDIT_LOG) -> None:
-    """Appends {"ts","source","sql","elapsed_ms","row_count","outcome"} as one line."""
+    """Appends {"ts","source","sql","elapsed_ms","row_count","outcome"} as one line, plus "masked"."""
     entry = {
         "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
         "source": source,
@@ -25,6 +25,10 @@ def record(sql: str, source: str, result: Result, path: str | Path = config.AUDI
         "row_count": result.row_count,
         "outcome": "ok" if result.error is None else result.error.kind,
     }
+    # ASSUMPTION: "masked" yalnız bir şey maskelendiyse yazılıyor, yani maskesiz girdi Run 1
+    # sözleşmesinin altı alanıyla kalmaya devam ediyor; adlar burada, değerler hiçbir yerde.
+    if result.masked_columns:
+        entry["masked"] = list(result.masked_columns)
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:

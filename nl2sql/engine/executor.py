@@ -1,13 +1,15 @@
 """LocalExecutor: the single public door to the databases.
 
-The order is fixed here - policy, then transpile, then backend, then audit - so a caller
-cannot reach a backend without the guardrail, and every attempt, approved or refused, leaves
-one audit line. The backends are private modules for the same reason; nothing in this package
-exposes a policy-free way to run SQL.
+The order is fixed here - policy, then transpile, then backend, then masking, then audit - so a
+caller cannot reach a backend without the guardrail, never sees a raw PII value, and every
+attempt, approved or refused, leaves one audit line. The backends are private modules for the
+same reason; nothing in this package exposes a policy-free way to run SQL.
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
+from functools import partial
 from pathlib import Path
 
 from sqlglot import exp, transpile
@@ -18,10 +20,13 @@ from sqlglot.errors import SqlglotError, UnsupportedError
 from nl2sql import config
 from nl2sql.engine import _mssql, _sqlite, audit
 from nl2sql.engine.result import Budget, ExecError, Result
-from nl2sql.policy import policy
+from nl2sql.policy import pii, policy
 from nl2sql.schema_map import doc
 
 TRANSPILE_MESSAGE = "SQL çalıştırılabilir bir sorguya çevrilemedi; tek bir T-SQL SELECT yazın."
+
+# İzlenemeyen bir kolonun hücresi: hiçbir parçası gösterilmiyor.
+HIDDEN = "***"
 
 # ----------------------------------------------------------------- tsql -> sqlite dates
 #
@@ -158,6 +163,7 @@ class LocalExecutor:
         db_path: str | Path = config.DB_PATH,
         allowlist: set[str] | None = None,
         audit_path: str | Path = config.AUDIT_LOG,
+        pii_schema: dict | None = None,
     ) -> None:
         self._backend = backend or config.backend()
         if self._backend not in config.BACKENDS:
@@ -167,9 +173,13 @@ class LocalExecutor:
         # geç çözülür, böylece testler dosyaya dokunmadan kendi listesini verebilir.
         self._allowlist = allowlist if allowlist is not None else doc.allowlist(doc.load_schema())
         self._audit_path = audit_path
+        # ASSUMPTION: pii işareti hangi şemadan okunuyorsa maskeleme o şemayı izler; kendisine
+        # şema verilmeyen executor hangi kolonun pii olduğunu bilmediği için hiçbir şey maskelemez.
+        self._pii_schema = pii_schema
+        self._pii_map = pii.column_map(pii_schema) if pii_schema is not None else {}
 
     def execute(self, sql: str, budget: Budget | None = None, source: str = "") -> Result:
-        """The only public entry: policy -> transpile (sqlite backend) -> backend -> audit."""
+        """The only public entry: policy -> transpile (sqlite backend) -> backend -> mask -> audit."""
         result = self._run(sql, budget or Budget())
         audit.record(sql, source, result, self._audit_path)
         return result
@@ -179,18 +189,72 @@ class LocalExecutor:
         if not verdict.ok:
             return _error("policy", verdict.reason)
         if self._backend != "sqlite":
-            return _mssql.run(verdict.sql, budget)
+            return self._masked(_mssql.run(verdict.sql, budget), verdict)
         try:
             statements = transpile(verdict.sql, read="tsql", write=_SQLiteDates)
         except SqlglotError as exc:
             return _error("transpile", _explain(exc))
         if len(statements) != 1:
             return _error("transpile", TRANSPILE_MESSAGE)
-        return _sqlite.run(statements[0], budget, self._db_path)
+        return self._masked(_sqlite.run(statements[0], budget, self._db_path), verdict)
+
+    # ----------------------------------------------------------------- masking (R3-6)
+
+    def _masked(self, result: Result, verdict) -> Result:
+        """Backend'den dönen satırlar: hiçbir çağıran kaynağı pii olan bir ham değeri görmüyor."""
+        if result.error is not None or not result.rows or not self._pii_map:
+            return result
+        masks = self._masks(verdict, result.columns)
+        if not any(masks):
+            return result
+        rows = [
+            tuple(mask(value) if mask else value for value, mask in zip(row, masks))
+            for row in result.rows
+        ]
+        names = [name for name, mask in zip(result.columns, masks) if mask]
+        return replace(result, rows=rows, masked_columns=names)
+
+    def _masks(self, verdict, columns: list[str]) -> list:
+        """Kolon başına bir maske işlevi ya da None.
+
+        PII işaretli bir tabloya dokunmayan sorgunun maskelenecek bir şeyi yoktur; dokunan
+        sorguda ise izi okunamayan kolonun tamamı gizlenir, çünkü kaynağı bilinmiyordur.
+        """
+        if not any(table in verdict.tables for table, _ in self._pii_map):
+            return [None] * len(columns)
+        traced = pii.trace(verdict.sql, self._pii_schema)
+        if len(traced) != len(columns):
+            # İz hiç süzülemedi ya da iki çıktı kolonu aynı adı taşıyor: hiçbir kolonun kaynağı
+            # bilinmiyor, o yüzden hiçbiri ham gösterilmiyor (fail closed).
+            return [_hidden] * len(columns)
+        return [_mask(trace, self._pii_map) for trace in traced]
 
 
 def _error(kind: str, message: str) -> Result:
     return Result(error=ExecError(kind, message))
+
+
+def _mask(trace: pii.Trace, marks: dict):
+    """Bir çıktı kolonunun maskesi ya da None; R3-6 beyaz listesi COUNT'a sayıyı gösterir."""
+    if trace.aggregate == "count":
+        return None
+    if trace.sources is None:
+        return _hidden
+    classes = {marks[source] for source in trace.sources if source in marks}
+    if not classes:
+        return None
+    # İki farklı sınıfın değeri aynı kolona akıyorsa tek maske ikisini de anlatmaz.
+    return _class_mask(classes.pop()) if len(classes) == 1 else _hidden
+
+
+def _class_mask(cls: str):
+    """Bilinen sınıfın maskesi; şemanın tanımadığı bir işaret değerin tamamını gizler."""
+    return partial(pii.mask, cls) if cls in pii.CLASSES else _hidden
+
+
+def _hidden(value):
+    """Kaynağı okunamayan bir kolonun hücresi; boş hücre boş kalır, geri kalanın tamamı gizli."""
+    return None if value is None else HIDDEN
 
 
 def _explain(exc: SqlglotError) -> str:

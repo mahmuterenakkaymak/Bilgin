@@ -25,7 +25,7 @@ class ExecError:
 
 @dataclass(frozen=True)
 class Result:
-    """Rows as the database returned them; row_count is the total before truncation."""
+    """Rows as the database returned them, PII columns already masked; row_count is the total before truncation."""
 
     columns: list[str] = field(default_factory=list)
     rows: list[tuple] = field(default_factory=list)
@@ -33,3 +33,4 @@ class Result:
     truncated: bool = False
     elapsed_ms: float = 0.0
     error: ExecError | None = None
+    masked_columns: list[str] = field(default_factory=list)  # output names, in select order

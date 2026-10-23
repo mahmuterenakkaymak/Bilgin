@@ -119,6 +119,10 @@ IMPORT_HINT = (
 BAD_SCHEMA = "Şema dosyası okunamadı: {path}"
 NO_DIFF = "Fark yok."
 
+# R3-6: maskelenen kolonlar tablonun altında adlarıyla söylenir; hangi değerin maskeli olduğu
+# okunabilsin diye, değerin kendisi asla ekrana çıkmadığı için.
+MASKED = "Maskelendi: {cols}"
+
 # R3-5: eval hangi şema dosyasıyla ölçtüğünü canlı satırlardan önce söyler (imzanın başı, yani iki
 # koşunun aynı şemayı ölçüp ölçmediği ekrandan okunur); merge-map birleşik şemanın nereye yazıldığını.
 SCHEMA_LINE = "Şema: {path} ({hash8})"
@@ -237,13 +241,14 @@ def ask(
 
     ``llm`` hazır bir istemcidir; ``mode`` hangi araçların konuşacağını ve bağlamın nereden
     geleceğini söyler (rag indeksi ister, R2-9). Tablo için gönderilen SQL bir kez daha yürütülür,
-    çünkü döngü yanıtı metin olarak görür, satırları ekrana basacak biçimde elinde tutmaz.
+    çünkü döngü yanıtı metin olarak görür, satırları ekrana basacak biçimde elinde tutmaz. Tablo
+    şemanın pii işaretlerinden gelen maskeyle görünür ve maskelenen kolonların adı altta söylenir (R3-6).
     """
     _utf8_stdout()
     if _db_missing(db_path):
         return _no_db(db_path)
     schema = doc.load_schema()
-    executor = LocalExecutor(db_path=db_path, audit_path=audit_path)
+    executor = LocalExecutor(db_path=db_path, audit_path=audit_path, pii_schema=schema)
     try:
         context = _context(mode, executor, schema, load_rules(), index_dir)
     except (MissingIndexError, StaleIndexError) as exc:
@@ -268,7 +273,10 @@ def ask(
     print("Cevap SQL:")
     print(run.submitted_sql)
     print("\nSonuç:")
-    print(format_table(executor.execute(run.submitted_sql, Budget(), AUDIT_SOURCE)))
+    result = executor.execute(run.submitted_sql, Budget(), AUDIT_SOURCE)
+    print(format_table(result))
+    if result.masked_columns:
+        print(MASKED.format(cols=", ".join(result.masked_columns)))
     print()
     _cost(run)
     return 0
@@ -294,8 +302,9 @@ def evaluate(
     kıyaslanmasın (R2-12); imza da o yüzden raporun içinde durur.
 
     ``schema_path`` de koşunun kendisini tanımlar (R3-5): allowlist, modelin gördüğü şema metni,
-    join graphı ve indeks imzası hepsi okunan dosyadan gelir; yolu ve imzasının başı ekrana, yolu ve
-    imzası rapora yazılır, böylece iki koşu ancak aynı şemayı ölçtüyse birbirinin devamı sayılır.
+    join graphı, indeks imzası ve pii işaretleri (R3-6; ölçüm maskelenmiş satırla yapılır) hepsi
+    okunan dosyadan gelir; yolu ve imzasının başı ekrana, yolu ve imzası rapora yazılır, böylece
+    iki koşu ancak aynı şemayı ölçtüyse birbirinin devamı sayılır.
     """
     _utf8_stdout()
     if _db_missing(db_path):
@@ -316,7 +325,7 @@ def evaluate(
     print(SCHEMA_LINE.format(path=info["path"], hash8=info["hash"][:8]) + "\n")
     rules = load_rules()
     executor = LocalExecutor(
-        db_path=db_path, allowlist=doc.allowlist(schema), audit_path=audit_path
+        db_path=db_path, allowlist=doc.allowlist(schema), audit_path=audit_path, pii_schema=schema
     )
     try:
         context = _context(mode, executor, schema, rules, index_dir)
@@ -392,7 +401,7 @@ def compare_modes(
     print(SCHEMA_LINE.format(path=info["path"], hash8=info["hash"][:8]) + "\n")
     rules = load_rules()
     executor = LocalExecutor(
-        db_path=db_path, allowlist=doc.allowlist(schema), audit_path=audit_path
+        db_path=db_path, allowlist=doc.allowlist(schema), audit_path=audit_path, pii_schema=schema
     )
     clients = {mode: llm_factory(mode) for mode in config.MODES}
     kind, model = _client_kind(clients[config.MODES[0]])
@@ -546,7 +555,10 @@ def introspect_schema(
         # Allowlist yoklanan iskeletin kendisi: R3-14 gereği introspect bir Netsis kopyasında
         # schema.json yazılmadan önce koşar, varsayılan liste o kopyanın tablolarını bilmez.
         executor = LocalExecutor(
-            db_path=db_path, audit_path=audit_path, allowlist=doc.allowlist(skeleton)
+            db_path=db_path,
+            audit_path=audit_path,
+            allowlist=doc.allowlist(skeleton),
+            pii_schema=skeleton,
         )
         introspect.sample_hints(db_path, skeleton, executor)
     _write_json(out, skeleton)
