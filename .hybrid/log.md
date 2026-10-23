@@ -222,3 +222,8 @@
 2026-10-23 21:40:10 | ORCH   | T74: PASSED (hands)
 2026-10-23 21:40:13 | HANDS  | T75 try 1: FIX .gitignore still ignores the source package (T71 is open): `.gitignore` line `index/` matches nl2sql/index/ too, so the seven files are tracked only because they were force-added and any new file under nl2sql/index/ is ignored again; tests/test_repo_tracked.py cannot catch it because `git check-ignore` skips tracked paths. Change the line to `/index/`; add tests/test_gitignore_root.py (new file: `git check-ignore --no-index -q nl2sql/index/search.py` and `nl2sql/index/new_module.py` exit non-zero, `git check-ignore --no-index -q index/docs.json` exits 0); close T71 with it
 2026-10-23 21:41:10 | ORCH   | T75 hands edited TASKS.md - restored
+2026-10-23 21:41:11 | ORCH   | T75: PASSED (hands)
+2026-10-23 21:41:11 | ORCH   | final: whole-project checks
+2026-10-23 21:42:24 | ORCH   | final: whole-project checks RED: ['.venv\\Scripts\\python -m pytest -q']
+2026-10-23 21:42:43 | BRAIN  | M6: review with sonnet
+2026-10-23 21:43:54 | HANDS  | T76 try 1: FIX stale test after T75: tests/test_config_run2.py `test_index_dir_is_build_output_and_ignored` asserts the literal line `index/` in .gitignore, but T75 intentionally changed it to `/index/` (root-only, so nl2sql/index/ is no longer ignored); the .gitignore is right, the test is stale. Edit only that test in tests/test_config_run2.py: assert `/index/` is in the lines and `index/` is not; do not touch .gitignore

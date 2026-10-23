@@ -86,7 +86,8 @@ def test_run2_paths_do_not_collide_with_run1():
 
 def test_index_dir_is_build_output_and_ignored():
     lines = (config.ROOT / ".gitignore").read_text(encoding="utf-8").split()
-    assert "index/" in lines
+    assert "/index/" in lines
+    assert "index/" not in lines
 
 
 def test_embed_settings_defaults():
