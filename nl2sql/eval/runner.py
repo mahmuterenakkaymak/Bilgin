@@ -17,6 +17,7 @@ from pathlib import Path
 
 from nl2sql import config
 from nl2sql.agent.loop import Step, run_agent
+from nl2sql.agent.modes import ToolContext
 from nl2sql.engine.result import Budget, Result
 from nl2sql.eval.compare import compare
 from nl2sql.schema_map import doc
@@ -64,6 +65,8 @@ class QuestionResult:
     max_prompt_tokens: int = 0
     total_tokens: int = 0
     seconds: float = 0.0
+    mode: str = "full"
+    tags: list[str] = field(default_factory=list)
 
 
 # Run 2 alanları (PLAN R2 Contracts): bir golden satırı bunları hiç yazmadıysa boş liste anlaşılır.
@@ -89,24 +92,40 @@ def run_eval(
     only: Iterable[str] | None = None,
     *,
     schema: dict | None = None,
+    mode: str = "full",
+    tags: Iterable[str] | None = None,
+    context: ToolContext | None = None,
     on_progress: Callable[[QuestionResult], None] | None = None,
 ) -> list[QuestionResult]:
     """Ask every golden question of a fresh client and judge the answer; ``only`` keeps a few ids.
 
-    ``on_progress`` is handed each question the moment it is judged, so a caller can stream the run
-    to a screen instead of waiting for the whole set.
+    ``tags`` keeps the questions carrying any of the listed tags, and the whole run happens in
+    ``mode`` - with the ``context`` (index, graph, rules) that mode's tools need. ``on_progress`` is
+    handed each question the moment it is judged, so a caller can stream the run to a screen instead
+    of waiting for the whole set.
     """
     lines = load_golden() if golden is None else list(golden)
     if only:
         wanted = {str(name).strip().upper() for name in only}
         lines = [line for line in lines if str(line.get("id", "")).upper() in wanted]
+    if tags:
+        wanted = {str(tag).strip() for tag in tags}
+        lines = [line for line in lines if wanted & set(line.get("tags") or [])]
     document = doc.load_schema() if schema is None else schema
     truths = [_truth(line, executor) for line in lines]
     results = []
     for line, truth in zip(lines, truths):
         qid = str(line.get("id") or "")
-        run = run_agent(str(line.get("question") or ""), llm_factory(), executor, document, qid)
-        result = _result(line, run, executor, truth)
+        run = run_agent(
+            str(line.get("question") or ""),
+            llm_factory(),
+            executor,
+            document,
+            qid,
+            mode=mode,
+            context=context,
+        )
+        result = _result(line, run, executor, truth, mode)
         results.append(result)
         if on_progress:
             on_progress(result)
@@ -136,7 +155,7 @@ def _truth(line: dict, executor) -> Result:
     return result
 
 
-def _result(line: dict, run, executor, truth: Result) -> QuestionResult:
+def _result(line: dict, run, executor, truth: Result, mode: str) -> QuestionResult:
     outcome, reason, sql = _outcome(line, run, executor, truth)
     return QuestionResult(
         id=str(line.get("id") or ""),
@@ -150,6 +169,8 @@ def _result(line: dict, run, executor, truth: Result) -> QuestionResult:
         max_prompt_tokens=run.max_prompt_tokens,
         total_tokens=run.total_prompt_tokens + run.total_completion_tokens,
         seconds=run.elapsed_s,
+        mode=mode,
+        tags=[str(tag) for tag in line.get("tags") or []],
     )
 
 
