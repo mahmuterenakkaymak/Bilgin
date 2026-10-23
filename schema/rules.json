@@ -1,0 +1,142 @@
+{
+  "rules": [
+    {
+      "id": "ciro",
+      "term": "Ciro (net satış hasılatı)",
+      "synonyms": ["ciro", "net ciro", "satış hasılatı", "satış geliri", "ciro tutarı"],
+      "definition": "Satış hareketlerinin KDV hariç toplamı: her satırda STHAR_GCMIK x STHAR_NF. Yalnız STHAR_HTUR='S' satırları satıştır; transfer (T) ve sayım/devir (D) ciroya girmez. İadeler cirodan düşülmez; iadesi düşülmüş hali net satış kuralıdır.",
+      "sql_hint": "SUM(s.STHAR_GCMIK * s.STHAR_NF) FROM TBLSTHAR s WHERE s.STHAR_HTUR = 'S'",
+      "tables": ["TBLSTHAR"],
+      "markers": [
+        "SUM\\s*\\(\\s*(?:\\w+\\.)?STHAR_GCMIK\\s*\\*\\s*(?:\\w+\\.)?STHAR_NF\\s*\\)",
+        "STHAR_HTUR\\s*=\\s*'S'"
+      ]
+    },
+    {
+      "id": "net_satis",
+      "term": "Net satış (iadeler düşülmüş)",
+      "synonyms": ["net satış", "iadeler düşülmüş satış", "net satış miktarı", "iadeler düşülmüş hali"],
+      "definition": "Satış miktarından satış iadelerinin (STHAR_HTUR='I') düşüldüğü hal; miktar bazlıdır, iade ayrı bir fiyatla hesaplanmaz. Ciro'dan farkı iadenin düşülmesidir; KDV dahil bir tutar değildir.",
+      "sql_hint": "SUM(CASE WHEN s.STHAR_HTUR = 'S' THEN s.STHAR_GCMIK ELSE 0 END) - SUM(CASE WHEN s.STHAR_HTUR = 'I' THEN s.STHAR_GCMIK ELSE 0 END)",
+      "tables": ["TBLSTHAR"],
+      "markers": []
+    },
+    {
+      "id": "brut_satis",
+      "term": "Brüt satış (KDV dahil)",
+      "synonyms": ["brüt satış", "brüt ciro", "kdv dahil satış", "fatura genel toplamı"],
+      "definition": "Faturaların genel toplamı: TBLFATUIRS.GENELTOPLAM KDV dahil olduğu için ciroya eşit değildir. Yalnız satış faturaları (FTIRSIP=1) sayılır; iptal edilenler ve satış iade faturaları (FTIRSIP=3) brüt satışa girmez.",
+      "sql_hint": "SUM(f.GENELTOPLAM) FROM TBLFATUIRS f WHERE f.FTIRSIP = 1 AND f.IPTAL = 'H'",
+      "tables": ["TBLFATUIRS"],
+      "markers": []
+    },
+    {
+      "id": "iade_orani",
+      "term": "İade oranı",
+      "synonyms": ["iade oranı", "iade yüzdesi", "iadelerin oranı", "satışının ne kadarı iade"],
+      "definition": "Bir ürünün iade edilen satış miktarının (STHAR_HTUR='I') toplam satış miktarına (STHAR_HTUR='S') oranı; miktar bazlıdır, tutar bazlı değil. Payda sıfırsa oran tanımsızdır ve o ürün listelenmez.",
+      "sql_hint": "SUM(CASE WHEN s.STHAR_HTUR = 'I' THEN s.STHAR_GCMIK ELSE 0 END) * 100.0 / SUM(CASE WHEN s.STHAR_HTUR = 'S' THEN s.STHAR_GCMIK ELSE 0 END)",
+      "tables": ["TBLSTHAR"],
+      "markers": ["STHAR_HTUR\\s*=\\s*'I'", "STHAR_HTUR\\s*=\\s*'S'", "STHAR_GCMIK"]
+    },
+    {
+      "id": "iptal_haric",
+      "term": "İptal edilen faturalar hariç",
+      "synonyms": ["iptal edilmemiş", "iptal hariç", "geçerli faturalar", "iptaller çıkarılmış"],
+      "definition": "IPTAL='E' olan faturalar geçersizdir ve hiçbir toplamda sayılmaz. Stok hareketleri iptal için silinmez, bu yüzden filtre yalnız TBLFATUIRS tarafında anlamlıdır.",
+      "sql_hint": "f.IPTAL = 'H'",
+      "tables": ["TBLFATUIRS"],
+      "markers": ["IPTAL\\s*=\\s*'H'"]
+    },
+    {
+      "id": "plasiyersiz_haric",
+      "term": "Plasiyersiz cariler hariç",
+      "synonyms": ["plasiyerine göre", "plasiyer bazında", "her plasiyer", "plasiyersiz cariler düşsün"],
+      "definition": "TBLCASABIT.PLASIYER_KODU NULL olabilir, yani cari bir plasiyere bağlı değildir. 'Her plasiyerin...' biçimindeki bir kırılımda bu cariler satır üretmez; TBLPLASIYER ile iç join bunu kendiliğinden yapar, ayrıca IS NULL filtresi gerekmez.",
+      "sql_hint": "JOIN TBLPLASIYER p ON p.PLASIYER_KODU = c.PLASIYER_KODU",
+      "tables": ["TBLCASABIT", "TBLPLASIYER"],
+      "markers": ["TBLPLASIYER", "PLASIYER_KODU\\s*=\\s*\\w+\\.PLASIYER_KODU"]
+    },
+    {
+      "id": "gecen_ay",
+      "term": "Geçen ay",
+      "synonyms": ["geçen ay", "önceki ay", "bir önceki ay", "son ay"],
+      "definition": "Bugünün değil AS_OF = 2026-09-30 tarihinin bir önceki takvim ayı: 2026-08-01 dahil, 2026-09-01 hariç. Aralık her zaman yarım açık yazılır; gerçek saat hiçbir yerde kullanılmaz.",
+      "sql_hint": "STHAR_TARIH >= '2026-08-01' AND STHAR_TARIH < '2026-09-01' (fatura tarafında sütun TARIH)",
+      "tables": ["TBLSTHAR", "TBLFATUIRS"],
+      "markers": ["'2026-08-01'"]
+    },
+    {
+      "id": "bu_yil",
+      "term": "Bu yıl",
+      "synonyms": ["bu yıl", "bu sene", "yılbaşından beri", "2026 yılında"],
+      "definition": "AS_OF = 2026-09-30 yılının başından bugüne kadar: 2026-01-01 dahil, 2027-01-01 hariç. Veri AS_OF'ta bittiği için aralığı yıl sonuna kadar açmak sonucu değiştirmez.",
+      "sql_hint": "STHAR_TARIH >= '2026-01-01' AND STHAR_TARIH < '2027-01-01' (fatura tarafında sütun TARIH)",
+      "tables": ["TBLSTHAR", "TBLFATUIRS"],
+      "markers": ["'2026-01-01'"]
+    },
+    {
+      "id": "alici",
+      "term": "Alıcı cari",
+      "synonyms": ["alıcı", "alıcı cariler", "müşteri", "müşteriler"],
+      "definition": "TBLCASABIT.CARI_TIP kodu: A alıcı, S satıcı, H hem alıcı hem satıcı. Alıcı ararken CARI_TIP='A' yetmez; 'H' cariler de alıcıdır ve listeye girmeli.",
+      "sql_hint": "CARI_TIP IN ('A', 'H')",
+      "tables": ["TBLCASABIT"],
+      "markers": ["CARI_TIP[^)]*'A'[^)]*'H'"]
+    },
+    {
+      "id": "satici",
+      "term": "Satıcı cari",
+      "synonyms": ["satıcı", "satıcı cariler", "tedarikçi", "tedarikçiler"],
+      "definition": "TBLCASABIT.CARI_TIP kodu: S satıcı, H hem alıcı hem satıcı. Satıcı ararken yalnız 'S' filtrelemek 'H' carileri kaçırır.",
+      "sql_hint": "CARI_TIP IN ('S', 'H')",
+      "tables": ["TBLCASABIT", "TBLFATUIRS"],
+      "markers": ["CARI_TIP[^)]*'S'[^)]*'H'"]
+    },
+    {
+      "id": "arsiv_2025",
+      "term": "2025 arşivi",
+      "synonyms": ["2025", "arşiv", "geçmiş yıllar", "tüm zamanlar"],
+      "definition": "2025 yılı stok hareketleri TBLSTHAR_ARSIV tablosundadır; TBLSTHAR yalnız 2026 hareketlerini içerir. 2025 ya da 'tüm zamanlar' istendiğinde iki tablo aynı sütun adlarıyla UNION ALL birleştirilir.",
+      "sql_hint": "SELECT ... FROM TBLSTHAR UNION ALL SELECT ... FROM TBLSTHAR_ARSIV",
+      "tables": ["TBLSTHAR", "TBLSTHAR_ARSIV"],
+      "markers": ["TBLSTHAR_ARSIV"]
+    },
+    {
+      "id": "liste_fiyati",
+      "term": "Liste fiyatı",
+      "synonyms": ["liste fiyatı", "güncel fiyat", "satış fiyatı", "katalog fiyatı"],
+      "definition": "TBLSTOKFIAT aynı ürün için tarih aralıklı birden çok fiyat satırı tutar; satış tarafı FIYAT_TIPI='S'. 'Güncel liste fiyatı' GECERLILIK_TARIHI en son olan satırdır; hareketin fiili fiyatı STHAR_NF ile karıştırılmaz.",
+      "sql_hint": "WHERE f.FIYAT_TIPI = 'S' ve en son GECERLILIK_TARIHI",
+      "tables": ["TBLSTOKFIAT"],
+      "markers": []
+    },
+    {
+      "id": "doviz_tl",
+      "term": "Dövizi TL'ye çevirmek",
+      "synonyms": ["döviz", "USD", "EUR", "TL karşılığı", "kur"],
+      "definition": "TBLDOVKUR her gün ve her döviz kodu için tek satır tutar (ALIS/SATIS TL kuru). Kur, hareketin ya da faturanın tarihiyle eşleşen satırdan alınır; ortalama kur kullanılmaz. Tutarlar TL olarak saklandığı için dövize geçerken kura bölünür.",
+      "sql_hint": "JOIN TBLDOVKUR k ON k.KUR_TARIH = f.TARIH AND k.DOVIZ_KODU = 'USD'",
+      "tables": ["TBLDOVKUR"],
+      "markers": []
+    },
+    {
+      "id": "kampanyali_satis",
+      "term": "Kampanyalı satış",
+      "synonyms": ["kampanya", "kampanyalı", "kampanya dönemi", "indirimli satış"],
+      "definition": "TBLKAMPANYA bir ürün için tarih aralıklı indirim tanımlar; BASLANGIC ve BITIS günleri dahildir. Kampanyalı satış, hareket tarihi kampanya aralığına düşen satış hareketidir. INDIRIM_ORANI yüzde olarak durur ve STHAR_NF'ye zaten yansımıştır, bir kez daha uygulanmaz.",
+      "sql_hint": "JOIN TBLKAMPANYA k ON k.STOK_KODU = s.STOK_KODU AND s.STHAR_TARIH BETWEEN k.BASLANGIC AND k.BITIS",
+      "tables": ["TBLKAMPANYA", "TBLSTHAR"],
+      "markers": []
+    },
+    {
+      "id": "teslim_bekleyen",
+      "term": "Teslim bekleyen sipariş satırları",
+      "synonyms": ["teslim bekleyen", "teslim edilmemiş", "teslim tarihi olmayan", "açık sipariş satırı"],
+      "definition": "TBLSIPATRA.TESLIM_TARIHI NULL ise teslim tarihi henüz belirlenmemiştir; bu satırlar IS NULL ile bulunur, boş metinle değil. Bir siparişin satırlarının bir kısmı faturaya dönüşmüş olabilir, bu yüzden satır saymak ile sipariş saymak farklıdır.",
+      "sql_hint": "WHERE a.TESLIM_TARIHI IS NULL",
+      "tables": ["TBLSIPATRA", "TBLSIPAMAS"],
+      "markers": []
+    }
+  ]
+}
