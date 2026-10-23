@@ -4,11 +4,20 @@ The executor masks every value that traces back to a column carrying `pii`, so t
 the CLI and the eval only ever see the forms below. Each class keeps the smallest part that
 still lets a reader recognise which row they are looking at - the tail of an account number,
 the city of an address - and drops everything else; none of it is reversible.
+
+`trace` answers the other half of the same rule: which source columns an output column came
+from, so the executor knows which mask a column gets.
 """
 
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
+
+from sqlglot import exp, parse_one
+from sqlglot.errors import SqlglotError
+from sqlglot.lineage import lineage
+from sqlglot.optimizer.qualify import qualify
 
 CLASSES = (
     "tckn",
@@ -83,3 +92,101 @@ _MASKERS = {
     "salary": _salary,
     "person_name": _person_name,
 }
+
+
+# ----------------------------------------------------------------- lineage
+
+
+@dataclass(frozen=True)
+class Trace:
+    """One output column of a traced SELECT: its name and the source columns its values came from."""
+
+    name: str
+    sources: list[tuple[str, str]] | None
+    aggregate: str | None = None
+
+
+def trace(sql: str, schema: dict) -> list[Trace]:
+    """Per output column, in select order: the [(TABLE, COLUMN)] pairs its values come from.
+
+    Aliases, CTE renames, derived tables and subqueries are resolved, so a column reaches the
+    real schema columns behind it. `sources` is None when the lineage cannot be followed - and
+    then the caller masks the whole column, because an untraced column is never shown raw.
+    `aggregate` names the aggregate function wrapped around the column; only "count" (COUNT and
+    COUNT(DISTINCT x)) is on the R3-6 whitelist, and it keeps its sources so the caller can see
+    what was counted.
+
+    An empty list means the SQL could not be traced at all, which the caller reads the same way.
+    """
+    doc = _lineage_schema(schema)
+    try:
+        tree = parse_one(sql, read="tsql")
+        if not isinstance(tree, exp.Query):
+            return []
+        # qualify first: it expands SELECT * and rewrites every reference to table.column, so
+        # the lineage answer lines up with the output columns one by one.
+        tree = qualify(tree, dialect="tsql", schema=doc, validate_qualify_columns=False, identify=False)
+        nodes = lineage(None, tree, schema=doc, dialect="tsql")
+    except SqlglotError:
+        return []
+    branches = _branches(tree)
+    if len(nodes) != len(branches[0]):
+        # Two output columns sharing a name collapse into one lineage key, so the caller's column
+        # list can no longer be matched by position: nothing in this query is trusted.
+        return []
+    return [
+        Trace(name.upper(), _sources(node, doc), _aggregate(branches, position))
+        for position, (name, node) in enumerate(nodes.items())
+    ]
+
+
+def _lineage_schema(schema: dict) -> dict:
+    """The schema doc as sqlglot wants it: {TABLE: {COLUMN: type}}."""
+    return {
+        table["name"].upper(): {column["name"].upper(): column.get("type") or "" for column in table["columns"]}
+        for table in schema["tables"]
+    }
+
+
+def _branches(query) -> list[list]:
+    """Positional select lists of the UNION branches; a plain SELECT is a single list."""
+    if isinstance(query, exp.SetOperation):
+        return _branches(query.this) + _branches(query.expression)
+    return [query.selects]
+
+
+def _aggregate(branches, position) -> str | None:
+    """The aggregate wrapping that output column in every branch; None when the branches differ.
+
+    Only the column's own aggregate counts: a COUNT buried in a CASE that also returns a salary
+    would otherwise whitelist the whole column.
+    """
+    kinds = set()
+    for branch in branches:
+        expr = branch[position].unalias() if position < len(branch) else None
+        kinds.add(expr.key if isinstance(expr, exp.AggFunc) else None)
+    return kinds.pop() if len(kinds) == 1 else None
+
+
+def _sources(node, doc) -> list[tuple[str, str]] | None:
+    """The pairs a lineage graph bottoms out at; None as soon as any part of it cannot be read."""
+    found: set[tuple[str, str]] = set()
+    for step in node.walk():
+        if isinstance(step.source, exp.Placeholder) or isinstance(step.expression, exp.Placeholder):
+            return None  # sqlglot stopped: an unknown alias or a column two tables both have
+        if step.downstream:
+            continue
+        if isinstance(step.source, exp.Table):
+            pairs = [(_table_name(step.source), step.name.rpartition(".")[2])]
+        else:
+            pairs = [(column.table, column.name) for column in step.expression.find_all(exp.Column)]
+        for table, column in pairs:
+            if column.upper() not in doc.get(table.upper(), {}):
+                return None  # a table or column the schema doc does not know carries no pii flag to read
+            found.add((table.upper(), column.upper()))
+    return sorted(found)
+
+
+def _table_name(table) -> str:
+    """The declared table behind an alias: `TBLPERSONEL AS P` still reads as TBLPERSONEL."""
+    return (table.this.name if isinstance(table.this, exp.Identifier) else table.name).upper()
