@@ -13,6 +13,7 @@ adresin patladığı.
 from __future__ import annotations
 
 import argparse
+import re
 import sqlite3
 import sys
 import time
@@ -22,11 +23,13 @@ from nl2sql import config
 from nl2sql.agent import fake
 from nl2sql.agent.llm import OpenAIClient
 from nl2sql.agent.loop import AgentRun, Step, run_agent
-from nl2sql.agent.modes import ToolContext, get_mode
+from nl2sql.agent.modes import MODES, ToolContext, get_mode
 from nl2sql.cli.table import format_table
 from nl2sql.engine.executor import LocalExecutor
 from nl2sql.engine.result import Budget
 from nl2sql.eval import report, retrieval, runner
+from nl2sql.eval.compare_modes import REUSED_NOTE, build_compare, reusable, write_compare
+from nl2sql.eval.runner import _tokens
 from nl2sql.graph.graph import build_graph
 from nl2sql.graph.profile import load_profile
 from nl2sql.index.docs import COLLECTIONS, build_documents
@@ -49,6 +52,17 @@ AUDIT_SOURCE = "ask"
 PROSE = "yanıt"
 SQL_TOOLS = ("run_sql", "submit_sql")
 NO_ANSWER = "Cevap gönderilmedi: {}"
+
+# R2-14: arama araçlarının cevabı modele gider, ekrana değil; adımda kaç birim döndüğü ve
+# uyarısı durur. Araç adının sığacağı genişlik de modların araç listesinden gelir.
+TOOL_WIDTH = max(len(tool["function"]["name"]) for mode in MODES.values() for tool in mode.tools)
+LEADING_WORD = re.compile(r"[A-Za-z0-9_]+")  # bir satırın ilk sözcüğü: arama sonucunun tablo adı
+DETAIL_HEAD = re.compile(r"^[A-Z][A-Z0-9_]* — ", re.MULTILINE)  # detay bloğunun başlık satırı
+JOIN_LINE = re.compile(r"\S+ = ")  # bir join satırı: A.X = B.Y (fk 1.0)
+WARNING_MARK = "⚠"
+VALUE_COUNT = re.compile(r"Değerler \((\d+)\)")
+RUNNING = "{mode} koşuluyor ..."
+NO_INDEX_NOTE = "İndeks yok/eski; full modda çalışılıyor."
 
 ENV_URL = "NL2SQL_LLM_BASE_URL"
 EMBED_ENV_URL = "NL2SQL_EMBED_BASE_URL"
@@ -171,18 +185,32 @@ def eval_retrieval(
     return 0
 
 
-def ask(question: str, llm, db_path: str = config.DB_PATH, audit_path: str = config.AUDIT_LOG) -> int:
-    """Bir soru: adımları işaretle ve gecikmesiyle dök, gönderilen SQL'i ve tabloyu göster.
+def ask(
+    question: str,
+    llm,
+    mode: str = "full",
+    db_path: str = config.DB_PATH,
+    audit_path: str = config.AUDIT_LOG,
+    index_dir: str = config.INDEX_DIR,
+) -> int:
+    """Bir soru: modunu söyle, adımları işaretle ve gecikmesiyle dök, gönderilen SQL'i ve tabloyu göster.
 
-    ``llm`` hazır bir istemcidir; tablo için gönderilen SQL bir kez daha yürütülür, çünkü döngü
-    yanıtı metin olarak görür, satırları ekrana basacak biçimde elinde tutmaz.
+    ``llm`` hazır bir istemcidir; ``mode`` hangi araçların konuşacağını ve bağlamın nereden
+    geleceğini söyler (rag indeksi ister, R2-9). Tablo için gönderilen SQL bir kez daha yürütülür,
+    çünkü döngü yanıtı metin olarak görür, satırları ekrana basacak biçimde elinde tutmaz.
     """
     _utf8_stdout()
     if _db_missing(db_path):
         return _no_db(db_path)
+    schema = doc.load_schema()
     executor = LocalExecutor(db_path=db_path, audit_path=audit_path)
-    run = run_agent(question, llm, executor, doc.load_schema(), AUDIT_SOURCE)
+    try:
+        context = _context(mode, executor, schema, load_rules(), index_dir)
+    except (MissingIndexError, StaleIndexError) as exc:
+        return _index_failed(str(exc))
+    run = run_agent(question, llm, executor, schema, AUDIT_SOURCE, mode=mode, context=context)
 
+    print(f"Mod: {mode}")
     print(f"Soru: {question}\n")
     if run.steps:  # daha ilk turda düşen bir uç noktanın gösterecek adımı yok
         print("Adımlar:")
@@ -276,6 +304,84 @@ def evaluate(
     return 0
 
 
+def compare_modes(
+    llm_factory,
+    fresh: bool = False,
+    db_path: str = config.DB_PATH,
+    audit_path: str = config.AUDIT_LOG,
+    out_dir: str = config.EVAL_OUT,
+    index_dir: str = config.INDEX_DIR,
+) -> int:
+    """Üç modu aynı sorularda koşar, tek karşılaştırma raporu yazar, mod başına tek satır söyler.
+
+    ``llm_factory(mode)`` modun kendi kaydını oynatan istemciyi verir; ``fake`` mod başına farklı
+    bir konuşma oynattığı için istemci burada üretilir. R2-12: bir modun ``<out>/<mode>/latest``i
+    imzası bu koşunun imzasıyla birebir eşitse yeniden koşulmaz ve satırı ``(önceki koşu)`` ile
+    çıkar; ``fresh`` o kolaylığı bir kenara bırakır. Koşan mod raporunu kendi klasörüne yazar,
+    karşılaştırma ``<out>/compare`` altına gider (R2-14).
+    """
+    _utf8_stdout()
+    if _db_missing(db_path):
+        return _no_db(db_path)
+    lines = runner.load_golden()
+    schema = doc.load_schema()
+    rules = load_rules()
+    executor = LocalExecutor(db_path=db_path, audit_path=audit_path)
+    clients = {mode: llm_factory(mode) for mode in config.MODES}
+    kind, model = _client_kind(clients[config.MODES[0]])
+    fingerprints = {
+        mode: _mode_fingerprint(mode, kind, model, lines, schema, rules) for mode in config.MODES
+    }
+    stored = {mode: _mode_report(out_dir, mode) for mode in config.MODES}
+    reused = {
+        mode for mode in config.MODES if not fresh and reusable(stored[mode], fingerprints[mode])
+    }
+    if "rag" not in reused:
+        # rag koşacaksa indeksi baştan denetle; iki mod boşuna koşulduktan sonra red edilmesin.
+        try:
+            _context("rag", executor, schema, rules, index_dir)
+        except (MissingIndexError, StaleIndexError) as exc:
+            return _index_failed(str(exc))
+
+    reports = {mode: stored[mode] for mode in reused}
+    for mode in config.MODES:
+        if mode in reports:
+            continue
+        print(RUNNING.format(mode=mode))
+        results = runner.run_eval(
+            lambda: clients[mode],
+            executor,
+            golden=lines,
+            schema=schema,
+            mode=mode,
+            context=_context(mode, executor, schema, rules, index_dir),
+        )
+        if results and all(result.outcome == "llm_error" for result in results):
+            print(f"Uç nokta {len(results)} sorunun hiçbirini yanıtlamadı; rapor yazılmadı.\n")
+            return _llm_failed(results[0].reason)
+        report.write_report(
+            results,
+            Path(out_dir) / mode,
+            model=model,
+            config={
+                "backend": config.backend(),
+                "llm": model,
+                "fingerprint": fingerprints[mode],
+            },
+            mode=mode,
+        )
+        reports[mode] = _mode_report(out_dir, mode)
+
+    comparison = build_compare(reports, doc.estimate_tokens(doc.full_text(schema)), reused)
+    run_dir = write_compare(comparison, Path(out_dir) / "compare")
+    print()
+    for mode in config.MODES:
+        print(_compare_line(mode, comparison["modes"][mode]))
+    print(f"\n{comparison['verdict']['line']}")
+    print(f"Rapor: {run_dir / 'report.md'}")
+    return 0
+
+
 def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE):
     """``--llm`` değerini istemciye çevirir: fake altın kaydı oynatır, openai config'teki endpoint'e gider.
 
@@ -323,6 +429,11 @@ def main(argv: list[str] | None = None) -> int:
     ask_cmd.add_argument(
         "--llm", choices=LLMS, default=DEFAULT_LLM, help="istem kaynağı (varsayılan %(default)s)"
     )
+    ask_cmd.add_argument(
+        "--mode",
+        choices=config.MODES,
+        help="bağlam modu (verilmeyince taze indeks varsa rag, yoksa full)",
+    )
 
     eval_cmd = commands.add_parser("eval", help="altın soruları koşar ve raporu yazar")
     eval_cmd.add_argument(
@@ -343,6 +454,14 @@ def main(argv: list[str] | None = None) -> int:
         default=config.DEFAULT_EVAL_MODE,
         help="bağlam modu (varsayılan %(default)s)",
     )
+    eval_cmd.add_argument(
+        "--compare",
+        action="store_true",
+        help="üç modu aynı sorularda koşar ve tek raporda karşılaştırır",
+    )
+    eval_cmd.add_argument(
+        "--fresh", action="store_true", help="--compare ile yeniden koşmayan modları da koşar"
+    )
 
     args = parser.parse_args(argv)
     if args.command == "build-db":
@@ -352,7 +471,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "eval-retrieval":
         return eval_retrieval(embed=args.embed, k=args.k)
     if args.command == "ask":
-        return ask(question=args.question, llm=make_client(args.llm))
+        mode = args.mode or _ask_mode()
+        return ask(question=args.question, llm=make_client(args.llm, mode), mode=mode)
+    if args.compare:
+        return compare_modes(lambda mode: make_client(args.llm, mode), fresh=args.fresh)
     return evaluate(
         llm=make_client(args.llm, args.mode),
         only=args.only,
@@ -364,15 +486,48 @@ def main(argv: list[str] | None = None) -> int:
 
 def _step_lines(step: Step) -> list[str]:
     """Adımın satırları: sıra, ✓/✗, araç, gecikme; reddedilen bir sorgu sebebini alt satırda taşır."""
-    head = f"  {step.n:>2} {'✓' if step.ok else '✗'} {step.tool or PROSE:<11} {step.latency_ms:>5.0f} ms"
+    head = f"  {step.n:>2} {'✓' if step.ok else '✗'} {step.tool or PROSE:<{TOOL_WIDTH}} {step.latency_ms:>5.0f} ms"
     if not step.ok:
         return [head, f"       ↳ {step.summary}"]
     if not step.tool:
         return [head, *(f"       {line}" for line in step.summary.splitlines())]
-    # Şema adımı zaten okunan bir metindir, özetinin ilk satırı bir sonuç değil; sorgu adımları
-    # kaç kolon döndürdüğünü söylemeyi hak eder.
-    note = _first_line(step.summary) if step.tool in SQL_TOOLS else ""
-    return [f"{head} · {note}" if note else head]
+    if step.tool in SQL_TOOLS:
+        # Şema adımı zaten okunan bir metindir, özetinin ilk satırı bir sonuç değil; sorgu adımları
+        # kaç kolon döndürdüğünü söylemeyi hak eder.
+        note = _first_line(step.summary)
+        return [f"{head} · {note}"] if note else [head]
+    notes = _search_notes(step.tool, step.summary)
+    return [head, *(f"       {line}" for line in notes)] if notes else [head]
+
+
+def _search_notes(tool: str, summary: str) -> list[str]:
+    """R2-14: arama aracının cevabı modele gider, ekrana kaç birim döndüğü ve uyarısı yazılır.
+
+    Araç hiçbir şey bulamadıysa (eşleşen tablo yok, tek tablo, değer yok) kendi cümlesi gösterilir;
+    boş hali de kullanıcı için bir bilgidir.
+    """
+    lines = [line.strip() for line in summary.splitlines() if line.strip()]
+    if tool == "search_schema":
+        names = [match.group() for line in lines if (match := LEADING_WORD.match(line))]
+        note = f"→ {', '.join(names)}" if names else ""
+    elif tool == "get_table_details":
+        count = len(DETAIL_HEAD.findall(summary))
+        note = f"→ {count} tablo" if count else ""
+    elif tool == "find_join_path":
+        joins = sum(1 for line in lines if JOIN_LINE.match(line))
+        note = f"→ {joins} join" if joins else ""
+    elif tool == "search_rules":
+        terms = [block.splitlines()[0].strip() for block in summary.split("\n\n") if block.strip()]
+        note = f"→ {', '.join(terms)}" if terms else ""
+    elif tool == "sample_values":
+        found = VALUE_COUNT.search(summary)
+        note = f"→ {found.group(1)} değer" if found else ""
+    else:
+        return []
+    warnings = [line for line in lines if line.startswith(WARNING_MARK)]
+    if not note and lines:
+        note = f"→ {lines[0]}"
+    return [note, *warnings] if note else warnings
 
 
 def _cost(run: AgentRun) -> None:
@@ -397,6 +552,20 @@ def _context(mode: str, executor, schema: dict, rules: list[dict], index_dir: st
     )
 
 
+def _ask_mode(index_dir: str | Path = config.INDEX_DIR) -> str:
+    """``ask``a mod söylenmediyse varsayılan (R2-12): taze bir indeks varsa rag, yoksa notla full.
+
+    İndeks gerçekten yüklenir: bayat vektörler bulunamayan tabloyu modelin hatası gibi gösterir,
+    o yüzden R2-9 onu reddediyor. Ne kaybedildiği tek satırda söylensin, sessiz düşmesin.
+    """
+    try:
+        load_search(index_dir, doc.load_schema(), load_rules())
+    except (MissingIndexError, StaleIndexError):
+        print(NO_INDEX_NOTE)
+        return "full"
+    return "rag"
+
+
 def _fingerprint(mode: str, kind: str, model: str, lines: list[dict], results, schema, rules) -> dict:
     """Koşunun neyi ölçtüğünün imzası (R2-12); iki koşu ancak eşitse birbirinin devamı sayılır.
 
@@ -404,15 +573,48 @@ def _fingerprint(mode: str, kind: str, model: str, lines: list[dict], results, s
     imzayı verirse yeniden koşmak gerekip gerekmediği yanlış okunur.
     """
     ran = {result.id for result in results}
+    return _mode_fingerprint(
+        mode, kind, model, [line for line in lines if line["id"] in ran], schema, rules
+    )
+
+
+def _mode_fingerprint(
+    mode: str, kind: str, model: str, lines: list[dict], schema: dict, rules: list[dict]
+) -> dict:
+    """İmza koşu öncesi de kurulabilir: compare bir modun ``latest``ini ancak bu imza eşitse yeniden koşar."""
     return report.fingerprint(
         mode=mode,
         llm=kind,
         model=model,
-        golden=[line for line in lines if line["id"] in ran],
+        golden=lines,
         schema=schema,
         rules=rules,
         index_hash=content_hash(schema, rules) if mode == "rag" else "",
         max_tool_calls=get_mode(mode).max_tool_calls,
+    )
+
+
+def _client_kind(llm) -> tuple[str, str]:
+    """İstemcinin adı ve raporun model hanesi: fake kendinin adını, openai config'teki modeli taşır."""
+    if isinstance(llm, fake.FakeLLM):
+        return "fake", "fake"
+    return "openai", config.llm_settings().model
+
+
+def _mode_report(out_dir: str | Path, mode: str) -> dict | None:
+    """Modun ``latest`` raporu (R2-12); yoksa ya da okunamazsa None, yani yeniden koşulur."""
+    return report._load(Path(out_dir) / mode / "latest" / report.REPORT_FILES[0])
+
+
+def _compare_line(mode: str, summary: dict) -> str:
+    """R2-14: mod başına tek satır — skor, tepe/medyan bağlam, ortalama araç, toplam süre, not."""
+    score, context = summary["score"], summary["context"]
+    note = f"  {REUSED_NOTE}" if summary["reused"] else ""
+    return (
+        f"{mode:<{TOOL_WIDTH}} {score['passed']}/{score['total']}"
+        f"  bağlam {_tokens(context['max_prompt_tokens'])}/{_tokens(context['median_prompt_tokens'])}"
+        f"  araç {summary['tool_calls']['mean']:.1f}"
+        f"  {summary['seconds']['total']:.1f} sn{note}"
     )
 
 
