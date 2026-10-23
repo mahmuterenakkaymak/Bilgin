@@ -1,0 +1,188 @@
+"""The conversation: ask the model, run what it asks for, hand the answer back, until it submits.
+
+The loop is the only part that owns a run's shape. It keeps the transcript in the OpenAI form the
+endpoint expects (one assistant message per turn, then a tool message per call), records a Step for
+every tool call and every prose-only turn so the CLI can show what happened, and enforces the three
+limits that stop a run from spending forever: MAX_TOOL_CALLS, MAX_FAILED_RUNS and AGENT_TIMEOUT_S.
+A model that never calls submit_sql ends as no_submission; an endpoint that is down ends as
+llm_error, because the LLMError it raises is caught here rather than allowed to reach the console.
+"""
+
+from __future__ import annotations
+
+import json
+import time
+from dataclasses import dataclass, field
+
+from nl2sql import config
+from nl2sql.agent import prompt, tools
+from nl2sql.agent.llm import LLMError
+from nl2sql.agent.tools import ERROR_PREFIX, dispatch
+from nl2sql.schema_map import doc
+
+# Sözleşmede adı geçen dördüncü bir sınır yok; bu yalnızca hiç araç çağırmayıp metin üreten bir
+# modelin sonsuz dönmemesi için bir emniyet.
+# ASSUMPTION: varsayılan MAX_TOOL_CALLS'in üstünde seçildi ki araç sınırını sınayan senaryolarda
+# döngüyü durduran şey bu emniyet değil, adlandırılmış sınırın kendisi olsun.
+DEFAULT_MAX_TURNS = 16
+
+TIMEOUT_STOP = "Zaman aşımı: {seconds:.0f} sn."
+TURN_STOP = "Tur sınırına ulaşıldı ({turns})."
+TOOL_STOP = "Araç çağrı sınırı: {limit}."
+FAILED_STOP = "Başarısız sorgu sınırı: {limit}."
+
+
+@dataclass
+class Step:
+    """One thing that happened: a tool call and its answer, or a turn that only talked."""
+
+    n: int
+    tool: str
+    args: dict = field(default_factory=dict)
+    summary: str = ""
+    ok: bool = True
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    latency_ms: float = 0.0
+
+
+@dataclass
+class AgentRun:
+    """A finished run: the steps, what was submitted (if anything), why it stopped, what it cost."""
+
+    question: str
+    steps: list[Step] = field(default_factory=list)
+    submitted_sql: str | None = None
+    status: str = "no_submission"  # submitted | no_submission | timeout | llm_error
+    stop_reason: str = ""
+    max_prompt_tokens: int = 0
+    total_prompt_tokens: int = 0
+    total_completion_tokens: int = 0
+    elapsed_s: float = 0.0
+
+
+def run_agent(
+    question: str,
+    llm,
+    executor,
+    schema: dict,
+    source: str = "",
+    *,
+    max_turns: int = DEFAULT_MAX_TURNS,
+    timeout_s: float = config.AGENT_TIMEOUT_S,
+) -> AgentRun:
+    """Drive one question to a submitted SQL, a limit, or a model failure."""
+    started = time.perf_counter()
+    deadline = started + timeout_s
+    run = AgentRun(question=question)
+    audited = _Audited(executor, source)
+    messages = [
+        {"role": "system", "content": prompt.system_prompt(config.AS_OF, doc.compact_text(schema))},
+        {"role": "user", "content": question},
+    ]
+    tool_calls = failed_runs = 0
+
+    def finish(status: str, reason: str = "") -> AgentRun:
+        run.status = status
+        run.stop_reason = reason
+        run.elapsed_s = round(time.perf_counter() - started, 3)
+        return run
+
+    for _ in range(max_turns):
+        if time.perf_counter() >= deadline:
+            return finish("timeout", TIMEOUT_STOP.format(seconds=timeout_s))
+        if tool_calls >= config.MAX_TOOL_CALLS:
+            return finish("no_submission", TOOL_STOP.format(limit=config.MAX_TOOL_CALLS))
+
+        try:
+            response = llm.chat(messages, tools.TOOLS)
+        except LLMError as exc:
+            return finish("llm_error", str(exc))
+
+        if response.tool_calls:
+            messages.append(_assistant_message(response))
+            for call in response.tool_calls:
+                if tool_calls >= config.MAX_TOOL_CALLS:
+                    return finish("no_submission", TOOL_STOP.format(limit=config.MAX_TOOL_CALLS))
+                tool_calls += 1
+                answer = dispatch(call.name, call.arguments, audited, schema)
+                ok = not answer.startswith(ERROR_PREFIX)
+                _count_turn(run, response)
+                run.steps.append(
+                    Step(
+                        n=len(run.steps) + 1,
+                        tool=call.name,
+                        args=call.arguments,
+                        summary=answer,
+                        ok=ok,
+                        prompt_tokens=response.prompt_tokens,
+                        completion_tokens=response.completion_tokens,
+                        latency_ms=response.latency_ms,
+                    )
+                )
+                messages.append({"role": "tool", "tool_call_id": call.id, "content": answer})
+                if call.name == "submit_sql" and ok:
+                    run.submitted_sql = str(call.arguments.get("sql") or "")
+                    return finish("submitted")
+                if call.name in ("run_sql", "submit_sql") and not ok:
+                    failed_runs += 1
+                    if failed_runs >= config.MAX_FAILED_RUNS:
+                        return finish("no_submission", FAILED_STOP.format(limit=config.MAX_FAILED_RUNS))
+        else:
+            _count_turn(run, response)
+            run.steps.append(
+                Step(
+                    n=len(run.steps) + 1,
+                    tool="",
+                    summary=response.content,
+                    ok=True,
+                    prompt_tokens=response.prompt_tokens,
+                    completion_tokens=response.completion_tokens,
+                    latency_ms=response.latency_ms,
+                )
+            )
+            messages.append({"role": "assistant", "content": response.content})
+
+    return finish("no_submission", TURN_STOP.format(turns=max_turns))
+
+
+class _Audited:
+    """Binds a source to the executor so every query this run makes is audited under the question.
+
+    dispatch is the fixed boundary and calls ``execute(sql, budget)`` with no source, so the source
+    is attached here instead of changing it; the real executor (and its policy) still runs.
+    """
+
+    def __init__(self, executor, source: str) -> None:
+        self._executor = executor
+        self._source = source
+
+    def execute(self, sql, budget=None):
+        return self._executor.execute(sql, budget, self._source)
+
+
+def _assistant_message(response) -> dict:
+    """Echo the model's turn back so the next call sees the transcript it is continuing."""
+    return {
+        "role": "assistant",
+        "content": response.content,
+        "tool_calls": [
+            {
+                "id": call.id,
+                "type": "function",
+                "function": {"name": call.name, "arguments": _as_json(call.arguments)},
+            }
+            for call in response.tool_calls
+        ],
+    }
+
+
+def _as_json(arguments: dict) -> str:
+    return json.dumps(arguments, ensure_ascii=False)
+
+
+def _count_turn(run: AgentRun, response) -> None:
+    """Charge a turn's tokens once, no matter how many tool calls it asked for."""
+    run.total_prompt_tokens += response.prompt_tokens
+    run.total_completion_tokens += response.completion_tokens
+    run.max_prompt_tokens = max(run.max_prompt_tokens, response.prompt_tokens)
