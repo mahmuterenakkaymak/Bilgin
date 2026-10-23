@@ -21,6 +21,8 @@ import time
 import zipfile
 from pathlib import Path
 
+from openpyxl.utils.exceptions import InvalidFileException
+
 from nl2sql import config
 from nl2sql.agent import fake
 from nl2sql.agent.llm import ChatResponse, OpenAIClient
@@ -438,8 +440,10 @@ def import_map(
         return EXIT_BAD_INPUT
     try:
         preview = excel.read_workbook(source)
-    except (OSError, zipfile.BadZipFile, excel.SheetError) as exc:
-        print(f"Hata: {exc}")
+    # ASSUMPTION: openpyxl'in cümlesi verilen biçimi ve desteklenenleri sayar ama dosyayı saymaz;
+    # kullanıcının neyi düzelteceği tek satırda anlaşılsın diye yolu da buraya ekliyoruz.
+    except (OSError, zipfile.BadZipFile, excel.SheetError, InvalidFileException) as exc:
+        print(f"Hata: {source}: {exc}")
         return EXIT_BAD_INPUT
 
     proposal = mapping or _proposal_file(source, proposal_path)
