@@ -609,7 +609,7 @@
     },
     {
       "name": "TBLSTHAR_ARSIV",
-      "description": "2025 yılı stok hareketleri arşivi; sütunları ve kodları TBLSTHAR ile birebir aynıdır. 2026 hareketleri burada, 2025 hareketleri TBLSTHAR'da yoktur: 2025 soruları yalnız bu tablodan, 2026 soruları yalnız TBLSTHAR'dan cevaplanır.",
+      "description": "2025 yılı stok hareketleri arşivi; sütunları ve kodları TBLSTHAR ile birebir aynıdır. Bu tabloda 2026 hareketleri yoktur; TBLSTHAR'da 2025 hareketleri yoktur: 2025 soruları yalnız bu tablodan, 2026 soruları yalnız TBLSTHAR'dan cevaplanır.",
       "module": "Stok",
       "kind": "data",
       "keywords": ["arşiv", "2025", "geçen yıl", "stok hareketi", "devir"],
