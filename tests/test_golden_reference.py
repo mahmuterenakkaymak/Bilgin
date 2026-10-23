@@ -9,7 +9,18 @@ from eval import reference
 from nl2sql import config
 from nl2sql.schema_map import build, generator
 
-FIELDS = {"id", "question", "sql", "ordered", "trap", "notes", "review"}
+FIELDS = {
+    "id",
+    "question",
+    "sql",
+    "ordered",
+    "trap",
+    "notes",
+    "review",
+    "tags",
+    "requires_tables",
+    "rules",
+}
 
 
 def load_golden():

@@ -66,10 +66,20 @@ class QuestionResult:
     seconds: float = 0.0
 
 
+# Run 2 alanları (PLAN R2 Contracts): bir golden satırı bunları hiç yazmadıysa boş liste anlaşılır.
+GOLDEN_LIST_FIELDS = ("tags", "requires_tables", "rules")
+
+
 def load_golden(path: str | Path = config.GOLDEN_PATH) -> list[dict]:
-    """The golden lines, blank lines skipped."""
+    """The golden lines, blank lines skipped; the Run 2 list fields default to empty."""
     with open(path, encoding="utf-8") as handle:
-        return [json.loads(line) for line in handle if line.strip()]
+        return [_with_defaults(json.loads(line)) for line in handle if line.strip()]
+
+
+def _with_defaults(line: dict) -> dict:
+    for name in GOLDEN_LIST_FIELDS:
+        line.setdefault(name, [])
+    return line
 
 
 def run_eval(
