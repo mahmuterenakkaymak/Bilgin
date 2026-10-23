@@ -54,7 +54,9 @@ def table_detail(schema: dict, tables: list[str]) -> str:
     so the model gets one clear signal it can act on.
     """
     index = {table["name"].upper(): table for table in schema["tables"]}
-    known = ", ".join(sorted(index))
+    # ASSUMPTION: R2-4's distractors stay out of this hint; once the schema has ~81 tables the list is
+    # nothing the model can act on, and the tables worth falling back to are the real ones.
+    known = ", ".join(sorted(name for name, table in index.items() if table.get("kind") != "distractor"))
     wanted = []
     for name in tables:
         table = index.get(str(name).strip().upper())
