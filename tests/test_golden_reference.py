@@ -38,13 +38,6 @@ def dataset():
     return generator.generate(config.SEED)
 
 
-@pytest.fixture(scope="module")
-def db(tmp_path_factory):
-    path = tmp_path_factory.mktemp("golden") / "test.db"
-    build.build_db(config.SEED, path, path.with_suffix(".sql"))
-    return path
-
-
 def to_sqlite(sql):
     statements = transpile(sql, read="tsql", write="sqlite")
     assert len(statements) == 1
@@ -112,22 +105,8 @@ def test_golden_sql_is_a_single_tsql_select(qid):
     assert len(trees) == 1 and isinstance(trees[0], exp.Select), qid
 
 
-@pytest.mark.parametrize("qid", IDS)
-def test_golden_sql_transpiles_to_one_sqlite_statement(qid):
-    assert len(transpile(BY_ID[qid]["sql"], read="tsql", write="sqlite")) == 1
-
-
-# ----------------------------------------------------------------- golden == reference
-
-
-@pytest.mark.parametrize("qid", IDS)
-def test_every_question_actually_measures_something(qid, db, dataset):
-    assert reference.REFERENCES[qid](dataset), f"{qid} boş sonuç veriyor; soru bir şey ölçmüyor"
-
-
-@pytest.mark.parametrize("qid", IDS)
-def test_golden_sql_matches_the_python_reference(qid, db, dataset):
-    assert_same_result(qid, db, dataset)
+# Policy, çeviri, executor ve Python doğrusu karşılaştırması tek parametrik testte
+# (tests/test_golden_all.py, R3-1); burada dosya biçimi ve ikinci bir kurulum kalıyor.
 
 
 def test_the_whole_set_is_reproducible_on_a_fresh_build(tmp_path, dataset):

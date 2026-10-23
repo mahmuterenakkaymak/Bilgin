@@ -1,27 +1,22 @@
-"""M2 entegrasyonu: kurulum -> LocalExecutor -> Python doğruları; saldırılar policy kapısında kalır.
+"""M2 entegrasyonu: kurulum -> LocalExecutor; model bütçesi ve saldırılar policy kapısında kalır.
 
 Burada sahte hiçbir parça yok: gerçek build_db ile üretilmiş SQLite dosyası, gerçek policy,
-gerçek çeviri ve gerçek backend. Golden SQL'ler eval/reference.py ile, saldırı kümesi de
-reddedilip denetim satırına yazılmış olmasıyla sınanır.
+gerçek çeviri ve gerçek backend. Golden SQL'lerin Python doğrularıyla karşılaştırması tek
+parametrik teste taşındı (tests/test_golden_all.py, R3-1); burada modelin gördüğü bütçe ve
+saldırı kümesinin reddedilip denetim satırına yazılması sınanır.
 """
 
 import json
-from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 import pytest
 
-from eval import reference
 from nl2sql import config
 from nl2sql.engine.executor import LocalExecutor
 from nl2sql.engine.result import Budget
-from nl2sql.schema_map import build, generator
+from nl2sql.schema_map import build
 
 ENTRY_FIELDS = {"ts", "source", "sql", "elapsed_ms", "row_count", "outcome"}
-
-GOLDEN = [json.loads(line) for line in config.GOLDEN_PATH.read_text(encoding="utf-8").splitlines() if line.strip()]
-IDS = [line["id"] for line in GOLDEN]
-BY_ID = {line["id"]: line for line in GOLDEN}
 
 MALICIOUS = [
     json.loads(line)
@@ -43,11 +38,6 @@ def db(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def dataset():
-    return generator.generate(config.SEED)
-
-
-@pytest.fixture(scope="module")
 def executor(db, tmp_path_factory):
     return LocalExecutor("sqlite", db, audit_path=tmp_path_factory.mktemp("m2-audit") / "audit.jsonl")
 
@@ -55,40 +45,6 @@ def executor(db, tmp_path_factory):
 def entries(audit_path):
     text = Path(audit_path).read_text(encoding="utf-8")
     return [json.loads(line) for line in text.splitlines() if line.strip()]
-
-
-def cell(value):
-    """Sayıları 2 haneye indirir; yığma ondalık farkı doğruyu SQL ile kapıştırmasın."""
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        return value
-    stable = Decimal(repr(round(float(value), 6)))
-    return float(stable.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
-
-
-def comparable(rows, ordered):
-    """ordered=True sırayı da karşılaştırır (yalnız Q02); değilse çok küme olarak sıralanır."""
-    values = [tuple(map(cell, row)) for row in rows]
-    return values if ordered else sorted(values, key=repr)
-
-
-# ----------------------------------------------------------------- golden == reference, executor üzerinden
-
-
-@pytest.mark.parametrize("qid", IDS)
-def test_golden_sql_through_the_executor_matches_the_reference(qid, executor, dataset):
-    line = BY_ID[qid]
-    result = executor.execute(line["sql"], COMPARE, qid)
-    assert result.error is None, f"{qid} executor'da reddedildi: {result.error}"
-    assert result.row_count == len(result.rows) and result.truncated is False, f"{qid} bütçeye sığmadı"
-    assert result.columns and all(len(row) == len(result.columns) for row in result.rows)
-    expected = comparable(reference.REFERENCES[qid](dataset), line["ordered"])
-    assert comparable(result.rows, line["ordered"]) == expected, f"{qid} SQL sonucu Python doğrulundan farklı"
-
-
-def test_every_golden_answer_is_nonempty_through_the_executor(executor, dataset):
-    """Boş sonuç doğruya eşit olsa bile bir şey ölçmüyor; executor hattında da dolu olmalı."""
-    for qid in IDS:
-        assert executor.execute(BY_ID[qid]["sql"], COMPARE, qid).rows, f"{qid} boş döndü"
 
 
 # ----------------------------------------------------------------- model bütçesi

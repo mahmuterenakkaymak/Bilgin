@@ -1,12 +1,16 @@
-"""T42: Q11-Q20 kurulu dünyada policy kapısından geçer, satır döndürür ve Python doğrusuna eşittir.
+"""T77 (R3-1): altın kümenin tümü tek yerde ölçülür — policy, çeviri, executor ve Python doğrusu.
 
-Altın SQL'ler LocalExecutor'dan geçer (policy -> çeviri -> SQLite); doğrular eval.reference'dan
-gelir. Karşılaştırma eval bütçesiyle yapılır ki ne golden'ın ne doğrunun satırı kesilmesin.
+Q11-Q20 / Q21-Q30 / Q31-Q40 için üç ayrı dosyanın aynı üç kontrolü tekrarlaması kaldırıldı: tek
+parametrik test eval/golden.jsonl'daki her satırı policy'den geçirir, tek bir SQLite ifadesine
+çevirir, kurulu dünyada COMPARE bütçesiyle çalıştırır ve 2 haneye indirilmiş Python doğrulundan
+farksız olduğunu doğrular; sıra yalnız satır `ordered` ise karşılaştırılır. Kimlikler dosyadan
+okunur, sayı sabitlenmez (R3-12).
 """
 
 from decimal import ROUND_HALF_UP, Decimal
 
 import pytest
+from sqlglot import transpile
 
 from eval import reference
 from nl2sql import config
@@ -16,8 +20,9 @@ from nl2sql.eval.runner import load_golden
 from nl2sql.policy import policy
 from nl2sql.schema_map import build, doc, generator
 
-IDS = [f"Q{i:02d}" for i in range(11, 21)]
-BY_ID = {line["id"]: line for line in load_golden()}
+GOLDEN = load_golden()
+IDS = [line["id"] for line in GOLDEN]
+BY_ID = {line["id"]: line for line in GOLDEN}
 TABLES = doc.allowlist(doc.load_schema())
 
 # Eval karşılaştırma bütçesi: ne golden'ın ne doğrunun satırı kesilmesin (PLAN Decision 8).
@@ -40,14 +45,14 @@ def cell(value):
 
 
 def comparable(rows, ordered):
-    """ordered=True sırayı da karşılaştırır (Q13); değilse çok küme olarak sıralanır."""
+    """ordered=True sırayı da karşılaştırır; değilse çok küme olarak sıralanır."""
     values = [tuple(map(cell, row)) for row in rows]
     return values if ordered else sorted(values, key=repr)
 
 
 @pytest.fixture(scope="module")
 def executor(tmp_path_factory):
-    return build_db(tmp_path_factory.mktemp("q11-q20"))
+    return build_db(tmp_path_factory.mktemp("golden-all"))
 
 
 @pytest.fixture(scope="module")
@@ -56,19 +61,18 @@ def dataset():
 
 
 @pytest.mark.parametrize("qid", IDS)
-def test_the_question_has_a_pure_python_reference(qid):
+def test_every_golden_question_is_measured(qid, executor, dataset):
+    line = BY_ID[qid]
     assert qid in reference.REFERENCES, f"{qid} için doğrul yok"
 
-
-@pytest.mark.parametrize("qid", IDS)
-def test_golden_sql_passes_the_policy(qid):
-    verdict = policy.check(BY_ID[qid]["sql"], TABLES)
+    verdict = policy.check(line["sql"], TABLES)
     assert verdict.ok, f"{qid}: {verdict.reason}"
 
+    # ASSUMPTION (R3-1): "transpile" bir birleşim kontrolüdür ve buraya taşındı;
+    # test_golden_reference.py'deki aynı parametrik test artık yok.
+    statements = transpile(line["sql"], read="tsql", write="sqlite")
+    assert len(statements) == 1, f"{qid} tek bir SQLite ifadesine çevrilmiyor"
 
-@pytest.mark.parametrize("qid", IDS)
-def test_executor_answer_equals_the_reference(qid, executor, dataset):
-    line = BY_ID[qid]
     result = executor.execute(line["sql"], COMPARE, qid)
     assert result.error is None, f"{qid}: {result.error}"
     assert result.rows, f"{qid} boş döndü; soru hiçbir şey ölçmüyor"

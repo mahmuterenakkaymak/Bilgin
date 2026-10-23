@@ -1,0 +1,5 @@
+2026-10-23 22:45:57 | ORCH   | brain: cloud Claude (panel: cloud)
+2026-10-23 22:45:57 | BRAIN  | extending the plan from PROJECT_BRIEF_RUN3.md with opus
+2026-10-23 22:50:15 | BRAIN  | Claude usage limit hit - local Strata is the brain for the rest of this run
+2026-10-23 22:59:23 | BRAIN  | extend done: 33 new tasks
+2026-10-23 23:00:29 | HANDS  | T77 try 1: Golden test consolidation (PLAN R3-1): new tests/test_golden_all.py, one parametrized test over EVERY golden line in eval/golden.jsonl with the union of per-question checks (policy pass, transpile, run on build_db(tmp) with COMPARE budget, equals eval.reference.REFERENCES rounded 2 dp, >=1 row, order-aware only when ordered); delete tests/test_golden_q11_q20.py, tests/test_golden_q21_q30.py, tests/test_golden_q31_q40.py; strip the duplicated golden-vs-reference parts from tests/test_golden_reference.py, tests/test_integration_m2.py, tests/test_integration_m4.py keeping every other distinct assertion in those files; the new file parametrizes over ids read from the golden file (no fixed count, R3-12); report the test count before/after in the commit message

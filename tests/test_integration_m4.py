@@ -1,37 +1,28 @@
-"""T46: M4 entegrasyonu — kurulu dünyada 40 golden SQL policy'den geçer ve Python doğrularına eşittir.
+"""T46: M4 entegrasyonu — kurulu dünya Run 1 pin'ini tutar, şema eksiksiz kurulur, kurallar ve etiketler sorulara bağlı.
 
-Zincirin hiçbir halkası sahte değil: gerçek generator, gerçek build_db, gerçek LocalExecutor (policy
--> çeviri -> SQLite), doğrular eval/reference.py. Aynı dünya üzerinden Run 1 pin'i, şemadaki her
-tablonun kurulması, her kuralın en az bir soru tarafından iddia edilmesi ve R2-15 etiket hedefleri de
-burada sınanır; halkalardan biri kopsun, milletin tamamı kırmızıya döner.
+Zincirin hiçbir halkası sahte değil: gerçek generator ve gerçek build_db. Altın SQL'lerin policy'den
+geçip Python doğrularına eşit olması tek parametrik testte ölçülür (tests/test_golden_all.py, R3-1);
+aynı dünya üzerinden Run 1 pin'i, şemadaki her tablonun kurulması, her kuralın en az bir soru
+tarafından iddia edilmesi ve R2-15 etiket hedefleri de burada sınanır.
 """
 
 import re
 import sqlite3
-from decimal import ROUND_HALF_UP, Decimal
 
 import pytest
 
 from eval import reference
 from nl2sql import config
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
 from nl2sql.eval.runner import load_golden
-from nl2sql.policy import policy
 from nl2sql.schema_map import build, doc, generator, rules
 from test_run1_world import RUN1_FINGERPRINT, fingerprint
 
 IDS = [f"Q{i:02d}" for i in range(1, 41)]
 GOLDEN = load_golden()
-BY_ID = {line["id"]: line for line in GOLDEN}
-TABLES = doc.allowlist(doc.load_schema())
 RULES = {rule["id"]: rule for rule in rules.load_rules()}
 
 # R2-15 hedefleri: Q01-Q40 bu etiketleri en az bu kadar taşır.
 TAG_MINIMUMS = {"needs_rule": 8, "multi_join": 8, "distractor": 8, "needs_values": 8, "archive": 5}
-
-# Eval karşılaştırma bütçesi: ne golden'ın ne doğrunun satırı kesilmesin (PLAN Decision 8).
-COMPARE = Budget(max_rows=config.COMPARE_MAX_ROWS)
 
 
 @pytest.fixture(scope="module")
@@ -42,27 +33,8 @@ def db(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def executor(db, tmp_path_factory):
-    return LocalExecutor("sqlite", db, audit_path=tmp_path_factory.mktemp("m4-audit") / "audit.jsonl")
-
-
-@pytest.fixture(scope="module")
 def dataset():
     return generator.generate(config.SEED)
-
-
-def cell(value):
-    """Sayıları 2 haneye indirir; yığma ondalık farkı doğruyu SQL ile kapıştırmasın."""
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        return value
-    stable = Decimal(repr(round(float(value), 6)))
-    return float(stable.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
-
-
-def comparable(rows, ordered):
-    """ordered=True sırayı da karşılaştırır; değilse çok küme olarak sıralanır."""
-    values = [tuple(map(cell, row)) for row in rows]
-    return values if ordered else sorted(values, key=repr)
 
 
 def collapse(sql):
@@ -97,26 +69,6 @@ def test_every_schema_table_is_built(db):
     finally:
         conn.close()
     assert created == {table["name"] for table in doc.load_schema()["tables"]}
-
-
-# ----------------------------------------------------------------- golden -> policy -> executor -> doğru
-
-
-@pytest.mark.parametrize("qid", IDS)
-def test_golden_sql_passes_the_policy(qid):
-    verdict = policy.check(BY_ID[qid]["sql"], TABLES)
-    assert verdict.ok, f"{qid}: {verdict.reason}"
-
-
-@pytest.mark.parametrize("qid", IDS)
-def test_golden_answer_equals_the_reference(qid, executor, dataset):
-    line = BY_ID[qid]
-    result = executor.execute(line["sql"], COMPARE, qid)
-    assert result.error is None, f"{qid} executor'da reddedildi: {result.error}"
-    assert result.rows, f"{qid} boş döndü; soru hiçbir şey ölçmüyor"
-    assert result.row_count == len(result.rows) and result.truncated is False, f"{qid} bütçeye sığmadı"
-    expected = comparable(reference.REFERENCES[qid](dataset), line["ordered"])
-    assert comparable(result.rows, line["ordered"]) == expected, f"{qid} SQL sonucu Python doğrulundan farklı"
 
 
 # ----------------------------------------------------------------- kurallar iddia ettikleri SQL'lere uyar
