@@ -1,0 +1,10 @@
+{
+  "suite": [
+    ".venv\\Scripts\\python -m pytest -q"
+  ],
+  "smoke": [
+    ".venv\\Scripts\\python -m nl2sql build-db --seed 42",
+    ".venv\\Scripts\\python -m nl2sql eval --llm fake",
+    ".venv\\Scripts\\python -m nl2sql ask \"Eylül ayında en çok satan 5 ürün\" --llm fake"
+  ]
+}

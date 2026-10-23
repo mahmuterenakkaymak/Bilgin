@@ -1,0 +1,17 @@
+[project]
+name = "nl2sql"
+version = "0.1.0"
+description = "NL -> T-SQL Phase 0 proof: synthetic Netsis-like DB, safe executor, agent loop, eval"
+requires-python = ">=3.11"
+dependencies = [
+    "sqlglot==30.24.0",
+    "openai==3.37.0",
+    "pyodbc==5.3.0",
+]
+
+[dependency-groups]
+dev = ["pytest==9.1.1"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
