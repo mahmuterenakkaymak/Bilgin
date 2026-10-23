@@ -1,4 +1,4 @@
-"""The three tools the model may ask for, and the short text each one answers with.
+"""The tools the model may ask for, and the short text each one answers with.
 
 The model never sees a Result object: it sees the columns, the first rows and the total row
 count, or one line naming the failure kind and why. That is deliberate - the row count is what
@@ -72,6 +72,115 @@ SUBMIT_SQL = {
                 "sql": {"type": "string", "description": "Cevap olarak gönderilen tek bir T-SQL SELECT."},
             },
             "required": ["sql"],
+        },
+    },
+}
+
+# Aşağıdakiler `rag` modunun arama araçlarıdır (PLAN R2-5): hangi modun hangi araçları gördüğüne
+# nl2sql.agent.modes karar verir, yani burada liste halinde durmaları gerekmiyor.
+SEARCH_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "search_schema",
+        "description": (
+            "Sorunun anlamına en yakın tabloları arar ve her biri için adını, açıklamasını, modülünü "
+            "ve kolon adlarını döndürür. Hangi tabloda olduğunu bilmediğin bir soruda ilk durak budur."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": 'Aramaya verilecek ifade, örn. "stok hareketleri satış iade".',
+                },
+            },
+            "required": ["query"],
+        },
+    },
+}
+
+GET_TABLE_DETAILS = {
+    "type": "function",
+    "function": {
+        "name": "get_table_details",
+        "description": (
+            "Adları verilen tabloların kolonlarını, tiplerini, foreign key bağlantılarını ve kod "
+            "anlamlarını döndürür. Kolon adlarını uydurmak yerine buradan öğren."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "tables": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": 'Ayrıntısı istenen tablo adları, örn. ["TBLSTHAR", "TBLFATUIRS"].',
+                }
+            },
+            "required": ["tables"],
+        },
+    },
+}
+
+FIND_JOIN_PATH = {
+    "type": "function",
+    "function": {
+        "name": "find_join_path",
+        "description": (
+            "Verilen tabloları birbirine bağlayan join koşullarını bulur; hangi kolon çiftlerinin "
+            "eşitleneceğini ve bağlantının güvenini söyler, güveni düşük olanları uyarıyla birlikte "
+            "listeler. Birden fazla tabloyu birleştirmeden önce çağır."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "tables": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": 'Birbirine bağlanacak tablo adları, örn. ["TBLFATUIRS", "TBLCASABIT"].',
+                }
+            },
+            "required": ["tables"],
+        },
+    },
+}
+
+SEARCH_RULES = {
+    "type": "function",
+    "function": {
+        "name": "search_rules",
+        "description": (
+            "İş terimlerinin (ciro, net satış, iade oranı, geçen ay) bu veritabanında ne anlama "
+            "geldiğini arar ve ilgili kural bloklarını döndürür. Soruda böyle bir terim varsa "
+            "submit_sql öncesi neyin kastedildiğini buradan doğrula."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": 'Aramaya verilecek ifade, örn. "ağustos net ciro".',
+                },
+            },
+            "required": ["query"],
+        },
+    },
+}
+
+SAMPLE_VALUES = {
+    "type": "function",
+    "function": {
+        "name": "sample_values",
+        "description": (
+            "Bir kolondaki farklı değerlerden en fazla 20 örneği döndürür; 'İSTANBUL' mu 'istanbul' "
+            "mu, kod 'A' mı 'H' mı gibi yazım ve kod sorularını tahmin etme, buradan bak."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "table": {"type": "string", "description": "Tablo adı, örn. \"TBLCARISUBE\"."},
+                "column": {"type": "string", "description": "Kolon adı, örn. \"IL\"."},
+            },
+            "required": ["table", "column"],
         },
     },
 }
