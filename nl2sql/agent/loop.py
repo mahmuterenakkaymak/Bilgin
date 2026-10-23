@@ -160,8 +160,17 @@ def run_agent(
 
 
 def _context(context, audited, schema: dict, mode: str) -> modes.ToolContext:
-    """This run's dispatch world: the caller's index and graph, the audited executor, this mode."""
+    """This run's dispatch world: the caller's index and graph, the audited executor, this mode.
+
+    ``full_rules`` without a context is a wiring mistake, not a mode: an empty ``rules`` makes its
+    system prompt identical to ``full``, so the A/B would measure the same arm twice. It raises.
+    """
     if context is None:
+        if mode == "full_rules":
+            raise ValueError(
+                "full_rules modu bağlam istiyor: context.rules verilmedi; kuralsız bir full_rules "
+                "istemi full ile aynıdır."
+            )
         return modes.ToolContext(executor=audited, schema=schema, mode=mode)
     # ASSUMPTION: bağlamın kendi şeması varsa o kazanır; run_agent'ın şema argümanı yalnız
     # bağlam verilmeyince devreye girer, böylece ikisi çelişirse sessiz olan yutulmaz.

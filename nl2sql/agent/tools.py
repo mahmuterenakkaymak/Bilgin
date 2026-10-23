@@ -24,6 +24,12 @@ UNKNOWN_TOOL_PREFIX = "Bilinmeyen araç"
 IDENTIFIER = re.compile(r"^[A-Za-z0-9_]+$")
 REFUSALS = (ERROR_PREFIX, BLANK_SQL_PREFIX, UNKNOWN_TOOL_PREFIX)
 
+# Bağlamı eksik bir çağrının cevabı (T72): ToolContext search ile graph'ı None doğurur, yani
+# rag'in arama araçları onlarsız da çağrılabilir. dispatch kötü bir çağrıda yükseltmez, o yüzden
+# burada AttributeError yerine red satırı dönüyor ve döngü onu başarısız adım sayıyor.
+NO_SEARCH = f"{ERROR_PREFIX}: arama indeksi yok."
+NO_GRAPH = f"{ERROR_PREFIX}: join graph yok."
+
 GET_SCHEMA = {
     "type": "function",
     "function": {
@@ -240,6 +246,8 @@ def _unknown(name: str, known: list[str]) -> str:
 
 
 def _search_schema(ctx, query: str) -> str:
+    if ctx.search is None:
+        return NO_SEARCH
     hits = ctx.search.search(query, collection="tables", k=config.SEARCH_K)
     if not hits:
         return "Eşleşen tablo yok."
@@ -257,6 +265,8 @@ def _hit_line(table: dict | None, name: str) -> str:
 
 
 def _search_rules(ctx, query: str) -> str:
+    if ctx.search is None:
+        return NO_SEARCH
     hits = ctx.search.search(query, collection="rules", k=config.RULES_K)
     if not hits:
         return "Eşleşen kural yok."
@@ -267,6 +277,8 @@ def _search_rules(ctx, query: str) -> str:
 
 
 def _find_join_path(ctx, tables: list[str]) -> str:
+    if ctx.graph is None:
+        return NO_GRAPH
     try:
         path = ctx.graph.find_join_path(tables)
     except GraphError as error:

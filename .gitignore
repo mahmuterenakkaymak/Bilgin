@@ -3,7 +3,7 @@ data/*.db
 db/mssql/build_test_db.sql
 eval_out/
 logs/
-index/
+/index/
 .env
 __pycache__/
 .pytest_cache/
