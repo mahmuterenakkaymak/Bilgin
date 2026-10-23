@@ -32,6 +32,14 @@ TRANSPILE_MESSAGE = "SQL çalıştırılabilir bir sorguya çevrilemedi; tek bir
 # yani 'YYYY-MM' kesimi hiç yapılmaz. İkisi de çıplak ISO metin üzerine yeniden kuruluyor;
 # takvim birimleri 30/365'e bölmek yerine SQL Server gibi birim sınırının geçişini sayar.
 
+# MONTH/YEAR/DAY ve DATEPART ayrı bir yerde kırılır: sqlglot MONTH(TARIH)'i MONTH(DATE(TARIH))
+# bırakıyor (SQLite'ta MONTH işlevi yok), DATEPART'i EXTRACT(month FROM ...) yapıyor - o SQLite'ta
+# söz dizimi olarak bile geçmez, yani create_function ile düzeltilemez - LEFT de "no such function".
+# Üçü de burada STRFTIME/SUBSTR'a bağlanır.
+# ASSUMPTION: görev iki yol veriyordu (create_function / çeviri öncesi yeniden yazım); EXTRACT
+# create_function ile düzeltilemediği için hepsi tek yerde, aynı üreticide ele alınıyor.
+DATE_PART_FORMATS = {"YEAR": "%Y", "MONTH": "%m", "DAY": "%d"}
+
 CAST_DATE_TYPES = frozenset(
     {
         exp.DataType.Type.DATE,
@@ -46,7 +54,7 @@ CONVERT_STYLE_120 = "120"  # ODBC canonical: 'YYYY-MM-DD HH:MM:SS'
 def _date_arg(node):
     """İşlev argümanını tarih CAST katmanlarından soyar; JULIANDAY ve STRFTIME ISO metni okur."""
     while True:
-        if isinstance(node, exp.TimeStrToTime):
+        if isinstance(node, (exp.TimeStrToTime, exp.TsOrDsToDate)):
             node = node.this
         elif isinstance(node, (exp.Cast, exp.TryCast)) and node.to.this in CAST_DATE_TYPES:
             node = node.this
@@ -54,8 +62,18 @@ def _date_arg(node):
             return node
 
 
+def _strftime_int(fmt: str, x: str) -> str:
+    return f"CAST(STRFTIME('{fmt}', {x}) AS INTEGER)"
+
+
 def _year(x: str) -> str:
-    return f"CAST(STRFTIME('%Y', {x}) AS INTEGER)"
+    return _strftime_int("%Y", x)
+
+
+def _date_part(unit: str, x: str) -> str | None:
+    """MONTH/DATEPART karşılığı; tanımadığımız birimde None, yani gürültülü red."""
+    fmt = DATE_PART_FORMATS.get(unit)
+    return None if fmt is None else _strftime_int(fmt, x)
 
 
 def _month_index(x: str) -> str:
@@ -84,7 +102,7 @@ def _text_length(to) -> int | None:
 
 
 class _SQLiteDates(SQLite):
-    """SQLite üretimi; tarih işlevleri SQL Server'ın verdiği sayıyı ve metni verir."""
+    """SQLite üretimi; tarih işlevleri SQL Server'ın verdiği sayıyı ve metni verir, LEFT SUBSTR olur."""
 
     class Generator(SQLite.Generator):
         def datediff_sql(self, expression: exp.DateDiff) -> str:
@@ -106,6 +124,29 @@ class _SQLiteDates(SQLite):
                 return super().convert_sql(expression)
             fmt = TSQL.CONVERT_FORMAT_MAPPING[CONVERT_STYLE_120]
             return f"SUBSTR(STRFTIME('{fmt}', {self.sql(expression, 'expression')}), 1, {length})"
+
+        def day_sql(self, expression: exp.Day) -> str:
+            return self._date_part_sql("DAY", expression.this)
+
+        def month_sql(self, expression: exp.Month) -> str:
+            return self._date_part_sql("MONTH", expression.this)
+
+        def year_sql(self, expression: exp.Year) -> str:
+            return self._date_part_sql("YEAR", expression.this)
+
+        def extract_sql(self, expression: exp.Extract) -> str:
+            return self._date_part_sql(expression.this.name.upper(), expression.args["expression"])
+
+        def left_sql(self, expression: exp.Left) -> str:
+            this = self.sql(expression, "this")
+            count = self.sql(expression, "expression")
+            return f"SUBSTR({this}, 1, {count})"
+
+        def _date_part_sql(self, unit, arg) -> str:
+            sql = _date_part(unit, self.sql(_date_arg(arg)))
+            if sql is None:
+                raise UnsupportedError(f"Tarih parçası {unit} yok; YEAR, MONTH ya da DAY yazın.")
+            return sql
 
 
 class LocalExecutor:
