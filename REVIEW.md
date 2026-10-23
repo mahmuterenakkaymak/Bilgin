@@ -1,14 +1,13 @@
-# REVIEW M4 (T31-T46)
+# REVIEW M5 (T47-T61)
 
-Base e90b62e (Run 2 plan) -> HEAD acbf4ea. Full suite and smoke pass. Run 1 lines of golden.jsonl unchanged apart from the new fields; Run 1 pin holds; Q01-Q40 equal their references on seed 42 (no empty answer).
+Base ae4f0d0 (M4 review) -> HEAD 6d82a8b. Suite and smoke pass in the main checkout; this clean worktree cannot even import `nl2sql.index` (see T71).
 
-- **BUG (T67)**: schema.json `TBLSTHAR_ARSIV.description` says "2026 hareketleri burada, 2025 hareketleri TBLSTHAR'da yoktur" - it claims the archive holds 2026 movements. The text goes into every `full` / `get_table_details` answer and contradicts R2-3 (archive = 2025 only), so the A/B would partly measure a typo.
-- **BUG (T68)**: rules `doviz_tl` and `teslim_bekleyen` have `markers: []` although Q23/Q26/Q36/Q38 cite them; R2-11 (markers must match every citing golden SQL) is vacuous for them, and the ASSUMPTION in rules.py ("empty only for rules no question cites yet") is wrong.
-- **BUG (T69)**: `extra.DISTRACTOR_ROWS` default 0 still gives every filler distractor 1 row (`1 + randint(0, min(N, 4))`), 62 tables; R2-4/T39 say 0-5 rows with default 0, the config comment says "0 = stays schema-only", and build-db's "şema-yalnız Y" is always 0. tests/test_build_world.py::test_other_distractors_get_a_single_filler_row_by_default encodes it.
-- **BUG (T70)**: `_stok_fiyat` draws random dates, so a product can get two S rows with the same GECERLILIK_TARIHI (seeds 3, 10, 12, 16, 23, 28, 33 of 1-40; not 42). "Liste fiyatı = latest date" is then ambiguous and Q15's golden SQL returns the product twice.
-- ASSUMPTIONs checked OK: config Run 2 paths, doc.table_detail hides distractors in the unknown-table hint, extra._fill (empty table on a foreign schema), test_golden_contract needs_values, test_schema_doc allowlist = every table.
-- Risk: golden Q03 ("Geçen ay"), Q05 (net satış), Q09 (teslim tarihi yok) use a rule's concept without listing it, so needs_rule/retrieval metrics under-count those rules.
-- Risk: `sql_hint` of ciro/net_satis/iade_orani is nearly the golden SQL; R2-16 only checks questions, so `full_rules` and `rag` get an easier job than the model would in a real ERP.
-- Risk: TBLMUHFIS books purchase KDV on 391 (hesaplanan) for every invoice; no golden test shows that the near-duplicate named in a `distractor` question's note gives a different answer (test_build_world checks it only for TBLSTHAR_LOG and TBLCASABIT_YEDEK).
-- Risk: report/table still prints int codes with thousand dots (open since M3); eval/REVIEW.md previews inherit it.
-- Missing tests: any seed other than 42 for the golden answers; every rule has a non-empty marker; distractor tag vs. near-duplicate difference per question.
+- **BUG (T71)**: `.gitignore` has `index/` (for the runtime INDEX_DIR); it also matches `nl2sql/index/`, so the whole package (text, embed, docs, bm25, store, search, `__init__`) was never committed. `git ls-files nl2sql/index` is empty while cli/main.py, eval/retrieval.py and 9 tests import it - a clean checkout breaks, and the green suite only proves the working tree.
+- **BUG (T72)**: `ToolContext(search=None, graph=None)` default + `dispatch` -> `ctx.search.search` / `ctx.graph.find_join_path` raise AttributeError in `rag` when `run_agent` gets no `context`; runner.py and cli/main.py still call `run_agent` without mode/context. `full_rules` without context silently gets `rules=[]` (= `full`, a quiet A/B error).
+- ASSUMPTIONs checked OK: loop `_context` (context schema wins), tools `_run` (submit goes through policy), retrieval empty `requires_tables` = 1.0 (all 40 golden lines have tables, never hit), cli defaults `openai`/EXIT_EMBED 3, extra `_benzersiz_tarih`, rules markers, tools circular import of modes.
+- Risk: tools.py ASSUMPTION leaves `get_schema` uncapped, but PLAN R2-6 says every tool answer in every mode is capped at 4000 chars; `full` can still pull a ~83-table summary into the transcript, `rag` cannot - the A/B context numbers are not symmetric. Decide: cap it (R2-6) or amend the plan.
+- Risk: graph profile pairs fan out to every distractor holding TARIH / STOK_KODU / CARI_KOD (0.6-0.9 edges); `find_join_path` stays correct only because a direct edge is always cheaper - not tested on a pair whose shortest path crosses a distractor.
+- Risk: `config.SAMPLE_VALUES_N` comment ("in the index text") is stale - it is the sample_values row cap.
+- Risk: `build_index` timing excludes the store write; `seconds` is measured before `FileStore.save`.
+- Risk (open from M4): rules' `sql_hint` ~ golden SQL, so `full_rules` and `rag` get an easier job than the model would in a real ERP.
+- Missing tests: committed-file check for the whole package (T71); rag/full_rules with an incomplete context (T72); `find_join_path` never routes through a `distractor` table when a data-table path exists; `eval-retrieval`/`build-index` exit 3 on a dead embedder end-to-end.
