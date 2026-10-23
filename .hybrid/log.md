@@ -24,3 +24,6 @@
 2026-10-23 12:01:41 | ORCH   | M1: whole-project checks RED: ['.venv\\Scripts\\python -m nl2sql build-db --seed 42', '.venv\\Scripts\\python -m nl2sql eval --llm fake', '.venv\\Scripts\\python -m nl2sql ask "Eylül ayında en çok satan 5 ürün" --llm fake']
 2026-10-23 12:01:53 | BRAIN  | M1: review with sonnet in the background - hands keep building
 2026-10-23 12:01:53 | HANDS  | T08 try 1: nl2sql/policy/policy.py check(sql, allowlist, top_n) -> PolicyResult: sqlglot tsql parse, exactly one statement, SELECT/CTE/UNION-of-SELECT only, default-deny allowlist on real table refs (CTE-scope aware, shadowing cannot hide a real table), reject db/server-qualified names, sys/INFORMATION_SCHEMA, xp_/sp_, OPENROWSET/OPENQUERY/OPENDATASOURCE, SELECT INTO, table-valued functions; short reasons; all 10 golden SQLs pass
+2026-10-23 12:12:11 | ORCH   | T08: PASSED (hands)
+2026-10-23 12:12:11 | BRAIN  | M1: review merged - 0 fix task(s) added
+2026-10-23 12:12:28 | HANDS  | T09 try 1: policy TOP injection (outermost SELECT; top-level UNION wrapped as SELECT TOP n * FROM (...) AS _q; existing TOP kept) + tests/data/malicious.jsonl with >=20 cases (multi-statement, comment injection, UPDATE/DELETE in CTE, sys via UNION, CTE shadowing, [bracket]/"quoted" names, case tricks, SELECT INTO, EXEC, cross-db, OPENROWSET, TVF) all rejected with non-empty reason

@@ -1,0 +1,51 @@
+{"id": "MAL01", "category": "multi_statement", "sql": "SELECT 1 AS A; UPDATE TBLCASABIT SET CARI_KOD = 'X'", "expect": "Tek seferde"}
+{"id": "MAL02", "category": "multi_statement", "sql": "SELECT STOK_KODU FROM TBLSTHAR; DELETE FROM TBLSTHAR", "expect": "Tek seferde"}
+{"id": "MAL03", "category": "multi_statement", "sql": "SELECT 1 AS A;\n\nUPDATE TBLCASABIT SET CARI_KOD = 'X'", "expect": "Tek seferde"}
+{"id": "MAL04", "category": "comment_injection", "sql": "SELECT * FROM TBLSTHAR /* blok yorum */ ; DROP TABLE TBLCASABIT", "expect": "Tek seferde"}
+{"id": "MAL05", "category": "comment_injection", "sql": "SELECT * FROM TBLSTHAR; -- yoruma gömülmüş ikinci cümle\nSELECT 2", "expect": "Tek seferde"}
+{"id": "MAL06", "category": "comment_injection", "sql": "SELECT * FROM sys/* gizli */.objects", "expect": "Sistem kataloğu"}
+{"id": "MAL07", "category": "mutation_in_cte", "sql": "WITH x AS (UPDATE TBLSTHAR SET STOK_KODU = 'A' OUTPUT deleted.STOK_KODU) SELECT * FROM x", "expect": "Veri değiştiren"}
+{"id": "MAL08", "category": "mutation_in_cte", "sql": "WITH x AS (DELETE FROM TBLCASABIT OUTPUT deleted.CARI_KOD) SELECT * FROM x", "expect": "Veri değiştiren"}
+{"id": "MAL09", "category": "mutation_in_cte", "sql": "WITH x AS (INSERT INTO TBLCASABIT (CARI_KOD) OUTPUT inserted.CARI_KOD VALUES ('Z')) SELECT * FROM x", "expect": "Veri değiştiren"}
+{"id": "MAL10", "category": "sys_via_union", "sql": "SELECT STOK_KODU FROM TBLSTHAR UNION SELECT name FROM sys.objects", "expect": "Sistem kataloğu"}
+{"id": "MAL11", "category": "sys_via_union", "sql": "SELECT CARI_KOD FROM TBLCASABIT UNION ALL SELECT definition FROM sys.sql_modules", "expect": "Sistem kataloğu"}
+{"id": "MAL12", "category": "system_catalog", "sql": "SELECT * FROM TBLSTHAR s WHERE EXISTS (SELECT 1 FROM sys.partitions p)", "expect": "Sistem kataloğu"}
+{"id": "MAL13", "category": "cte_shadowing", "sql": "WITH TBLSTHAR AS (SELECT object_id AS STOK_KODU FROM sys.objects) SELECT * FROM TBLSTHAR", "expect": "Sistem kataloğu"}
+{"id": "MAL14", "category": "cte_shadowing", "sql": "WITH TBLCASABIT AS (SELECT 1 AS CARI_KOD) SELECT * FROM TBLCASABIT JOIN sys.sql_logins l ON 1 = 1", "expect": "Sistem kataloğu"}
+{"id": "MAL15", "category": "cte_shadowing", "sql": "WITH TBLCASABIT AS (SELECT 1 AS CARI_KOD) SELECT * FROM TBLCASABIT JOIN TBLGECKMIS g ON 1 = 1", "expect": "İzin verilmeyen tablo"}
+{"id": "MAL16", "category": "cte_shadowing", "sql": "WITH x AS (SELECT * FROM OPENROWSET('SQLNCLI', 'server=x;uid=y', 'SELECT 1') r) SELECT * FROM x", "expect": "Tablo işlevi"}
+{"id": "MAL17", "category": "cte_shadowing", "sql": "WITH sys AS (SELECT 1 AS A) SELECT * FROM sys.objects", "expect": "Sistem kataloğu"}
+{"id": "MAL18", "category": "quoted_names", "sql": "SELECT * FROM [sys].[objects]", "expect": "Sistem kataloğu"}
+{"id": "MAL19", "category": "quoted_names", "sql": "SELECT * FROM \"sys\".\"columns\"", "expect": "Sistem kataloğu"}
+{"id": "MAL20", "category": "quoted_names", "sql": "SELECT * FROM [INFORMATION_SCHEMA].[TABLES]", "expect": "Sistem kataloğu"}
+{"id": "MAL21", "category": "quoted_names", "sql": "SELECT * FROM [dbo].[TBLSTHAR]", "expect": "veritabanı"}
+{"id": "MAL22", "category": "quoted_names", "sql": "SELECT * FROM [xp_cmdshell]", "expect": "Sistem yordamları"}
+{"id": "MAL23", "category": "quoted_names", "sql": "SELECT * FROM \"TBLGECKMIS\"", "expect": "İzin verilmeyen tablo"}
+{"id": "MAL24", "category": "case_tricks", "sql": "sElEcT * FrOm SyS.ObJeCtS", "expect": "Sistem kataloğu"}
+{"id": "MAL25", "category": "case_tricks", "sql": "SELECT * FROM Xp_CMDSHELL", "expect": "Sistem yordamları"}
+{"id": "MAL26", "category": "case_tricks", "sql": "SeLeCt * InTo Tmp FrOm TBLSTHAR", "expect": "SELECT INTO"}
+{"id": "MAL27", "category": "case_tricks", "sql": "SELECT * FROM INFORMATION_SCHEMA.tables", "expect": "Sistem kataloğu"}
+{"id": "MAL28", "category": "select_into", "sql": "SELECT * INTO #stolen FROM TBLSTHAR", "expect": "SELECT INTO"}
+{"id": "MAL29", "category": "select_into", "sql": "SELECT STOK_KODU INTO YedekDB.dbo.KOPYA FROM TBLSTHAR", "expect": "SELECT INTO"}
+{"id": "MAL30", "category": "select_into", "sql": "SELECT * INTO TBLCASABIT_KOPYA FROM TBLCASABIT", "expect": "SELECT INTO"}
+{"id": "MAL31", "category": "exec", "sql": "EXEC xp_cmdshell 'dir'", "expect": "Yalnızca SELECT"}
+{"id": "MAL32", "category": "exec", "sql": "EXECUTE sp_who", "expect": "Yalnızca SELECT"}
+{"id": "MAL33", "category": "exec", "sql": "EXEC('SELECT * FROM sys.objects')", "expect": "Yalnızca SELECT"}
+{"id": "MAL34", "category": "exec", "sql": "EXEC sp_executesql N'SELECT * FROM sys.objects'", "expect": "Yalnızca SELECT"}
+{"id": "MAL35", "category": "exec", "sql": "DECLARE @q NVARCHAR(100) = 'SELECT 1'; EXEC(@q)", "expect": "Tek seferde"}
+{"id": "MAL36", "category": "cross_db", "sql": "SELECT * FROM OtherDB.dbo.TBLSTHAR", "expect": "veritabanı"}
+{"id": "MAL37", "category": "cross_db", "sql": "SELECT * FROM TBLSTHAR s JOIN msdb.dbo.sysjobs j ON 1 = 1", "expect": "veritabanı"}
+{"id": "MAL38", "category": "cross_db", "sql": "SELECT * FROM [10.0.0.5].msdb.dbo.sysjobs", "expect": "veritabanı"}
+{"id": "MAL39", "category": "cross_db", "sql": "SELECT * FROM TBLSTHAR WHERE FISNO IN (SELECT FATIRS_NO FROM tempdb.dbo.FATURALAR)", "expect": "veritabanı"}
+{"id": "MAL40", "category": "openrowset", "sql": "SELECT * FROM OPENROWSET('SQLNCLI', 'server=x;uid=y;pwd=z', 'SELECT * FROM TBLSTHAR') AS r", "expect": "Tablo işlevi"}
+{"id": "MAL41", "category": "openrowset", "sql": "SELECT * FROM OPENROWSET(BULK 'C:\\temp\\dokum.csv', FORMATFILE='C:\\temp\\dokum.fmt') AS t", "expect": "çözümlenemedi"}
+{"id": "MAL42", "category": "openrowset", "sql": "SELECT r.* FROM OPENQUERY(SRV, 'SELECT * FROM sys.objects') r", "expect": "Tablo işlevi"}
+{"id": "MAL43", "category": "openrowset", "sql": "SELECT * FROM OPENDATASOURCE('SQLOLEDB', 'Data Source=x;Uid=y;Pwd=z')..dbo.TBLSTHAR", "expect": "Tablo işlevi"}
+{"id": "MAL44", "category": "table_valued_function", "sql": "SELECT * FROM STRING_SPLIT('a,b,c', ',')", "expect": "Tablo işlevi"}
+{"id": "MAL45", "category": "table_valued_function", "sql": "SELECT * FROM TBLSTHAR s CROSS APPLY dbo.fn_lines(s.FISNO) x", "expect": "APPLY ile"}
+{"id": "MAL46", "category": "table_valued_function", "sql": "SELECT * FROM OPENJSON('[]') WITH (A INT '$.a')", "expect": "Tablo işlevi"}
+{"id": "MAL47", "category": "table_valued_function", "sql": "SELECT * FROM fn_split('a', ',')", "expect": "Tablo işlevi"}
+{"id": "MAL48", "category": "system_procedure", "sql": "SELECT dbo.sp_who()", "expect": "Sistem yordamları"}
+{"id": "MAL49", "category": "system_procedure", "sql": "SELECT * FROM TBLSTHAR WHERE STOK_KODU = xp_lookup(1)", "expect": "Sistem yordamları"}
+{"id": "MAL50", "category": "not_in_allowlist", "sql": "SELECT * FROM TBLGECKMIS", "expect": "İzin verilmeyen tablo"}
+{"id": "MAL51", "category": "not_in_allowlist", "sql": "SELECT * FROM #gizli", "expect": "İzin verilmeyen tablo"}
