@@ -229,3 +229,7 @@
 2026-10-23 21:43:54 | HANDS  | T76 try 1: FIX stale test after T75: tests/test_config_run2.py `test_index_dir_is_build_output_and_ignored` asserts the literal line `index/` in .gitignore, but T75 intentionally changed it to `/index/` (root-only, so nl2sql/index/ is no longer ignored); the .gitignore is right, the test is stale. Edit only that test in tests/test_config_run2.py: assert `/index/` is in the lines and `index/` is not; do not touch .gitignore
 2026-10-23 21:44:16 | ORCH   | T76: PASSED (hands)
 2026-10-23 21:44:16 | ORCH   | done: {"tasks": 11, "first_try": 7, "local_retries": 6, "rescues": 2, "failed": ["T71"], "reviews": 3, "checks": "red", "minutes": 116.6, "brain_calls": 17, "brain": "cloud"}
+2026-10-23 22:45:57 | ORCH   | brain: cloud Claude (panel: cloud)
+2026-10-23 22:45:57 | BRAIN  | extending the plan from PROJECT_BRIEF_RUN3.md with opus
+2026-10-23 22:50:15 | BRAIN  | Claude usage limit hit - local Strata is the brain for the rest of this run
+2026-10-23 22:59:23 | BRAIN  | extend done: 33 new tasks

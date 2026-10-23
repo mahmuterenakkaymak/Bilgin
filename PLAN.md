@@ -305,3 +305,159 @@ R2-16. **No leakage**: no index doc contains a golden question or any 6-token sh
 - **M6 - RAG agent + A/B eval** (T58-T66): modes/prompts, rag tools + cap, sample_values, mode-aware loop + FakeLLM rag
   replay, runner/report per mode, CLI eval --mode/--tag, compare report, CLI --compare + ask --mode, README + smoke.
   Integration: real FakeLLM + real executor + real index + real graph through `eval --compare`.
+
+---
+
+# PLAN - NL2SQL Run 3 (schema map import: Excel + live DB, and PII protection)
+
+Source: `PROJECT_BRIEF_RUN3.md`. Product name **Bilgin** (README title; package and CLI stay `nl2sql`). Everything
+above stays valid unless a numbered "Run 3 decision" says it changes. Stack: Run 2 + **openpyxl 3.1.5** (MIT, pure
+Python; installed and pinned in pyproject before the run). No pandas, no other new dependency. Still CLI-only ->
+Decision 14 stands, no `.hybrid/visual.json`; "what users see" is CLI output and markdown reports (R3-13).
+
+## Run 3 architecture
+
+```
+Excel map --(LLM proposes mapping JSON, user edits/accepts)--> excel.convert (code, all rows) --> schema/imported.json
+live DB  --introspect (SQLite PRAGMA | MSSQL INFORMATION_SCHEMA)--------------> schema/skeleton.json
+                          merge.merge_map (DB truth: existence+types; Excel truth: meaning) --> merged schema
+                          diff.diff_map  --> schema/diff.json + schema/diff.md          |
+                                                                                  build-index (hash check stays)
+ask/eval --mode full|full_rules|rag|auto--> agent --> LocalExecutor.execute:
+    policy.check (tables + PII filter rules) -> transpile -> backend -> pii.mask (sqlglot lineage, fail closed)
+    -> Result (+ masked_columns) -> audit (+ masked column names, never values)
+make-login-script --> db/mssql/readonly_login.sql (the primary control; policy is the second layer)
+```
+
+## Run 3 file layout additions
+
+```
+profiles/excel_headers.json      header synonyms for the deterministic mapping fallback
+nl2sql/schema_map/excel.py       read (sheets, header detect, preview), propose (LLM+fallback), convert (rows)
+nl2sql/schema_map/introspect.py  sqlite skeleton, MSSQL query texts + rows -> skeleton, --sample hints
+nl2sql/schema_map/merge.py       merge_map(excel, db), diff_map(excel, db) -> DiffReport, render md
+nl2sql/policy/pii.py             classes + mask fns, trace(sql, schema) lineage, filter check for predicates
+nl2sql/engine/login_script.py    readonly_login_sql(schema, login) -> T-SQL text
+tests/fixtures/make_maps.py      generates map_netsis_style.xlsx + map_customer_map.xlsx from schema.json
+tests/fixtures/*.xlsx            the two committed fixtures
+tests/data/pii_bypass.jsonl      >= 20 bypass cases
+schema/mapping.<name>.json  schema/imported.json  schema/skeleton.json  schema/diff.json|md  (generated, ignored)
+db/mssql/readonly_login.sql      (generated)
+```
+
+## Run 3 decisions
+
+R3-1. **Golden test consolidation (first task of the run).** One parametrized file `tests/test_golden_all.py` over
+      every golden line with the union of per-question checks (policy pass, transpile, run on build_db(tmp), equals
+      eval.reference.REFERENCES rounded 2 dp, >=1 row, order-aware only when `ordered`). Delete
+      `tests/test_golden_q11_q20.py`, `test_golden_q21_q30.py`, `test_golden_q31_q40.py`; strip the duplicated
+      golden-vs-reference parts from `tests/test_golden_reference.py`, `tests/test_integration_m2.py`,
+      `tests/test_integration_m4.py`, keeping every other distinct assertion there. Report test count before/after;
+      behaviour coverage must not shrink.
+R3-2. **Excel pipeline is two-phase, LLM never touches rows.** Phase 1 `propose`: the LLM sees only sheet names,
+      headers and the first `config.EXCEL_PREVIEW_ROWS` (20) rows and returns the mapping JSON; it is written to
+      `schema/mapping.<name>.json` for the user to edit. Phase 2 `convert` (on `--accept`) turns **all** rows into a
+      canonical schema with code only: group by table, normalise types, parse `values` cells (`G=Giriş; C=Çıkış`),
+      keep row order, report skipped/invalid rows with sheet+row number. Header row = first row with >= 3 text cells.
+R3-3. **Deterministic fallback** (`profiles/excel_headers.json`: canonical field -> Turkish-folded header synonyms;
+      TABLO/TABLE/TABLO ADI, KOLON/ALAN/FIELD, TİP/TYPE, AÇIKLAMA/ACIKLAMA/DESCRIPTION, MODÜL/MODUL/MODULE,
+      TÜR/TUR/DEĞER/DEGER/VALUES, NULLABLE/BOŞ, REFERANS/FK...). Used when the LLM is unreachable (with a printed
+      note) and always to sanity-check the LLM proposal; per-field disagreements are listed in the proposal output
+      and in the mapping file (`disagreements`), never silently resolved.
+R3-4. **Introspection.** SQLite: `sqlite_master` + `PRAGMA table_info` / `foreign_key_list`. SQL Server: query texts
+      (`INFORMATION_SCHEMA.TABLES/COLUMNS`, `sys.foreign_keys` joins) live in ONE module constant, are parse-tested
+      with sqlglot tsql, and the rows -> skeleton conversion is a pure function unit-tested with hand-built rows;
+      the pyodbc connection (lazy, `NL2SQL_MSSQL_CONN`, ApplicationIntent=ReadOnly) is never exercised by tests.
+      Skeleton schema: names, types (normalised to the T-SQL type names schema.json uses), nullability, fks;
+      descriptions empty; `kind` = "unknown"; join edges stay inferred from the profile (nothing stored).
+      `--sample` adds up to 5 distinct values per short text column (declared length <= 100), fetched through
+      LocalExecutor (policy + audit inside), columns whose `pii` is set excluded.
+R3-5. **Merge + diff.** `merge_map`: live DB wins on existence and types, Excel wins on meaning (description, values,
+      module, keywords); an Excel fk missing in the DB is kept only in the diff, not in the merge. `diff_map` ->
+      `DiffReport` rendered as diff.json + diff.md. Index freshness (R2-9) keeps working: content_hash is computed
+      from the schema actually loaded, so `build-index`/`eval --schema <path>` refuse an index built from another one.
+R3-6. **PII.** Schema columns gain optional `pii` in tckn, vkn, iban, phone, email, address, salary, person_name.
+      Masking runs **inside the executor, after the backend, before the Result is returned** (model, CLI and eval
+      all see masked rows): output columns are traced to source columns with sqlglot lineage; any output depending
+      on a PII column is masked per class (`tckn` -> `*******1234`, `iban` -> `TR** **** **** **** 1234`, `salary`
+      -> `***`, `address` -> city only, `phone` -> last 4, `email` -> first char + domain, `person_name` -> initials
+      only, `vkn` -> `*******1234`), except whitelisted aggregates `COUNT` / `COUNT(DISTINCT ...)` which stay;
+      `MAX/AVG` over a salary stay masked. Lineage unresolvable for an output column -> the whole column is masked
+      (fail closed) and the count of fail-closed columns is printed. Policy rejects PII columns appearing in
+      WHERE/JOIN/GROUP BY/ORDER BY (filter side channels), configurable per class via `config.PII_FILTER`. Audit
+      gains `masked`: column names only. sample_values and introspect --sample inherit the protection through the
+      executor.
+R3-7. **Synthetic PII data** (`extra.extend_run3(dataset, seed)`, own stream `random.Random(f"{seed}:run3")`, called
+      last): TBLPERSONEL gains columns TCKN/VKN/IBAN/E_POSTA/ADRES (appended), TBLCARISUBE gains ADRES/TELEFON/
+      E_POSTA; TBLPERSONEL, TBLMAAS, TBLMAASDETAY get rows (fictional people, checksum-valid TCKN (11-digit rule)
+      and IBAN (mod-97)); existing Run 1/Run 2 column values and all 40 golden answers unchanged (Run 1 pin holds;
+      golden SQL selects explicit columns). schema.json annotates the PII columns (R3-6 classes); no golden question
+      touches them.
+R3-8. **Login script** (`make-login-script [--login nl2sql_ro]` -> `db/mssql/readonly_login.sql`): CREATE LOGIN with
+      password placeholder `__DEGISTIR__` (never a real one), CREATE USER, `db_datareader`, `DENY SELECT` on every
+      table not in the schema allowlist, column-level `DENY SELECT` on every `pii` column, `DENY VIEW DEFINITION`,
+      `DENY EXECUTE`; header comments state that views/synonyms/TVFs bypass a parser allowlist so THIS script is the
+      primary control. Tests parse the whole script with sqlglot tsql and check the DENY set equals the schema.
+R3-9. **Retrieval improvements, measured, never tuned to flip the verdict.** Neighbour expansion: `search_schema`
+      adds 1-hop join-graph neighbours of the top-k that are data tables (config `NEIGHBOUR_EXPANSION` on/off,
+      `NEIGHBOUR_MAX`), hits marked "komşu" in the tool answer; synonym rewriting: synonyms of the rules matched by
+      the query are appended to the BM25 query (config `SYNONYM_REWRITE`). `eval-retrieval` reports recall@k per
+      variant (base / +komşu / +eşanlam); with FakeEmbedder neither may lower recall@5 on the golden set. Embed
+      model is configuration: `build-index --embed-model` / `eval-retrieval --embed-model`, meta stores the id
+      (already true); README documents bge-m3 (MIT) via llama-server `--embedding` on CPU at another port. `rag`
+      prompt gains: call `find_join_path` before writing a 3+ table join.
+R3-10. **`--mode auto`** (new default for `ask`; eval keeps explicit modes): estimate = `doc.estimate_tokens` of the
+      full_rules system prompt (schema full text + rules + system); <= `config.AUTO_FULL_MAX_TOKENS` (12000) ->
+      `full_rules`, else `rag` (rag without a fresh index -> `full` with the Run 2 note). The chosen mode and the
+      estimate are printed and land in the audit/`AgentRun.mode`.
+R3-11. **Noise measurement**: `eval --compare --repeat N` runs each mode N times; the compare report gains per-mode
+      and per-tag mean/min/max scores, `flips_within_mode` (questions whose outcome changes between repeats of the
+      same mode), and the verdict uses the means, saying "fark gürültü içinde" when two mode means differ by less
+      than the max-min spread of either.
+R3-12. **Test rule for this run (from brief §0):** tests over a growing or configurable set assert structure (ids
+      sequential/unique, every item checked), never a fixed count; a test that depends on data volume reads it from
+      the dataset/config. New tests must not hardcode "40 questions" or "83 tables".
+R3-13. **What the user sees (CLI states):** `import-map` prints the proposal as a table (sheet, header row, mapped
+      fields per column), the disagreement lines ("⚠ uyuşmuyor: <sheet>.<column> <field>: llm=... fallback=..."),
+      and after --accept "Şema yazıldı: schema/imported.json (N tablo, M kolon, K atlanan satır)" with each skipped
+      row listed; `introspect` prints "İskelet: N tablo, M kolon -> schema/skeleton.json"; `diff-map` prints the
+      counts and the two output paths, empty diff -> "Fark yok."; `eval --schema X` prints "Şema: <path> (<hash8>)";
+      after a masked result the CLI prints "Maskelendi: TCKN, TELEFON" and the audit line carries the names; `ask`
+      prints "Mod: auto -> full_rules (bağlam tahmini 9.8K token)"; `--repeat` prints per-mode mean/min/max and the
+      noise verdict line.
+R3-14. **Real-data checklist** in README: introspect -> import-map -> diff-map -> merge-map -> build-index ->
+      make-login-script (create the login first!) -> ask/eval against a Netsis **copy**; states that nothing in the
+      tests touches a real server and that Windows auth (sysadmin) is never used.
+
+## Contracts (Run 3 additions)
+
+| Shape | Producer -> Consumer | Fields (optional = default) |
+|---|---|---|
+| sheet preview | excel.read -> propose, CLI | `{"file", "sheets":[{"name", "header_row"(1-based), "headers":[str], "rows":[first EXCEL_PREVIEW_ROWS rows as [cell]]}]}` |
+| mapping | excel.propose -> `schema/mapping.<name>.json`, excel.convert, CLI | `{"file", "generated_by"("llm"\|"fallback"), "sheets":[{"sheet","header_row","columns":[{"column"(letter or header text),"table_name"=null,"column_name"=null,"data_type"=null,"description"=null,"fk_target"=null("TABLE.COL"),"values"=null,"nullable"=null,"module"=null}]}], "disagreements"=[{"sheet","column","field","llm","fallback"}]}` |
+| convert report | excel.convert -> CLI | `{"schema": <canonical schema doc>, "tables": int, "columns": int, "skipped":[{"sheet","row"(1-based),"reason"}]}` |
+| skeleton schema | introspect -> merge, diff, eval --schema | canonical schema doc shape; `kind`="unknown", descriptions "", `pii` from DB = none |
+| `DiffReport` | merge.diff_map -> diff.json/md, CLI | `{"excel_only_tables":[str], "db_only_tables":[str], "excel_only_columns":[{"table","column"}], "db_only_columns":[{"table","column"}], "type_mismatches":[{"table","column","excel","db"}], "fk_missing_in_db":[{"table","column","fk"}]}` |
+| pii class | schema.json column + `pii`=null -> policy, pii.mask, login_script, introspect --sample | one of tckn, vkn, iban, phone, email, address, salary, person_name |
+| lineage | pii.trace(sql, schema) -> pii.mask | per output column: `list[(table, column)]` or `None` (unresolvable -> mask whole column) |
+| `Result` (ext.) | executor -> tools, runner, CLI | + `masked_columns: list[str]`=[] |
+| audit entry (ext.) | executor -> logs/audit.jsonl | + `"masked"`:[column names]=[] — never values |
+| bypass case | `tests/data/pii_bypass.jsonl` -> parametrized test | `{"id","sql","expect"("masked"\|"rejected"),"masked_columns"=[],"note"=""}` |
+| retrieval report (ext.) | eval.retrieval -> CLI, report | + `variants`: "base"\|"neighbours"\|"synonyms" -> `{"mean":{method:float},"by_tag":{...}}` |
+| report.json (ext.) | runner -> report.md | + `"schema"`: {"path","hash"} |
+| compare report (ext.) | compare_modes -> report.json/md | + `"repeat"`:int=1, per mode `"scores"`:{"mean","min","max"}, per tag mean/min/max, `"flips_within_mode"`:int; verdict line may end "fark gürültü içinde" |
+
+## Run 3 milestones
+
+- **M7 - Clean-up + Excel import** (T77-T85): golden test merge, config, reader + header detection, fallback
+  mapping, LLM proposal + disagreements, row conversion, fixtures, CLI import-map. Integration: real fixture files
+  -> real reader -> real fallback -> real convert == schema.json (tidy exact; messy same tables/columns).
+- **M8 - Live schema** (T86-T92): SQLite + MSSQL introspect, --sample, merge, diff, merge-map/diff-map CLI,
+  eval --schema <path|full|skeleton> with schema path+hash in the report. Integration: build_db -> real introspect
+  -> real diff vs real imported schema -> eval --schema skeleton with fake LLM.
+- **M9 - PII + DB script** (T93-T101): classes + masks, schema annotations, synthetic PII rows, lineage, executor
+  masking + audit, filter rules, bypass set, login script, README checklist. Integration: real executor on real
+  built DB masks every bypass case; golden 40 unchanged; login script DENY set == schema.
+- **M10 - Retrieval + modes** (T102-T109): neighbour expansion, synonym rewriting, eval-retrieval variants,
+  embed-model config, rag join hint, --mode auto, --repeat noise, README + smoke. Integration: real index + graph +
+  FakeEmbedder through eval-retrieval; real CLI auto + compare --repeat.

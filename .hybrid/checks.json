@@ -5,6 +5,10 @@
   "smoke": [
     ".venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql eval --llm fake && .venv\\Scripts\\python -m nl2sql ask \"Eylül ayında en çok satan 5 ürün\" --llm fake",
     {"cmd": ".venv\\Scripts\\python -m nl2sql build-index --embed fake && .venv\\Scripts\\python -m nl2sql eval-retrieval --embed fake", "from": "M5"},
-    {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql build-index --embed fake && .venv\\Scripts\\python -m nl2sql eval --compare --llm fake && .venv\\Scripts\\python -m nl2sql ask \"Eylül 2026'da her plasiyerin carilerine ait iptal edilmemiş satış faturalarının genel toplamı ne kadar?\" --llm fake --mode rag", "from": "M6"}
+    {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql build-index --embed fake && .venv\\Scripts\\python -m nl2sql eval --compare --llm fake && .venv\\Scripts\\python -m nl2sql ask \"Eylül 2026'da her plasiyerin carilerine ait iptal edilmemiş satış faturalarının genel toplamı ne kadar?\" --llm fake --mode rag", "from": "M6"},
+    {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql import-map tests\\fixtures\\map_netsis_style.xlsx --llm fake && .venv\\Scripts\\python -m nl2sql import-map tests\\fixtures\\map_netsis_style.xlsx --accept --llm fake --out schema\\imported.json", "from": "M7"},
+    {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql introspect --out schema\\skeleton.json && .venv\\Scripts\\python -m nl2sql import-map tests\\fixtures\\map_customer_map.xlsx --accept --llm fake --out schema\\imported.json && .venv\\Scripts\\python -m nl2sql diff-map --excel schema\\imported.json --db && .venv\\Scripts\\python -m nl2sql eval --schema skeleton --llm fake", "from": "M8"},
+    {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql make-login-script && .venv\\Scripts\\python -m nl2sql eval --llm fake", "from": "M9"},
+    {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql build-index --embed fake && .venv\\Scripts\\python -m nl2sql eval-retrieval --embed fake && .venv\\Scripts\\python -m nl2sql eval --compare --repeat 2 --llm fake", "from": "M10"}
   ]
 }
