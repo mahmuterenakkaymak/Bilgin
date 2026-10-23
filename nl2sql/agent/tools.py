@@ -9,6 +9,8 @@ and the database, so it is also where a missing argument stops instead of reachi
 
 from __future__ import annotations
 
+import re
+
 from nl2sql import config
 from nl2sql.engine.result import Budget
 from nl2sql.graph.graph import GraphError, join_text
@@ -19,6 +21,7 @@ from nl2sql.schema_map.rules import rule_text
 ERROR_PREFIX = "Hata"
 BLANK_SQL_PREFIX = "Sorgu boş"
 UNKNOWN_TOOL_PREFIX = "Bilinmeyen araç"
+IDENTIFIER = re.compile(r"^[A-Za-z0-9_]+$")
 REFUSALS = (ERROR_PREFIX, BLANK_SQL_PREFIX, UNKNOWN_TOOL_PREFIX)
 
 GET_SCHEMA = {
@@ -218,8 +221,9 @@ def dispatch(name: str, args: dict, ctx_or_executor, schema: dict | None = None)
         answer = _search_rules(ctx, str(args.get("query") or ""))
     elif name == "find_join_path":
         answer = _find_join_path(ctx, _table_names(args.get("tables")))
+    elif name == "sample_values":
+        answer = _sample_values(ctx, str(args.get("table") or ""), str(args.get("column") or ""))
     else:
-        # Modun listesinde ama dispatch'e henüz bağlı değil: sample_values (T60).
         return _unknown(name, known)
     return cap_text(answer, config.TOOL_RESULT_MAX_CHARS)
 
@@ -268,6 +272,38 @@ def _find_join_path(ctx, tables: list[str]) -> str:
     except GraphError as error:
         return f"{ERROR_PREFIX}: {error}"
     return join_text(path)
+
+
+def _sample_values(ctx, table: str, column: str) -> str:
+    """R2-7: kolon adı burada süzülür; tablo adı ön denetimden geçmez, policy'ye kadar gider.
+
+    Tablonun varlığını policy, yokluğunu allowlist söyler ve red de denetlendiği için
+    uydurma bir tablo deneme izi bırakır; kolon ise şemada yoksa veritabanına hiç gitmez.
+    """
+    if not IDENTIFIER.match(column):
+        return f"{ERROR_PREFIX}: Geçersiz kolon adı: {column}. Yalnız harf, rakam ve alt çizgi kullanın."
+    columns = _column_names(ctx.schema, table)
+    if columns and column.upper() not in columns:
+        return f"{ERROR_PREFIX}: {column} kolonu {table} tablosunda yok. Kolonlar: {', '.join(columns)}."
+    sql = (
+        f"SELECT DISTINCT TOP {config.SAMPLE_VALUES_N} [{column}] FROM [{table}]"
+        f" WHERE [{column}] IS NOT NULL ORDER BY [{column}]"
+    )
+    result = ctx.executor.execute(sql, Budget(max_rows=config.SAMPLE_VALUES_N))
+    if result.error is not None:
+        return f"{ERROR_PREFIX} ({result.error.kind}): {result.error.message}"
+    values = [_cell(row[0]) for row in result.rows]
+    if not values:
+        return "Değer yok."
+    return f"Değerler ({len(values)}): " + ", ".join(values)
+
+
+def _column_names(schema: dict, table: str) -> list[str]:
+    """Tablonun kolon adları; tablo şemada yoksa boş liste, yani kolon denetimi yapılmaz."""
+    for candidate in schema.get("tables", []):
+        if candidate["name"].upper() == table.strip().upper():
+            return [column["name"] for column in candidate.get("columns", [])]
+    return []
 
 
 def answer_is_ok(answer: str) -> bool:
