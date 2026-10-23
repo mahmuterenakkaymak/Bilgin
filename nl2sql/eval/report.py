@@ -35,17 +35,37 @@ def write_report(
     model: str = "",
     config: dict | None = None,
 ) -> Path:
-    """Write ``eval_out/<timestamp>/report.json`` + ``report.md``, copy them to ``eval_out/latest``."""
+    """Write ``eval_out/<timestamp>/report.json`` + ``report.md``, copy them to ``eval_out/latest``.
+
+    ``latest`` holds the previous run, so it is read before it is replaced: that is the only place
+    the run-to-run delta can come from.
+    """
     stamp = datetime.now()
-    report = _report(results, model, config, stamp)
     out = Path(out_dir)
+    previous = _load(out / "latest" / REPORT_FILES[0])
+    report = _report(results, model, config, stamp, previous)
     run_dir = out / stamp.strftime(STAMP)
     _write(run_dir, report)
     _write(out / "latest", report)
     return run_dir
 
 
-def _report(results: list[QuestionResult], model: str, settings: dict | None, stamp: datetime) -> dict:
+def _load(path: Path) -> dict | None:
+    """Önceki koşunun raporu; okunamazsa (yok, yarı yazılmış, bozuk) None - delta bölümü yazılmaz."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _report(
+    results: list[QuestionResult],
+    model: str,
+    settings: dict | None,
+    stamp: datetime,
+    previous: dict | None = None,
+) -> dict:
     passed = sum(1 for result in results if result.outcome == "pass")
     peaks = [result.max_prompt_tokens for result in results]
     return {
@@ -59,7 +79,37 @@ def _report(results: list[QuestionResult], model: str, settings: dict | None, st
             "median_prompt_tokens": round(statistics.median(peaks)) if peaks else 0,
         },
         "questions": [dataclasses.asdict(result) for result in results],
-        "previous": None,
+        "previous": _delta(previous, results),
+    }
+
+
+def _delta(previous: dict | None, results: list[QuestionResult]) -> dict | None:
+    """Önceki koşuya göre değişim: skor farkı ve sonucu dönen sorular.
+
+    Önceki rapor yoksa ya da skor satırı yarım/bozuksa None döner; uydurma bir fark göstermektense
+    bölüm hiç yazılmaz. ``--only`` ile kısalan koşuda iki tarafta da olan sorular karşılaştırılır.
+    """
+    score = (previous or {}).get("score")
+    score = score if isinstance(score, dict) else {}
+    passed, total = score.get("passed"), score.get("total")
+    if not isinstance(passed, int) or not isinstance(total, int):
+        return None
+    before = {
+        question["id"]: question.get("outcome", "")
+        for question in previous.get("questions") or []
+        if isinstance(question, dict) and question.get("id")
+    }
+    now = sum(1 for result in results if result.outcome == "pass")
+    return {
+        "timestamp": previous.get("timestamp") or "",
+        "model": previous.get("model") or "",
+        "score": {"passed": passed, "total": total},
+        "delta": now - passed,
+        "flipped": [
+            {"id": result.id, "from": before[result.id], "to": result.outcome}
+            for result in results
+            if result.id in before and before[result.id] != result.outcome
+        ],
     }
 
 
@@ -101,6 +151,10 @@ def _markdown(report: dict) -> str:
         "",
         f"Bağlam: tepe {context['max_prompt_tokens']} istem tokenı, medyan "
         f"{context['median_prompt_tokens']} istem tokenı.",
+    ]
+    if report["previous"]:
+        lines += ["", "## Önceki koşuya göre", ""] + _delta_lines(report)
+    lines += [
         "",
         "| Soru | Sonuç | Araç | Token | Süre |",
         "| --- | --- | ---: | ---: | ---: |",
@@ -120,6 +174,28 @@ def _markdown(report: dict) -> str:
         if question["golden_sql"] and question["golden_sql"] != question["sql"]:
             lines += ["Golden SQL:", "", _sql(question["golden_sql"]), ""]
     return "\n".join(lines) + "\n"
+
+
+def _delta_lines(report: dict) -> list[str]:
+    previous, score = report["previous"], report["score"]
+    was = f"{previous['score']['passed']}/{previous['score']['total']}"
+    now = f"{score['passed']}/{score['total']}"
+    origin = " — ".join(
+        str(part)
+        for part in (was, previous["model"], previous["timestamp"])
+        if part
+    )
+    delta = previous["delta"]
+    change = f"**{delta:+d}** soru ({was} → {now})" if delta else f"değişmedi ({now})"
+    flipped = [
+        f"- {item['id']} {_mark(item['from'])} {item['from']} → {_mark(item['to'])} {item['to']}"
+        for item in previous["flipped"]
+    ]
+    return [
+        f"- Önceki koşu: {origin}",
+        f"- Skor değişimi: {change}",
+        *(flipped or ["- Soru sonuçları aynı."]),
+    ]
 
 
 def _mark(outcome: str) -> str:

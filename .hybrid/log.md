@@ -63,3 +63,5 @@
 2026-10-23 13:08:52 | HANDS  | T21 try 1: Delight 3: friendly errors in CLI - missing DB prints "Önce `python -m nl2sql build-db` çalıştırın" and exits 2; LLMError on ask/eval prints the failing base URL and a hint about Strata / NL2SQL_LLM_BASE_URL with no traceback
 2026-10-23 13:12:42 | ORCH   | T21: PASSED (hands)
 2026-10-23 13:12:43 | HANDS  | T22 try 1: Delight 4: eval prints one live progress line per finished question (id, ✓/✗, outcome, tool calls, seconds, tokens like 8.1K) via a callback from run_eval; test captures the lines for a 3-question fake run
+2026-10-23 13:15:43 | ORCH   | T22: PASSED (hands)
+2026-10-23 13:15:45 | HANDS  | T23 try 1: Delight 5: report.py reads previous eval_out/latest/report.json before overwriting, stores "previous" score in report.json and writes a "Önceki koşuya göre" section in report.md (score delta + flipped questions); test with two consecutive fake runs
