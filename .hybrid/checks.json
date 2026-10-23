@@ -3,8 +3,8 @@
     ".venv\\Scripts\\python -m pytest -q"
   ],
   "smoke": [
-    ".venv\\Scripts\\python -m nl2sql build-db --seed 42",
-    ".venv\\Scripts\\python -m nl2sql eval --llm fake",
-    ".venv\\Scripts\\python -m nl2sql ask \"Eylül ayında en çok satan 5 ürün\" --llm fake"
+    ".venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql eval --llm fake && .venv\\Scripts\\python -m nl2sql ask \"Eylül ayında en çok satan 5 ürün\" --llm fake",
+    {"cmd": ".venv\\Scripts\\python -m nl2sql build-index --embed fake && .venv\\Scripts\\python -m nl2sql eval-retrieval --embed fake", "from": "M5"},
+    {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql build-index --embed fake && .venv\\Scripts\\python -m nl2sql eval --compare --llm fake && .venv\\Scripts\\python -m nl2sql ask \"Eylül 2026'da her plasiyerin carilerine ait iptal edilmemiş satış faturalarının genel toplamı ne kadar?\" --llm fake --mode rag", "from": "M6"}
   ]
 }

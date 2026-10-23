@@ -82,3 +82,6 @@
 2026-10-23 13:28:13 | ORCH   | final: whole-project checks
 2026-10-23 13:28:31 | ORCH   | final: whole-project checks green (4 command(s))
 2026-10-23 13:28:31 | ORCH   | done: {"tasks": 30, "first_try": 30, "local_retries": 0, "rescues": 0, "failed": [], "reviews": 3, "checks": "green", "minutes": 113.8, "brain_calls": 5, "brain": "cloud"}
+2026-10-23 15:08:46 | ORCH   | brain: cloud Claude (panel: cloud)
+2026-10-23 15:08:46 | BRAIN  | extending the plan from PROJECT_BRIEF_RUN2.md with opus
+2026-10-23 15:19:52 | BRAIN  | extend done: 36 new tasks
