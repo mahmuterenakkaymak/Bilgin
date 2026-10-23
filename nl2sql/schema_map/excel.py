@@ -12,11 +12,17 @@ kalarak görünür kalır; uydurma alan adı sessizce geçiştirilmez.
 Öneri adımı (PLAN R3-2) eşlemeyi modele sorar; model yalnızca sayfa adı, başlık ve önizleme
 satırlarını görür. Sözlük her durumda çalışır ve öneriyi yoklar: iki tarafın aynı sütun için
 farklı iddiası varsa uyuşmazlık sessizce çözülmez, mapping'in yanında kullanıcıya taşınır.
+
+Dönüşüm adımı (PLAN R3-2) eşlemeyi tüm çalışma kitabına koddan uygular; LLM satırları hiç görmez.
+Tablo adı ilk görünüm sırasıyla gruplanır, tipler şemanın T-SQL adlarına çevrilir, values hücreleri
+çözülür. Bozuk bir hücre sütunu düşürmez: satır olduğu gibi kalır, sorunu sheet + 1-tabanlı satır
+numarasıyla raporla kullanıcıya taşınır.
 """
 
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -60,16 +66,22 @@ def read_workbook(path: str | Path) -> dict:
 
 def _read_sheet(sheet: Worksheet) -> dict:
     rows = list(sheet.iter_rows(values_only=True))
+    number = _header_row(rows, sheet.title)
+    return {
+        "name": sheet.title,
+        "header_row": number,
+        "headers": [_text(value) for value in rows[number - 1]],
+        "rows": [list(item) for item in rows[number : number + config.EXCEL_PREVIEW_ROWS]],
+    }
+
+
+def _header_row(rows: list[tuple[Any, ...]], title: str) -> int:
+    """Başlık satırının 1-tabanlı numarası: eşiği geçen ilk satır (önizleme ve dönüşüm aynı satırı görür)."""
     for number, row in enumerate(rows, start=1):
         if _text_cells(row) >= _HEADER_TEXT_CELLS:
-            return {
-                "name": sheet.title,
-                "header_row": number,
-                "headers": [_text(value) for value in row],
-                "rows": [list(item) for item in rows[number : number + config.EXCEL_PREVIEW_ROWS]],
-            }
+            return number
     raise SheetError(
-        f"'{sheet.title}' sayfasında başlık satırı yok; en az {_HEADER_TEXT_CELLS} dolu "
+        f"'{title}' sayfasında başlık satırı yok; en az {_HEADER_TEXT_CELLS} dolu "
         "metin hücresi olan bir satır gerekir."
     )
 
@@ -272,3 +284,217 @@ def _references(sheet: dict) -> dict[str, int]:
         refs.setdefault(text.fold(_text(header)), index)
         refs.setdefault(text.fold(get_column_letter(index + 1)), index)
     return refs
+
+
+# --- Satırdan şemaya dönüşüm (PLAN R3-2): tüm satırlar koddan geçer. ---
+
+# Uzunluk verilmemiş serbest metnin şemadaki karşılığı.
+_TEXT_TYPE = "NVARCHAR(255)"
+
+# Türkçe tip yazımları -> taban tip adı; "sayı" hücresi ile "INT" hücresi aynı yere çıkar.
+_TYPE_WORDS = {
+    "sayi": "int",
+    "tam sayi": "int",
+    "integer": "int",
+    "para": "decimal",
+    "tutar": "decimal",
+    "metin": "nvarchar",
+    "yazi": "nvarchar",
+    "string": "nvarchar",
+    "tarih": "date",
+}
+
+_TYPE_RE = re.compile(
+    r"^(int|bigint|smallint|bit|real|float|money|date|datetime|datetime2|uniqueidentifier"
+    r"|decimal|numeric|varchar|nvarchar|char|nchar)(\(\s*\d+\s*(?:,\s*\d+\s*)?\))?$"
+)
+
+# Uzunluk verilmeyen tiplerin şema karşılığı; listesi olmayanlar kendi adıyla geçer.
+_TYPE_DEFAULTS = {
+    "decimal": "DECIMAL(18,2)",
+    "numeric": "DECIMAL(18,2)",
+    "varchar": _TEXT_TYPE,
+    "nvarchar": _TEXT_TYPE,
+    "char": _TEXT_TYPE,
+    "nchar": _TEXT_TYPE,
+}
+
+_FK_RE = re.compile(r"^[A-Z0-9_]+\.[A-Z0-9_]+$")
+
+# "Dolu" yazımları; geri kalan her şey (boş hücre dahil) boş bırakılabilir sayılır.
+_FILLED_WORDS = frozenset({"h", "hayir", "false", "0", "dolu", "not null", "degil"})
+
+# Katlama İ/I/ı üçünü aynı harfe indirir; tip ve boş/dolu sözcükleri iki yazımla da tanınır.
+_TURKISH_LETTERS = str.maketrans("çÇğĞıİöÖşŞüÜ", "cCgGiIoOSSuU")
+
+
+def convert(path: str | Path, mapping: dict) -> dict:
+    """Eşlemeyi tüm çalışma kitabına uygular ve şemayı koddan üretir (PLAN R3-2).
+
+    Adlar şemanın büyük harf kuralına çekilir; gruplama bu hâliyle yapılır, böylece aynı tablonun
+    iki yazımı tek tabloda toplanır.
+    """
+    book = openpyxl.load_workbook(path, data_only=True)
+    state: dict = {"tables": {}, "columns": 0, "skipped": []}
+    try:
+        for entry in mapping.get("sheets") or []:
+            name = entry.get("sheet") if isinstance(entry, dict) else None
+            if name not in book.sheetnames:
+                print(f"Eşlemedeki bilinmeyen sayfa atlandı: '{name}'.")
+                continue
+            _convert_sheet(book[name], entry, state)
+    finally:
+        book.close()
+    tables = list(state["tables"].values())
+    return {
+        "schema": {"tables": tables},
+        "tables": len(tables),
+        "columns": state["columns"],
+        "skipped": state["skipped"],
+    }
+
+
+def _convert_sheet(sheet: Worksheet, entry: dict, state: dict) -> None:
+    rows = list(sheet.iter_rows(values_only=True))
+    header_row = _header_row(rows, sheet.title)
+    fields = _field_columns(sheet.title, entry, [_text(value) for value in rows[header_row - 1]])
+    table = ""
+    for number, row in enumerate(rows[header_row:], start=header_row + 1):
+        table = _convert_row(sheet.title, number, row, fields, state, table)
+
+
+def _field_columns(sheet: str, entry: dict, headers: list[str]) -> dict[str, int]:
+    """Eşlemedeki sütun referanslarını (başlık metni ya da harf) indekse çevirir: alan -> sütun."""
+    references = _references({"headers": headers})
+    fields: dict[str, int] = {}
+    for column in entry.get("columns") or []:
+        if not isinstance(column, dict):
+            continue
+        ref = _text(column.get("column"))
+        index = references.get(text.fold(ref))
+        if index is None:
+            print(f"Eşlemedeki bilinmeyen sütun atlandı: '{sheet}.{ref}'.")
+            continue
+        for field in _FIELDS:
+            if column.get(field) and field not in fields:
+                fields[field] = index
+    return fields
+
+
+def _convert_row(
+    sheet: str, number: int, row: tuple[Any, ...], fields: dict[str, int], state: dict, last: str
+) -> str:
+    """Bir satırı işler ve ait olduğu tablo adını döndürür; boş TABLO hücresi onu tekrarlar."""
+    if not any(_text(value) for value in row):
+        # ASSUMPTION: baştan sona boş satır dolgu sayılır, atlanan satır olarak raporlanmaz.
+        return last
+    # ASSUMPTION: boş TABLO hücresi birleşik hücre gibi bir önceki tabloyu tekrarlar (brief §2);
+    # sayfanın henüz tablosu olmadığında ucu açık kalan satır atlanır.
+    name = _cell(row, fields, "table_name").upper() or last
+    if not name:
+        _note(state, sheet, number, "TABLO boş; satır atlandı")
+        return last
+    table = state["tables"].setdefault(
+        name, {"name": name, "description": "", "module": "", "columns": []}
+    )
+    description = _text(_cell(row, fields, "description"))
+    module = _text(_cell(row, fields, "module"))
+    if module and not table["module"]:
+        table["module"] = module
+    column = _cell(row, fields, "column_name").upper()
+    if not column:
+        # Kolonu olmayan satır tablonun kendi satırıdır; açıklama tabloya aittir.
+        if description:
+            table["description"] = description
+        return name
+    if any(item["name"] == column for item in table["columns"]):
+        _note(state, sheet, number, f"'{name}.{column}' tekrar ediyor; satır atlandı")
+        return name
+
+    raw_type = _cell(row, fields, "data_type")
+    data_type = _data_type(raw_type)
+    if data_type is None:
+        data_type = _TEXT_TYPE
+        _note(state, sheet, number, f"tip '{raw_type}' tanınmadı; {_TEXT_TYPE} kullanıldı")
+    raw_fk = _cell(row, fields, "fk_target")
+    fk = _fk(raw_fk)
+    if raw_fk and fk is None:
+        _note(state, sheet, number, f"REFERANS '{raw_fk}' TABLE.COL biçiminde değil; referanssız kaldı")
+    raw_values = _cell(row, fields, "values")
+    values = _values(raw_values)
+    if values is None:
+        values = {}
+        _note(
+            state,
+            sheet,
+            number,
+            f"DEĞER '{raw_values}' çözümlenemedi ('KOD=açıklama' olmalı); değerler boş bırakıldı",
+        )
+    table["columns"].append(
+        {
+            "name": column,
+            "type": data_type,
+            "description": description,
+            "fk": fk,
+            "values": values,
+            "nullable": _nullable(_cell(row, fields, "nullable")),
+        }
+    )
+    state["columns"] += 1
+    return name
+
+
+def _cell(row: tuple[Any, ...], fields: dict[str, int], field: str) -> str:
+    """Alanın hücresi; alan hiç eşlenmemişse ya da satır oraya kadar gelmiyorsa boş metin."""
+    index = fields.get(field)
+    return "" if index is None or index >= len(row) else _text(row[index])
+
+
+def _note(state: dict, sheet: str, number: int, reason: str) -> None:
+    """Satır numarasıyla not: atlanan satır ya da düşen alan, kullanıcı raporda görür."""
+    state["skipped"].append({"sheet": sheet, "row": number, "reason": reason})
+
+
+def _data_type(value: str) -> str | None:
+    """Tip hücresini şemanın T-SQL adına çevirir; şemanın kendi adları olduğu gibi geçer."""
+    folded = _plain(value)
+    if not folded:
+        return _TEXT_TYPE
+    base = _TYPE_WORDS.get(folded)
+    if base is None:
+        match = _TYPE_RE.match(folded)
+        if not match:
+            return None
+        base = match.group(1)
+        if match.group(2):
+            return f"{base.upper()}{match.group(2).replace(' ', '')}"
+    return _TYPE_DEFAULTS.get(base, base.upper())
+
+
+def _fk(value: str) -> str | None:
+    """REFERANS hücresi TABLE.COL biçimindeyse büyük harfle geçer; değilse None (satır notu kullanıcının)."""
+    upper = value.upper()
+    return upper if _FK_RE.match(upper) else None
+
+
+def _values(value: str) -> dict[str, str] | None:
+    """'G=Giriş; C=Çıkış' -> {'G': 'Giriş', 'C': 'Çıkış'}; boş hücre {}, çözülemeyen None."""
+    if not value:
+        return {}
+    result: dict[str, str] = {}
+    for part in re.split(r"[;\n]+", value):
+        code, sep, meaning = part.partition("=")
+        code, meaning = code.strip(), meaning.strip()
+        if not sep or not code or not meaning:
+            return None
+        result[code] = meaning
+    return result
+
+
+def _nullable(value: str) -> bool:
+    """Boş/dolu hücresi; hiçbir şey yazılmamışsa sütun boş bırakılabilir sayılır."""
+    return _plain(value) not in _FILLED_WORDS
+
+
+def _plain(value: str) -> str:
+    return value.translate(_TURKISH_LETTERS).lower()
