@@ -11,7 +11,7 @@ submit, so the model's last attempt is executed once more to name the blocker.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -31,6 +31,9 @@ OUTCOMES = (
     "timeout",
     "llm_error",
 )
+
+# Outcome sütunu bu genişliğe yazılır, yani canlı satırlar birbirinin üstünde hizalı durur.
+OUTCOME_WIDTH = max(len(name) for name in OUTCOMES)
 
 # ExecError.kind -> the outcome for a query that never reached the data.
 EXEC_OUTCOMES = {
@@ -76,8 +79,13 @@ def run_eval(
     only: Iterable[str] | None = None,
     *,
     schema: dict | None = None,
+    on_progress: Callable[[QuestionResult], None] | None = None,
 ) -> list[QuestionResult]:
-    """Ask every golden question of a fresh client and judge the answer; ``only`` keeps a few ids."""
+    """Ask every golden question of a fresh client and judge the answer; ``only`` keeps a few ids.
+
+    ``on_progress`` is handed each question the moment it is judged, so a caller can stream the run
+    to a screen instead of waiting for the whole set.
+    """
     lines = load_golden() if golden is None else list(golden)
     if only:
         wanted = {str(name).strip().upper() for name in only}
@@ -88,8 +96,23 @@ def run_eval(
     for line, truth in zip(lines, truths):
         qid = str(line.get("id") or "")
         run = run_agent(str(line.get("question") or ""), llm_factory(), executor, document, qid)
-        results.append(_result(line, run, executor, truth))
+        result = _result(line, run, executor, truth)
+        results.append(result)
+        if on_progress:
+            on_progress(result)
     return results
+
+
+def progress_line(result: QuestionResult) -> str:
+    """The one live line a finished question earns (Delight 4): id, ✓/✗, outcome, tool calls, cost.
+
+    The outcome column is padded to its widest name so a run of these lines reads as columns.
+    """
+    mark = "✓" if result.outcome == "pass" else "✗"
+    return (
+        f"{result.id} {mark} {result.outcome:<{OUTCOME_WIDTH}} {result.tool_calls} araç  "
+        f"{result.seconds:.1f} sn  {_tokens(result.total_tokens)} token"
+    )
 
 
 def _truth(line: dict, executor) -> Result:
@@ -153,3 +176,8 @@ def _last_attempt(run) -> str:
         if step.tool in SQL_TOOLS:
             return str(step.args.get("sql") or "")
     return ""
+
+
+def _tokens(total: int) -> str:
+    """A thousand and above reads short on a console (8123 -> 8.1K); below it the plain number."""
+    return f"{total / 1000:.1f}K" if total >= 1000 else str(total)

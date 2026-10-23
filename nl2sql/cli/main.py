@@ -100,12 +100,16 @@ def evaluate(
     audit_path: str = config.AUDIT_LOG,
     out_dir: str = config.EVAL_OUT,
 ) -> int:
-    """Altın soruları koşar, raporu yazar, skoru söyler; koşu tamamlandıysa kod 0'dır."""
+    """Altın soruları koşar, her soru biter bitmez tek satır dökerek (Delight 4) ilerler,
+    raporu yazar, skoru söyler; koşu tamamlandıysa kod 0'dır."""
     _utf8_stdout()
     if _db_missing(db_path):
         return _no_db(db_path)
     results = runner.run_eval(
-        lambda: llm, LocalExecutor(db_path=db_path, audit_path=audit_path), only=only
+        lambda: llm,
+        LocalExecutor(db_path=db_path, audit_path=audit_path),
+        only=only,
+        on_progress=lambda result: print(runner.progress_line(result)),
     )
     if results and all(result.outcome == "llm_error" for result in results):
         print(f"Uç nokta {len(results)} sorunun hiçbirini yanıtlamadı; rapor yazılmadı.\n")
