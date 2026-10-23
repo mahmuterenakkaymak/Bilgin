@@ -134,11 +134,11 @@ def test_the_backup_card_table_disagrees_about_the_city(dataset_and_schema):
 # ----------------------------------------------------------------- filler rows
 
 
-def test_other_distractors_get_a_single_filler_row_by_default(dataset_and_schema):
+def test_other_distractors_stay_empty_by_default(dataset_and_schema):
     dataset, schema = dataset_and_schema
     assert extra.DISTRACTOR_ROWS == 0
     assert all(
-        len(dataset[table["name"]]) == 1 for table in distractors(schema) if table["name"] not in extra.YAKIN_KOPYALAR
+        dataset[table["name"]] == [] for table in distractors(schema) if table["name"] not in extra.YAKIN_KOPYALAR
     )
 
 

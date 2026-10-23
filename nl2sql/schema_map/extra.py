@@ -92,7 +92,9 @@ def distractor_rows(dataset: dict, schema: dict, rng: random.Random) -> None:
             hedef = c["fk"].split(".")[0] if c.get("fk") else None
             if hedef in dolgu:
                 doldur(dolgu[hedef])
-        adet = 1 + rng.randint(0, min(DISTRACTOR_ROWS, 4))  # en az bir satır: dataset ile betik eşleşsin
+        adet = rng.randint(0, min(DISTRACTOR_ROWS, 5))  # varsayılan 0: tablo şemada kaldığı gibi kalır
+        if any(_hedefi_bos(c, dataset) for c in table["columns"]):  # hedefi boş olan NOT NULL fk: geçerli satır yazılamaz
+            adet = 0
         degerler = [
             {c["name"]: _dolgu_degeri(c, rng, kodlar, i) for c in table["columns"]} for i in range(1, adet + 1)
         ]
@@ -180,12 +182,19 @@ def _sipatra_tmp(dataset: dict, cols: list[str] | None, rng: random.Random) -> N
     _fill(dataset, "TBLSIPATRA_TMP", cols, satirlar)
 
 
+def _hedefi_bos(column: dict, dataset: dict) -> bool:
+    """NOT NULL bir fk sütununun hedefinde satır kalmadıysa bu tabloya geçerli satır yazılamaz."""
+    if column["nullable"] or not column.get("fk"):
+        return False
+    return not dataset.get(column["fk"].split(".")[0])
+
+
 def _dolgu_degeri(column: dict, rng: random.Random, kodlar: dict, sira: int):
     """Dolgu satırı değeri: gerçek kod, şemadaki kod kümesi ya da türe uygun rastgele değer."""
     if column.get("fk"):
         hedef_tablo, hedef_sutun = column["fk"].split(".")
         degerler = [satir[hedef_sutun] for satir in kodlar["_dataset"].get(hedef_tablo, [])]
-        return rng.choice(degerler) if degerler else None
+        return rng.choice(degerler) if degerler else None  # hedef dolgu tablosu boşsa yalnız NULL sütuna girer
     if column["nullable"] and rng.random() < 0.25:
         return None
     havuz = kodlar.get(column["name"])
