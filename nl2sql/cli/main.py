@@ -365,6 +365,7 @@ def compare_modes(
     audit_path: str = config.AUDIT_LOG,
     out_dir: str = config.EVAL_OUT,
     index_dir: str = config.INDEX_DIR,
+    schema_path: str | Path = config.SCHEMA_PATH,
 ) -> int:
     """Üç modu aynı sorularda koşar, tek karşılaştırma raporu yazar, mod başına tek satır söyler.
 
@@ -374,14 +375,25 @@ def compare_modes(
     ``(önceki koşu)`` ile çıkar; ``fresh`` o kolaylığı bir kenara bırakır. Koşan mod raporunu
     kendi klasörüne yazar,
     karşılaştırma ``<out>/compare`` altına gider (R2-14).
+
+    ``schema_path`` ``evaluate``ınkiyle aynı anlamı taşır (R3-5): üç mod da o dosyayla ölçer —
+    allowlist, şema metni, join graphı, indeks imzası ve raporun ``schema`` alanı hepsi ondan
+    gelir —, yani bir modun ``latest``i ancak aynı şemayla ölçmüşse yeniden kullanılabilir.
     """
     _utf8_stdout()
     if _db_missing(db_path):
         return _no_db(db_path)
+    schema_file = _schema_file(schema_path)
+    schema = _load_schema(schema_file)
+    if schema is None:
+        return EXIT_BAD_INPUT
     lines = runner.load_golden()
-    schema = doc.load_schema()
+    info = report.schema_info(schema_file, schema)
+    print(SCHEMA_LINE.format(path=info["path"], hash8=info["hash"][:8]) + "\n")
     rules = load_rules()
-    executor = LocalExecutor(db_path=db_path, audit_path=audit_path)
+    executor = LocalExecutor(
+        db_path=db_path, allowlist=doc.allowlist(schema), audit_path=audit_path
+    )
     clients = {mode: llm_factory(mode) for mode in config.MODES}
     kind, model = _client_kind(clients[config.MODES[0]])
     fingerprints = {
@@ -428,6 +440,7 @@ def compare_modes(
                 "fingerprint": fingerprints[mode],
             },
             mode=mode,
+            schema_info=info,
         )
         reports[mode] = _mode_report(out_dir, mode)
 
@@ -816,7 +829,11 @@ def main(argv: list[str] | None = None) -> int:
         mode = args.mode or _ask_mode()
         return ask(question=args.question, llm=make_client(args.llm, mode), mode=mode)
     if args.compare:
-        return compare_modes(lambda mode: make_client(args.llm, mode), fresh=args.fresh)
+        return compare_modes(
+            lambda mode: make_client(args.llm, mode),
+            fresh=args.fresh,
+            schema_path=args.schema,
+        )
     return evaluate(
         llm=make_client(args.llm, args.mode),
         only=args.only,
