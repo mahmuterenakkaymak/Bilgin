@@ -42,3 +42,6 @@
 2026-10-23 21:41:11 | ORCH   | final: whole-project checks
 2026-10-23 21:42:24 | ORCH   | final: whole-project checks RED: ['.venv\\Scripts\\python -m pytest -q']
 2026-10-23 21:42:43 | BRAIN  | M6: review with sonnet
+2026-10-23 21:43:54 | HANDS  | T76 try 1: FIX stale test after T75: tests/test_config_run2.py `test_index_dir_is_build_output_and_ignored` asserts the literal line `index/` in .gitignore, but T75 intentionally changed it to `/index/` (root-only, so nl2sql/index/ is no longer ignored); the .gitignore is right, the test is stale. Edit only that test in tests/test_config_run2.py: assert `/index/` is in the lines and `index/` is not; do not touch .gitignore
+2026-10-23 21:44:16 | ORCH   | T76: PASSED (hands)
+2026-10-23 21:44:16 | ORCH   | done: {"tasks": 11, "first_try": 7, "local_retries": 6, "rescues": 2, "failed": ["T71"], "reviews": 3, "checks": "red", "minutes": 116.6, "brain_calls": 17, "brain": "cloud"}
