@@ -1,13 +1,13 @@
-"""Komut satırı: veritabanını kur, indeksi kur, geri çağırmayı ölç, tek bir soru sor, altın soruları koş.
+"""Komut satırı: veritabanını kur, indeksi kur, bir Excel haritasını şemaya eşle, geri çağırmayı ölç, tek bir soru sor, altın soruları koş.
 
 Komutlar aynı parçaları kullanır ve hiçbir yola sahip çıkmaz: SQLite dosyası, audit kaydı,
 rapor klasörü ve indeks klasörü parametredir, varsayılanı config'den gelir, testler kendi tmp
 yolunu verir. ``ask``
 koşuyu adım adım dökerek ekrana yazdırır (Delight 6), ``eval`` raporu yazıp skoru söyler; skor veri
 olduğu için çıkış koduna geçmez, yalnız cevap gönderilmeyen bir soru 1 döner. Kullanıcının
-düzeltebileceği üç arıza iz dökümüyle değil tek cümleyle çıkar (Delight 3): veritabanı dosyası
-yoksa kod 2 ve "önce kur", uç nokta ya da embedding sunucusu hiç çalışmıyorsa kod 3 ve hangi
-adresin patladığı.
+düzeltebileceği arıza iz dökümüyle değil tek cümleyle çıkar (Delight 3): veritabanı dosyası
+yoksa kod 2 ve "önce kur", verilecek dosya ya da eşleme okunamıyorsa kod 2 ve neyin okunamadığı,
+uç nokta ya da embedding sunucusu hiç çalışmıyorsa kod 3 ve hangi adresin patladığı.
 """
 
 from __future__ import annotations
@@ -18,11 +18,12 @@ import re
 import sqlite3
 import sys
 import time
+import zipfile
 from pathlib import Path
 
 from nl2sql import config
 from nl2sql.agent import fake
-from nl2sql.agent.llm import OpenAIClient
+from nl2sql.agent.llm import ChatResponse, OpenAIClient
 from nl2sql.agent.loop import AgentRun, Step, run_agent
 from nl2sql.agent.modes import MODES, ToolContext, get_mode
 from nl2sql.cli.table import format_table
@@ -43,7 +44,7 @@ from nl2sql.index.store import (
     StaleIndexError,
     content_hash,
 )
-from nl2sql.schema_map import build, doc
+from nl2sql.schema_map import build, doc, excel
 from nl2sql.schema_map.rules import load_rules
 
 LLMS = ("fake", "openai")
@@ -92,6 +93,24 @@ EXIT_EMBED = 3
 # yani veritabanı gibi kod 2 (R2-9). Boş bir etiket seçimi de koşacak bir şey bırakmaz.
 EXIT_NO_INDEX = 2
 EXIT_NO_TAG = 2
+# ASSUMPTION: verilecek dosyanın yokluğu da okunamayan eşleme de kullanıcının kendi düzelteceği bir
+# eksikliktir, yani veritabanı gibi kod 2 (R3-13).
+EXIT_BAD_INPUT = 2
+
+# R3-13: import-map'ın iki sabit satırı; ilki model ile sözlüğün çeliştiğini, ikincisi dönüşümün
+# ne yazdığını söyler. İkisi de kullanıcının denetleyeceği şeyi adıyla taşır.
+DISAGREEMENT = "⚠ uyuşmuyor: {sheet}.{column} {field}: llm={llm} fallback={fallback}"
+SCHEMA_WRITTEN = (
+    "Şema yazıldı: {path} ({tables} tablo, {columns} kolon, {skipped} atlanan satır)"
+)
+UNMAPPED = "hiçbir alan"
+NONE = "-"
+NO_FILE = "Excel dosyası yok: {path}"
+BAD_MAPPING = "Eşleme dosyası okunamadı: {path}"
+IMPORT_HINT = (
+    "Devam: --accept ile şemayı yazdırın; "
+    "eşlemeyi elle düzeltmek isterseniz --mapping ile geri verin."
+)
 
 
 def build_database(
@@ -397,6 +416,69 @@ def compare_modes(
     return 0
 
 
+def import_map(
+    path: str | Path,
+    llm_factory,
+    accept: bool = False,
+    mapping: str | Path | None = None,
+    proposal_path: str | Path | None = None,
+    out: str | Path = config.IMPORTED_PATH,
+) -> int:
+    """Excel haritasının eşlemesini önerir, diske yazar; ``--accept`` ile şemaya dönüştürür (R3-2).
+
+    Model eşlemeyi önerir ama satırları hiç görmez: dönüşümü tüm çalışma kitabına koddan
+    ``convert`` uygular. Modelin sözlükle çeliştiği sütun sessizce çözülmez, ekrana uyuşmazlık
+    olarak çıkar; eşleme diskte kaldığı için kullanıcı elle düzeltip ``--mapping`` ile geri verir
+    ve o yolda model bir daha aranmaz.
+    """
+    _utf8_stdout()
+    source = Path(path)
+    if not source.is_file():
+        print(NO_FILE.format(path=path))
+        return EXIT_BAD_INPUT
+    try:
+        preview = excel.read_workbook(source)
+    except (OSError, zipfile.BadZipFile, excel.SheetError) as exc:
+        print(f"Hata: {exc}")
+        return EXIT_BAD_INPUT
+
+    proposal = mapping or _proposal_file(source, proposal_path)
+    if mapping:
+        chosen = _read_mapping(mapping)
+        if chosen is None:
+            return EXIT_BAD_INPUT
+        by = "dosya"
+    else:
+        chosen = excel.propose(preview, llm_factory(preview))
+        _write_json(proposal, chosen)
+        by = str(chosen["generated_by"])
+
+    print(f"Dosya: {source}")
+    for line in _mapping_lines(chosen):
+        print(line)
+    for note in chosen.get("disagreements") or []:
+        print(DISAGREEMENT.format(**{key: value or NONE for key, value in note.items()}))
+    print(f"\nEşleme: {proposal} ({by})")
+
+    if not accept:
+        print(IMPORT_HINT)
+        return 0
+    report = excel.convert(source, chosen)
+    _write_json(out, report["schema"])
+    print(
+        "\n"
+        + SCHEMA_WRITTEN.format(
+            path=out,
+            tables=report["tables"],
+            columns=report["columns"],
+            skipped=len(report["skipped"]),
+        )
+    )
+    for note in report["skipped"]:
+        print(f"     ↳ {note['sheet']}.satır {note['row']}: {note['reason']}")
+    return 0
+
+
 def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE):
     """``--llm`` değerini istemciye çevirir: fake altın kaydı oynatır, openai config'teki endpoint'e gider.
 
@@ -406,6 +488,18 @@ def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE):
         return fake.for_golden(runner.load_golden(), mode=mode)
     settings = config.llm_settings()
     return OpenAIClient(settings.base_url, settings.model, settings.api_key)
+
+
+def make_map_client(kind: str, preview: dict):
+    """``import-map``ın ``--llm`` değeri.
+
+    ``fake`` zekâ değil boru hattı ölçer: sözlük eşlemesini olduğu gibi JSON geri verir, böylece
+    öneri → dosya → dönüşüm zincirinin tamamı model olmadan koşulur.
+    """
+    if kind == "fake":
+        reply = json.dumps(excel.fallback_mapping(preview), ensure_ascii=False)
+        return fake.FakeLLM([ChatResponse(content=reply)])
+    return make_client(kind)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -437,6 +531,29 @@ def main(argv: list[str] | None = None) -> int:
     )
     retrieval_cmd.add_argument(
         "--k", type=int, default=config.SEARCH_K, help="kaç tablo (varsayılan %(default)s)"
+    )
+
+    import_cmd = commands.add_parser(
+        "import-map", help="Excel şema haritasını eşler; --accept ile şemayı yazar"
+    )
+    import_cmd.add_argument("file", metavar="HARITA.xlsx", help="Excel şema haritasının yolu")
+    import_cmd.add_argument(
+        "--llm", choices=LLMS, default=DEFAULT_LLM, help="istem kaynağı (varsayılan %(default)s)"
+    )
+    import_cmd.add_argument(
+        "--accept",
+        action="store_true",
+        help="eşlemeyi tüm satırlara uygular ve şemayı yazar (uygulamayı kod yapar, model değil)",
+    )
+    import_cmd.add_argument(
+        "--mapping",
+        metavar="DOSYA.json",
+        help="--accept için eşleme dosyası (varsayılan: az önce yazılan)",
+    )
+    import_cmd.add_argument(
+        "--out",
+        default=str(config.IMPORTED_PATH),
+        help="yazılacak şema dosyası (varsayılan %(default)s)",
     )
 
     ask_cmd = commands.add_parser("ask", help="tek bir soruyu modelden geçirip cevabı gösterir")
@@ -485,6 +602,14 @@ def main(argv: list[str] | None = None) -> int:
         return build_index(embed=args.embed)
     if args.command == "eval-retrieval":
         return eval_retrieval(embed=args.embed, k=args.k)
+    if args.command == "import-map":
+        return import_map(
+            args.file,
+            lambda preview: make_map_client(args.llm, preview),
+            accept=args.accept,
+            mapping=args.mapping,
+            out=args.out,
+        )
     if args.command == "ask":
         mode = args.mode or _ask_mode()
         return ask(question=args.question, llm=make_client(args.llm, mode), mode=mode)
@@ -550,6 +675,50 @@ def _cost(run: AgentRun) -> None:
     total = run.total_prompt_tokens + run.total_completion_tokens
     print(f"Token: {total} (istem {run.total_prompt_tokens} + cevap {run.total_completion_tokens})")
     print(f"Süre: {run.elapsed_s:.1f} sn")
+
+
+def _mapping_lines(mapping: dict) -> list[str]:
+    """R3-13: önerinin tablosu — sayfa ve başlık satırı başına her sütunun eşlenen alanları.
+
+    Alan listesi kaydın kendi anahtarlarından gelir; eşlenmemiş sütun "hiçbir alan" ile görünür
+    kalır, çünkü müşterinin haritasında tanınmayan bir başlık düzeltilmesi gereken bir bilgidir.
+    """
+    lines: list[str] = []
+    for sheet in mapping.get("sheets") or []:
+        columns = [item for item in sheet.get("columns") or [] if isinstance(item, dict)]
+        lines.append(f"\n{sheet.get('sheet')} — başlık satırı {sheet.get('header_row')}")
+        width = max((len(str(item.get("column"))) for item in columns), default=0)
+        for item in columns:
+            fields = [
+                name for name, value in item.items() if name != "column" and value is not None
+            ]
+            lines.append(f"  {str(item.get('column')):<{width}}  {' · '.join(fields) or UNMAPPED}")
+    return lines
+
+
+def _proposal_file(source: Path, proposal_path: str | Path | None) -> Path:
+    """Önerinin yazılacağı yol; adlandırma kuralı config'de, testler kendi tmp yolunu verir."""
+    return Path(proposal_path) if proposal_path else config.mapping_path(source.stem)
+
+
+def _read_mapping(path: str | Path) -> dict | None:
+    """Kullanıcının elle düzelttiği eşleme dosyası; okunamazsa ya da nesne değilse None."""
+    try:
+        chosen = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        print(f"{BAD_MAPPING.format(path=path)}\n{exc}")
+        return None
+    if not isinstance(chosen, dict):
+        print(f'{BAD_MAPPING.format(path=path)}\nÜst düzey bir JSON nesnesi olmalı: {{"sheets": [...]}}.')
+        return None
+    return chosen
+
+
+def _write_json(path: str | Path, payload: dict) -> None:
+    """Elle düzenlenecek dosya: Türkçe metin olduğu gibi, iki boşlukla girintili."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def _context(mode: str, executor, schema: dict, rules: list[dict], index_dir: str | Path):
