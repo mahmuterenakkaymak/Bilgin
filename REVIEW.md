@@ -1,12 +1,14 @@
-# REVIEW M3 (T13-T24, plus fixes T25-T27)
+# REVIEW M4 (T31-T46)
 
-Base 89bbcef (M2 review) -> HEAD c589ed6. Full suite: 714 passed. T25/T26/T27 fixes verified in diff (executor.py date/LEFT rewrites, policy.py `_cap_rows`); the M2 smoke failure is gone.
+Base e90b62e (Run 2 plan) -> HEAD acbf4ea. Full suite and smoke pass. Run 1 lines of golden.jsonl unchanged apart from the new fields; Run 1 pin holds; Q01-Q40 equal their references on seed 42 (no empty answer).
 
-- **BUG (T28)**: blank `submit_sql` (also `{}` after bad tool JSON) gets "Sorgu boş: ..." without ERROR_PREFIX, so loop.py counts it ok -> run ends `submitted` with SQL `""`, no retry; `ask` then prints "submit_sql hiç çağrılmadı". Blank `run_sql` / unknown tool never count toward MAX_FAILED_RUNS. Reproduced with FakeLLM.
-- **BUG (T29)**: `_count_turn` runs once per tool call, not once per response (docstring says once). A turn with 2 tool calls doubles its tokens: got 400/25, expected 300/15. Inflates total_tokens in progress lines and report.md. Reproduced.
-- **BUG (T30)**: report `_delta` = passes now (all questions) minus previous passes (whole previous run), while `flipped` uses shared ids only. After `eval --only Q03` (overwrites `latest`) a full run shows a fake +9. tests/test_report_delta.py::test_a_shorter_run_compares_only_the_shared_questions asserts the wrong `-2`.
-- ASSUMPTIONs checked OK: loop.py DEFAULT_MAX_TURNS, tools.py `_run` (submit_sql goes through the policy), runner.py `_truth` (broken golden -> RuntimeError) and `_outcome` (last attempt re-executed), compare.py (`ordered` affects row order only), cli/main.py (all llm_error -> exit 3, no report).
-- Risk: COMPARE_MAX_ROWS=100000 is still dead, policy injects TOP_N=1000 on golden and predicted alike (open since M2); fine for the 10 goldens.
-- Risk: report dirs use second-resolution stamps, two runs in one second overwrite each other. compare.py pairs columns by value multiset, identical-valued columns can pair wrongly (score unaffected).
-- Risk: table.py prints int codes/years with thousands dots ("2.026"); prompt rule 2 still forbids MONTH/YEAR although T27 made them work.
-- Missing tests: multi-tool-call turns, blank/unknown tool answers, `--only` then full-run delta, MSSQL path of ask/eval (no server).
+- **BUG (T67)**: schema.json `TBLSTHAR_ARSIV.description` says "2026 hareketleri burada, 2025 hareketleri TBLSTHAR'da yoktur" - it claims the archive holds 2026 movements. The text goes into every `full` / `get_table_details` answer and contradicts R2-3 (archive = 2025 only), so the A/B would partly measure a typo.
+- **BUG (T68)**: rules `doviz_tl` and `teslim_bekleyen` have `markers: []` although Q23/Q26/Q36/Q38 cite them; R2-11 (markers must match every citing golden SQL) is vacuous for them, and the ASSUMPTION in rules.py ("empty only for rules no question cites yet") is wrong.
+- **BUG (T69)**: `extra.DISTRACTOR_ROWS` default 0 still gives every filler distractor 1 row (`1 + randint(0, min(N, 4))`), 62 tables; R2-4/T39 say 0-5 rows with default 0, the config comment says "0 = stays schema-only", and build-db's "şema-yalnız Y" is always 0. tests/test_build_world.py::test_other_distractors_get_a_single_filler_row_by_default encodes it.
+- **BUG (T70)**: `_stok_fiyat` draws random dates, so a product can get two S rows with the same GECERLILIK_TARIHI (seeds 3, 10, 12, 16, 23, 28, 33 of 1-40; not 42). "Liste fiyatı = latest date" is then ambiguous and Q15's golden SQL returns the product twice.
+- ASSUMPTIONs checked OK: config Run 2 paths, doc.table_detail hides distractors in the unknown-table hint, extra._fill (empty table on a foreign schema), test_golden_contract needs_values, test_schema_doc allowlist = every table.
+- Risk: golden Q03 ("Geçen ay"), Q05 (net satış), Q09 (teslim tarihi yok) use a rule's concept without listing it, so needs_rule/retrieval metrics under-count those rules.
+- Risk: `sql_hint` of ciro/net_satis/iade_orani is nearly the golden SQL; R2-16 only checks questions, so `full_rules` and `rag` get an easier job than the model would in a real ERP.
+- Risk: TBLMUHFIS books purchase KDV on 391 (hesaplanan) for every invoice; no golden test shows that the near-duplicate named in a `distractor` question's note gives a different answer (test_build_world checks it only for TBLSTHAR_LOG and TBLCASABIT_YEDEK).
+- Risk: report/table still prints int codes with thousand dots (open since M3); eval/REVIEW.md previews inherit it.
+- Missing tests: any seed other than 42 for the golden answers; every rule has a non-empty marker; distractor tag vs. near-duplicate difference per question.
