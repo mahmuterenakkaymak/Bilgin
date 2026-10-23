@@ -99,15 +99,18 @@ def run_agent(
         except LLMError as exc:
             return finish("llm_error", str(exc))
 
+        # Endpoint maliyeti yanıt başına bir kez bildirir; aşağıda kaç adım üretilirse üretilsin
+        # koşunun toplamına da bir kez yazılır.
+        _count_turn(run, response)
+
         if response.tool_calls:
             messages.append(_assistant_message(response))
-            for call in response.tool_calls:
+            for index, call in enumerate(response.tool_calls):
                 if tool_calls >= config.MAX_TOOL_CALLS:
                     return finish("no_submission", TOOL_STOP.format(limit=config.MAX_TOOL_CALLS))
                 tool_calls += 1
                 answer = dispatch(call.name, call.arguments, audited, schema)
                 ok = answer_is_ok(answer)
-                _count_turn(run, response)
                 run.steps.append(
                     Step(
                         n=len(run.steps) + 1,
@@ -115,8 +118,9 @@ def run_agent(
                         args=call.arguments,
                         summary=answer,
                         ok=ok,
-                        prompt_tokens=response.prompt_tokens,
-                        completion_tokens=response.completion_tokens,
+                        # Adımlar da maliyeti bir kez taşısın: aynı yanıtın sonraki çağrısı 0 yazar.
+                        prompt_tokens=response.prompt_tokens if index == 0 else 0,
+                        completion_tokens=response.completion_tokens if index == 0 else 0,
                         latency_ms=response.latency_ms,
                     )
                 )
@@ -129,7 +133,6 @@ def run_agent(
                     if failed_runs >= config.MAX_FAILED_RUNS:
                         return finish("no_submission", FAILED_STOP.format(limit=config.MAX_FAILED_RUNS))
         else:
-            _count_turn(run, response)
             run.steps.append(
                 Step(
                     n=len(run.steps) + 1,
