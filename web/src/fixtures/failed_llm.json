@@ -1,0 +1,30 @@
+{
+  "status": "failed",
+  "question": "Eylül 2026'da net satışımız ne kadar?",
+  "choice": null,
+  "answer_text": "Model endpoint'ine ulaşılamadı: http://127.0.0.1:8080/v1. Strata'nın açık olup olmadığına bakın, gerekirse NL2SQL_LLM_BASE_URL ile doğru adresi verin.",
+  "narration_source": null,
+  "chart": null,
+  "facts": [],
+  "columns": [],
+  "rows": [],
+  "row_count": 0,
+  "truncated": false,
+  "sql": "",
+  "tables_used": [],
+  "rules_used": [],
+  "masked_columns": [],
+  "warnings": [],
+  "notes": [],
+  "mode": "full_rules",
+  "dataset": "synthetic_erp",
+  "model": "strata",
+  "timings": { "agent_s": 0.412, "execute_ms": 0.0, "narrate_s": 0.0, "total_s": 0.418 },
+  "audit_id": "9f3c1a7b2d64",
+  "clarification": null,
+  "error": {
+    "kind": "llm_error",
+    "message": "Model endpoint'ine ulaşılamadı: http://127.0.0.1:8080/v1. Strata'nın açık olup olmadığına bakın, gerekirse NL2SQL_LLM_BASE_URL ile doğru adresi verin."
+  },
+  "steps": []
+}

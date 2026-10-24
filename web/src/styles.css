@@ -204,6 +204,205 @@ main {
   overscroll-behavior-x: contain;
 }
 
+/* --- soru akışı ----------------------------------------------------------- */
+
+.ask-flow > * + * {
+  margin-top: calc(var(--space) * 2);
+}
+
+.card {
+  padding: calc(var(--space) * 2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.ask-box {
+  display: grid;
+  gap: var(--space);
+  padding: calc(var(--space) * 2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.question {
+  width: 100%;
+  min-height: 76px;
+  padding: calc(var(--space) * 1.25);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.question::placeholder {
+  color: var(--muted);
+}
+
+.question:focus {
+  border-color: var(--accent);
+}
+
+.ask-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space) calc(var(--space) * 1.5);
+}
+
+.ask-hint {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.btn {
+  padding: calc(var(--space) * 0.75) calc(var(--space) * 2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.btn-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space);
+}
+
+.example-chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: calc(var(--space) * 0.5) calc(var(--space) * 1.25);
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.example-chip:hover:not(:disabled) {
+  border-color: var(--accent);
+  border-style: solid;
+  color: var(--accent);
+}
+
+.example-chip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.empty-state .examples {
+  margin-top: calc(var(--space) * 2);
+}
+
+.loading-step {
+  margin: calc(var(--space) * 1.5) 0 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.loading-count {
+  margin-left: var(--space);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.skeleton span {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--line);
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
+}
+
+.skeleton span + span {
+  margin-top: var(--space);
+}
+
+.skeleton span:nth-child(2) {
+  width: 72%;
+}
+
+.skeleton span:nth-child(3) {
+  width: 46%;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton span {
+    animation: none;
+  }
+}
+
+.error-card {
+  border-color: var(--err-text);
+  background: var(--err-bg);
+}
+
+.error-title {
+  margin: 0;
+  color: var(--err-text);
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.error-hint,
+.error-reason {
+  margin: var(--space) 0 0;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.error-hint {
+  color: var(--muted);
+}
+
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space) calc(var(--space) * 1.5);
+  margin-top: calc(var(--space) * 1.5);
+}
+
 @media (min-width: 720px) {
   .sidebar-toggle {
     display: none;
