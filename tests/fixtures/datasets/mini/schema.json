@@ -1,0 +1,161 @@
+{
+  "tables": [
+    {
+      "name": "Sales.Customers",
+      "description": "Customer cards; every order belongs to exactly one customer.",
+      "module": "Sales",
+      "kind": "data",
+      "keywords": ["müşteri", "cari", "müşteri adı", "şehir", "telefon"],
+      "columns": [
+        {
+          "name": "CustomerID",
+          "type": "INT",
+          "description": "Customer key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerName",
+          "type": "NVARCHAR(60)",
+          "description": "Customer trading name as it is written on the order.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "City",
+          "type": "NVARCHAR(30)",
+          "description": "City the customer trades in.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PhoneNumber",
+          "type": "VARCHAR(20)",
+          "description": "Customer contact phone number; personal data.",
+          "pii": "phone",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "Sales.Orders",
+      "description": "Sales orders; the header, its money lives in the order lines.",
+      "module": "Sales",
+      "kind": "data",
+      "keywords": ["sipariş", "sipariş tarihi", "müşteri siparişi", "sipariş sayısı"],
+      "columns": [
+        {
+          "name": "OrderID",
+          "type": "INT",
+          "description": "Order number; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerID",
+          "type": "INT",
+          "description": "Customer who placed the order.",
+          "fk": "Sales.Customers.CustomerID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OrderDate",
+          "type": "DATE",
+          "description": "Date the order was placed. Filter a period with a half-open literal range (>= first day, < first day of the next period) so the boundary day is never lost.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Sales.OrderLines",
+      "description": "Order lines; one line per ordered stock item, the only place a paid price is stored.",
+      "module": "Sales",
+      "kind": "data",
+      "keywords": ["sipariş satırı", "adet", "miktar", "birim fiyat", "tutar", "ciro satırı"],
+      "columns": [
+        {
+          "name": "OrderLineID",
+          "type": "INT",
+          "description": "Order line number; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OrderID",
+          "type": "INT",
+          "description": "Order the line belongs to.",
+          "fk": "Sales.Orders.OrderID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Ordered stock item.",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Quantity",
+          "type": "INT",
+          "description": "Ordered amount in the item's own unit.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "UnitPrice",
+          "type": "DECIMAL(18,2)",
+          "description": "Price paid per unit on this line, VAT excluded. Revenue is Quantity x UnitPrice of the line; the stock item card holds no price.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Warehouse.StockItems",
+      "description": "Stock items; the product card an order line points at.",
+      "module": "Warehouse",
+      "kind": "data",
+      "keywords": ["ürün", "stok kalemi", "ürün adı", "birim"],
+      "columns": [
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Stock item key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemName",
+          "type": "NVARCHAR(60)",
+          "description": "Product name.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "UnitName",
+          "type": "NVARCHAR(10)",
+          "description": "Unit the item is sold in (PAKET, KG, LT).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    }
+  ]
+}
