@@ -49,6 +49,22 @@ MESSAGE_OVERHEAD_TOKENS = 4  # per-message overhead added to the prompt token es
 PING_TIMEOUT_S = 5.0  # reachability probe timeout of a model endpoint
 COMPARE_MODEL_MODES = ("full_rules", "rag")  # modes `compare-models` runs for every model
 
+# ---------------------------------------------------------------- Run 5: web UI, ask log, reports
+UI_MAX_ROWS = 200  # rows of the final answer the UI may show
+EXPORT_MAX_ROWS = 100000  # rows an export re-runs the ask's SQL for
+HISTORY_N = 50  # ask log lines /api/history returns (newest first)
+EXAMPLES_N = 4  # example questions offered on the empty screen
+SERVE_HOST = "127.0.0.1"  # `serve` binds loopback only: single user, no auth
+SERVE_PORT = 8777
+FANOUT_FACTOR = 3.0  # joined/driving row ratio above which the fan-out check warns
+CHART_BAR_MAX_ROWS = 20  # rows a bar chart is still readable with
+CHART_PIE_MAX_PARTS = 6
+NARRATE_MAX_ROWS = 20  # masked rows the narrator is shown
+NUMBER_TOLERANCE_UNITS = 0.5  # half a unit of the last shown decimal in the number guard
+CLARIFY_MAX_OPTIONS = 4  # upper bound of the mutually exclusive options
+TABLE_SUMMARIES = False  # R5-20: True only if measured recall@5 gains on both datasets
+SUMMARY_KEY_COLUMNS = 8  # key columns one table summary lists
+
 # ---------------------------------------------------------------- reference date
 # "geçen ay" / "bu yıl" are always relative to this date, never to the real clock.
 AS_OF = "2026-09-30"
@@ -94,6 +110,11 @@ LOGIN_SCRIPT_PATH = ROOT / "db" / "mssql" / "readonly_login.sql"
 # ASSUMPTION: Run 4 paths sit here for the same reason — they need ROOT.
 DATASETS_DIR = ROOT / "datasets"
 MODELS_PATH = ROOT / "config" / "models.json"
+# ASSUMPTION: Run 5 paths sit here for the same reason — they need ROOT.
+APP_DB_PATH = ROOT / "data" / "bilgin.db"
+ASK_LOG = ROOT / "logs" / "asks.jsonl"
+STATIC_DIR = ROOT / "nl2sql" / "web" / "static"
+WEB_DIR = ROOT / "web"
 
 # ---------------------------------------------------------------- env defaults
 DEFAULT_LLM_BASE_URL = "http://127.0.0.1:8080/v1"
