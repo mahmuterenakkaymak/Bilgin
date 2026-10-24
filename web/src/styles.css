@@ -591,6 +591,20 @@ main {
   text-align: right;
 }
 
+@media (max-width: 720px) {
+  /* Cevabın sayısı yan kaydırmanın ardında kalmasın: telefon genişliğinde hücreler sarar,
+     böylece her sütun ekrana sığar. Geniş ekrandaki nowrap yukarıda duruyor. */
+  .result-table th,
+  .result-table td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .result-table .num {
+    min-width: 4.5rem;
+  }
+}
+
 .table-note {
   margin: var(--space) 0 0;
   color: var(--muted);
