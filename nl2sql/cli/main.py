@@ -39,7 +39,7 @@ from nl2sql.agent.llm import (
 from nl2sql.agent.loop import AgentRun, Step, run_agent
 from nl2sql.agent.modes import MODES, ToolContext, get_mode
 from nl2sql.cli.table import format_table
-from nl2sql.engine import login_script
+from nl2sql.engine import checks, login_script
 from nl2sql.engine.executor import LocalExecutor
 from nl2sql.engine.result import Budget
 from nl2sql.eval import report, retrieval, runner
@@ -67,6 +67,8 @@ from nl2sql.index.store import (
     dataset_arg,
 )
 from nl2sql.policy import pii
+from nl2sql.report.facts import compute_facts
+from nl2sql.report.narrate import narrate
 from nl2sql.schema_map import build, doc, excel, introspect, merge
 from nl2sql.schema_map.rules import load_rules
 
@@ -186,6 +188,8 @@ NO_DIFF = "Fark yok."
 # R3-6: maskelenen kolonlar tablonun altında adlarıyla söylenir; hangi değerin maskeli olduğu
 # okunabilsin diye, değerin kendisi asla ekrana çıkmadığı için.
 MASKED = "Maskelendi: {cols}"
+# R5-14: tablonun altındaki tek cümlelik cevap; sayıları bekçi onaylamış haliyle (R5-9).
+ANSWER = "Cevap: {text}"
 
 # R3-5: eval hangi şema dosyasıyla ölçtüğünü canlı satırlardan önce söyler (imzanın başı, yani iki
 # koşunun aynı şemayı ölçüp ölçmediği ekrandan okunur); merge-map birleşik şemanın nereye yazıldığını.
@@ -359,7 +363,8 @@ def ask(
     budget: int | None = None,
     profile: ModelProfile | None = None,
 ) -> int:
-    """Bir soru: modunu söyle, adımları işaretle ve gecikmesiyle dök, gönderilen SQL'i ve tabloyu göster.
+    """Bir soru: modunu söyle, adımları işaretle ve gecikmesiyle dök, gönderilen SQL'i, tabloyu,
+    uyarıları ve tek cümlelik cevabı göster.
 
     ``llm`` hazır bir istemcidir; ``mode`` hangi araçların konuşacağını ve bağlamın nereden
     geleceğini söyler (rag indeksi ister, R2-9). ``mode`` olarak ``auto`` da verilebilir (R3-10):
@@ -460,6 +465,11 @@ def ask(
     print(format_table(result))
     if result.masked_columns:
         print(MASKED.format(cols=", ".join(result.masked_columns)))
+    for warning in checks.post_checks(run.submitted_sql, result, executor):
+        print(f"{WARNING_MARK} {warning.message}")
+    facts = compute_facts(result.columns, result.rows)
+    sentence = narrate(question, result.columns, result.rows, facts, llm).text
+    print(f"\n{ANSWER.format(text=sentence)}")
     print()
     _cost(run)
     return 0

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Callable
 
 from nl2sql import config, datasets
+from nl2sql.agent import fake
 from nl2sql.agent.llm import (
     ModelProfile,
     ProfileError,
@@ -60,6 +61,14 @@ class Session:
         from nl2sql.cli import main as cli
 
         return cli.make_client(self.llm_kind, mode, self.dataset, self.profile)
+
+    def narrator(self):
+        """Anlatıcının istemcisi: fake kendi cümlesini kurar, açık uç ajanınkiyle aynı uca gider."""
+        if self.llm_kind == "fake":
+            return fake.narration_client()
+        # ASSUMPTION: anlatıcı araçsız düz metin istediği için mod istemcinin seçiminde söz sahibi
+        # değil; ajanınkiyle aynı kurulum "full" ile istenir.
+        return self.agent_llm("full")
 
     def context(self, mode: str, clarify: bool = False):
         """Modun bağlamı (ToolContext)."""

@@ -2,7 +2,8 @@
 
 ``ask --json`` da ``POST /api/ask`` da bunu çağırır; ekranın gördüğü anahtarların tamamı burada
 kurulur, her durumda aynı kümeyle, böylece hiçbir alan ekranda ``undefined`` olmaz. Cevabın
-kendisi SQL ve satırlardır: anlatı M15'e, netleştirme M16'ya kadar boş kalan alanlardır.
+kendisi SQL ve satırlardır; olgular, grafik ve cümle onların üstüne kurulur (R5-6, R5-7, R5-9),
+netleştirme ise M16'ya kadar boş kalan alandır.
 """
 
 from __future__ import annotations
@@ -15,6 +16,9 @@ from nl2sql.app import asklog
 from nl2sql.engine import checks
 from nl2sql.engine.result import Budget
 from nl2sql.index.store import ForeignIndexError, MissingIndexError, StaleIndexError
+from nl2sql.report.chart import chart_spec
+from nl2sql.report.facts import compute_facts
+from nl2sql.report.narrate import narrate
 from nl2sql.schema_map.rules import matching_rules
 
 # Adım özeti ekranda okunur; uzun bir araç cevabı payload'ı şişirmesin.
@@ -119,6 +123,22 @@ def _run(session, question: str, mode: str, source: str, payload: dict) -> None:
     payload["warnings"] = [
         warning.to_dict() for warning in checks.post_checks(sql, result, session.executor)
     ]
+    _report(session, question, payload)
+
+
+def _report(session, question: str, payload: dict) -> None:
+    """Cevabın raporu: olgular ve grafik dönen satırlardan koddan, cümle anlatıcıdan (R5-6, R5-7, R5-9)."""
+    payload["facts"] = [
+        fact.to_dict() for fact in compute_facts(payload["columns"], payload["rows"])
+    ]
+    payload["chart"] = chart_spec(payload["columns"], payload["rows"], question)
+    started = time.perf_counter()
+    narration = narrate(
+        question, payload["columns"], payload["rows"], payload["facts"], session.narrator()
+    )
+    payload["answer_text"] = narration.text
+    payload["narration_source"] = narration.source
+    payload["timings"]["narrate_s"] = round(time.perf_counter() - started, 3)
 
 
 def _fail(payload: dict, kind: str, message: str) -> None:
