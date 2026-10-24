@@ -26,6 +26,7 @@ from openpyxl.utils.exceptions import InvalidFileException
 
 from nl2sql import config, datasets
 from nl2sql.agent import fake, llm, prompt
+from nl2sql.agent.clarify import follow_up_text
 from nl2sql.agent.llm import (
     ChatResponse,
     LLMError,
@@ -190,6 +191,12 @@ NO_DIFF = "Fark yok."
 MASKED = "Maskelendi: {cols}"
 # R5-14: tablonun altındaki tek cümlelik cevap; sayıları bekçi onaylamış haliyle (R5-9).
 ANSWER = "Cevap: {text}"
+# R5-14: netleştirmenin ekranı — soru, numaralı şıklar ve seçimin hazır komutu; devamındaki tur
+# seçimi tek başına söyler, çünkü sorunun kendisi zaten ekranda duruyor.
+CLARIFY_HEAD = "Netleştirme: {question}"
+CLARIFY_OPTION = "  {n}. {option}"
+CLARIFY_HINT = 'Seçmek için: ask "{question}" --choice "{option}"'
+CHOICE_LINE = "Seçilen anlam: {option}"
 
 # R3-5: eval hangi şema dosyasıyla ölçtüğünü canlı satırlardan önce söyler (imzanın başı, yani iki
 # koşunun aynı şemayı ölçüp ölçmediği ekrandan okunur); merge-map birleşik şemanın nereye yazıldığını.
@@ -362,6 +369,7 @@ def ask(
     dataset_line: bool = True,
     budget: int | None = None,
     profile: ModelProfile | None = None,
+    choice: str | None = None,
 ) -> int:
     """Bir soru: modunu söyle, adımları işaretle ve gecikmesiyle dök, gönderilen SQL'i, tabloyu,
     uyarıları ve tek cümlelik cevabı göster.
@@ -387,6 +395,10 @@ def ask(
     ``profile`` ``--model``in profilidir (R4-10): ekran hangi modelle ve hangi pencereyle koşulduğunu
     ilk satırlarda söyler, bütçe söylenmediyse profilin penceresinden gelir ve auto'nun eşiği de o
     pencereye göre kurulur. Verilmediğinde koşum Run 3'ün halidir: config'in ucu, bütçe yok.
+
+    İlk soru netleştirme sorabilir (R5-10): ekran soruyu ve şıklarını yazar ve kod 0 ile çıkar —
+    cevap gelmedi, ama bir hata da olmadı. ``choice`` o şıklardan biridir (R5-11): soru seçilen
+    anlamla koşar ve o tur yeniden sormaz.
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
@@ -423,12 +435,13 @@ def ask(
         pii_schema=schema,
     )
     try:
-        context = _context(mode, executor, schema, rules, index_dir, ds)
+        context = _context(mode, executor, schema, rules, index_dir, ds, clarify=not choice)
     except (MissingIndexError, StaleIndexError) as exc:
         return _index_failed(str(exc))
     # Bütçe yalnız verildiğinde geçirilir (R4-11: ``budget=None`` = Run 3'ün koşumu olduğu gibi).
+    asked = follow_up_text(question, choice) if choice else question
     run = run_agent(
-        question,
+        asked,
         llm,
         executor,
         schema,
@@ -442,7 +455,10 @@ def ask(
         print(f"Mod: {mode}")
     else:
         print(_auto_line(mode, estimate, _auto_limit(profile)))
-    print(f"Soru: {question}\n")
+    print(f"Soru: {question}")
+    if choice:
+        print(CHOICE_LINE.format(option=choice))
+    print()
     if run.steps:  # daha ilk turda düşen bir uç noktanın gösterecek adımı yok
         print("Adımlar:")
         for step in run.steps:
@@ -453,6 +469,11 @@ def ask(
         print(TRIMMED.format(trimmed=run.trimmed) + "\n")
     if run.status == "llm_error":
         return _llm_failed(run.stop_reason)
+    if run.status == "needs_clarification":
+        for line in _clarify_lines(question, run.clarification):
+            print(line)
+        _cost(run)
+        return 0
     if not run.submitted_sql:
         print(NO_ANSWER.format(run.stop_reason or "submit_sql hiç çağrılmadı."))
         _cost(run)
@@ -468,7 +489,7 @@ def ask(
     for warning in checks.post_checks(run.submitted_sql, result, executor):
         print(f"{WARNING_MARK} {warning.message}")
     facts = compute_facts(result.columns, result.rows)
-    sentence = narrate(question, result.columns, result.rows, facts, llm).text
+    sentence = narrate(asked, result.columns, result.rows, facts, llm).text
     print(f"\n{ANSWER.format(text=sentence)}")
     print()
     _cost(run)
@@ -1061,7 +1082,8 @@ def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE, dataset=None, p
 
     Sahte istemci oynatacağı kaydı moddan alır: ``rag`` aramadan geçerek, diğerleri şemadan.
     ``dataset`` verildiğinde kayıtlar o kümenin altın sorularıdır ve eşleşmeyen bir sorunun
-    cevabı da kümenin kendi sorgusudur (R4-4) - başka bir kümenin tablosunu uydurmasın.
+    cevabı da kümenin kendi sorgusudur (R4-4) - başka bir kümenin tablosunu uydurmasın. Belirsiz
+    soruları da küme taşır (R5-11); kümenin böyle bir dosyası yoksa sahte hiçbir soruyu sormaz.
 
     ``profile`` ``--model``in profilidir (R4-10): openai istemcisi onun uç noktasından, model
     adından ve anahtar değişkeninden kurulur; anahtar tanımsızsa ``LLMError`` burada yükseltir.
@@ -1072,6 +1094,7 @@ def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE, dataset=None, p
             dataset.golden() if dataset else runner.load_golden(),
             dataset.fake_fallback_sql if dataset else fake.FALLBACK_SQL,
             mode=mode,
+            ambiguous=dataset.ambiguous() if dataset else (),
         )
     if profile is not None:
         return client_for(profile)
@@ -1332,6 +1355,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="yalnız cevabın JSON'unu yazdır (web API ile aynı tek kapı)",
     )
+    ask_cmd.add_argument(
+        "--choice",
+        metavar="SEÇENEK",
+        help="netleştirme şıkkı: soruyu seçilen anlamıyla koşar, yeniden sormaz",
+    )
     _add_model_options(ask_cmd)
     _add_dataset_option(ask_cmd)
 
@@ -1461,7 +1489,7 @@ def main(argv: list[str] | None = None) -> int:
                 mode=mode,
                 estimate=estimate,
                 dataset_line=False,
-                **_given(dataset=args.dataset, profile=profile),
+                **_given(dataset=args.dataset, profile=profile, choice=args.choice),
             )
         except ForeignIndexError as exc:
             # R4-8: yabancı bir indeksin çözümü full'a düşmek değil, kendi kümesini kurmaktır.
@@ -1554,7 +1582,9 @@ def _ask_json(args) -> int:
     except SessionError as exc:
         print(exc)
         return exc.exit_code
-    payload = ask_payload(session, args.question, mode=args.mode, source=JSON_SOURCE)
+    payload = ask_payload(
+        session, args.question, mode=args.mode, choice=args.choice, source=JSON_SOURCE
+    )
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0 if payload["status"] in JSON_OK else 1
 
@@ -1657,6 +1687,21 @@ def _search_notes(tool: str, summary: str) -> list[str]:
     if not note and lines:
         note = f"→ {lines[0]}"
     return [note, *warnings] if note else warnings
+
+
+def _clarify_lines(question: str, clarification: dict) -> list[str]:
+    """R5-14: netleştirmenin satırları — soru, numaralı şıklar ve seçimin hazır komutu.
+
+    Komut ilk şıkla kurulur: kopyalanıp yapıştırılınca çalışan bir satır, uydurma bir yer tutucudan
+    iyidir. Soru da olduğu gibi yazılır, böylece şıkkın hangisine verildiği okunur.
+    """
+    options = clarification["options"]
+    return [
+        CLARIFY_HEAD.format(question=clarification["question"]),
+        *(CLARIFY_OPTION.format(n=n, option=option) for n, option in enumerate(options, 1)),
+        "",
+        CLARIFY_HINT.format(question=question, option=options[0]),
+    ]
 
 
 def _cost(run: AgentRun) -> None:

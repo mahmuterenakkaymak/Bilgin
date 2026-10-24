@@ -27,6 +27,7 @@ FILE_DEFAULTS = {
     "profile": "profile.json",
     "golden": "golden.jsonl",
     "traps": None,
+    "ambiguous": None,
 }
 REQUIRED_KEYS = ("name", "as_of", "builder", "generator", "references")
 
@@ -52,6 +53,7 @@ class Dataset:
     profile_path: Path
     golden_path: Path
     traps_path: Path | None
+    ambiguous_path: Path | None
     db_path: Path
     mssql_script: Path
     index_dir: Path
@@ -99,6 +101,19 @@ class Dataset:
 
         return runner.load_golden(self.golden_path)
 
+    def ambiguous(self) -> list[dict]:
+        """Belirsiz sorular (PLAN R5-12); kümenin böyle bir dosyası yoksa boş, yani soru sorulmaz.
+
+        Satırların doğruluğu ölçümün işidir; burada yalnız okunur, boş satırlar atlanır.
+        """
+        if self.ambiguous_path is None or not self.ambiguous_path.is_file():
+            return []
+        return [
+            json.loads(line)
+            for line in self.ambiguous_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+
 
 def list_datasets(root: str | Path | None = None) -> list[str]:
     """Sorted names of the folders under ``root`` that hold a ``dataset.json``."""
@@ -137,6 +152,7 @@ def load_dataset(name: str, root: str | Path | None = None) -> Dataset:
         profile_path=folder / files["profile"],
         golden_path=golden_path,
         traps_path=folder / files["traps"] if files["traps"] else None,
+        ambiguous_path=folder / files["ambiguous"] if files["ambiguous"] else None,
         db_path=config.ROOT / outputs.get("db", f"data/{name}.db"),
         mssql_script=config.ROOT / outputs.get("mssql_script", f"db/mssql/build_{name}.sql"),
         index_dir=config.ROOT / outputs.get("index_dir", f"index/{name}"),

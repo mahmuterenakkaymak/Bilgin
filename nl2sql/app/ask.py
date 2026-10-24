@@ -3,7 +3,7 @@
 ``ask --json`` da ``POST /api/ask`` da bunu çağırır; ekranın gördüğü anahtarların tamamı burada
 kurulur, her durumda aynı kümeyle, böylece hiçbir alan ekranda ``undefined`` olmaz. Cevabın
 kendisi SQL ve satırlardır; olgular, grafik ve cümle onların üstüne kurulur (R5-6, R5-7, R5-9),
-netleştirme ise M16'ya kadar boş kalan alandır.
+netleştirme ise cevabın yerini alan sorudur (R5-2, R5-11).
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from __future__ import annotations
 import time
 
 from nl2sql import config
+from nl2sql.agent.clarify import follow_up_text
 from nl2sql.agent.loop import run_agent
 from nl2sql.app import asklog
 from nl2sql.engine import checks
@@ -34,15 +35,19 @@ def ask_payload(session, question: str, mode: str | None = None, choice=None, so
     ``mode`` verilmezse ``auto``dur ve oturumun ``resolve_mode``u onu düşürdüğü notu ``notes``a
     yazar; ``source`` hem soru günlüğünün hem o koşumun denetim satırlarının başıdır
     (``<web|cli>:<audit_id>``, R5-4). Her çağrı soru günlüğüne tek satır bırakır.
+
+    İlk soru netleştirme sorabilir (R5-10); ``choice`` verilmişse soru seçilen anlamla koşar ve o
+    tur soramaz, yani açıklama döngüsü kurulmaz (R5-11). Günlük soruyu ve seçimi ayrı taşır.
     """
     audit_id = asklog.new_audit_id()
     notes: list[str] = []
     started = time.perf_counter()
     payload = _skeleton(question, choice, mode or "auto", session, audit_id, notes)
+    asked = follow_up_text(question, choice) if choice else question
     try:
         resolved, _ = session.resolve_mode(payload["mode"], notes)
         payload["mode"] = resolved
-        _run(session, question, resolved, f"{source}:{audit_id}", payload)
+        _run(session, asked, resolved, f"{source}:{audit_id}", payload, clarify=not choice)
     except INDEX_ERRORS as exc:
         _fail(payload, "index", str(exc))
     payload["timings"]["total_s"] = round(time.perf_counter() - started, 3)
@@ -81,7 +86,7 @@ def _skeleton(question: str, choice, mode: str, session, audit_id: str, notes: l
     }
 
 
-def _run(session, question: str, mode: str, source: str, payload: dict) -> None:
+def _run(session, question: str, mode: str, source: str, payload: dict, clarify: bool = True) -> None:
     """Ajanın koşusu, gönderilen SQL'in arayüz bütçesiyle ikinci yürüyüşü ve cevabın doldurulması."""
     run = run_agent(
         question,
@@ -90,7 +95,7 @@ def _run(session, question: str, mode: str, source: str, payload: dict) -> None:
         session.schema,
         source,
         mode=mode,
-        context=session.context(mode),
+        context=session.context(mode, clarify),
         budget=session.budget,
     )
     payload["steps"] = [
@@ -98,6 +103,9 @@ def _run(session, question: str, mode: str, source: str, payload: dict) -> None:
         for step in run.steps
     ]
     payload["timings"]["agent_s"] = run.elapsed_s
+    if run.status == "needs_clarification":
+        _clarify(payload, run.clarification)
+        return
     if run.status != "submitted":
         # Durumun adı hatanın adıdır: modelin hiç göndermemesi de bir cevap hatasıdır (R5-2).
         _fail(payload, run.status, run.stop_reason)
@@ -139,6 +147,12 @@ def _report(session, question: str, payload: dict) -> None:
     payload["answer_text"] = narration.text
     payload["narration_source"] = narration.source
     payload["timings"]["narrate_s"] = round(time.perf_counter() - started, 3)
+
+
+def _clarify(payload: dict, clarification: dict) -> None:
+    """Netleştirme: soru ve şıkları cevabın yerini alır (R5-2) — koşulmamış bir SQL yoktur."""
+    payload["status"] = "needs_clarification"
+    payload["clarification"] = clarification
 
 
 def _fail(payload: dict, kind: str, message: str) -> None:
