@@ -29,6 +29,7 @@ from nl2sql.agent.llm import ChatResponse, OpenAIClient
 from nl2sql.agent.loop import AgentRun, Step, run_agent
 from nl2sql.agent.modes import MODES, ToolContext, get_mode
 from nl2sql.cli.table import format_table
+from nl2sql.engine import login_script
 from nl2sql.engine.executor import LocalExecutor
 from nl2sql.engine.result import Budget
 from nl2sql.eval import report, retrieval, runner
@@ -46,6 +47,7 @@ from nl2sql.index.store import (
     StaleIndexError,
     content_hash,
 )
+from nl2sql.policy import pii
 from nl2sql.schema_map import build, doc, excel, introspect, merge
 from nl2sql.schema_map.rules import load_rules
 
@@ -655,6 +657,29 @@ def merge_map(
     return 0
 
 
+def make_login_script(
+    login: str = login_script.DEFAULT_LOGIN,
+    schema_path: str | Path = config.SCHEMA_PATH,
+    out: str | Path = config.LOGIN_SCRIPT_PATH,
+) -> int:
+    """Salt okunur MSSQL giriş betiğini üretir ve ``out``a yazar (R3-8).
+
+    Allowlist ve PII kolonları okunan şemadan gelir; betiğin kendisi ``readonly_login_sql``de
+    kurulur. Ekran kaç tablonun allowlist'te, kaç PII kolonunun reddedildiğini ve nereye
+    yazıldığını söyler — parolanın yer tutucusu olduğu için dosya repoda durabilir.
+    """
+    _utf8_stdout()
+    schema = doc.load_schema(schema_path)
+    target = Path(out)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(login_script.readonly_login_sql(schema, login), encoding="utf-8")
+    print(f"Giriş: {login}")
+    print(f"Allowlist: {len(doc.allowlist(schema))} tablo")
+    print(f"PII kolonu reddedildi: {len(pii.column_map(schema))}")
+    print(f"Betik: {out}")
+    return 0
+
+
 def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE):
     """``--llm`` değerini istemciye çevirir: fake altın kaydı oynatır, openai config'teki endpoint'e gider.
 
@@ -775,6 +800,15 @@ def main(argv: list[str] | None = None) -> int:
         help="yazılacak birleşik şema dosyası (varsayılan %(default)s)",
     )
 
+    login_cmd = commands.add_parser(
+        "make-login-script", help="salt okunur MSSQL giriş betiğini üretir ve yazar"
+    )
+    login_cmd.add_argument(
+        "--login",
+        default=login_script.DEFAULT_LOGIN,
+        help="giriş ve kullanıcı adı (varsayılan %(default)s)",
+    )
+
     ask_cmd = commands.add_parser("ask", help="tek bir soruyu modelden geçirip cevabı gösterir")
     ask_cmd.add_argument("question", help='Türkçe soru, örn. "Geçen ayın cirosu ne kadar?"')
     ask_cmd.add_argument(
@@ -841,6 +875,8 @@ def main(argv: list[str] | None = None) -> int:
         return diff_map(args.excel, db_schema=args.db_schema)
     if args.command == "merge-map":
         return merge_map(args.excel, db_schema=args.db_schema, out=args.out)
+    if args.command == "make-login-script":
+        return make_login_script(login=args.login)
     if args.command == "ask":
         mode = args.mode or _ask_mode()
         return ask(question=args.question, llm=make_client(args.llm, mode), mode=mode)
