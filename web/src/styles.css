@@ -608,6 +608,53 @@ main {
   .result-table .num {
     min-width: 4.5rem;
   }
+
+  /* Kural listesinin min-content genişliği de ekranı aşıyor (Terim 160px, düğmeler tek satır) ve
+     .table-wrap onu kırpıyor: İşlem sütunu hiç görünmüyor, kural ne düzenleniyor ne siliniyor.
+     Tablo bloğa döner - hücreler tablo bağlamında kaldıkça anonim hücreler aynı tavanı korur -
+     ve her satır kendi bloğuna iner: terim + kimlik, eş anlamlılar, tablolar, düğmeler.
+     Seçiciler tbody/alt-sınıf ile temelden derinleşiyor: kural ekranının temelleri aşağıda
+     duruyor, o yüzden burada sırayı değil özgüllüğü kazanmak gerekiyor. */
+  .rules-table,
+  .rules-table tbody,
+  .rules-table tr,
+  .rules-table th,
+  .rules-table td {
+    display: block;
+  }
+
+  /* Başlık satırı blokların üstünde asılı kalmasın: etiketi hücrenin kendisi taşır. */
+  .rules-table thead {
+    display: none;
+  }
+
+  .rules-table tbody tr {
+    padding: var(--space) 0;
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+
+  /* Ayraç artık satırın kendisinden gelir; hücre çizgisi kalsaydı her satır dört çizgi görürdü. */
+  .rules-table tbody th,
+  .rules-table tbody td {
+    overflow-wrap: anywhere;
+    box-shadow: none;
+  }
+
+  .rules-table .rules-list {
+    max-width: none;
+  }
+
+  .rules-table .rules-list:nth-of-type(1)::before {
+    content: "Eş anlamlılar: ";
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .rules-table .rules-list:nth-of-type(2)::before {
+    content: "Tablolar: ";
+    color: var(--text);
+    font-weight: 600;
+  }
 }
 
 .table-note {
