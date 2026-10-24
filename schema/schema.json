@@ -2634,7 +2634,7 @@
       "name": "TBLPERSONEL",
       "description": "Personel kartları; adı, departmanı ve görev bilgisi burada durur. Maaş, puantaj ve izin kayıtları ayrı tablolardadır, burada hiçbir tutar yoktur.",
       "module": "Personel",
-      "kind": "distractor",
+      "kind": "data",
       "keywords": [
         "personel",
         "çalışan",
@@ -2663,7 +2663,7 @@
           "name": "DEPARTMAN_KODU",
           "type": "VARCHAR(12)",
           "description": "Bağlı olduğu departman.",
-          "fk": "TBLDEPARTMAN.DEPARTMAN_KODU",
+          "fk": null,
           "values": {},
           "nullable": true
         },
@@ -2880,7 +2880,7 @@
       "name": "TBLMAAS",
       "description": "Aylık maaş bordrolarının üst satırı; brüt, kesinti ve net tutar. Personel başına ayda tek satırdır, kazanç ve kesinti kalemleri TBLMAASDETAY tablosundadır.",
       "module": "Personel",
-      "kind": "distractor",
+      "kind": "data",
       "keywords": [
         "maaş",
         "bordro",
@@ -2961,7 +2961,7 @@
       "name": "TBLMAASDETAY",
       "description": "Bordronun kazanç ve kesinti kalemleri; bir bordro birden çok kalem satırı taşır. Bordroyla join yapılırsa net tutar her kalemde tekrarlanır.",
       "module": "Personel",
-      "kind": "distractor",
+      "kind": "data",
       "keywords": [
         "bordro kalemi",
         "kazanç",
