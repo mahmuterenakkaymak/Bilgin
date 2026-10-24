@@ -78,6 +78,8 @@ AUDIT_SOURCE = "ask"
 PROSE = "yanıt"
 SQL_TOOLS = ("run_sql", "submit_sql")
 NO_ANSWER = "Cevap gönderilmedi: {}"
+# R4-11: kırpma görünmez bir olay değil; modelin hangi araç cevabını eksik gördüğü ekrandan okunmalı.
+TRIMMED = "✂ bağlam: {trimmed} araç cevabı kısaltıldı"
 
 # R2-14: arama araçlarının cevabı modele gider, ekrana değil; adımda kaç birim döndüğü ve
 # uyarısı durur. Araç adının sığacağı genişlik de modların araç listesinden gelir.
@@ -321,6 +323,7 @@ def ask(
     estimate: int | None = None,
     dataset: str | None = None,
     dataset_line: bool = True,
+    budget: int | None = None,
 ) -> int:
     """Bir soru: modunu söyle, adımları işaretle ve gecikmesiyle dök, gönderilen SQL'i ve tabloyu göster.
 
@@ -337,6 +340,10 @@ def ask(
     kümenin tanımıdır (R4-4); açıkça verilen yol ya da mod onun önüne geçer. ``dataset_line``
     False ise çağıran küme satırını çoktan basmıştır (R4-14): ``main`` auto çözümünden önce
     bastığı için burada yinelenmez, yoksa satır ekranın ilk satırı olmaktan çıkar.
+
+    ``budget`` tur başına istem bütçesidir (R4-11): döngü ona sığmayan cevabı kısaltır, kısaltma da
+    yetmezse modele hiç gitmeden durur ve ekran hangi cevabın kısaltıldığını ya da cevabın neden
+    hiç gelmediğini söyler.
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
@@ -372,7 +379,9 @@ def ask(
         context = _context(mode, executor, schema, rules, index_dir, ds)
     except (MissingIndexError, StaleIndexError) as exc:
         return _index_failed(str(exc))
-    run = run_agent(question, llm, executor, schema, AUDIT_SOURCE, mode=mode, context=context)
+    run = run_agent(
+        question, llm, executor, schema, AUDIT_SOURCE, mode=mode, context=context, budget=budget
+    )
 
     if estimate is None:
         print(f"Mod: {mode}")
@@ -385,6 +394,8 @@ def ask(
             for line in _step_lines(step):
                 print(line)
         print()
+    if run.trimmed:
+        print(TRIMMED.format(trimmed=run.trimmed) + "\n")
     if run.status == "llm_error":
         return _llm_failed(run.stop_reason)
     if not run.submitted_sql:

@@ -2,7 +2,7 @@
 
 The runner is where a run becomes a number. It re-decides nothing about what the model meant: the
 submitted SQL goes to the same executor the model talked to, under the comparison budget so neither
-side loses rows, and the verdict comes from compare(). All eight outcomes are named here, which is
+side loses rows, and the verdict comes from compare(). All nine outcomes are named here, which is
 also why a run that never submitted is not automatically just ``no_submission`` - the query that
 killed it (a policy reject, a missing column) says far more in the report than the absence of a
 submit, so the model's last attempt is executed once more to name the blocker.
@@ -32,6 +32,7 @@ OUTCOMES = (
     "no_submission",
     "timeout",
     "llm_error",
+    "context_overflow",
 )
 
 # Outcome sütunu bu genişliğe yazılır, yani canlı satırlar birbirinin üstünde hizalı durur.
@@ -68,6 +69,11 @@ class QuestionResult:
     seconds: float = 0.0
     mode: str = "full"
     tags: list[str] = field(default_factory=list)
+    # Bağlam bütçesinin üç sayısı ve submit edilip edilmediği (PLAN R4-11, R4-14).
+    peak_estimate: int = 0
+    trimmed: int = 0
+    overflows: int = 0
+    submitted: bool = False
 
 
 # Run 2 alanları (PLAN R2 Contracts): bir golden satırı bunları hiç yazmadıysa boş liste anlaşılır.
@@ -97,13 +103,15 @@ def run_eval(
     tags: Iterable[str] | None = None,
     context: ToolContext | None = None,
     on_progress: Callable[[QuestionResult], None] | None = None,
+    budget: int | None = None,
 ) -> list[QuestionResult]:
     """Ask every golden question of a fresh client and judge the answer; ``only`` keeps a few ids.
 
     ``tags`` keeps the questions carrying any of the listed tags, and the whole run happens in
     ``mode`` - with the ``context`` (index, graph, rules) that mode's tools need. ``on_progress`` is
     handed each question the moment it is judged, so a caller can stream the run to a screen instead
-    of waiting for the whole set.
+    of waiting for the whole set. ``budget`` is the per-request prompt budget the loop enforces
+    (R4-11); a question that cannot fit it ends as ``context_overflow``.
     """
     lines = load_golden() if golden is None else list(golden)
     if only:
@@ -135,6 +143,7 @@ def run_eval(
             qid,
             mode=mode,
             context=context,
+            budget=budget,
         )
         result = _result(line, run, executor, truth, mode)
         results.append(result)
@@ -182,13 +191,17 @@ def _result(line: dict, run, executor, truth: Result, mode: str) -> QuestionResu
         seconds=run.elapsed_s,
         mode=mode,
         tags=[str(tag) for tag in line.get("tags") or []],
+        peak_estimate=run.peak_estimate,
+        trimmed=run.trimmed,
+        overflows=run.overflows,
+        submitted=run.status == "submitted",
     )
 
 
 def _outcome(line: dict, run, executor, truth: Result) -> tuple[str, str, str]:
-    """AgentRun + the executed answer + compare -> one of the eight outcomes, with a reason."""
+    """AgentRun + the executed answer + compare -> one of the nine outcomes, with a reason."""
     qid = str(line.get("id") or "")
-    if run.status in ("llm_error", "timeout"):
+    if run.status in ("llm_error", "timeout", "context_overflow"):
         return run.status, run.stop_reason, ""
     if run.status == "submitted":
         return _verdict(line, str(run.submitted_sql or ""), executor, truth, qid)

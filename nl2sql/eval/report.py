@@ -142,6 +142,13 @@ def _report(
 ) -> dict:
     passed = sum(1 for result in results if result.outcome == "pass")
     peaks = [result.max_prompt_tokens for result in results]
+    # R4-11: bütçenin iki sayısı. Koşuda ne tepe tahmin ne taşma varsa hiç yazılmazlar (``schema``
+    # gibi) - ikisi de sıfırken okuyana hiçbir şey söylemeyen bir satır, diskteki eski raporların
+    # context sözlüğünü de kendi haliyle okunamaz kılardı.
+    budget = {
+        "peak_estimate": max((result.peak_estimate for result in results), default=0),
+        "overflows": sum(1 for result in results if result.overflows),
+    }
     return {
         "timestamp": stamp.isoformat(sep=" ", timespec="seconds"),
         "model": model,
@@ -155,6 +162,7 @@ def _report(
         "context": {
             "max_prompt_tokens": max(peaks, default=0),
             "median_prompt_tokens": round(statistics.median(peaks)) if peaks else 0,
+            **(budget if budget["peak_estimate"] or budget["overflows"] else {}),
         },
         "questions": [dataclasses.asdict(result) for result in results],
         "previous": _delta(previous, results),
@@ -252,6 +260,11 @@ def _markdown(report: dict) -> str:
         f"Bağlam: tepe {context['max_prompt_tokens']} istem tokenı, medyan "
         f"{context['median_prompt_tokens']} istem tokenı.",
     ]
+    if context.get("peak_estimate") or context.get("overflows"):
+        lines.append(
+            f"Bağlam bütçesi: tepe tahmin {context.get('peak_estimate', 0)} token, "
+            f"{context.get('overflows', 0)} soru bütçeye sığmadı."
+        )
     if report["previous"]:
         lines += ["", "## Önceki koşuya göre", ""] + _delta_lines(report)
     if report["tags"]:
