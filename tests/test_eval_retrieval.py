@@ -37,7 +37,7 @@ class StubSearch:
         self.calls: list[tuple[str, str, int]] = []
         self.embedder = SimpleNamespace(id="stub:1")
 
-    def search(self, query, collection="tables", k=config.SEARCH_K, method="hybrid"):
+    def search(self, query, collection="tables", k=config.SEARCH_K, method="hybrid", rewrite=False):
         self.calls.append((collection, method, k))
         tables = self.order.get(method, {}).get(query, [])[:k]
         return [

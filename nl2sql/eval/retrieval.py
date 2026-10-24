@@ -161,10 +161,13 @@ class _Leg:
 
 
 def _ask(search, question: str, k: int, method: str, rewrite: bool):
-    """Aramanın kendi çağrısı; ``rewrite`` yalnız açıkken geçirilir, eski imza onu bilmeyebilir."""
-    if rewrite:
-        return search.search(question, collection="tables", k=k, method=method, rewrite=True)
-    return search.search(question, collection="tables", k=k, method=method)
+    """Aramanın kendi çağrısı; ``rewrite`` her iki durumda da açıkça geçirilir.
+
+    Aramanın kendi varsayılanı eş anlamlı genişletmesini açık tutuyor (``config.SYNONYM_REWRITE``)
+    ve kurallar aramanın yanında duruyor; geçirilmezse taban varyantı da genişletilmiş sorguyla
+    ölçülür, yani tabanla +eşanlam aynı sayıyı verirdi.
+    """
+    return search.search(question, collection="tables", k=k, method=method, rewrite=rewrite)
 
 
 def _variant(expand: bool, rewrite: bool) -> str:
