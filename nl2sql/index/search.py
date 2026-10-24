@@ -8,6 +8,10 @@ sırasını kullandığı için ölçekler uzlaştırılmaz.
 BM25 koleksiyon başına kurulur; kural dokümanları tablo dokümanlarından uzun olduğu için tek
 korpus idf'yi boğardı. Vektörler L2-normalize gelse de kosinüs bölme ile hesaplanır: boş metnin
 sıfır vektörü ya da vektörü olmayan bir doküman böylece hiç öne çıkmaz.
+
+İki bacak aynı sorguyu görmek zorunda değil (R3-9): sözcük bacağı iş teriminin eş anlamlılarıyla
+genişletilir, vektör bacağı ham sorguda kalır - eklenen kelimeler vektörü kullanıcının demek
+istediğinden uzağa taşırdı.
 """
 
 from __future__ import annotations
@@ -22,7 +26,7 @@ from nl2sql.index.bm25 import BM25
 from nl2sql.index.docs import Doc, build_documents
 from nl2sql.index.embed import Embedder, make_embedder
 from nl2sql.index.store import FileStore, content_hash
-from nl2sql.index.text import tokens
+from nl2sql.index.text import fold, tokens
 
 METHODS = ("hybrid", "bm25", "dense")
 
@@ -51,11 +55,39 @@ def rrf(rankings: Sequence[Sequence[str]], k: int = config.RRF_K) -> list[tuple[
     return sorted(totals.items(), key=lambda pair: (-pair[1], pair[0]))
 
 
-class HybridSearch:
-    """Bir koleksiyon kümesi üzerinde hybrid/bm25/dense arama; `vectors` `docs` sırasıyladır."""
+def synonym_query(query: str, rules: Iterable[dict]) -> str:
+    """R3-9: sorgunun yakaladığı her kuralın eş anlamlıları sorgunun sonuna eklenir.
 
-    def __init__(self, docs: list[Doc], vectors: list[list[float]], embedder: Embedder) -> None:
+    Kural ifadesi katlanmış sorguda alt dizi olarak aranır, böylece "ciro" ile sorulan bir soru
+    "cirosu"nu da yakalar. Sorguda zaten geçen eş anlamlı yeniden eklenmez: BM25 tekrar eden
+    sorgu kelimesini iki kez sayar, yani terimin kendi ağırlığını şişirirdi.
+    """
+    asked = fold(query)
+    extra: list[str] = []
+    for rule in rules:
+        synonyms = [word for word in rule.get("synonyms") or [] if word]
+        phrases = [rule.get("term") or "", *synonyms]
+        if any(fold(phrase) in asked for phrase in phrases if phrase):
+            extra.extend(word for word in synonyms if fold(word) not in asked)
+    return f"{query} {' '.join(extra)}" if extra else query
+
+
+class HybridSearch:
+    """Bir koleksiyon kümesi üzerinde hybrid/bm25/dense arama; `vectors` `docs` sırasıyladır.
+
+    `rules` eş anlamlı genişletmesi için gerekir: kural dokümanları olmasa da sorgunun hangi iş
+    terimlerini söylediğini söyleyen taraf onlar.
+    """
+
+    def __init__(
+        self,
+        docs: list[Doc],
+        vectors: list[list[float]],
+        embedder: Embedder,
+        rules: Sequence[dict] = (),
+    ) -> None:
         self.embedder = embedder
+        self.rules = list(rules)
         self._docs = {doc.id: doc for doc in docs}
         self._vectors = {doc.id: vector for doc, vector in zip(docs, vectors)}
         self._members: dict[str, list[Doc]] = {}
@@ -71,8 +103,12 @@ class HybridSearch:
         collection: str = "tables",
         k: int = config.SEARCH_K,
         method: str = "hybrid",
+        rewrite: bool = config.SYNONYM_REWRITE,
     ) -> list[Hit]:
-        """Koleksiyonun ilk `k` sonucu; boş sorgu/koleksiyon boş liste döndürür."""
+        """Koleksiyonun ilk `k` sonucu; boş sorgu/koleksiyon boş liste döndürür.
+
+        `rewrite` açıkken (R3-9) yalnız sözcük bacağı eş anlamlılarla genişletilir.
+        """
         if method not in METHODS:
             raise ValueError(
                 f"Bilinmeyen arama yöntemi: '{method}'. Geçerli olanlar: {list(METHODS)}."
@@ -81,19 +117,22 @@ class HybridSearch:
         if not members or k <= 0:
             return []
         if method == "bm25":
-            ranked = self._rank_bm25(collection, query, k)
+            ranked = self._rank_bm25(collection, query, k, rewrite)
         elif method == "dense":
             ranked = self._rank_dense(query, members, k)
         else:
-            ranked = self._rank_hybrid(collection, query, members, k)
+            ranked = self._rank_hybrid(collection, query, members, k, rewrite)
         return [
             Hit(doc_id=doc_id, title=self._docs[doc_id].title, score=score, rank=rank)
             for rank, (doc_id, score) in enumerate(ranked, start=1)
         ]
 
-    def _rank_bm25(self, collection: str, query: str, k: int) -> list[tuple[str, float]]:
+    def _rank_bm25(
+        self, collection: str, query: str, k: int, rewrite: bool
+    ) -> list[tuple[str, float]]:
         members = self._members[collection]
-        return [(members[index].id, score) for index, score in self._bm25[collection].rank(tokens(query), k)]
+        asked = synonym_query(query, self.rules) if rewrite else query
+        return [(members[index].id, score) for index, score in self._bm25[collection].rank(tokens(asked), k)]
 
     def _rank_dense(self, query: str, members: list[Doc], k: int) -> list[tuple[str, float]]:
         vector = self.embedder.embed([query])[0]
@@ -107,14 +146,14 @@ class HybridSearch:
         return [(members[index].id, score) for score, index in hits[:k]]
 
     def _rank_hybrid(
-        self, collection: str, query: str, members: list[Doc], k: int
+        self, collection: str, query: str, members: list[Doc], k: int, rewrite: bool
     ) -> list[tuple[str, float]]:
         # ASSUMPTION: her yöntem k'nın iki katı derinliğine kadar kaynaştırılır; bir yöntemde
         # k'nın hemen dışına düşen doküman diğerinin oyuyla hâlâ kazanabilir (RRF'nin varlık nedeni).
         window = 2 * k
         return rrf(
             [
-                [doc_id for doc_id, _ in self._rank_bm25(collection, query, window)],
+                [doc_id for doc_id, _ in self._rank_bm25(collection, query, window, rewrite)],
                 [doc_id for doc_id, _ in self._rank_dense(query, members, window)],
             ]
         )[:k]
@@ -174,7 +213,7 @@ def _neighbours(graph, name: str) -> Iterable[str]:
 def build_search(schema: dict, rules: list[dict], embedder: Embedder) -> HybridSearch:
     """İndeksi bellekte kurar: dokümanlar + onların vektörleri (R2-9: diske dokunmaz)."""
     docs = build_documents(schema, rules)
-    return HybridSearch(docs, embedder.embed([doc.text for doc in docs]), embedder)
+    return HybridSearch(docs, embedder.embed([doc.text for doc in docs]), embedder, rules)
 
 
 def load_search(
@@ -182,7 +221,9 @@ def load_search(
 ) -> HybridSearch:
     """Diskteki indeksi yükler; bayat sahte değil gerçek bir hata. Sorgu embedder'ı meta'dan."""
     index = FileStore(index_dir).load_checked(content_hash(schema, rules))
-    return HybridSearch(index.docs, index.vectors, make_embedder(index.meta.get("embedder", "")))
+    return HybridSearch(
+        index.docs, index.vectors, make_embedder(index.meta.get("embedder", "")), rules
+    )
 
 
 def _cosine(left: Sequence[float], right: Sequence[float]) -> float:
