@@ -73,14 +73,14 @@ ENABLE_THINKING = True
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "data" / "test.db"
 MSSQL_SCRIPT = ROOT / "db" / "mssql" / "build_test_db.sql"
-SCHEMA_PATH = ROOT / "schema" / "schema.json"
-GOLDEN_PATH = ROOT / "eval" / "golden.jsonl"
-TRAPS_PATH = ROOT / "eval" / "traps.jsonl"
+SCHEMA_PATH = ROOT / "datasets" / "synthetic_erp" / "schema.json"
+GOLDEN_PATH = ROOT / "datasets" / "synthetic_erp" / "golden.jsonl"
+TRAPS_PATH = ROOT / "datasets" / "synthetic_erp" / "traps.jsonl"
 EVAL_OUT = ROOT / "eval_out"
 AUDIT_LOG = ROOT / "logs" / "audit.jsonl"
 # ASSUMPTION: Run 2 paths sit here, not in the Run 2 block above, because they need ROOT.
-RULES_PATH = ROOT / "schema" / "rules.json"
-PROFILE_PATH = ROOT / "profiles" / "netsis.json"
+RULES_PATH = ROOT / "datasets" / "synthetic_erp" / "rules.json"
+PROFILE_PATH = ROOT / "datasets" / "synthetic_erp" / "profile.json"
 EXCEL_HEADERS_PATH = ROOT / "profiles" / "excel_headers.json"
 INDEX_DIR = ROOT / "index"
 # ASSUMPTION: Run 3 paths sit here for the same reason — they need ROOT.

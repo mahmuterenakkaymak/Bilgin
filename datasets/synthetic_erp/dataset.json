@@ -1,0 +1,26 @@
+{
+  "name": "synthetic_erp",
+  "display_name": "Sentetik ERP (Netsis benzeri)",
+  "dialect": "tsql",
+  "connection": "sqlite",
+  "default_schema": "dbo",
+  "as_of": "2026-09-30",
+  "seed": 42,
+  "files": {
+    "schema": "schema.json",
+    "rules": "rules.json",
+    "profile": "profile.json",
+    "golden": "golden.jsonl",
+    "traps": "traps.jsonl"
+  },
+  "builder": "nl2sql.schema_map.build:build_db",
+  "generator": "nl2sql.schema_map.generator:generate",
+  "references": "eval.reference:REFERENCES",
+  "fake_fallback_sql": "SELECT TOP 20 STOK_KODU, STOK_ADI FROM TBLSTSABIT ORDER BY STOK_KODU",
+  "outputs": {
+    "db": "data/test.db",
+    "mssql_script": "db/mssql/build_test_db.sql",
+    "index_dir": "index",
+    "eval_out": "eval_out"
+  }
+}

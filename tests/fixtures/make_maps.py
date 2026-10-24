@@ -1,16 +1,21 @@
-"""T83: iki Excel fixture'ını schema/schema.json'dan üretir (PLAN R3-2).
+"""T83: iki Excel fixture'ını config.SCHEMA_PATH'ten üretir (PLAN R3-2).
 
 Çalıştırma: .venv/Scripts/python tests/fixtures/make_maps.py
 """
 
 import json
+import sys
 from pathlib import Path
 
 import openpyxl
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 FIXTURES = Path(__file__).resolve().parent
-SCHEMA_PATH = ROOT / "schema" / "schema.json"
+sys.path.insert(0, str(ROOT))
+
+from nl2sql import config  # noqa: E402
+
+SCHEMA_PATH = config.SCHEMA_PATH
 
 TIDY_HEADERS = ["TABLO", "KOLON", "TİP", "AÇIKLAMA", "REFERANS", "DEĞER", "NULL", "MODÜL"]
 TAB_HEADERS = ["MODÜL", "TABLO ADI", "AÇIKLAMA"]
