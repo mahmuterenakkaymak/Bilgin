@@ -8,6 +8,10 @@ AGENT_TIMEOUT_S. A model that never calls submit_sql ends as no_submission; an e
 ends as llm_error, because the LLMError it raises is caught here rather than allowed to reach the
 console.
 
+With a prompt budget (PLAN R4-11) every turn is estimated before it is sent: an over-budget
+transcript is trimmed with ``budget.trim_tool_answers`` (permanently, tool answers only) and, if it
+still does not fit, the run ends as ``context_overflow`` without ever reaching the model.
+
 The mode (PLAN R2-5) decides the rest of the run: the system prompt, the tools the model is shown
 and the tool-call limit all come from ``modes.get_mode``, so the three arms of the A/B differ in
 nothing but the context and the tools they hand the model.
@@ -21,6 +25,7 @@ from dataclasses import dataclass, field, replace
 
 from nl2sql import config
 from nl2sql.agent import modes
+from nl2sql.agent.budget import estimate_prompt, trim_tool_answers
 from nl2sql.agent.llm import LLMError
 from nl2sql.agent.tools import answer_is_ok, dispatch
 
@@ -34,6 +39,7 @@ TIMEOUT_STOP = "Zaman aşımı: {seconds:.0f} sn."
 TURN_STOP = "Tur sınırına ulaşıldı ({turns})."
 TOOL_STOP = "Araç çağrı sınırı: {limit}."
 FAILED_STOP = "Başarısız sorgu sınırı: {limit}."
+OVERFLOW_STOP = "Bağlam bütçesi aşıldı: tahmin {estimate} > sınır {limit} token."
 
 
 @dataclass
@@ -58,12 +64,15 @@ class AgentRun:
     mode: str = "full"
     steps: list[Step] = field(default_factory=list)
     submitted_sql: str | None = None
-    status: str = "no_submission"  # submitted | no_submission | timeout | llm_error
+    status: str = "no_submission"  # submitted | no_submission | timeout | llm_error | context_overflow
     stop_reason: str = ""
     max_prompt_tokens: int = 0
     total_prompt_tokens: int = 0
     total_completion_tokens: int = 0
     elapsed_s: float = 0.0
+    peak_estimate: int = 0  # en yüksek gönderilen istem tahmini (R4-11); taşmada reddedilen tahmin
+    trimmed: int = 0  # bütçe için kısaltılan araç cevabı sayısı
+    overflows: int = 0  # 1: bütçeye sığmadığı için modele gitmeden durdu
 
 
 def run_agent(
@@ -77,8 +86,10 @@ def run_agent(
     context: modes.ToolContext | None = None,
     max_turns: int = DEFAULT_MAX_TURNS,
     timeout_s: float = config.AGENT_TIMEOUT_S,
+    budget: int | None = None,
 ) -> AgentRun:
-    """Drive one question to a submitted SQL, a limit, or a model failure, in one mode."""
+    """Drive one question to a submitted SQL, a limit, or a model failure, in one mode; with a
+    prompt budget, keep every request under it (R4-11)."""
     started = time.perf_counter()
     deadline = started + timeout_s
     mode_def = modes.get_mode(mode)
@@ -91,10 +102,12 @@ def run_agent(
         {"role": "user", "content": question},
     ]
     tool_calls = failed_runs = 0
+    peak = 0
 
     def finish(status: str, reason: str = "") -> AgentRun:
         run.status = status
         run.stop_reason = reason
+        run.peak_estimate = peak
         run.elapsed_s = round(time.perf_counter() - started, 3)
         return run
 
@@ -103,6 +116,21 @@ def run_agent(
             return finish("timeout", TIMEOUT_STOP.format(seconds=timeout_s))
         if tool_calls >= limit:
             return finish("no_submission", TOOL_STOP.format(limit=limit))
+
+        # Her çağrı öncesi tahmin: bütçe varsa aşan sohbet kalıcı olarak kırpılır, kırpma da
+        # yetmezse modele hiç gidilmez (R4-11). Bütçe yoksa yalnız tepe tahmini izlenir.
+        estimate = estimate_prompt(messages, mode_def.tools)
+        if budget is not None and estimate > budget:
+            messages, cuts, estimate = trim_tool_answers(messages, budget, mode_def.tools)
+            run.trimmed += cuts
+            if estimate > budget:
+                run.overflows = 1
+                if peak == 0:  # daha hiçbir tur gönderilmedi: reddedilen tahmin tepe olur
+                    peak = estimate
+                return finish(
+                    "context_overflow", OVERFLOW_STOP.format(estimate=estimate, limit=budget)
+                )
+        peak = max(peak, estimate)
 
         try:
             response = llm.chat(messages, mode_def.tools)
