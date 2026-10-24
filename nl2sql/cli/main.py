@@ -741,13 +741,19 @@ def make_login_script(
     return 0
 
 
-def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE):
+def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE, dataset=None):
     """``--llm`` değerini istemciye çevirir: fake altın kaydı oynatır, openai config'teki endpoint'e gider.
 
     Sahte istemci oynatacağı kaydı moddan alır: ``rag`` aramadan geçerek, diğerleri şemadan.
+    ``dataset`` verildiğinde kayıtlar o kümenin altın sorularıdır ve eşleşmeyen bir sorunun
+    cevabı da kümenin kendi sorgusudur (R4-4) - başka bir kümenin tablosunu uydurmasın.
     """
     if kind == "fake":
-        return fake.for_golden(runner.load_golden(), mode=mode)
+        return fake.for_golden(
+            dataset.golden() if dataset else runner.load_golden(),
+            dataset.fake_fallback_sql if dataset else fake.FALLBACK_SQL,
+            mode=mode,
+        )
     settings = config.llm_settings()
     return OpenAIClient(settings.base_url, settings.model, settings.api_key)
 
@@ -1167,14 +1173,21 @@ def _ask_mode(index_dir: str | Path = config.INDEX_DIR) -> str:
     return "rag"
 
 
-def resolve_auto(schema: dict, rules: list[dict], index_dir: str | Path = config.INDEX_DIR) -> tuple[str, int]:
+def resolve_auto(
+    schema: dict,
+    rules: list[dict],
+    index_dir: str | Path = config.INDEX_DIR,
+    as_of: str = config.AS_OF,
+) -> tuple[str, int]:
     """``--mode auto``nun çözümü (R3-10): tam kurallı istem bütçeye sığıyorsa full_rules, sığmıyorsa rag.
 
     Ölçüt tam kurallı sistem isteminin bağlam tahminidir: full_rules o istemi olduğu gibi bağlama
     koyar, sığmıyorsa rag arama araçlarına geçer. Rag'in taze bir indeksi yoksa ölçüm yapılamaz,
     tam nota full'a düşülür; tahmin her halükarda döner, ekrana yazılan satırın sağı solu olsun.
+    ``as_of`` kümenin referans tarihidir (R4-4): tahmin, modelin gerçekten göreceği istem ölçülerek
+    bulunur, yani o da aynı tarihle kurulur.
     """
-    estimate = doc.estimate_tokens(prompt.full_rules_prompt(config.AS_OF, schema, rules))
+    estimate = doc.estimate_tokens(prompt.full_rules_prompt(as_of, schema, rules))
     if estimate <= config.AUTO_FULL_MAX_TOKENS:
         return "full_rules", estimate
     try:

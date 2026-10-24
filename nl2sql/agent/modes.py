@@ -25,6 +25,8 @@ class ToolContext:
     search: Any = None
     graph: Any = None
     mode: str = "full"
+    # R4-4: referans tarih verinin parçasıdır; bir kümenin "geçen ay"ı kendi as_of'una göredir.
+    as_of: str = config.AS_OF
 
 
 @dataclass(frozen=True)
@@ -38,15 +40,15 @@ class Mode:
 
 
 def _full_prompt(ctx: ToolContext) -> str:
-    return prompt.full_prompt(config.AS_OF, ctx.schema)
+    return prompt.full_prompt(ctx.as_of, ctx.schema)
 
 
 def _full_rules_prompt(ctx: ToolContext) -> str:
-    return prompt.full_rules_prompt(config.AS_OF, ctx.schema, ctx.rules)
+    return prompt.full_rules_prompt(ctx.as_of, ctx.schema, ctx.rules)
 
 
 def _rag_prompt(ctx: ToolContext) -> str:
-    return prompt.rag_prompt(config.AS_OF, ctx.schema)
+    return prompt.rag_prompt(ctx.as_of, ctx.schema)
 
 
 _SQL_TOOLS = [tools.RUN_SQL, tools.SUBMIT_SQL]

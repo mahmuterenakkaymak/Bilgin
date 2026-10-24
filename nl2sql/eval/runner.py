@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from nl2sql import config
@@ -113,10 +113,16 @@ def run_eval(
         wanted = {str(tag).strip() for tag in tags}
         lines = [line for line in lines if wanted & set(line.get("tags") or [])]
     document = doc.load_schema() if schema is None else schema
-    if context is None and mode == "full_rules":
+    if mode == "full_rules" and not (context and context.rules):
         # The loop refuses a contextless full_rules run on purpose - an empty rules list makes its
-        # prompt identical to full's - so the runner wires the rules a caller did not pass.
-        context = ToolContext(executor=executor, schema=document, rules=load_rules(), mode=mode)
+        # prompt identical to full's - so the runner wires the rules a caller did not pass. A
+        # context that carries its own rules (a dataset's, R4-4) is left alone.
+        rules = load_rules()
+        context = (
+            replace(context, rules=rules)
+            if context is not None
+            else ToolContext(executor=executor, schema=document, rules=rules, mode=mode)
+        )
     truths = [_truth(line, executor) for line in lines]
     results = []
     for line, truth in zip(lines, truths):
