@@ -25,7 +25,7 @@ from pathlib import Path
 from openpyxl.utils.exceptions import InvalidFileException
 
 from nl2sql import config, datasets
-from nl2sql.agent import fake, prompt
+from nl2sql.agent import fake, llm, prompt
 from nl2sql.agent.llm import (
     ChatResponse,
     LLMError,
@@ -34,6 +34,7 @@ from nl2sql.agent.llm import (
     ProfileError,
     client_for,
     get_profile,
+    load_profiles,
 )
 from nl2sql.agent.loop import AgentRun, Step, run_agent
 from nl2sql.agent.modes import MODES, ToolContext, get_mode
@@ -42,6 +43,7 @@ from nl2sql.engine import login_script
 from nl2sql.engine.executor import LocalExecutor
 from nl2sql.engine.result import Budget
 from nl2sql.eval import report, retrieval, runner
+from nl2sql.eval import compare_models
 from nl2sql.eval.compare_modes import (
     REUSED_NOTE,
     build_compare,
@@ -119,6 +121,13 @@ EVAL_NO_AUTO = "eval auto modu kabul etmez; modu açıkça seçin: full, full_ru
 # R4-10/R4-14: --model hangi uç noktayla ve hangi pencereyle koşulduğunu ilk satırda söyler; bütçe
 # pencerenin kendisidir, yani cevabın payı henüz düşülmemiş hali.
 MODEL_LINE = "Model: {name} ({model}, bütçe {budget} token)"
+# R4-13: kapalı bir uç nokta bütün modeli düşürür; sebep satırı hem ekranda hem raporun
+# ``skipped``ında durur, yani okuyan hangi modelin neden ölçülmediğini rapordan da görür.
+MODES_WITHOUT_MODELS = "--modes yalnız --models ile kullanılır."
+MODEL_SKIPPED = "uç nokta yanıt vermiyor ({url}) — bu blok atlandı; GPU'da bu modeli açıp yeniden koşun."
+# ASSUMPTION: hiçbir model koşmadıysa ortada ölçülen bir hücre yoktur; rapor yazılmadan çıkılır
+# (ölü uç noktanın kod 3'ü gibi - koşulmamış bir karşılaştırmanın raporu kullanıcıyı yanıltır).
+EXIT_NO_CELLS = 3
 
 ENV_URL = "NL2SQL_LLM_BASE_URL"
 EMBED_ENV_URL = "NL2SQL_EMBED_BASE_URL"
@@ -692,6 +701,110 @@ def compare_modes(
     return 0
 
 
+def compare_models_cmd(
+    models: list[str],
+    modes: list[str] | None = None,
+    dataset: str | None = None,
+    llm_kind: str = DEFAULT_LLM,
+    repeat: int = 1,
+    models_file: str | Path | None = None,
+    db_path: str | Path | None = None,
+    audit_path: str = config.AUDIT_LOG,
+    out_dir: str | Path | None = None,
+    index_dir: str | Path | None = None,
+    ping=llm.ping,
+) -> int:
+    """Model x mod hücrelerini aynı sorularda koşar, tek model-karşılaştırma raporu yazar (R4-13).
+
+    ``models`` profil adlarıdır ve verildikleri sırayla koşulur; her model kendi penceresiyle
+    (``profile.prompt_limit``) ölçer. ``--llm openai``da modelden önce uç nokta yoklanır: kapıysa
+    model ``skipped``a sebebiyle yazılır ve hiçbir hücresi olmaz, açıksa her mod x tekrar
+    ``runner.run_eval``den geçer. ``--llm fake`` yoklamayı atlar ve altın kaydı aynı bütçeyle
+    oynatır, yani sahte bir karşılaştırma bile hangi modun hangi pencereye sığdığını gösterir.
+
+    ``modes`` söylenmediğinde ``config.COMPARE_MODEL_MODES``; ``dataset`` ``evaluate``ınkiyle aynı
+    anlamı taşır (R4-4). Hiçbir model koşmadıysa rapor yazılmaz ve kod 3 döner; değilse hücre
+    satırları, atlananların ⚠ satırları ve rapor yolu basılır.
+    """
+    _utf8_stdout()
+    ds, code = _dataset(dataset)
+    if code:
+        return code
+    _dataset_line(ds)
+    modes = list(modes) if modes else list(config.COMPARE_MODEL_MODES)
+    db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
+    index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
+    out_dir = _or(out_dir, ds.eval_out if ds else None, config.EVAL_OUT)
+    if _db_missing(db_path):
+        return _no_db(db_path, ds.name if ds else None)
+    try:
+        profiles = load_profiles(models_file or config.MODELS_PATH)
+    except ProfileError as exc:
+        print(exc)
+        return EXIT_BAD_INPUT
+    unknown = [model for model in models if model not in profiles]
+    if unknown:
+        print(
+            f"Bilinmeyen model profili: {', '.join(unknown)} "
+            f"(bilinenler: {', '.join(sorted(profiles))})"
+        )
+        return EXIT_BAD_INPUT
+    schema = ds.schema() if ds else doc.load_schema()
+    rules = ds.rules() if ds else load_rules()
+    lines = ds.golden() if ds else runner.load_golden()
+    executor = LocalExecutor(
+        db_path=db_path, allowlist=doc.allowlist(schema), audit_path=audit_path, pii_schema=schema
+    )
+    if "rag" in modes:
+        # rag koşacaksa indeksi baştan denetle; hiçbir model boşuna koşulmasın (R2-9).
+        try:
+            _context("rag", executor, schema, rules, index_dir, ds)
+        except (MissingIndexError, StaleIndexError) as exc:
+            return _index_failed(str(exc))
+
+    cells: dict[str, dict] = {}
+    skipped: dict[str, str] = {}
+    used: dict[str, ModelProfile] = {}
+    for model in models:
+        profile = profiles[model]
+        if llm_kind == "openai":
+            if ping(profile):
+                skipped[model] = MODEL_SKIPPED.format(url=profile.base_url)
+                continue
+        budget = profile.prompt_limit
+        used[model] = profile
+        cells[model] = {}
+        for mode in modes:
+            context = _context(mode, executor, schema, rules, index_dir, ds)
+            client = make_client(llm_kind, mode, ds, profile)
+            cells[model][mode] = [
+                runner.run_eval(
+                    lambda: client,
+                    executor,
+                    golden=lines,
+                    schema=schema,
+                    mode=mode,
+                    context=context,
+                    budget=budget,
+                )
+                for _ in range(repeat)
+            ]
+
+    if not cells:
+        for model, reason in skipped.items():
+            print(f"⚠ {model}: {reason}")
+        return EXIT_NO_CELLS
+    report_data = compare_models.build_model_compare(
+        cells, profiles=used, dataset=ds.name if ds else config.DEFAULT_DATASET, skipped=skipped
+    )
+    path = compare_models.write_model_compare(report_data, out_dir)
+    print()
+    for line in compare_models.console_lines(report_data):
+        print(line)
+    print(f"\nRapor: {path}")
+    return 0
+
+
 def import_map(
     path: str | Path,
     llm_factory,
@@ -1216,6 +1329,16 @@ def main(argv: list[str] | None = None) -> int:
         "--fresh", action="store_true", help="--compare ile yeniden koşmayan modları da koşar"
     )
     eval_cmd.add_argument(
+        "--models",
+        metavar="A,B",
+        help="--compare ile model x mod karşılaştırması: virgülle ayrılmış profil adları",
+    )
+    eval_cmd.add_argument(
+        "--modes",
+        metavar="M1,M2",
+        help=f"--models ile koşulacak modlar (varsayılan {','.join(config.COMPARE_MODEL_MODES)})",
+    )
+    eval_cmd.add_argument(
         "--repeat",
         type=int,
         default=1,
@@ -1295,6 +1418,9 @@ def main(argv: list[str] | None = None) -> int:
             # düzeltmesi kullanıcının elinde olduğu için iz dökümü değil tek satır ve kod 2.
             print(exc)
             return EXIT_BAD_INPUT
+    if args.modes and not args.models:
+        print(MODES_WITHOUT_MODELS)
+        return EXIT_BAD_INPUT
     if args.mode == "auto":
         print(EVAL_NO_AUTO)
         return EXIT_BAD_INPUT
@@ -1307,6 +1433,19 @@ def main(argv: list[str] | None = None) -> int:
     # ``--schema`` söylenmediyse küme kendi şemasını ölçer; ``full`` onun önüne geçmez (R4-4).
     schema = None if args.dataset and args.schema == FULL_SCHEMA else args.schema
     try:
+        if args.compare and args.models:
+            # R4-13: ``--models`` model x mod karşılaştırmasıdır; Run 2/3 mod karşılaştırması
+            # (adsız ``--compare``) aşağıda olduğu gibi kalır.
+            return compare_models_cmd(
+                models=[name.strip() for name in args.models.split(",") if name.strip()],
+                modes=[name.strip() for name in args.modes.split(",") if name.strip()]
+                if args.modes
+                else None,
+                dataset=args.dataset,
+                llm_kind=args.llm,
+                repeat=args.repeat,
+                models_file=args.models_file,
+            )
         if args.compare:
             if args.repeat < 1:
                 print(BAD_REPEAT)
