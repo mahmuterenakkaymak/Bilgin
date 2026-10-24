@@ -21,6 +21,8 @@ class IntrospectError(RuntimeError):
 # ASSUMPTION: SQLite stores neither a length nor the VARCHAR/NVARCHAR/DATE distinction, so a skeleton
 # type is the affinity's T-SQL name; the tests compare it through build.SQLITE_TYPES instead of to the
 # schema's exact "VARCHAR(20)" text.
+# ASSUMPTION: build.py collapses DATETIME and DATETIME2 onto the one SQLite affinity DATETIME, so the
+# inverse keeps DATETIME as DATETIME; naming it DATETIME2 would turn every real DATETIME column into one.
 SQLITE_TO_TSQL = {
     "INTEGER": "INT",
     "REAL": "DECIMAL",
@@ -38,7 +40,10 @@ def normalize_type(declared: str) -> str:
 
 
 def sqlite_skeleton(db_path: str | Path = config.DB_PATH) -> dict:
-    """Structure only: a database knows names, types, nullability and fks, not meaning (R3-4)."""
+    """Structure only: a database knows names, types, nullability and fks, not meaning (R3-4).
+
+    A table's stored identifier is its name, so a qualified build reads back "Sales.Orders" (R4-6).
+    """
     conn = sqlite3.connect(f"{Path(db_path).resolve().as_uri()}?mode=ro", uri=True)
     try:
         names = [
@@ -90,8 +95,8 @@ def _quote(name: str) -> str:
 #   tables         (schema, table)
 #   columns        (schema, table, column, data type, max length, precision, scale, "YES"/"NO")
 #   foreign_keys   (schema, table, column, referenced schema, referenced table, referenced column)
-# ASSUMPTION: a Netsis database keeps its tables in one schema, so the skeleton carries bare table
-# names as schema.json does; two same-named tables in different schemas are not told apart by name.
+# The skeleton names a table of its own schema "<schema>.<table>" and a dbo table bare, the way
+# schema.json does (R4-6), so two same-named tables in different schemas are two different names.
 MSSQL_QUERIES = {
     "tables": (
         "SELECT TABLE_SCHEMA, TABLE_NAME"
@@ -121,7 +126,7 @@ def rows_to_skeleton(table_rows, column_rows, fk_rows) -> dict:
     """Introspection rows -> canonical skeleton; pure, so the unit test hands it rows directly."""
     tables = {
         (schema, table): {
-            "name": table,
+            "name": _qualified_name(schema, table),
             "description": "",
             "module": "",
             "kind": "unknown",
@@ -146,11 +151,16 @@ def rows_to_skeleton(table_rows, column_rows, fk_rows) -> dict:
             }
         )
     index = {key: {column["name"]: column for column in table["columns"]} for key, table in tables.items()}
-    for schema, table, column_name, _, ref_table, ref_column in fk_rows:
+    for schema, table, column_name, ref_schema, ref_table, ref_column in fk_rows:
         column = index.get((schema, table), {}).get(column_name)
         if column is not None:
-            column["fk"] = f"{ref_table}.{ref_column}"
+            column["fk"] = f"{_qualified_name(ref_schema, ref_table)}.{ref_column}"
     return {"tables": list(tables.values())}
+
+
+def _qualified_name(schema: str, table: str) -> str:
+    """dbo is the database's own schema and stays bare, the way schema.json writes it (R4-6)."""
+    return table if str(schema).upper() == "DBO" else f"{schema}.{table}"
 
 
 def mssql_skeleton(conn_str: str | None = None) -> dict:
