@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -20,9 +20,11 @@ from nl2sql.agent import prompt
 from nl2sql.app import asklog
 from nl2sql.app.ask import ask_payload
 from nl2sql.cli import main as cli
+from nl2sql.engine.result import Budget
 from nl2sql.eval import runner
 from nl2sql.index.search import load_search
 from nl2sql.index.store import MissingIndexError, StaleIndexError, content_hash
+from nl2sql.report.export import MEDIA_TYPES, to_csv_bytes, to_xlsx_bytes
 from nl2sql.schema_map import doc
 from nl2sql.web.saved import SavedStore
 
@@ -30,6 +32,10 @@ from nl2sql.web.saved import SavedStore
 BLANK_QUESTION = "Soru boş."
 # R5-16: silinmek istenen kayıt zaten yoksa ekranın okuyacağı cümle.
 NO_SAVED = "Kayıtlı soru bulunamadı."
+# R5-16: dışa aktarımın red cümleleri; 404 bilinmeyen soru, 409 dışa aktarılacak cevap değil.
+NO_ASK = "Bu sorunun kaydı bulunamadı."
+NOT_ANSWERED = "Yalnızca cevaplanmış bir soru dışa aktarılabilir."
+OTHER_DATASET = "Bu kayıt başka bir veri kümesine ait."
 NO_UI = "Arayüz derlenmemiş"
 BUILD_COMMAND = "npm --prefix web run build"
 
@@ -88,7 +94,7 @@ class SavedBody(BaseModel):
 
 
 def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir: str | Path = config.STATIC_DIR) -> FastAPI:
-    """Oturumun üstünde API: soru, sağlık, örnekler, tablolar, kayıtlar ve derlenmiş arayüz."""
+    """Oturumun üstünde API: soru, sağlık, örnekler, tablolar, kayıtlar, dışa aktarım ve arayüz."""
     app = FastAPI(title="Bilgin")
     app.state.session = session
     app.state.saved_path = Path(saved_path)
@@ -158,6 +164,16 @@ def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir:
         """Son sorular: soru günlüğünün satırları, en yeni önce; veri satırları asla (R5-4)."""
         return {"history": asklog.history(session.ask_log)}
 
+    @app.get("/api/export/{audit_id}.csv")
+    def export_csv(audit_id: str) -> Response:
+        """Cevabın tamamı CSV: ``bilgin_<id>.csv`` adı ile iner (R5-16)."""
+        return _export(session, dataset, audit_id, "csv")
+
+    @app.get("/api/export/{audit_id}.xlsx")
+    def export_xlsx(audit_id: str) -> Response:
+        """Cevabın tamamı Excel: sayı hücreleri sayı olarak kalır (R5-16)."""
+        return _export(session, dataset, audit_id, "xlsx")
+
     assets = static / "assets"
     if assets.is_dir():
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
@@ -171,6 +187,36 @@ def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir:
         return HTMLResponse(NO_UI_PAGE)
 
     return app
+
+
+def _export(session, dataset: str, audit_id: str, ext: str) -> Response:
+    """Günlükteki SQL'i dışa aktarım bütçesiyle bir kez daha koşar ve dosyayı hazırlar (R5-16).
+
+    Satırlar yürütücünün döndürdükleridir: PII maskesi bu yürüyüşte de üstlerinden geçer, yani
+    indirme ekranın gösterdiğinden fazlasını asla vermez. Denetim satırı ``export:<id>`` kaynağını
+    taşır, böylece hangi indirmenin hangi sorguyu koştuğu soru günlüğüyle birleşir (R5-4).
+    """
+    record = asklog.find_ask(audit_id, session.ask_log)
+    if record is None:
+        raise HTTPException(status_code=404, detail=NO_ASK)
+    if record.get("status") != "answered":
+        raise HTTPException(status_code=409, detail=NOT_ANSWERED)
+    # ASSUMPTION: günlüğü yazan oturum küme adı taşımıyorsa ölçülen config'in kümesidir, yani
+    # adsız ``serve`` kendi indirmesini reddetmez.
+    if record.get("dataset") not in (None, dataset):
+        raise HTTPException(status_code=409, detail=OTHER_DATASET)
+    result = session.executor.execute(
+        record.get("sql") or "", Budget(max_rows=config.EXPORT_MAX_ROWS), f"export:{audit_id}"
+    )
+    if result.error is not None:
+        # ASSUMPTION: yeniden koşumun reddi bir çelişkidir; sebebi ekran okusun diye ayrıntıdadır.
+        raise HTTPException(status_code=409, detail=result.error.message)
+    render = to_csv_bytes if ext == "csv" else to_xlsx_bytes
+    return Response(
+        content=render(result.columns, result.rows),
+        media_type=MEDIA_TYPES[ext],
+        headers={"Content-Disposition": f'attachment; filename="bilgin_{audit_id}.{ext}"'},
+    )
 
 
 def _dataset_block(session) -> dict:
