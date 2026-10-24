@@ -105,8 +105,8 @@ gain → no RAG**, so the deliverable is not the retriever — it is `eval --com
 
 ```bash
 python -m nl2sql build-db [--seed 42]                       # data/test.db + db/mssql/build_test_db.sql
-python -m nl2sql build-index [--embed openai|fake]          # index/docs.json + vectors.json + meta.json
-python -m nl2sql eval-retrieval [--embed openai|fake] [--k 5]
+python -m nl2sql build-index [--embed openai|fake[:dim]] [--embed-model bge-m3]   # index/ + meta.json
+python -m nl2sql eval-retrieval [--embed openai|fake[:dim]] [--embed-model bge-m3] [--k 5]
 python -m nl2sql ask "..." [--llm openai|fake] [--mode full|full_rules|rag]
 python -m nl2sql eval [--llm openai|fake] [--mode full|full_rules|rag] [--tag archive needs_rule]
                       [--only Q03 Q04] [--compare] [--fresh]
@@ -149,14 +149,27 @@ cannot end up in different vector spaces by accident. **Changing the model means
 
 The default `embeddinggemma` is ~300M, multilingual (Turkish included) and light enough to sit next to
 a 27B chat model, but it ships under the **Gemma Terms of Use** — Google's own terms, not MIT or
-Apache — so read them before putting it in anything commercial. `bge-m3` (BAAI) is **MIT**, 1024-dim,
-8K context and served exactly the same way, so the swap is two lines:
+Apache — so read them before putting it in anything commercial. `bge-m3` (BAAI) is **MIT**, 1024-dim
+and 8K context, and it is what you ship if the Gemma terms are a problem.
+
+### Measuring bge-m3 against the default
+
+bge-m3 is bigger than a 300M embedder and the GPU is already carrying the chat model, so run it **on
+CPU on its own port** — retrieval is measured, not served, and a few seconds per document is fine
+when the whole index is built once:
 
 ```bash
-set NL2SQL_EMBED_MODEL=bge-m3
-python -m nl2sql build-index && python -m nl2sql eval-retrieval
+llama-server -m bge-m3-Q8_0.gguf --host 127.0.0.1 --port 8892 --embedding --cpu
+set NL2SQL_EMBED_BASE_URL=http://127.0.0.1:8892/v1
+python -m nl2sql build-index --embed-model bge-m3
+python -m nl2sql eval-retrieval --embed-model bge-m3
 ```
 
+`--embed-model` is the model id sent to the endpoint, so the two models can be compared without
+touching `NL2SQL_EMBED_MODEL`; `meta.json` records the id it was built with (`openai:bge-m3`), which
+is how `ask`/`eval` know they are not querying a different vector space than they indexed. The
+numbers themselves are read by hand after the run: `eval-retrieval` prints recall@k per golden
+question and the means per method and per tag, and its report lands in `eval_out/retrieval/latest`.
 Compare the recall before committing to either: the license decides what you may ship, the recall
 decides whether retrieval earns its place at all.
 

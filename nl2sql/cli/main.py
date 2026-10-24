@@ -55,10 +55,16 @@ LLMS = ("fake", "openai")
 # ASSUMPTION: ölçüm aracının varsayılanı gerçek endpoint'tir; --llm fake model istemeyen ölçüm
 # yolu olduğu için kendisi söylenerek seçilir.
 DEFAULT_LLM = "openai"
-EMBEDS = ("fake", "openai")
 # ASSUMPTION: indeksin varsayılanı da gerçek embedding sunucusudur; --embed fake aramanın
 # davranışını model olmadan ölçmek isteyen yol olduğu için kendisi söylenerek seçilir.
 DEFAULT_EMBED = "openai"
+# R3-9: --embed artık choices değil, çünkü iki sonek de geçerli olmalı (fake:<dim>, openai:<model>);
+# biçimi bozuk olan argparse yerine burada, kullanıcının kendi cümlesiyle reddedilir.
+EMBED_ID = re.compile(r"(?:fake(?::[1-9]\d*)?|openai(?::\S+)?)\Z", re.IGNORECASE)
+BAD_EMBED = (
+    "Embedder kaynağı anlaşılmadı: {value}\nGeçerli olanlar: fake, fake:<dim>, openai, "
+    "openai:<model>; model adını --embed-model de verebilir."
+)
 
 AUDIT_SOURCE = "ask"
 PROSE = "yanıt"
@@ -705,6 +711,37 @@ def make_map_client(kind: str, preview: dict):
     return make_client(kind)
 
 
+def _add_embed_options(command: argparse.ArgumentParser) -> None:
+    """``build-index`` ile ``eval-retrieval``ın ortak embedder bayrakları (R3-9).
+
+    ``--embed-model`` model adını doğrudan söyler: aynı sunucuda duran iki modeli (embeddinggemma,
+    bge-m3) ölçmek için ortam değişkeni değiştirmek yerine komutun kendisi yazılır.
+    """
+    command.add_argument(
+        "--embed",
+        default=DEFAULT_EMBED,
+        help="embedder kaynağı: fake, fake:<dim>, openai (varsayılan %(default)s)",
+    )
+    command.add_argument(
+        "--embed-model",
+        metavar="AD",
+        help="openai kaynağının model adı, örn. bge-m3 (varsayılan: NL2SQL_EMBED_MODEL)",
+    )
+
+
+def _embed_arg(args) -> str | None:
+    """``--embed`` ile ``--embed-model`` tek embedder metnine döner: ``fake:64``, ``openai:bge-m3``.
+
+    Model adı bir uç nokta kaynağı ister; ``fake``in soneki vektör genişliği olduğu için
+    ``--embed fake --embed-model bge-m3``in anlatmak istediği bir şey yok.
+    """
+    value = f"{args.embed}:{args.embed_model}" if args.embed_model else str(args.embed)
+    if not EMBED_ID.match(value):
+        print(BAD_EMBED.format(value=value))
+        return None
+    return value
+
+
 def main(argv: list[str] | None = None) -> int:
     """argparse: ``build-db`` | ``ask`` | ``eval``; seçilen komutun işlevini çağırır."""
     parser = argparse.ArgumentParser(prog="python -m nl2sql", description="NL -> T-SQL ölçüm aracı.")
@@ -716,22 +753,12 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     index_cmd = commands.add_parser("build-index", help="şema ve kurallardan arama indeksini kurar")
-    index_cmd.add_argument(
-        "--embed",
-        choices=EMBEDS,
-        default=DEFAULT_EMBED,
-        help="embedder kaynağı (varsayılan %(default)s)",
-    )
+    _add_embed_options(index_cmd)
 
     retrieval_cmd = commands.add_parser(
         "eval-retrieval", help="altın sorularında aramanın geri çağırmasını ölçer"
     )
-    retrieval_cmd.add_argument(
-        "--embed",
-        choices=EMBEDS,
-        default=DEFAULT_EMBED,
-        help="embedder kaynağı (varsayılan %(default)s)",
-    )
+    _add_embed_options(retrieval_cmd)
     retrieval_cmd.add_argument(
         "--k", type=int, default=config.SEARCH_K, help="kaç tablo (varsayılan %(default)s)"
     )
@@ -860,9 +887,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "build-db":
         return build_database(seed=args.seed)
     if args.command == "build-index":
-        return build_index(embed=args.embed)
+        embed = _embed_arg(args)
+        return build_index(embed=embed) if embed else EXIT_BAD_INPUT
     if args.command == "eval-retrieval":
-        return eval_retrieval(embed=args.embed, k=args.k)
+        embed = _embed_arg(args)
+        return eval_retrieval(embed=embed, k=args.k) if embed else EXIT_BAD_INPUT
     if args.command == "import-map":
         return import_map(
             args.file,
