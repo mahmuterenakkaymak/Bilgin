@@ -343,10 +343,11 @@ def _sample_values(ctx, table: str, column: str) -> str:
 
 
 def _column_names(schema: dict, table: str) -> list[str]:
-    """Tablonun kolon adları; tablo şemada yoksa boş liste, yani kolon denetimi yapılmaz."""
+    """Tablonun okunabilir kolon adları; bir `deny` kolon burada da düşer (R4-7), ne denetimde ne de
+    "Kolonlar:" listesinde görünür. Tablo şemada yoksa boş liste, yani kolon denetimi yapılmaz."""
     for candidate in schema.get("tables", []):
         if candidate["name"].upper() == table.strip().upper():
-            return [column["name"] for column in candidate.get("columns", [])]
+            return [column["name"] for column in candidate.get("columns", []) if not column.get("deny")]
     return []
 
 
