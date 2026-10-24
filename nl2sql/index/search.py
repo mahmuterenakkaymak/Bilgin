@@ -55,20 +55,39 @@ def rrf(rankings: Sequence[Sequence[str]], k: int = config.RRF_K) -> list[tuple[
     return sorted(totals.items(), key=lambda pair: (-pair[1], pair[0]))
 
 
+# Kısa bir terimin geçtiği her kelime onu söylüyor demek değil: "Kuruyemiş" ürün grubuyla
+# sorulan soru "Dövizi TL'ye çevirmek" kuralını yakalıyordu. Kelime kökü yakalamak için gereken
+# uzunluk - "ciro" "cirosu"nu bulsun, "kur" "kuruyemiş"i bulmasın.
+MIN_SUBSTRING = 4
+
+
+def _said(phrase: str, asked: str, words: Sequence[str]) -> bool:
+    """İş terimi sorguda söylenmiş mi: uzun ifade alt dizi, kısa ifade tam bir sözcük.
+
+    Ölçü ifadenin tamamı: "kur farkı" iki sözcüğe bölünüp "kur" aranan bir şey değildir.
+    """
+    folded = fold(phrase)
+    if len(folded) >= MIN_SUBSTRING:
+        return folded in asked
+    return folded in words
+
+
 def synonym_query(query: str, rules: Iterable[dict]) -> str:
     """R3-9: sorgunun yakaladığı her kuralın eş anlamlıları sorgunun sonuna eklenir.
 
     Kural ifadesi katlanmış sorguda alt dizi olarak aranır, böylece "ciro" ile sorulan bir soru
-    "cirosu"nu da yakalar. Sorguda zaten geçen eş anlamlı yeniden eklenmez: BM25 tekrar eden
-    sorgu kelimesini iki kez sayar, yani terimin kendi ağırlığını şişirirdi.
+    "cirosu"nu da yakalar; dört katlanmış harften kısa ifadeler tam bir sözcük olmak zorundadır
+    (`_said`). Sorguda zaten geçen eş anlamlı yeniden eklenmez: BM25 tekrar eden sorgu
+    kelimesini iki kez sayar, yani terimin kendi ağırlığını şişirirdi.
     """
     asked = fold(query)
+    words = tokens(query)
     extra: list[str] = []
     for rule in rules:
         synonyms = [word for word in rule.get("synonyms") or [] if word]
         phrases = [rule.get("term") or "", *synonyms]
-        if any(fold(phrase) in asked for phrase in phrases if phrase):
-            extra.extend(word for word in synonyms if fold(word) not in asked)
+        if any(_said(phrase, asked, words) for phrase in phrases if phrase):
+            extra.extend(word for word in synonyms if not _said(word, asked, words))
     return f"{query} {' '.join(extra)}" if extra else query
 
 
