@@ -21,40 +21,41 @@ from nl2sql.eval.runner import _tokens
 COMPARE_OUT = config.EVAL_OUT / "compare"
 REUSED_NOTE = "(önceki koşu)"
 NO_FLIPS = "Hiçbir sorunun sonucu modlar arasında değişmedi."
+# R3-11: iki modun ortalaması kendi dalgalanmasından az farklıysa ölçülen fark kendi gürültüsünden
+# küçük demektir; satır bunu adıyla söyler, çünkü "kaldı" da "yok" da o durumda uydurma olur.
+NOISE = "fark gürültü içinde"
 
 
 def verdict(mode_reports: dict) -> dict:
     """R2-13: RAG kalır iff rag en az full_rules kadar geçiyor **ve** tepe bağlamı ondan düşük.
 
     İki koşuldan hangisi düşüyorsa satır onu iki sayısıyla birlikte söyler; okuyan kararın nedenini
-    tabloyu yeniden kurmadan anlasın. Koşulların sırası sabit: skor, sonra bağlam.
+    tabloyu yeniden kurmadan anlasın. Koşulların sırası sabit: skor, sonra bağlam. R3-11: mod
+    listesiyle çağrılırsa karar tekrarların ortalamasıyla kurulur ve fark herhangi bir modun
+    yayılımından küçükse satır gürültüyü adıyla anar.
     """
-    rules = mode_reports.get("full_rules") or {}
-    rag = mode_reports.get("rag") or {}
-    rag_passed, rag_total = _score_of(rag)
-    rule_passed, rule_total = _score_of(rules)
-    rag_peak, rule_peak = _peak_of(rag), _peak_of(rules)
-    if rag_passed < rule_passed:
-        return {
-            "keep_rag": False,
-            "line": f"Karar: RAG yok — rag {rag_passed}/{rag_total} < full_rules {rule_passed}/{rule_total}.",
-        }
-    if rag_peak >= rule_peak:
+    rules, rag = _runs(mode_reports.get("full_rules")), _runs(mode_reports.get("rag"))
+    rag_mean, rule_mean = _mean(_passed(rag)), _mean(_passed(rules))
+    rag_total, rule_total = _totals(rag), _totals(rules)
+    rag_peak, rule_peak = _peaks(rag), _peaks(rules)
+    noisy = abs(rag_mean - rule_mean) < max(_spread(rag), _spread(rules))
+    if rag_mean < rule_mean:
+        keep, text = False, (
+            f"Karar: RAG yok — rag {_score_text(rag_mean, rag_total)} "
+            f"< full_rules {_score_text(rule_mean, rule_total)}"
+        )
+    elif rag_peak >= rule_peak:
         sign = "≥" if rag_peak == rule_peak else ">"
-        return {
-            "keep_rag": False,
-            "line": (
-                f"Karar: RAG yok — tepe bağlam {_tokens(rag_peak)} {sign} "
-                f"{_tokens(rule_peak)} token."
-            ),
-        }
-    return {
-        "keep_rag": True,
-        "line": (
-            f"Karar: RAG kalır — rag {rag_passed}/{rag_total} ≥ full_rules {rule_passed}/{rule_total} "
-            f"ve tepe bağlam {_tokens(rag_peak)} < {_tokens(rule_peak)} token."
-        ),
-    }
+        keep, text = False, (
+            f"Karar: RAG yok — tepe bağlam {_tokens(rag_peak)} {sign} {_tokens(rule_peak)} token"
+        )
+    else:
+        keep, text = True, (
+            f"Karar: RAG kalır — rag {_score_text(rag_mean, rag_total)} "
+            f"≥ full_rules {_score_text(rule_mean, rule_total)} "
+            f"ve tepe bağlam {_tokens(rag_peak)} < {_tokens(rule_peak)} token"
+        )
+    return {"keep_rag": keep, "line": f"{text}{'; ' + NOISE if noisy else ''}."}
 
 
 def flips(mode_reports: dict) -> list[dict]:
@@ -62,12 +63,12 @@ def flips(mode_reports: dict) -> list[dict]:
 
     Bir modda hiç koşmamış sorunun sonucu uydurulmaz; o mod ``outcomes``'ta hiç yoktur. Tek modda
     koşmuş bir soru karşılaştırılacak ikinci bir sonuca sahip olmadığı için dönme sayılmaz.
+    Tekrarlı koşuda modlar kendi birincil ölçümüyle girer; bir modun kendi içindeki dönüşü
+    ``flips_within_mode`` sayar, yoksa aynı soru iki yerde iki farklı şey gibi görünürdü.
     """
     seen: dict[str, dict[str, str]] = {}
     for mode, mode_report in mode_reports.items():
-        for question in (mode_report or {}).get("questions") or []:
-            if not isinstance(question, dict):
-                continue
+        for question in _questions(_primary(_runs(mode_report))):
             qid, outcome = str(question.get("id") or ""), str(question.get("outcome") or "")
             if qid and outcome:
                 seen.setdefault(qid, {})[mode] = outcome
@@ -78,6 +79,27 @@ def flips(mode_reports: dict) -> list[dict]:
     ]
 
 
+def flips_within_mode(mode_reports: dict) -> int:
+    """R3-11: kendi tekrarları arasında sonucu değişen kaç soru var (aynı soru bir kez sayılır).
+
+    Tek ölçümü olan mod dönecek bir şey ölçmemiştir, sayılmaz; yayılımı olmayan bir ölçüm gürültü
+    kanıtı değildir.
+    """
+    unstable: set[str] = set()
+    for mode_report in mode_reports.values():
+        runs = _runs(mode_report)
+        if len(runs) < 2:
+            continue
+        outcomes: dict[str, set[str]] = {}
+        for run in runs:
+            for question in _questions(run):
+                qid = str(question.get("id") or "")
+                if qid:
+                    outcomes.setdefault(qid, set()).add(str(question.get("outcome") or ""))
+        unstable.update(qid for qid, seen in outcomes.items() if len(seen) > 1)
+    return len(unstable)
+
+
 def build_compare(
     mode_reports: dict, schema_tokens: int, reused: Iterable[str] | None = None
 ) -> dict:
@@ -85,10 +107,16 @@ def build_compare(
 
     ``reused`` hangi modların ``latest``ten alındığını söyler; ``schema_tokens`` şema metninin
     tahmini tokenı, yani full modun her soruya baştan yüklediği bağlam.
+
+    R3-11: bir modun değeri liste ise o modun tekrarlarıdır ve rapora ``repeat``, mod başına
+    ``scores`` ile etiket başına yayılım ve ``flips_within_mode`` eklenir. Tek ölçümde bu alanlar
+    hiç yazılmaz — Contracts'ın ``"repeat":int=1`` satırı yokluğu 1 der, Run 2 raporu da böylece
+    değişmeden kalır.
     """
     modes = _modes(mode_reports)
     taken = set(reused or ())
-    return {
+    repeat = max((len(_runs(value)) for value in mode_reports.values()), default=1)
+    comparison = {
         "timestamp": datetime.now().isoformat(sep=" ", timespec="seconds"),
         "model": _model(mode_reports),
         "questions": len(_ids(mode_reports)),
@@ -99,6 +127,10 @@ def build_compare(
         "flips": flips(mode_reports),
         "verdict": verdict(mode_reports),
     }
+    if repeat > 1:
+        comparison["repeat"] = repeat
+        comparison["flips_within_mode"] = flips_within_mode(mode_reports)
+    return comparison
 
 
 def write_compare(report: dict, out_dir: str | Path = COMPARE_OUT) -> Path:
@@ -141,15 +173,21 @@ def _ids(mode_reports: dict) -> list[str]:
     seen = {
         str(question.get("id") or "")
         for mode_report in mode_reports.values()
-        for question in (mode_report or {}).get("questions") or []
-        if isinstance(question, dict) and question.get("id")
+        for run in _runs(mode_report)
+        for question in _questions(run)
+        if question.get("id")
     }
     return sorted(seen)
 
 
 def _model(mode_reports: dict) -> str:
     return next(
-        (str(report.get("model") or "") for report in mode_reports.values() if report.get("model")),
+        (
+            str(run["model"])
+            for mode_report in mode_reports.values()
+            for run in _runs(mode_report)
+            if run.get("model")
+        ),
         "",
     )
 
@@ -165,23 +203,20 @@ def _peak_of(mode_report: dict) -> int:
 
 
 def _summary(mode: str, mode_report: dict, reused: bool) -> dict:
-    questions = [
-        question
-        for question in (mode_report or {}).get("questions") or []
-        if isinstance(question, dict)
-    ]
+    runs = _runs(mode_report)
+    primary = _primary(runs)
+    questions = _questions(primary)
     calls = [int(question.get("tool_calls") or 0) for question in questions]
     seconds = [float(question.get("seconds") or 0.0) for question in questions]
-    score = (mode_report or {}).get("score") or {}
-    context = (mode_report or {}).get("context") or {}
+    score = (primary or {}).get("score") or {}
+    context = (primary or {}).get("context") or {}
     return {
         "score": {
             "passed": int(score.get("passed") or 0),
             "total": int(score.get("total") or 0),
         },
-        "tags": {
-            tag: dict(counts) for tag, counts in ((mode_report or {}).get("tags") or {}).items()
-        },
+        **({"scores": _stats(_passed(runs))} if len(runs) > 1 else {}),
+        "tags": _tags(runs),
         "context": {
             "max_prompt_tokens": int(context.get("max_prompt_tokens") or 0),
             "median_prompt_tokens": int(context.get("median_prompt_tokens") or 0),
@@ -195,8 +230,89 @@ def _summary(mode: str, mode_report: dict, reused: bool) -> dict:
     }
 
 
+def _tags(runs: list[dict]) -> dict:
+    """Etiket başına skor: birincil koşunun passed/total'ı, tekrarlıda yayılımı da (R3-11).
+
+    Bir tekrarda etiket hiç yoksa o ölçüm yayılıma girmez; olmayan bir koşuyu 0 saymak etiketi
+    olmayan bir modu kendisiyle çelişen iki ölçüm gibi gösterirdi.
+    """
+    tags = list(dict.fromkeys(tag for run in runs for tag in (run.get("tags") or {})))
+    summary = {}
+    for tag in tags:
+        counts = [item for item in ((run.get("tags") or {}).get(tag) for run in runs) if item]
+        first = counts[0] if counts else {}
+        entry = {
+            "passed": int(first.get("passed") or 0),
+            "total": int(first.get("total") or 0),
+        }
+        if len(counts) > 1:
+            entry["scores"] = _stats([int(item.get("passed") or 0) for item in counts])
+        summary[tag] = entry
+    return summary
+
+
 def _mean(values: list[float]) -> float:
     return round(statistics.mean(values), 1) if values else 0.0
+
+
+def _stats(values: list[int]) -> dict:
+    """Yayılımın üç sayısı: tek ölçümde üçü de aynıdır, yani spread 0 ve gürültü yok."""
+    return {
+        "mean": _mean([float(value) for value in values]),
+        "min": min(values, default=0),
+        "max": max(values, default=0),
+    }
+
+
+def _runs(mode_report) -> list[dict]:
+    """Modun ölçümleri: tek rapor da tekrar listesi de aynı kapıdan geçer (R3-11)."""
+    if isinstance(mode_report, list):
+        return [run for run in mode_report if isinstance(run, dict)]
+    return [mode_report] if isinstance(mode_report, dict) else []
+
+
+def _primary(runs: list[dict]) -> dict:
+    """Tek ölçüm okuyan alanların (skor, bağlam, araç, süre, modlar arası dönüş) referans koşusu.
+
+    ASSUMPTION: R3-11 tekrarlar arasında birini "asıl" diye sıralamaz; hangisi önce yazıldıysa o
+    okunur, tekrarların kendisi ``scores`` ve ``flips_within_mode`` olarak ayrıca durur.
+    """
+    return runs[0] if runs else {}
+
+
+def _questions(mode_report: dict) -> list[dict]:
+    return [
+        question
+        for question in (mode_report or {}).get("questions") or []
+        if isinstance(question, dict)
+    ]
+
+
+def _passed(runs: list[dict]) -> list[int]:
+    return [_score_of(run)[0] for run in runs]
+
+
+def _totals(runs: list[dict]) -> int:
+    return max((_score_of(run)[1] for run in runs), default=0)
+
+
+def _peaks(runs: list[dict]) -> int:
+    return max((_peak_of(run) for run in runs), default=0)
+
+
+def _spread(runs: list[dict]) -> int:
+    """Tekrarların yayılımı: en iyi ile en kötü koşul arasındaki fark; tek ölçümde 0."""
+    passed = _passed(runs)
+    return (max(passed) - min(passed)) if passed else 0
+
+
+def _score_text(mean: float, total: int) -> str:
+    return f"{_num(mean)}/{total}"
+
+
+def _num(value: float) -> str:
+    """Ortalama tam sayıya düşüyorsa ondalık yazılmaz: 2.0 -> 2, 2.33 -> 2.3."""
+    return str(int(value)) if float(value).is_integer() else f"{value:.1f}"
 
 
 # ------------------------------------------------------------------ markdown
@@ -213,27 +329,47 @@ def _write(directory: Path, report: dict) -> None:
         (directory / name).write_text(text, encoding="utf-8")
 
 
+def score_cell(summary: dict) -> str:
+    """Skor hanesi: tek ölçümde ``7/10``, tekrarlıda ``6.7/6/7`` (ort/min/max) — CLI de bunu yazar."""
+    spread = summary.get("scores")
+    if spread:
+        return f"{_num(spread['mean'])}/{spread['min']}/{spread['max']}"
+    score = summary["score"]
+    return f"{score['passed']}/{score['total']}"
+
+
 def _markdown(report: dict) -> str:
     modes = list(report["modes"])
+    repeat = report.get("repeat", 1)
     lines = [
         f"# Mod karşılaştırması — {report['model'] or 'model adı verilmemiş koşum'}",
         "",
         f"- Koşum: {report['timestamp']}",
         f"- Model: `{report['model'] or '-'}`",
         f"- Soru: {report['questions']}",
+        *(
+            [
+                f"- Tekrar: {repeat} (her mod {repeat} kez koşuldu)",
+                f"- Mod içi dönüş: {report.get('flips_within_mode', 0)} soru",
+            ]
+            if repeat > 1
+            else []
+        ),
         f"- Şema tahmini: {_tokens(report['schema_tokens'])} token",
         "",
         "## Modlar",
         "",
-        "| Mod | Skor | Bağlam (tepe/medyan) | Araç (ort/max) | Süre (ort/toplam) | Not |",
+        "| Mod | "
+        + ("Skor (ort/min/max)" if repeat > 1 else "Skor")
+        + " | Bağlam (tepe/medyan) | Araç (ort/max) | Süre (ort/toplam) | Not |",
         "| --- | ---: | ---: | ---: | ---: | --- |",
     ]
     for mode in modes:
         summary = report["modes"][mode]
-        score, context = summary["score"], summary["context"]
+        context = summary["context"]
         calls, seconds = summary["tool_calls"], summary["seconds"]
         lines.append(
-            f"| {mode} | {score['passed']}/{score['total']} "
+            f"| {mode} | {score_cell(summary)} "
             f"| {_tokens(context['max_prompt_tokens'])} / {_tokens(context['median_prompt_tokens'])} "
             f"| {calls['mean']:.1f} / {calls['max']} "
             f"| {seconds['mean']:.1f} / {seconds['total']:.1f} sn "
@@ -260,7 +396,12 @@ def _tag_lines(report: dict, modes: list[str]) -> list[str]:
         cells = []
         for mode in modes:
             counts = report["modes"][mode]["tags"].get(tag)
-            cells.append(f"{counts['passed']}/{counts['total']}" if counts else "-")
+            spread = (counts or {}).get("scores")
+            cells.append(
+                f"{_num(spread['mean'])}/{spread['min']}/{spread['max']}"
+                if spread
+                else (f"{counts['passed']}/{counts['total']}" if counts else "-")
+            )
         lines.append(f"| {tag} | " + " | ".join(cells) + " |")
     return lines
 

@@ -33,7 +33,13 @@ from nl2sql.engine import login_script
 from nl2sql.engine.executor import LocalExecutor
 from nl2sql.engine.result import Budget
 from nl2sql.eval import report, retrieval, runner
-from nl2sql.eval.compare_modes import REUSED_NOTE, build_compare, reusable, write_compare
+from nl2sql.eval.compare_modes import (
+    REUSED_NOTE,
+    build_compare,
+    reusable,
+    score_cell,
+    write_compare,
+)
 from nl2sql.eval.runner import _tokens
 from nl2sql.graph.graph import build_graph
 from nl2sql.graph.profile import load_profile
@@ -82,6 +88,11 @@ JOIN_LINE = re.compile(r"\S+ = ")  # bir join satırı: A.X = B.Y (fk 1.0)
 WARNING_MARK = "⚠"
 VALUE_COUNT = re.compile(r"Değerler \((\d+)\)")
 RUNNING = "{mode} koşuluyor ..."
+# R3-11: tekrarlı koşuda hangi denemede olduğu satırdan okunur; gürültü ölçümü uzun bir iş ve
+# ekranın "kaçıncı koşu"yu söylememesi uzun bir bekleyişi sessizliğe çevirirdi.
+RUNNING_REPEAT = "{mode} koşuluyor {attempt}/{repeat} ..."
+REPEAT_LINE = "Tekrar: her mod {repeat} kez koşuluyor (gürültü ölçümü)"
+BAD_REPEAT = "--repeat en az 1 olmalı."
 NO_INDEX_NOTE = "İndeks yok/eski; full modda çalışılıyor."
 # R3-10: auto modun çözümü ekrana hem seçilen modu hem onu doğuran bağlam tahmini yazılır; eval
 # auto'yu kabul etmez, çünkü bir A/B ölçümünün hangi kolu ölçtüğü baştan belli olmalı.
@@ -400,6 +411,7 @@ def compare_modes(
     out_dir: str = config.EVAL_OUT,
     index_dir: str = config.INDEX_DIR,
     schema_path: str | Path = config.SCHEMA_PATH,
+    repeat: int = 1,
 ) -> int:
     """Üç modu aynı sorularda koşar, tek karşılaştırma raporu yazar, mod başına tek satır söyler.
 
@@ -413,6 +425,9 @@ def compare_modes(
     ``schema_path`` ``evaluate``ınkiyle aynı anlamı taşır (R3-5): üç mod da o dosyayla ölçer —
     allowlist, şema metni, join graphı, indeks imzası ve raporun ``schema`` alanı hepsi ondan
     gelir —, yani bir modun ``latest``i ancak aynı şemayla ölçmüşse yeniden kullanılabilir.
+
+    ``repeat`` her modun kaç kez koşulacağıdır (R3-11): aynı imzada tekrarlandıkça yayılım
+    ölçülür, karar ortalamalarla kurulur ve satır gürültüyü de söyler.
     """
     _utf8_stdout()
     if _db_missing(db_path):
@@ -438,7 +453,11 @@ def compare_modes(
     reused = {
         mode
         for mode in config.MODES
-        if not fresh and reusable(stored[mode], fingerprints[mode], spaces[mode])
+        # ASSUMPTION: R3-11 tekrarlı koşuda ``latest`` yeniden kullanılmaz; tek ölçümün yayılımı
+        # yoktur, yani gürültüyü ölçmek isteyen bir koşu N ölçümün kendisini ister.
+        if not fresh
+        and repeat == 1
+        and reusable(stored[mode], fingerprints[mode], spaces[mode])
     }
     if "rag" not in reused:
         # rag koşacaksa indeksi baştan denetle; iki mod boşuna koşulduktan sonra red edilmesin.
@@ -446,37 +465,47 @@ def compare_modes(
             _context("rag", executor, schema, rules, index_dir)
         except (MissingIndexError, StaleIndexError) as exc:
             return _index_failed(str(exc))
+    if repeat > 1:
+        print(REPEAT_LINE.format(repeat=repeat) + "\n")
 
     reports = {mode: stored[mode] for mode in reused}
     for mode in config.MODES:
         if mode in reports:
             continue
-        print(RUNNING.format(mode=mode))
-        results = runner.run_eval(
-            lambda: clients[mode],
-            executor,
-            golden=lines,
-            schema=schema,
-            mode=mode,
-            context=_context(mode, executor, schema, rules, index_dir),
-        )
-        if results and all(result.outcome == "llm_error" for result in results):
-            print(f"Uç nokta {len(results)} sorunun hiçbirini yanıtlamadı; rapor yazılmadı.\n")
-            return _llm_failed(results[0].reason)
-        report.write_report(
-            results,
-            Path(out_dir) / mode,
-            model=model,
-            config={
-                "backend": config.backend(),
-                "llm": model,
-                "embedder": spaces[mode],
-                "fingerprint": fingerprints[mode],
-            },
-            mode=mode,
-            schema_info=info,
-        )
-        reports[mode] = _mode_report(out_dir, mode)
+        context = _context(mode, executor, schema, rules, index_dir)
+        runs = []
+        for attempt in range(1, repeat + 1):
+            print(
+                RUNNING_REPEAT.format(mode=mode, attempt=attempt, repeat=repeat)
+                if repeat > 1
+                else RUNNING.format(mode=mode)
+            )
+            results = runner.run_eval(
+                lambda: clients[mode],
+                executor,
+                golden=lines,
+                schema=schema,
+                mode=mode,
+                context=context,
+            )
+            if results and all(result.outcome == "llm_error" for result in results):
+                print(f"Uç nokta {len(results)} sorunun hiçbirini yanıtlamadı; rapor yazılmadı.\n")
+                return _llm_failed(results[0].reason)
+            report.write_report(
+                results,
+                Path(out_dir) / mode,
+                model=model,
+                config={
+                    "backend": config.backend(),
+                    "llm": model,
+                    "embedder": spaces[mode],
+                    "fingerprint": fingerprints[mode],
+                },
+                mode=mode,
+                schema_info=info,
+            )
+            runs.append(_mode_report(out_dir, mode))
+        reports[mode] = runs
 
     comparison = build_compare(reports, doc.estimate_tokens(doc.full_text(schema)), reused)
     run_dir = write_compare(comparison, Path(out_dir) / "compare")
@@ -893,6 +922,13 @@ def main(argv: list[str] | None = None) -> int:
         "--fresh", action="store_true", help="--compare ile yeniden koşmayan modları da koşar"
     )
     eval_cmd.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        metavar="N",
+        help="--compare ile her modu N kez koşar ve gürültüyü ölçer (varsayılan %(default)s)",
+    )
+    eval_cmd.add_argument(
         "--schema",
         default="full",
         metavar="DOSYA|full|skeleton",
@@ -938,10 +974,14 @@ def main(argv: list[str] | None = None) -> int:
         print(EVAL_NO_AUTO)
         return EXIT_BAD_INPUT
     if args.compare:
+        if args.repeat < 1:
+            print(BAD_REPEAT)
+            return EXIT_BAD_INPUT
         return compare_modes(
             lambda mode: make_client(args.llm, mode),
             fresh=args.fresh,
             schema_path=args.schema,
+            repeat=args.repeat,
         )
     return evaluate(
         llm=make_client(args.llm, args.mode),
@@ -1201,11 +1241,14 @@ def _mode_report(out_dir: str | Path, mode: str) -> dict | None:
 
 
 def _compare_line(mode: str, summary: dict) -> str:
-    """R2-14: mod başına tek satır — skor, tepe/medyan bağlam, ortalama araç, toplam süre, not."""
-    score, context = summary["score"], summary["context"]
+    """R2-14: mod başına tek satır — skor, tepe/medyan bağlam, ortalama araç, toplam süre, not.
+
+    R3-11: tekrarlı koşuda skor hanesi ``ort/min/max`` okunur; tek ölçümde yine ``7/10``.
+    """
+    context = summary["context"]
     note = f"  {REUSED_NOTE}" if summary["reused"] else ""
     return (
-        f"{mode:<{TOOL_WIDTH}} {score['passed']}/{score['total']}"
+        f"{mode:<{TOOL_WIDTH}} {score_cell(summary)}"
         f"  bağlam {_tokens(context['max_prompt_tokens'])}/{_tokens(context['median_prompt_tokens'])}"
         f"  araç {summary['tool_calls']['mean']:.1f}"
         f"  {summary['seconds']['total']:.1f} sn{note}"
