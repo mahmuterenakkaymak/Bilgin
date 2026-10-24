@@ -27,6 +27,7 @@ def load_schema(path: str | Path = config.SCHEMA_PATH) -> dict:
             column.setdefault("values", {})
             column.setdefault("nullable", True)
             column.setdefault("pii", None)
+            column.setdefault("deny", False)
     return schema
 
 
@@ -98,10 +99,7 @@ def table_detail(schema: dict, tables: list[str]) -> str:
         wanted.append(index[found.upper()])
     if not wanted:
         return f"Tablo adı verilmedi. Bilinen tablolar: {known}."
-    return "\n\n".join(
-        "\n".join([_table_header(table)] + [_column_line(column) for column in table["columns"]])
-        for table in wanted
-    )
+    return "\n\n".join(_table_block(table) for table in wanted)
 
 
 def full_text(schema: dict) -> str:
@@ -112,6 +110,13 @@ def full_text(schema: dict) -> str:
 def estimate_tokens(text: str) -> int:
     """Char-based token estimate for prompt budgets (PLAN R2-5)."""
     return math.ceil(len(text) / config.CHARS_PER_TOKEN)
+
+
+def _table_block(table: dict) -> str:
+    """Başlık ve okunabilir kolonlar: bir `deny` kolon hiçbir model metnine düşmez (PLAN R4-7)."""
+    lines = [_table_header(table)]
+    lines += [_column_line(column) for column in table["columns"] if not column["deny"]]
+    return "\n".join(lines)
 
 
 def _table_header(table: dict) -> str:

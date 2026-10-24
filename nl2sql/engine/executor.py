@@ -211,6 +211,8 @@ class LocalExecutor:
         # şema verilmeyen executor hangi kolonun pii olduğunu bilmediği için hiçbir şey maskelemez.
         self._pii_schema = pii_schema
         self._pii_map = pii.column_map(pii_schema) if pii_schema is not None else {}
+        # Kapalı kolon maskelenmez, hiç okunmaz (R4-7): o yüzden harita değil, küme politika'ya gider.
+        self._deny = pii.deny_set(pii_schema) if pii_schema is not None else set()
 
     def execute(self, sql: str, budget: Budget | None = None, source: str = "") -> Result:
         """The only public entry: policy -> transpile (sqlite backend) -> backend -> mask -> audit."""
@@ -220,7 +222,7 @@ class LocalExecutor:
 
     def _run(self, sql: str, budget: Budget) -> Result:
         # Filtre kuralı aynı haritayı izler: maskelenen bir kolon sorguda filtre de olamaz (R3-6).
-        verdict = policy.check(sql, self._allowlist, config.TOP_N, pii=self._pii_map)
+        verdict = policy.check(sql, self._allowlist, config.TOP_N, pii=self._pii_map, deny=self._deny)
         if not verdict.ok:
             return _error("policy", verdict.reason)
         if self._backend != "sqlite":

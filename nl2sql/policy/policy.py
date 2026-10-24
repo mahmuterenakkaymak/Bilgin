@@ -46,12 +46,21 @@ class PolicyResult:
     tables: set[str] = field(default_factory=set)
 
 
-def check(sql: str, allowlist: set[str], top_n: int = config.TOP_N, pii: dict | None = None) -> PolicyResult:
+def check(
+    sql: str,
+    allowlist: set[str],
+    top_n: int = config.TOP_N,
+    pii: dict | None = None,
+    deny: set[tuple[str, str]] | None = None,
+) -> PolicyResult:
     """Single read-only T-SQL SELECT, real tables from the allowlist only, TOP n enforced.
 
     `pii` is the {(TABLE, COLUMN): class} map of the schema (R3-6). A column whose class is in
     `config.PII_FILTER` may not be used as a filter: the mask hides a value, but WHERE/JOIN/GROUP
     BY/ORDER BY over that same value lets a question be asked about it.
+
+    `deny` is the {(TABLE, COLUMN)} set of the columns the schema marks `deny` (R4-7). Nothing may
+    read one, and a table holding one cannot be read with a star either: the star would open it.
     """
     if not sql or not sql.strip():
         return PolicyResult(ok=False, reason="Boş sorgu.")
@@ -63,6 +72,9 @@ def check(sql: str, allowlist: set[str], top_n: int = config.TOP_N, pii: dict | 
     if reason:
         return PolicyResult(ok=False, reason=reason)
     reason = _check_filter(tree, pii or {}, tables)
+    if reason:
+        return PolicyResult(ok=False, reason=reason)
+    reason = _check_denied(tree, deny or set(), tables)
     if reason:
         return PolicyResult(ok=False, reason=reason)
     return PolicyResult(ok=True, sql=_with_top(tree, top_n), tables=tables)
@@ -229,6 +241,39 @@ def _filter_target(column, aliases, marks, tables) -> str:
     # ASSUMPTION: ad çözülür, iz sürülmez; adı çakışan kolon sorgunun dokunduğu tabloda pii ise
     # hangisi olduğu bilinemediği için reddedilir (fail closed).
     return next((f"{table}.{name}" for table in sorted(tables) if (table, name) in marks), "")
+
+
+# ----------------------------------------------------------------- denied columns (R4-7)
+
+
+def _check_denied(tree, deny, tables):
+    """Kapalı kolon sorgunun hiçbir yerinde okunamaz; yıldız da onu açtığı için tablo okunamaz kalır."""
+    if not deny:
+        return None
+    names = {column for _, column in deny}
+    aliases = _aliases(tree, tables)
+    for column in tree.find_all(exp.Column):
+        if column.name.upper() in names:
+            # Sahibinin çözümü filtre kuralıyla aynı: takma ad, o çözülmezse sorgunun gerçek tabloları.
+            guilty = _filter_target(column, aliases, deny, tables)
+            if guilty:
+                return f"Erişimi kapalı kolon: {guilty}."
+    if any(_opens_denied(star, aliases, deny, tables) for star in tree.find_all(exp.Star)):
+        return "Bu tabloda kapalı kolon var; kolonları adıyla yazın."
+    return None
+
+
+def _opens_denied(star, aliases, deny, tables) -> bool:
+    """COUNT(*) hiçbir kolon açmaz; `t.*` kendi tablosuna, çıplak `*` sorgunun gerçek tablolarına bakar."""
+    owner = star.parent
+    if isinstance(owner, exp.Count):
+        return False
+    if isinstance(owner, exp.Column) and owner.table:
+        # ASSUMPTION: takma adı çözülemeyen yıldız bir CTE'yi açar; o gövde de aynı denetimden
+        # geçtiği için kapalı kolon oradan dışarı çıkamaz.
+        table = aliases.get(owner.table.upper())
+        return table is not None and any(pair[0] == table for pair in deny)
+    return any(table in tables for table, _ in deny)
 
 
 # ----------------------------------------------------------------- row cap

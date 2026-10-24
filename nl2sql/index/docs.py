@@ -68,7 +68,10 @@ def leaks(docs: Iterable[Doc], questions: Iterable[dict], n: int = 6) -> list[tu
 
 
 def _table_text(table: dict) -> str:
-    """Tablo adı ve modülü, açıklaması, anahtar kelimeleri, sonra her kolon ve kod anlamları."""
+    """Tablo adı ve modülü, açıklaması, anahtar kelimeleri, sonra her okunabilir kolon ve kod anlamları.
+
+    Bir `deny` kolon dokümana hiç girmez: adını buradan okuyan model onu sorgusuna da yazar (PLAN R4-7).
+    """
     module = f" [{table['module']}]" if table.get("module") else ""
     lines = [f"{table['name']}{module}"]
     if table.get("description"):
@@ -76,6 +79,8 @@ def _table_text(table: dict) -> str:
     if table.get("keywords"):
         lines.append("Anahtar kelimeler: " + ", ".join(table["keywords"]))
     for column in table.get("columns", []):
+        if column.get("deny"):
+            continue
         line = column["name"]
         if column.get("description"):
             line += " — " + column["description"]

@@ -113,6 +113,20 @@ def column_map(schema: dict) -> dict[tuple[str, str], str]:
     }
 
 
+def deny_set(schema: dict) -> set[tuple[str, str]]:
+    """{(FULL_TABLE, COLUMN)} for every column the schema marks `deny` (PLAN R4-7).
+
+    The same key form as `column_map`, because the policy reads the two side by side: a `pii` mark
+    hides a value, a `deny` mark hides the column itself, so it never reaches the mask at all.
+    """
+    return {
+        (table["name"].upper(), column["name"].upper())
+        for table in schema["tables"]
+        for column in table["columns"]
+        if column.get("deny")
+    }
+
+
 # ----------------------------------------------------------------- lineage
 
 
