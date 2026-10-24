@@ -43,7 +43,7 @@ from nl2sql.cli.table import format_table
 from nl2sql.engine import checks, login_script
 from nl2sql.engine.executor import LocalExecutor
 from nl2sql.engine.result import Budget
-from nl2sql.eval import report, retrieval, runner
+from nl2sql.eval import metrics, report, retrieval, runner
 from nl2sql.eval import compare_models
 from nl2sql.eval.compare_modes import (
     REUSED_NOTE,
@@ -130,6 +130,13 @@ NO_INDEX_NOTE = "İndeks yok/eski; full modda çalışılıyor."
 AUTO_LINE = "Mod: auto -> {mode} (bağlam tahmini {tokens} token{budget})"
 AUTO_BUDGET = " · bütçe {budget}"
 EVAL_NO_AUTO = "eval auto modu kabul etmez; modu açıkça seçin: full, full_rules, rag."
+# R5-12: --ambiguous iki durumda koşmaz — kümenin belirsiz seti yoksa sorulacak soru yoktur, ve
+# --compare üç modu koşar, oysa belirsiz set bir modun netleştirme davranışının ölçümüdür.
+NO_AMBIGUOUS = "Bu veri kümesinin belirsiz soru seti yok."
+AMBIGUOUS_COMPARE = "--ambiguous tek mod eval'i içindir."
+# R5-14: metrik bloğunun başlığı; satırlarını report.metrics_block kurar, yani ekran ile report.md
+# aynı altı ölçüyü söyler.
+METRICS_HEAD = "Metrikler:"
 # R4-10/R4-14: --model hangi uç noktayla ve hangi pencereyle koşulduğunu ilk satırda söyler; bütçe
 # pencerenin kendisidir, yani cevabın payı henüz düşülmemiş hali.
 MODEL_LINE = "Model: {name} ({model}, bütçe {budget} token)"
@@ -509,6 +516,8 @@ def evaluate(
     dataset: str | None = None,
     budget: int | None = None,
     profile: ModelProfile | None = None,
+    ambiguous: bool = False,
+    narrate: bool = False,
 ) -> int:
     """Altın soruları bir modda koşar, her soru biter bitmez tek satır dökerek (Delight 4)
     ilerler, raporu ``out_dir`` altına yazar (CLI ona ``eval_out/<mode>`` verir, R2-12), skoru söyler; koşu tamamlandıysa kod 0'dır.
@@ -531,12 +540,23 @@ def evaluate(
     penceresinden gelir, rapor hangi modelle ve hangi pencereyle ölçtüğünü ondan yazar, imzaya da
     bütçe yalnız o zaman girer. ``budget`` açıkça verildiğinde o kazanır; ikisi de yoksa Run 3'ün
     koşumu olduğu gibi kalır - bütçesiz ve imzası Run 3'ün anahtarlarıyla.
+
+    ``ambiguous`` altın soruların ardına kümenin belirsiz setini de katar ve netleştirmeyi açar
+    (R5-12): soru soruldukça ölçülen şey cevap isabeti değil, tahmin etmek yerine sormaktır. Kümenin
+    böyle bir seti yoksa koşacak belirsiz soru yoktur, yani tek cümle ve kod 2. ``narrate``
+    gönderilen her altın cevabı bir kez daha yürütüp anlatır ve anlatıcı kaynaklarını sayar (R5-13).
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
     if code:
         return code
     _dataset_line(ds)
+    # Belirsiz setin yokluğu veritabanından önce sorulur: eksik olan ölçümün tanımıdır, kurulu bir
+    # dosya onu geri getirmez (R5-12).
+    ambiguous_lines = ds.ambiguous() if ambiguous and ds else []
+    if ambiguous and not ambiguous_lines:
+        print(NO_AMBIGUOUS)
+        return EXIT_BAD_INPUT
     budget = _or(budget, profile.prompt_limit if profile else None)
     db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
     index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
@@ -577,10 +597,13 @@ def evaluate(
         context=context,
         on_progress=lambda result: print(runner.progress_line(result)),
         budget=budget,
+        clarify=ambiguous,
+        ambiguous=ambiguous_lines,
     )
     if results and all(result.outcome == "llm_error" for result in results):
         print(f"Uç nokta {len(results)} sorunun hiçbirini yanıtlamadı; rapor yazılmadı.\n")
         return _llm_failed(results[0].reason)
+    narration = _narrate_results(results, executor, _narrator(llm)) if narrate else None
     passed = sum(1 for result in results if result.outcome == "pass")
     kind, model = _client_kind(llm, profile)
     name = ds.name if ds else config.DEFAULT_DATASET
@@ -593,15 +616,21 @@ def evaluate(
             "llm": model,
             "embedder": _embedder_id(mode, index_dir),
             "fingerprint": _fingerprint(
-                mode, kind, model, lines, results, schema, rules, name, budget
+                mode, kind, model, lines, results, schema, rules, name, budget, ambiguous
             ),
         },
         mode=mode,
         schema_info=info,
         dataset=name,
         profile=_profile_block(profile),
+        narration=narration,
     )
     print(f"Skor: {passed}/{len(results)}")
+    if ambiguous:
+        print(f"\n{METRICS_HEAD}")
+        for line in report.metrics_block(metrics.compute_metrics(results)):
+            print(line)
+        print()
     print(f"Rapor: {run_dir / 'report.md'}")
     return 0
 
@@ -1430,6 +1459,16 @@ def main(argv: list[str] | None = None) -> int:
         metavar="DOSYA|full|skeleton",
         help="ölçümün şeması: tam ad ya da yol (varsayılan %(default)s)",
     )
+    eval_cmd.add_argument(
+        "--ambiguous",
+        action="store_true",
+        help="altın sorulara kümenin belirsiz setini de katıp netleştirme metriklerini ölçer",
+    )
+    eval_cmd.add_argument(
+        "--narrate",
+        action="store_true",
+        help="gönderilen her altın cevabı anlatıp anlatıcının kaynağını sayar",
+    )
     _add_model_options(eval_cmd)
     _add_dataset_option(eval_cmd)
 
@@ -1512,14 +1551,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.mode == "auto":
         print(EVAL_NO_AUTO)
         return EXIT_BAD_INPUT
-    ds, code = _dataset(args.dataset)
+    if args.compare and args.ambiguous:
+        print(AMBIGUOUS_COMPARE)
+        return EXIT_BAD_INPUT
+    # ASSUMPTION: --ambiguous belirsiz seti bir veri kümesinden okur; --dataset söylenmemişse ölçülen
+    # dünya adıyla da söylenir, yani config'in sabitleriyle aynı değerleri taşıyan sentetik ERP
+    # (R5-12) — sahte kayıt belirsiz soruları ancak küme tanınırsa oynatır.
+    dataset = args.dataset or (config.DEFAULT_DATASET if args.ambiguous else None)
+    ds, code = _dataset(dataset)
     if code:
         return code
     profile, code = _profile_arg(args)
     if code:
         return code
     # ``--schema`` söylenmediyse küme kendi şemasını ölçer; ``full`` onun önüne geçmez (R4-4).
-    schema = None if args.dataset and args.schema == FULL_SCHEMA else args.schema
+    schema = None if dataset and args.schema == FULL_SCHEMA else args.schema
     try:
         if args.compare and args.models:
             # R4-13: ``--models`` model x mod karşılaştırmasıdır; Run 2/3 mod karşılaştırması
@@ -1529,7 +1575,7 @@ def main(argv: list[str] | None = None) -> int:
                 modes=[name.strip() for name in args.modes.split(",") if name.strip()]
                 if args.modes
                 else None,
-                dataset=args.dataset,
+                dataset=dataset,
                 llm_kind=args.llm,
                 repeat=args.repeat,
                 models_file=args.models_file,
@@ -1542,7 +1588,7 @@ def main(argv: list[str] | None = None) -> int:
                 lambda mode: make_client(args.llm, mode, ds, profile),
                 fresh=args.fresh,
                 repeat=args.repeat,
-                **_given(schema_path=schema, dataset=args.dataset, profile=profile),
+                **_given(schema_path=schema, dataset=dataset, profile=profile),
             )
         return evaluate(
             llm=make_client(args.llm, args.mode, ds, profile),
@@ -1550,7 +1596,9 @@ def main(argv: list[str] | None = None) -> int:
             tags=args.tag,
             mode=args.mode,
             out_dir=_eval_out(ds, args.mode),
-            **_given(schema_path=schema, dataset=args.dataset, profile=profile),
+            ambiguous=args.ambiguous,
+            narrate=args.narrate,
+            **_given(schema_path=schema, dataset=dataset, profile=profile),
         )
     except LLMError as exc:
         print(exc)
@@ -1884,7 +1932,7 @@ def resolve_auto(
 
 def _fingerprint(
     mode: str, kind: str, model: str, lines: list[dict], results, schema, rules, dataset=None,
-    budget=None,
+    budget=None, clarify=False,
 ) -> dict:
     """Koşunun neyi ölçtüğünün imzası (R2-12); iki koşu ancak eşitse birbirinin devamı sayılır.
 
@@ -1901,6 +1949,7 @@ def _fingerprint(
         rules,
         dataset,
         budget,
+        clarify,
     )
 
 
@@ -1913,11 +1962,13 @@ def _mode_fingerprint(
     rules: list[dict],
     dataset: str | None = None,
     budget: int | None = None,
+    clarify: bool = False,
 ) -> dict:
     """İmza koşu öncesi de kurulabilir: compare bir modun ``latest``ini ancak bu imza eşitse yeniden koşar.
 
     ``budget`` yalnız ``--model`` verildiğinde yazılır (R4-10): aynı model 16K ile de 256K ile de
-    ölçülebilir ve ikisi birbirinin devamı değildir.
+    ölçülebilir ve ikisi birbirinin devamı değildir. ``clarify`` de aynı kuraldadır (R5-12):
+    kapalıyken hiç yazılmaz, yani Run 1-4'ün diskteki imzaları byte-eşit kalır.
     """
     return report.fingerprint(
         mode=mode,
@@ -1930,6 +1981,7 @@ def _mode_fingerprint(
         max_tool_calls=get_mode(mode).max_tool_calls,
         dataset=dataset,
         budget=budget,
+        clarify=clarify,
     )
 
 
@@ -1966,6 +2018,38 @@ def _client_kind(llm, profile: ModelProfile | None = None) -> tuple[str, str]:
     if isinstance(llm, fake.FakeLLM):
         return "fake", "fake"
     return "openai", profile.model if profile else config.llm_settings().model
+
+
+def _narrator(llm):
+    """``--narrate``ın anlatıcısı (R5-13): fake ölçümde altın kaydı anlatıcı değildir.
+
+    Altın kaydı her soruya araç çağrılarıyla cevap veriyor; aynı istemciye anlatı cümlesi sorulunca
+    o kaydı tekrar oynatırdı. Sahte anlatıcı bekçinin gördüğü olguyu söyler, yani ölçüm yine
+    modelden bağımsızdır.
+    """
+    return fake.narration_client() if isinstance(llm, fake.FakeLLM) else llm
+
+
+def _narrate_results(results, executor, narrator) -> dict:
+    """Gönderilen her altın cevap yürütülüp anlatılır ve anlatıcının kaynağı sayılır (R5-13).
+
+    Belirsiz satırlar anlatılmaz: cevapları bir okunuşun tahminidir, yani anlatılacak bir altın
+    cevabı yok. Kaynak sorunun satırına da yazılır, böylece rapor tek tek de okunabilir; yürütme
+    yeniden denetimden geçer, yani anlatı hiçbir yandan politika dışı bir sorgunun üstüne kurulmaz.
+    """
+    counts = {"llm": 0, "llm_retry": 0, "template": 0}
+    for result in results:
+        if result.kind != "golden" or not result.submitted or not result.sql:
+            continue
+        executed = executor.execute(result.sql, Budget(), result.id)
+        if executed.error is not None:
+            continue
+        facts = compute_facts(executed.columns, executed.rows)
+        narration = narrate(result.question, executed.columns, executed.rows, facts, narrator)
+        result.narration_source = narration.source
+        counts[narration.source] += 1
+    total = sum(counts.values())
+    return {**counts, "template_pct": round(counts["template"] / total, 4) if total else 0.0}
 
 
 def _profile_block(profile: ModelProfile | None) -> dict | None:

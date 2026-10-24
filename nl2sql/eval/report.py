@@ -17,7 +17,9 @@ from datetime import datetime
 from pathlib import Path
 
 from nl2sql import config
+from nl2sql.eval.metrics import compute_metrics
 from nl2sql.eval.runner import QuestionResult
+from nl2sql.report import fmt
 
 STAMP = "%Y%m%d-%H%M%S"
 REPORT_FILES = ("report.json", "report.md")
@@ -30,6 +32,17 @@ DECISIONS = (
 )
 NO_QUESTIONS = "Kararsız — koşulmuş soru yok, ölçüm boş."
 
+# Metrik bloğunun satır sırası ve Türkçe adları (PLAN R5-14): ekran ile report.md aynı listeyi okur,
+# yani iki yerde iki ayrı ad uydurulamaz. Paydası olmayan oran ``–`` ile durur (R5-12).
+METRIC_ROWS = (
+    ("accuracy", "Doğruluk"),
+    ("answered_pct", "Cevaplanan %"),
+    ("accuracy_when_answered", "Cevaplananlarda doğruluk"),
+    ("wrong_answer_rate", "Yanlış cevap oranı"),
+    ("clarify_precision", "Netleştirme kesinliği"),
+    ("clarify_recall", "Netleştirme duyarlılığı"),
+)
+
 
 def write_report(
     results: list[QuestionResult],
@@ -40,6 +53,7 @@ def write_report(
     schema_info: dict | None = None,
     dataset: str = config.DEFAULT_DATASET,
     profile: dict | None = None,
+    narration: dict | None = None,
 ) -> Path:
     """Write ``<out_dir>/<timestamp>/report.json`` + ``report.md``, copy them to ``<out_dir>/latest``.
 
@@ -52,12 +66,16 @@ def write_report(
     does not name one leaves the field out rather than writing an empty schema nobody loaded.
     ``dataset`` names the world the run measured (PLAN R4-4), so two datasets' reports never read
     as each other's continuation. ``profile`` is the model profile the run was measured with
-    (PLAN R4-14) - the same rule as ``schema_info``: no profile, no field.
+    (PLAN R4-14) - the same rule as ``schema_info``: no profile, no field. ``narration`` is the
+    narrator's own count (PLAN R5-13) and stays null for a run that never narrated; the metrics
+    block is not a caller's choice at all - every run has answered/wrong/clarification numbers.
     """
     stamp = datetime.now()
     out = Path(out_dir)
     previous = _load(out / "latest" / REPORT_FILES[0])
-    report = _report(results, model, config, stamp, previous, mode, schema_info, dataset, profile)
+    report = _report(
+        results, model, config, stamp, previous, mode, schema_info, dataset, profile, narration
+    )
     run_dir = out / stamp.strftime(STAMP)
     _write(run_dir, report)
     _write(out / "latest", report)
@@ -75,6 +93,7 @@ def fingerprint(
     max_tool_calls: int,
     dataset: str | None = None,
     budget: int | None = None,
+    clarify: bool = False,
 ) -> dict:
     """Bir koşunun neyi ölçtüğünün imzası: iki koşun farkı ancak imzaları eşitse kıyaslanabilir.
 
@@ -84,7 +103,8 @@ def fingerprint(
     iki kümenin imzaları birbirine karışmasın, ama varsayılanla ölçmüş Run 3 koşuları kendi
     imzalarını korusun, yoksa diskteki ``latest``leri bir daha hiç yeniden kullanılamazdı.
     ``budget`` de aynı kuraldadır (R4-10): yalnız ``--model`` bir bütçe verdiğinde yazılır, çünkü
-    aynı model iki farklı pencerede iki farklı ölçümdür.
+    aynı model iki farklı pencerede iki farklı ölçümdür. ``clarify`` de öyledir (R5-12): belirsiz
+    seti koşan bir ölçüm, altın seti koşanla aynı değildir, çünkü cevap sayılan şeyler değişir.
     """
     lines = list(golden)
     return {
@@ -109,6 +129,7 @@ def fingerprint(
         "max_tool_calls": max_tool_calls,
         **({"dataset": dataset} if dataset and dataset != config.DEFAULT_DATASET else {}),
         **({"budget": budget} if budget is not None else {}),
+        **({"clarify": True} if clarify else {}),
     }
 
 
@@ -146,6 +167,7 @@ def _report(
     schema_info: dict | None = None,
     dataset: str = config.DEFAULT_DATASET,
     profile: dict | None = None,
+    narration: dict | None = None,
 ) -> dict:
     passed = sum(1 for result in results if result.outcome == "pass")
     peaks = [result.max_prompt_tokens for result in results]
@@ -172,6 +194,10 @@ def _report(
             "median_prompt_tokens": round(statistics.median(peaks)) if peaks else 0,
             **(budget if budget["peak_estimate"] or budget["overflows"] else {}),
         },
+        # Metrikler her koşunun sayısıdır (R5-12): belirsiz set koşulmamışsa netleştirme oranları
+        # null'dır, yani "ölçülmedi" ile "hiç netleştirme olmadı" ayrımı diskte de durur.
+        "metrics": compute_metrics(results),
+        "narration": narration,
         "questions": [dataclasses.asdict(result) for result in results],
         "previous": _delta(previous, results),
     }
@@ -245,8 +271,21 @@ def _write(directory: Path, report: dict) -> None:
         (directory / name).write_text(text, encoding="utf-8")
 
 
+def metric_percent(value: float | None) -> str:
+    """Oran yüzde olarak okunur (``0.8333`` -> ``%83,33``); paydası olmayan oran ölçülmedi."""
+    return fmt.tr_percent(None if value is None else 100 * value, 2)
+
+
+def metrics_block(metrics: dict) -> list[str]:
+    """Konsolun metrik bloğu (R5-14): report.md ile aynı satırlar, girintili ve hizalı."""
+    width = max(len(label) for _, label in METRIC_ROWS)
+    return [
+        f"  {label:<{width}}  {metric_percent(metrics[key])}" for key, label in METRIC_ROWS
+    ]
+
+
 def _markdown(report: dict) -> str:
-    score, context = report["score"], report["context"]
+    score, context, metrics = report["score"], report["context"], report["metrics"]
     lines = [
         f"# Değerlendirme raporu — {report['model'] or 'model adı verilmemiş koşum'}",
         "",
@@ -275,6 +314,10 @@ def _markdown(report: dict) -> str:
             f"Bağlam bütçesi: tepe tahmin {context.get('peak_estimate', 0)} token, "
             f"{context.get('overflows', 0)} soru bütçeye sığmadı."
         )
+    lines += ["", "## Metrikler", "", "| Ölçü | Değer |", "| --- | ---: |"]
+    lines += [f"| {label} | {metric_percent(metrics[key])} |" for key, label in METRIC_ROWS]
+    if report.get("narration"):
+        lines += ["", _narration_note(report["narration"])]
     if report["previous"]:
         lines += ["", "## Önceki koşuya göre", ""] + _delta_lines(report)
     if report["tags"]:
@@ -354,6 +397,18 @@ def _profile_note(report: dict) -> str:
         f" · bütçe {profile.get('context_budget') or 0}"
         f" · tepe tahmin {context.get('peak_estimate') or 0}"
         f" · taşma {context.get('overflows') or 0}"
+    )
+
+
+def _narration_note(narration: dict) -> str:
+    """Anlatının satırı (R5-13): cümleyi kimin kurduğu, yani kaçı bekçiyi ilk geçirdi.
+
+    Sayılar anlatının kendisinden gelir; ``template_pct`` paydasız kaldığında 0.0'dır, çünkü
+    anlatılacak cevap olmayan bir koşuda şablon da konuşmamıştır.
+    """
+    return (
+        f"Anlatı: llm {narration['llm']} · llm_retry {narration['llm_retry']} · şablon "
+        f"{narration['template']} (şablon oranı {metric_percent(narration['template_pct'])})"
     )
 
 
