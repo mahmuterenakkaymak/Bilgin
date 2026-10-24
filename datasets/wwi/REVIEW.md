@@ -492,7 +492,7 @@ Dunmore Textiles   |  5.298,87
 - Not: AS_OF 2016-05-31 yılı 2016; fatura tarihi InvoiceDate üzerinden yarım açık süzülür. Ciro kredi notları hariç fatura satırından gelir; kırılım faturayı kredi edilen SalespersonPersonID'nin kişisi ve tam adıdır.
 
 ```sql
-SELECT p.FullName, SUM(il.ExtendedPrice) AS CIRO FROM Sales.Invoices i JOIN Sales.InvoiceLines il ON il.InvoiceID = i.InvoiceID JOIN Application.People p ON p.PersonID = i.SalespersonPersonID WHERE i.IsCreditNote = 0 AND i.InvoiceDate >= '2016-01-01' AND i.InvoiceDate < '2017-01-01' GROUP BY p.FullName ORDER BY p.FullName
+SELECT p.FullName, SUM(il.ExtendedPrice) AS CIRO FROM Sales.Invoices i JOIN Sales.InvoiceLines il ON il.InvoiceID = i.InvoiceID JOIN Application.People p ON p.PersonID = i.SalespersonPersonID WHERE i.IsCreditNote = 0 AND i.InvoiceDate >= '2016-01-01' AND i.InvoiceDate < '2017-01-01' GROUP BY p.PersonID ORDER BY p.PersonID
 ```
 
 Doğru yanıtın ilk 5 satırı (toplam 6 satır):
