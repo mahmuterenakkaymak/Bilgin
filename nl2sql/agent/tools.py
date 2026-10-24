@@ -316,14 +316,21 @@ def _sample_values(ctx, table: str, column: str) -> str:
 
     Tablonun varlığını policy, yokluğunu allowlist söyler ve red de denetlendiği için
     uydurma bir tablo deneme izi bırakır; kolon ise şemada yoksa veritabanına hiç gitmez.
+    Ad şemada çözülür (R4-5): benzersiz çıplak ad tam adına döner, yani kolon denetimi
+    nitelikli tabloda da yapılır ve sorgu şemasıyla yazılır; SQL Server `[Sales.Customers]`
+    adını tanımadığı için tek köşeli parantez iki kez yanlış okunur.
     """
     if not IDENTIFIER.match(column):
         return f"{ERROR_PREFIX}: Geçersiz kolon adı: {column}. Yalnız harf, rakam ve alt çizgi kullanın."
+    full = _full_names(ctx, [table])
+    if isinstance(full, str):
+        return full
+    table = full[0]
     columns = _column_names(ctx.schema, table)
-    if columns and column.upper() not in columns:
+    if columns and column.upper() not in {name.upper() for name in columns}:
         return f"{ERROR_PREFIX}: {column} kolonu {table} tablosunda yok. Kolonlar: {', '.join(columns)}."
     sql = (
-        f"SELECT DISTINCT TOP {config.SAMPLE_VALUES_N} [{column}] FROM [{table}]"
+        f"SELECT DISTINCT TOP {config.SAMPLE_VALUES_N} [{column}] FROM {_bracket(table)}"
         f" WHERE [{column}] IS NOT NULL ORDER BY [{column}]"
     )
     result = ctx.executor.execute(sql, Budget(max_rows=config.SAMPLE_VALUES_N))
@@ -341,6 +348,12 @@ def _column_names(schema: dict, table: str) -> list[str]:
         if candidate["name"].upper() == table.strip().upper():
             return [column["name"] for column in candidate.get("columns", [])]
     return []
+
+
+def _bracket(table: str) -> str:
+    """Tabloyu T-SQL'e yaz: şema parçası kendi köşeli parantezini alır, çıplak ad tek kalır (R4-5)."""
+    schema, name = doc.split_name(table)
+    return f"[{schema}].[{name}]" if schema else f"[{name}]"
 
 
 def answer_is_ok(answer: str) -> bool:
