@@ -226,14 +226,16 @@ class LocalExecutor:
         if not verdict.ok:
             return _error("policy", verdict.reason)
         if self._backend != "sqlite":
-            return self._masked(_mssql.run(verdict.sql, budget), verdict)
+            return _with_tables(self._masked(_mssql.run(verdict.sql, budget), verdict), verdict)
         try:
             statements = transpile(verdict.sql)
         except SqlglotError as exc:
             return _error("transpile", _explain(exc))
         if len(statements) != 1:
             return _error("transpile", TRANSPILE_MESSAGE)
-        return self._masked(_sqlite.run(statements[0], budget, self._db_path), verdict)
+        return _with_tables(
+            self._masked(_sqlite.run(statements[0], budget, self._db_path), verdict), verdict
+        )
 
     # ----------------------------------------------------------------- masking (R3-6)
 
@@ -269,6 +271,13 @@ class LocalExecutor:
 
 def _error(kind: str, message: str) -> Result:
     return Result(error=ExecError(kind, message))
+
+
+def _with_tables(result: Result, verdict) -> Result:
+    """R5-3: okunan tabloların sıralı büyük adları; hata sonucu boş kalır. Yalnız gösterim."""
+    if result.error is not None:
+        return result
+    return replace(result, tables=sorted(verdict.tables))
 
 
 def _mask(trace: pii.Trace, marks: dict):

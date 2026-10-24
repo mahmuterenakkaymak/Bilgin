@@ -34,3 +34,4 @@ class Result:
     elapsed_ms: float = 0.0
     error: ExecError | None = None
     masked_columns: list[str] = field(default_factory=list)  # output names, in select order
+    tables: list[str] = field(default_factory=list)  # upper full names read, sorted; display only
