@@ -12,6 +12,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 
 from nl2sql import config
+from nl2sql.schema_map import doc
 
 
 class GraphError(RuntimeError):
@@ -117,7 +118,9 @@ def build_graph(schema: dict, profile: list[dict]) -> JoinGraph:
     for table in schema["tables"]:
         for column in table.get("columns", []):
             if column.get("fk"):
-                ref_table, ref_column = column["fk"].rsplit(".", 1)
+                # split_fk kolonu son parça sayar, yani "Sales.Orders.OrderID" hedefi tablo adını
+                # bölemeden kalır (R4-5).
+                ref_table, ref_column = doc.split_fk(column["fk"])
                 _add(edges, taken, Edge(table["name"], column["name"], ref_table, ref_column, 1.0, "fk"))
     holders = _holders(schema)
     for pair in profile:

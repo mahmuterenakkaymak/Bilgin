@@ -285,11 +285,30 @@ def _search_rules(ctx, query: str) -> str:
 def _find_join_path(ctx, tables: list[str]) -> str:
     if ctx.graph is None:
         return NO_GRAPH
+    full = _full_names(ctx, tables)
+    if isinstance(full, str):
+        return full
     try:
-        path = ctx.graph.find_join_path(tables)
+        path = ctx.graph.find_join_path(full)
     except GraphError as error:
         return f"{ERROR_PREFIX}: {error}"
     return join_text(path)
+
+
+def _full_names(ctx, names: list[str]) -> list[str] | str:
+    """Adları şemanın tam adlarına çevirir; benzersiz çıplak ad yeter, belirsiz ad red (R4-8).
+
+    Graph tam adlarla örüldüğü için çıplak ad ona ulaşmadan önce çözülür. Bilinmeyen ad olduğu gibi
+    kalır: cümlesini graph kuruyor ("Bilinmeyen tablo: X"), yani red cümlesini tek bir yer söylüyor.
+    """
+    known = [table["name"] for table in ctx.schema.get("tables", [])]
+    full = []
+    for name in names:
+        found = doc.resolve_table(name, known)
+        if isinstance(found, list):
+            return f"{ERROR_PREFIX}: Belirsiz tablo adı: {name} ({', '.join(found)}); şemasıyla yazın."
+        full.append(name if found is None else found)
+    return full
 
 
 def _sample_values(ctx, table: str, column: str) -> str:

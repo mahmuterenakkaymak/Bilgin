@@ -82,8 +82,10 @@ NO_ANSWER = "Cevap gönderilmedi: {}"
 TOOL_WIDTH = max(len(tool["function"]["name"]) for mode in MODES.values() for tool in mode.tools)
 # Gerçek bir arama sonucu: "TABLO — ..." ya da çıplak "TABLO". Cümleler ("Eşleşen tablo yok.",
 # "Hata: ...") eşleşmez; adları onların ilk sözcüğünden çıkarmak uydurma ad üretirdi (R2-14).
-SCHEMA_HIT = re.compile(r"([A-Z][A-Z0-9_]*)(?: — .*)?$")
-DETAIL_HEAD = re.compile(r"^[A-Z][A-Z0-9_]* — ", re.MULTILINE)  # detay bloğunun başlık satırı
+# R4-8: ad "Şema.Tablo" da olabilir, yani büyük/küçük harf karışık ve tek noktalı.
+TABLE_NAME = r"[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)?"
+SCHEMA_HIT = re.compile(rf"({TABLE_NAME})(?: — .*)?$")
+DETAIL_HEAD = re.compile(rf"^{TABLE_NAME} — ", re.MULTILINE)  # detay bloğunun başlık satırı
 JOIN_LINE = re.compile(r"\S+ = ")  # bir join satırı: A.X = B.Y (fk 1.0)
 WARNING_MARK = "⚠"
 VALUE_COUNT = re.compile(r"Değerler \((\d+)\)")
