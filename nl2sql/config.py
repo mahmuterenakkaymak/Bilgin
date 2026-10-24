@@ -41,6 +41,14 @@ PII_FILTER = frozenset(
     {"tckn", "vkn", "iban", "phone", "email", "address", "salary", "person_name"}
 )
 
+# ---------------------------------------------------------------- Run 4: datasets, models, context
+DEFAULT_DATASET = "synthetic_erp"  # dataset used when the command names none
+AUTO_FULL_SHARE = 0.5  # share of the prompt budget the full schema may take in auto mode
+TRIM_TOOL_CHARS = 400  # tool answers longer than this are trimmed before the model sees them
+MESSAGE_OVERHEAD_TOKENS = 4  # per-message overhead added to the prompt token estimate
+PING_TIMEOUT_S = 5.0  # reachability probe timeout of a model endpoint
+COMPARE_MODEL_MODES = ("full_rules", "rag")  # modes `compare-models` runs for every model
+
 # ---------------------------------------------------------------- reference date
 # "geçen ay" / "bu yıl" are always relative to this date, never to the real clock.
 AS_OF = "2026-09-30"
@@ -83,6 +91,9 @@ DIFF_JSON_PATH = SCHEMA_DIR / "diff.json"
 DIFF_MD_PATH = SCHEMA_DIR / "diff.md"
 MERGED_PATH = SCHEMA_DIR / "merged.json"
 LOGIN_SCRIPT_PATH = ROOT / "db" / "mssql" / "readonly_login.sql"
+# ASSUMPTION: Run 4 paths sit here for the same reason — they need ROOT.
+DATASETS_DIR = ROOT / "datasets"
+MODELS_PATH = ROOT / "config" / "models.json"
 
 # ---------------------------------------------------------------- env defaults
 DEFAULT_LLM_BASE_URL = "http://127.0.0.1:8080/v1"
@@ -144,3 +155,8 @@ def backend() -> str:
 def mapping_path(name: str) -> Path:
     """Column mapping of one imported source: schema/mapping.<name>.json."""
     return SCHEMA_DIR / f"mapping.{name}.json"
+
+
+def datasets_dir() -> Path:
+    """Dataset directory: NL2SQL_DATASETS_DIR when set, else DATASETS_DIR."""
+    return Path(_env("NL2SQL_DATASETS_DIR", str(DATASETS_DIR)))
