@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from nl2sql.index.text import fold, shingles, tokens
 from nl2sql.schema_map.rules import rule_text
 
-COLLECTIONS = ("tables", "rules", "examples")
+COLLECTIONS = ("tables", "rules", "summaries", "examples")
 
 
 @dataclass

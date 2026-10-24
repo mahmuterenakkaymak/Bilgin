@@ -29,7 +29,9 @@ NOTHING_MISSING = "-"
 
 # R3-9 varyantları: iki düğme ayrı ayrı ölçülür; adlar raporda, etiketler ekran ve markdown'da.
 VARIANTS = {"base": (False, False), "neighbours": (True, False), "synonyms": (False, True)}
-VARIANT_LABELS = {"base": "taban", "neighbours": "+komşu", "synonyms": "+eşanlam"}
+# R5-20: özet düğmesi taban ayarlarıyla koşar, o yüzden VARIANTSın (expand, rewrite) hali yok.
+SUMMARIES = "summaries"
+VARIANT_LABELS = {"base": "taban", "neighbours": "+komşu", "synonyms": "+eşanlam", SUMMARIES: "+özet"}
 
 
 def run_retrieval(
@@ -40,29 +42,32 @@ def run_retrieval(
     rewrite: bool = False,
     graph=None,
     schema: dict | None = None,
+    summaries: bool = False,
 ) -> dict:
     """Altın soruların her biri için üç yöntemin recall@k'sı, ortalamalar ve etiket ortalamaları.
 
     ``search`` aramanın kendisidir (``HybridSearch`` ya da testte elle yazılmış bir eşdeğeri):
     yöntem başına bir kez, tablo koleksiyonu üzerinde ve istenen ``k`` ile çağrılır. ``expand`` ve
     ``rewrite`` R3-9'un iki düğmesidir; ikisi kapalıyken ölçülen tabandır, hangi yapılandırmanın
-    ölçüldüğünü ``variants`` söyler.
+    ölçüldüğünü ``variants`` söyler. ``summaries`` R5-20'nin üçüncü düğmesidir: vuruşlar
+    ``search_tables``dan gelir, yani tablo sırası tablo özetlerinin sırasıyla kaynaşır.
     """
     # ASSUMPTION: komşu genişletmesi graph ve şema olmadan ölçülemez; sessizce taban ölçümüne
     # düşmesin diye ikisi de açıkça isteniyor.
     if expand and (graph is None or schema is None):
         raise ValueError("Komşu genişletmesi ölçümü join graphı ve şema ister.")
-    hits = _hits(search, expand, rewrite, graph, schema)
+    hits = _hits(search, expand, rewrite, graph, schema, summaries)
     questions = [_question(line, k, hits) for line in golden]
     mean = _means(questions)
     by_tag = _by_tag(questions)
     return {
         "k": k,
         "embedder": search.embedder.id,
+        "summaries": summaries,
         "questions": questions,
         "mean": mean,
         "by_tag": by_tag,
-        "variants": {_variant(expand, rewrite): {"mean": mean, "by_tag": by_tag}},
+        "variants": {_variant(expand, rewrite, summaries): {"mean": mean, "by_tag": by_tag}},
     }
 
 
@@ -72,18 +77,25 @@ def run_variants(
     k: int = config.SEARCH_K,
     graph=None,
     schema: dict | None = None,
+    summaries: bool = False,
 ) -> dict:
     """R3-9: taban, +komşu ve +eşanlam aynı sorular üzerinde koşar; rapor üçünün birden raporu.
 
     Gövde taban ölçümüdür, yani ekran ve rapor bugünkü haliyle okunur; ``variants`` her varyantın
-    metod metod ortalamasını, etiket ortalamalarını ve soru başına sayısını taşır.
+    metod metod ortalamasını, etiket ortalamalarını ve soru başına sayısını taşır. ``summaries``
+    açıkken dördüncü satır +özet'tir (R5-20): tabanın yanına özet koleksiyonu da girer.
     """
     lines = list(golden)
     reports = {
         name: run_retrieval(search, lines, k, expand, rewrite, graph, schema)
         for name, (expand, rewrite) in VARIANTS.items()
     }
+    if summaries:
+        reports[SUMMARIES] = run_retrieval(
+            search, lines, k, graph=graph, schema=schema, summaries=True
+        )
     report = reports["base"]
+    report["summaries"] = summaries
     report["variants"] = {
         name: {
             "mean": variant["mean"],
@@ -133,16 +145,20 @@ def console_lines(report: dict) -> list[str]:
     return lines
 
 
-def _hits(search, expand: bool, rewrite: bool, graph, schema):
+def _hits(search, expand: bool, rewrite: bool, graph, schema, summaries: bool):
     """Varyantın vuruş üreteni: ``(soru, yöntem, k)`` ile çağrılınca tablo vuruşlarını döndürür.
 
     Eş anlamlı genişletmesi aramanın kendi düğmesidir; komşu genişletmesi aramanın değil şemanın
-    söylediği bir bağlantı olduğu için graph ve schema ile ``expanded_hits``e devredilir.
+    söylediği bir bağlantı olduğu için graph ve schema ile ``expanded_hits``e devredilir. Özet
+    bacağı aramanın kendi içinde kaynaştığı için ``search_tables``a devredilir; o düğme yöntemi
+    değil aramanın varsayılanını (hybrid) ölçtüğünden üç metod sütunu aynı sayıyı taşır.
     """
 
     def hits(question: str, method: str, k: int):
         if expand:
             return expanded_hits(_Leg(search, method, rewrite), question, graph, schema, k, expand=True)
+        if summaries:
+            return search.search_tables(question, k=k, summaries=True)
         return _ask(search, question, k, method, rewrite)
 
     return hits
@@ -170,11 +186,13 @@ def _ask(search, question: str, k: int, method: str, rewrite: bool):
     return search.search(question, collection="tables", k=k, method=method, rewrite=rewrite)
 
 
-def _variant(expand: bool, rewrite: bool) -> str:
-    """Ölçülen yapılandırmanın adı; iki düğme ayrı ayrı ölçülür, ikisi birden bir varyant değil."""
+def _variant(expand: bool, rewrite: bool, summaries: bool = False) -> str:
+    """Ölçülen yapılandırmanın adı; düğmeler ayrı ayrı ölçülür, ikisi birden bir varyant değil."""
     if expand:
         return "neighbours"
-    return "synonyms" if rewrite else "base"
+    if rewrite:
+        return "synonyms"
+    return SUMMARIES if summaries else "base"
 
 
 def _question(line: dict, k: int, hits) -> dict:

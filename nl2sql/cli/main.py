@@ -67,6 +67,7 @@ from nl2sql.index.store import (
     content_hash,
     dataset_arg,
 )
+from nl2sql.index.summaries import table_summaries
 from nl2sql.policy import pii
 from nl2sql.report.facts import compute_facts
 from nl2sql.report.narrate import narrate
@@ -266,6 +267,8 @@ def build_index(
     indeksi reddetmesinin kendisi olduğu için burada ekrana da çıkıyor. İmzanın yanına bir de hangi
     veri kümesinin indeksi olduğu yazılır (R4-8), çünkü iki kümenin şemaları birbiriyle karışabilir.
     ``dataset`` o kümenin adını, şemasını, kurallarını ve indeks klasörünü de verir (R4-14).
+    Tablo dokümanlarının yanına bir de tablo başına bir özet yazılır (R5-20); sayım satırı onu
+    kendi koleksiyonuyla gösterir.
 
     ``dataset_name`` aynı satırın T131'deki adı: ikisi de ``meta.dataset``a yazılır, ikisi birden
     verilirse ``dataset`` kazanır.
@@ -278,10 +281,14 @@ def build_index(
     schema_path = _or(schema_path, ds.schema_path if ds else None, config.SCHEMA_PATH)
     rules_path = _or(rules_path, ds.rules_path if ds else None, config.RULES_PATH)
     index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
+    profile_path = ds.profile_path if ds else config.PROFILE_PATH
     started = time.perf_counter()
     schema = doc.load_schema(schema_path)
     rules = load_rules(rules_path)
     docs = build_documents(schema, rules)
+    # R5-20: özetler şema + kural + graphdan türetilir, yani imzaya yeni bir girdi girmez; graphın
+    # burada kurulmasının nedeni de yalnızca komşu satırıdır.
+    docs += table_summaries(schema, rules, build_graph(schema, load_profile(profile_path)))
     embedder = make_embedder(embed)
     try:
         vectors = embedder.embed([item.text for item in docs])
@@ -324,6 +331,7 @@ def eval_retrieval(
     golden_path: str | Path | None = None,
     profile_path: str | Path | None = None,
     dataset: str | None = None,
+    summaries: bool = False,
 ) -> int:
     """Aramanın geri çağırmasını altın sorular üzerinde ölçer ve raporu yazar (R2-14).
 
@@ -335,6 +343,9 @@ def eval_retrieval(
     profil ve altın sorular. Rapor da o kümenin ``eval_out``u altına yazılır (R4-3, R4-4): iki
     dünya aynı ``latest``i paylaşırsa ikincinin koşumu birincinin kıyasını yutar. Açıkça verilen
     yol yine önüne geçer.
+
+    ``summaries`` açıkken (R5-20) tablo dokümanlarının yanına tablo özetleri de indekse girer ve
+    dördüncü varyant olarak ölçülür; kapalıyken koşum bugünkü üç varyantın halidir.
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
@@ -349,12 +360,14 @@ def eval_retrieval(
     started = time.perf_counter()
     schema = doc.load_schema(schema_path)
     rules = load_rules(rules_path)
+    graph = build_graph(schema, load_profile(profile_path))
     try:
-        search = build_search(schema, rules, make_embedder(embed))
+        search = build_search(schema, rules, make_embedder(embed), graph if summaries else None)
     except EmbedError as exc:
         return _embed_failed(str(exc))
-    graph = build_graph(schema, load_profile(profile_path))
-    result = retrieval.run_variants(search, runner.load_golden(golden_path), k, graph, schema)
+    result = retrieval.run_variants(
+        search, runner.load_golden(golden_path), k, graph, schema, summaries
+    )
     print()
     for line in retrieval.console_lines(result):
         print(line)
@@ -1291,6 +1304,14 @@ def main(argv: list[str] | None = None) -> int:
     retrieval_cmd.add_argument(
         "--k", type=int, default=config.SEARCH_K, help="kaç tablo (varsayılan %(default)s)"
     )
+    # Varsayılan bilinçli olarak None: verilmeyen bayrak ``eval_retrieval``in kendi varsayılanına
+    # (off) düşer, yani ``--summaries`` yazılmayan bir koşumun raporu bugünkü raporun aynısıdır.
+    retrieval_cmd.add_argument(
+        "--summaries",
+        choices=("on", "off"),
+        default=None,
+        help="tablo özetlerini aramaya kat: on, off (varsayılan off)",
+    )
 
     import_cmd = commands.add_parser(
         "import-map", help="Excel şema haritasını eşler; --accept ile şemayı yazar"
@@ -1480,10 +1501,15 @@ def main(argv: list[str] | None = None) -> int:
         return build_index(embed=embed, **_given(dataset=args.dataset)) if embed else EXIT_BAD_INPUT
     if args.command == "eval-retrieval":
         embed = _embed_arg(args)
-        return (
-            eval_retrieval(embed=embed, k=args.k, **_given(dataset=args.dataset))
-            if embed
-            else EXIT_BAD_INPUT
+        if not embed:
+            return EXIT_BAD_INPUT
+        return eval_retrieval(
+            embed=embed,
+            k=args.k,
+            **_given(
+                dataset=args.dataset,
+                summaries=None if args.summaries is None else args.summaries == "on",
+            ),
         )
     if args.command == "import-map":
         return import_map(

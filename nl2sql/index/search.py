@@ -26,6 +26,7 @@ from nl2sql.index.bm25 import BM25
 from nl2sql.index.docs import Doc, build_documents
 from nl2sql.index.embed import Embedder, make_embedder
 from nl2sql.index.store import FileStore, content_hash
+from nl2sql.index.summaries import table_summaries
 from nl2sql.index.text import fold, tokens
 
 METHODS = ("hybrid", "bm25", "dense")
@@ -146,6 +147,32 @@ class HybridSearch:
             for rank, (doc_id, score) in enumerate(ranked, start=1)
         ]
 
+    def search_tables(
+        self, query: str, k: int = config.SEARCH_K, summaries: bool = False
+    ) -> list[Hit]:
+        """Tablo araması; `summaries` açıkken tablo sırası tablo özetlerinin sırasıyla kaynaşır (R5-20).
+
+        Özetler ayrı bir koleksiyondur: bir tablonun tek cümlelik tanıtımı, kolon kolon sayan tablo
+        dokümanının yanındaki ikinci ses. Kaynaşım özetin kimliğini tablonun kimliğine çevirir
+        (`summary:<AD>` -> `table:<AD>`), yani iki bacak da aynı tablo listesini sayıyor; vuruşların
+        hepsi tablodur.
+        """
+        hits = self.search(query, collection="tables", k=k)
+        if not summaries:
+            return hits
+        # ASSUMPTION: özet bacağı aramanın kendi yöntemiyle değil varsayılanıyla (hybrid) kaynaşır;
+        # bm25/dense için ayrı düğme yok, çünkü ölçülen iddia özetin hibride ne kattığı.
+        fused = rrf(
+            [
+                [hit.doc_id for hit in hits],
+                [f"table:{hit.title}" for hit in self.search(query, collection="summaries", k=k)],
+            ]
+        )
+        return [
+            Hit(doc_id=doc_id, title=self._docs[doc_id].title, score=score, rank=rank)
+            for rank, (doc_id, score) in enumerate(fused[:k], start=1)
+        ]
+
     def _rank_bm25(
         self, collection: str, query: str, k: int, rewrite: bool
     ) -> list[tuple[str, float]]:
@@ -229,9 +256,15 @@ def _neighbours(graph, name: str) -> Iterable[str]:
         yield edge.right_table if edge.left_table == name else edge.left_table
 
 
-def build_search(schema: dict, rules: list[dict], embedder: Embedder) -> HybridSearch:
-    """İndeksi bellekte kurar: dokümanlar + onların vektörleri (R2-9: diske dokunmaz)."""
+def build_search(schema: dict, rules: list[dict], embedder: Embedder, graph=None) -> HybridSearch:
+    """İndeksi bellekte kurar: dokümanlar + onların vektörleri (R2-9: diske dokunmaz).
+
+    `graph` verilirse tablo dokümanlarının yanına özetler de yazılır (R5-20): `summaries`
+    araması o koleksiyonu okur, yani diskteki indeksle aynı üç girdiden türer.
+    """
     docs = build_documents(schema, rules)
+    if graph is not None:
+        docs = [*docs, *table_summaries(schema, rules, graph)]
     return HybridSearch(docs, embedder.embed([doc.text for doc in docs]), embedder, rules)
 
 
