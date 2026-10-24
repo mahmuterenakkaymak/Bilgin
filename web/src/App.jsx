@@ -6,6 +6,7 @@ import ClarificationCard from "./components/ClarificationCard.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import ErrorCard from "./components/ErrorCard.jsx";
 import LoadingSteps from "./components/LoadingSteps.jsx";
+import Sidebar from "./components/Sidebar.jsx";
 import * as api from "./lib/api.js";
 import { askReducer, initialState } from "./lib/askState.js";
 import { parseRoute } from "./lib/route.js";
@@ -35,7 +36,7 @@ function chipText(health) {
 
 // Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Boş, bekleyen, cevap,
 // netleştirme ve hata yuvaları ile cevabın grafiği burada durur.
-function AskScreen() {
+function AskScreen({ pending = null, onRefresh }) {
   const [state, dispatch] = useReducer(askReducer, initialState);
   const [text, setText] = useState("");
   const [examples, setExamples] = useState([]);
@@ -66,8 +67,16 @@ function AskScreen() {
           kind: error?.status === 0 ? "network" : "failed",
           message: error?.message ?? "",
         }),
-      );
+      )
+      // Soru neyle biterse bitsin günlüğe bir satır düşer: kenar çubuğu her durumda tazelenir.
+      .finally(() => onRefresh?.());
   };
+
+  // Kenar çubuğundan gelen soru, kutudan sorulmuş gibi koşar; sayaç aynı sorunun ikinci
+  // tıklayışını da yeni bir istek yapar.
+  useEffect(() => {
+    if (pending?.question) send(pending.question);
+  }, [pending]);
 
   // Çip soruyu kutuya yazar ve bekletmeden sorar (R5-18).
   const ask = (question) => {
@@ -80,6 +89,13 @@ function AskScreen() {
 
   // "Soruyu değiştir" kartı kapatmaz: imleç kutuya döner, kullanıcı yazıp yeniden sorar.
   const changeQuestion = () => document.getElementById("question")?.focus();
+
+  // Kayıt kenar çubuğunun listesine de düşer.
+  const save = (item) =>
+    api.savedAdd(item).then((result) => {
+      onRefresh?.();
+      return result;
+    });
 
   const loading = state.status === "loading";
   const failed = state.status === "failed" || state.status === "network_error";
@@ -97,7 +113,7 @@ function AskScreen() {
       {loading && <LoadingSteps />}
       {state.status === "answered" && (
         <>
-          <AnswerCard payload={state.payload} />
+          <AnswerCard payload={state.payload} onSave={save} />
           {/* ASSUMPTION: AnswerCard grafik yuvasını açmıyor (kendi notu), o yüzden #chart kartın altında. */}
           <ChartView chart={state.payload?.chart} />
         </>
@@ -110,7 +126,7 @@ function AskScreen() {
   );
 }
 
-function Screen({ route }) {
+function Screen({ route, pending, onRefresh }) {
   if (route === "rules") {
     return (
       <section className="screen">
@@ -119,13 +135,16 @@ function Screen({ route }) {
       </section>
     );
   }
-  return <AskScreen />;
+  return <AskScreen pending={pending} onRefresh={onRefresh} />;
 }
 
 export default function App() {
   const [hash, setHash] = useState(currentHash);
   const [health, setHealth] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [saved, setSaved] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [pending, setPending] = useState(null); // {question, n}: kenar çubuğundan gelen soru
   const route = parseRoute(hash);
 
   useEffect(() => {
@@ -144,6 +163,32 @@ export default function App() {
       mounted = false;
     };
   }, []);
+
+  // Kenar çubuğunun iki listesi her soru, kayıt ve silme sonrası baştan okunur; düşerse
+  // ekranın kendi verisi olduğu için burada dururlar.
+  const refresh = () => {
+    api
+      .savedList()
+      .then((data) => setSaved(Array.isArray(data?.saved) ? data.saved : []))
+      .catch(() => {
+        // liste gelmezse kenar çubuğu son bildiğini göstermeye devam eder
+      });
+    api
+      .history()
+      .then((data) => setHistory(Array.isArray(data?.history) ? data.history : []))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  // Satıra tıklayınca soru soru ekranında koşar; dar ekranda çekmece kapanır ki cevap görünsün.
+  const askFromSidebar = (question) => {
+    setPending((current) => ({ question, n: (current?.n ?? 0) + 1 }));
+    setSidebarOpen(false);
+    if (route !== "ask") window.location.hash = "#/";
+  };
 
   const dot = healthDot(health);
   const chip = chipText(health);
@@ -180,9 +225,11 @@ export default function App() {
         >
           Kayıtlılar ve geçmiş
         </button>
-        <aside id="sidebar" className={sidebarOpen ? "sidebar is-open" : "sidebar"} aria-label="Kayıtlılar ve geçmiş" />
+        <aside id="sidebar" className={sidebarOpen ? "sidebar is-open" : "sidebar"} aria-label="Kayıtlılar ve geçmiş">
+          <Sidebar saved={saved} history={history} onAsk={askFromSidebar} onRemoved={refresh} />
+        </aside>
         <main id="main">
-          <Screen route={route} />
+          <Screen route={route} pending={pending} onRefresh={refresh} />
         </main>
       </div>
     </div>

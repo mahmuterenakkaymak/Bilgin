@@ -174,10 +174,122 @@ body {
 .sidebar {
   display: none;
   min-width: 0;
+  /* elli geçmiş satırı tek başına sayfayı uzatmasın: liste kendi içinde kayar. */
+  max-height: calc(100vh - var(--space) * 14);
+  overflow-y: auto;
 }
 
 .sidebar.is-open {
   display: block;
+}
+
+.side-block + .side-block {
+  margin-top: calc(var(--space) * 3);
+}
+
+.side-title {
+  margin: 0 var(--space) var(--space) 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.side-note {
+  margin: 0 0 var(--space);
+  color: var(--err-text);
+  font-size: 13px;
+}
+
+.side-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Uzun soru metni satırı genişletmesin: küçülme payı sıfır, × sağda kalsın. */
+.side-item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+  border-radius: var(--radius);
+}
+
+.side-item:hover {
+  background: var(--surface);
+}
+
+.side-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: baseline;
+  gap: calc(var(--space) * 0.5);
+  padding: calc(var(--space) * 0.5) var(--space);
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.side-text:hover {
+  color: var(--accent);
+}
+
+.side-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.side-marker {
+  flex: none;
+  font-weight: 700;
+}
+
+.marker-ok {
+  color: var(--ok);
+}
+
+.marker-warn {
+  color: var(--warn-line);
+}
+
+.marker-err {
+  color: var(--err-text);
+}
+
+.side-remove {
+  flex: none;
+  padding: 0 var(--space);
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.side-remove:hover {
+  color: var(--err-text);
+}
+
+.side-empty {
+  padding: calc(var(--space) * 0.5) var(--space);
+  color: var(--muted);
+  font-size: 14px;
 }
 
 main {
@@ -748,6 +860,12 @@ main {
     justify-content: center;
     gap: calc(var(--space) * 5);
     padding-inline: calc(var(--space) * 4);
+  }
+
+  .sidebar {
+    /* Uzun cevapta okuma yerinde kalsın: yan panel başlığın altında kalır. */
+    position: sticky;
+    top: calc(var(--space) * 11);
   }
 
   /* Boş yan panel 280px'lik çukur bırakmasın: dolunca (kayıtlılar/geçmiş) kendiliğinden iki sütuna döner. */
