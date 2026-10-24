@@ -3,9 +3,10 @@
 Skor SQL'in neyi hesapladığını söyler; neyin *kastedildiğini* bir insan onaylaması gerekir. Bu belge
 soru başına soruyu, etiketlerini, kurallarını, golden SQL'ini ve saf Python doğrulunun ilk beş
 satırını yan yana koyar, alta işaretlenmemiş bir onay kutusu bırakır. Doğrular veritabanından değil
-``eval.reference.REFERENCES``'tan gelir, yani belge ile doğruluk kaynağı hiç ayrışamaz.
+kümenin referans modülünden gelir, yani belge ile doğruluk kaynağı hiç ayrışamaz. Her küme kendi
+belgesini yazar: sentetik dünya ``eval/REVIEW.md``, ``wwi`` ``datasets/wwi/REVIEW.md``.
 
-    python -m eval.review [--out eval/REVIEW.md]
+    python -m eval.review [--dataset AD] [--out YOL]
 """
 
 from __future__ import annotations
@@ -13,35 +14,44 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import Counter
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 
 import sqlglot
 from sqlglot import errors
 
 from eval import reference
-from nl2sql import config
+from nl2sql import config, datasets
+from nl2sql.cli.main import EXIT_BAD_INPUT
 from nl2sql.cli.table import format_table
 from nl2sql.engine.result import Result
-from nl2sql.eval.runner import load_golden
-from nl2sql.schema_map import generator
 
 Dataset = dict[str, list[dict]]
 
 DEFAULT_OUT = Path(__file__).resolve().parent / "REVIEW.md"
+REVIEW_NAME = "REVIEW.md"
+# ``render`` küme söylenmeden çağrıldığında doğruların yeri; küme söylenirse onun kaynağı yazılır.
+TRUTH = "eval.reference.REFERENCES"
 PREVIEW_ROWS = 5
 CHECKBOX = "- [ ] niyet doğru"
 DASH = "—"
 
 
-def render(golden: Iterable[dict], dataset: Dataset) -> str:
-    """The whole document: the tag counts, then one reviewable section per golden question."""
+def render(golden: Iterable[dict], dataset: Dataset, ds: datasets.Dataset | None = None) -> str:
+    """The whole document: the tag counts, then one reviewable section per golden question.
+
+    ``dataset`` doğrulayan satırlar, ``ds`` ise o satırların ve referansların ait olduğu küme;
+    ``ds`` söylenmediğinde belge sentetik dünyanın sabitleriyle kurulur, yani bugünkü
+    ``eval/REVIEW.md`` ile bayt bayt aynı çıkar.
+    """
     lines = list(golden)
+    references = ds.references() if ds else reference.REFERENCES
+    seed = config.SEED if ds is None else ds.seed
     out = [
         "# Golden sorular — niyet incelemesi",
         "",
         f"- Soru: {len(lines)}; her sorunun altında bir `[ ] niyet doğru` kutusu var.",
-        f"- Doğrular `eval.reference.REFERENCES` üzerinden `generate({config.SEED})` verisiyle hesaplanır.",
+        f"- Doğrular `{_truth(ds)}` üzerinden `generate({seed})` verisiyle hesaplanır.",
         "",
         "## Etiket sayıları",
         "",
@@ -53,8 +63,19 @@ def render(golden: Iterable[dict], dataset: Dataset) -> str:
         "",
     ]
     for line in lines:
-        out += _section(line, dataset)
+        out += _section(line, dataset, references)
     return "\n".join(out) + "\n"
+
+
+def default_out(ds: datasets.Dataset) -> Path:
+    """``--out`` verilmediğinde belgenin yazılacağı yer: kümenin kendi klasöründeki ``REVIEW.md``.
+
+    ASSUMPTION: sentetik dünyanın belgesi Run 1'den beri ``eval/REVIEW.md``'de duruyor; küme
+    klasörüne taşımak izlenmiş bir dosyayı yerinden etmek olurdu, o yüzden yalnız adı orada kalır.
+    """
+    if ds.name == config.DEFAULT_DATASET:
+        return DEFAULT_OUT
+    return ds.root / REVIEW_NAME
 
 
 def _tag_counts(golden: Sequence[dict]) -> list[tuple[str, int]]:
@@ -63,7 +84,25 @@ def _tag_counts(golden: Sequence[dict]) -> list[tuple[str, int]]:
     return sorted(counts.items(), key=lambda item: (-item[1], item[0]))
 
 
-def _section(line: dict, dataset: Dataset) -> list[str]:
+def _truth(ds: datasets.Dataset | None) -> str:
+    """Doğruların kaynağının okunur adı: modül noktalı, kümenin kendi dosyası depoya göreli yazılır."""
+    if ds is None:
+        return TRUTH
+    target, _, attribute = ds.references_ref.partition(":")
+    if not target.endswith(".py"):
+        return f"{target}.{attribute}"
+    return f"{_under_root(ds.root / target).as_posix()}:{attribute}"
+
+
+def _under_root(path: Path) -> Path:
+    """Yol depo kökünün altındaysa bağıl hali; belge her makinede aynı yolu saysın."""
+    try:
+        return path.relative_to(config.ROOT)
+    except ValueError:
+        return path
+
+
+def _section(line: dict, dataset: Dataset, references: Mapping) -> list[str]:
     qid = str(line.get("id") or "")
     return [
         f"### {qid} — {line.get('question') or ''}",
@@ -77,19 +116,19 @@ def _section(line: dict, dataset: Dataset) -> list[str]:
         "",
         f"```sql\n{line.get('sql') or ''}\n```",
         "",
-        *_preview(line, dataset),
+        *_preview(line, dataset, references),
         "",
         CHECKBOX,
         "",
     ]
 
 
-def _preview(line: dict, dataset: Dataset) -> list[str]:
+def _preview(line: dict, dataset: Dataset, references: Mapping) -> list[str]:
     """The reference answer's first rows, drawn with the same table the CLI prints."""
     qid = str(line.get("id") or "")
-    truth = reference.REFERENCES.get(qid)
+    truth = references.get(qid)
     if truth is None:
-        return [f"_{qid} için `eval.reference.REFERENCES`'ta doğrulama yok._"]
+        return [f"_{qid} için referans doğrulaması yok._"]
     rows = truth(dataset)
     if not rows:
         return ["_Doğru yanıt boş (0 satır)._"]
@@ -131,15 +170,26 @@ def main(argv: list[str] | None = None) -> int:
         description="Golden soruların niyet inceleme belgesini markdown olarak yazar.",
     )
     parser.add_argument(
+        "--dataset",
+        metavar="AD",
+        default=config.DEFAULT_DATASET,
+        help=f"veri kümesi adı (varsayılan: {config.DEFAULT_DATASET})",
+    )
+    parser.add_argument(
         "--out",
-        default=str(DEFAULT_OUT),
-        help="Yazılacak markdown dosyası (varsayılan: eval/REVIEW.md).",
+        default=None,
+        help="Yazılacak markdown dosyası (varsayılan: kümenin kendi REVIEW.md'si).",
     )
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
-    golden = load_golden()
-    text = render(golden, generator.generate(config.SEED))
-    path = Path(args.out)
+    try:
+        ds = datasets.load_dataset(args.dataset)
+    except datasets.DatasetError as exc:
+        print(exc)  # cümleyi datasets kurar, bilinen kümeleri de sayar
+        return EXIT_BAD_INPUT
+    golden = ds.golden()
+    text = render(golden, ds.generate(), ds)
+    path = Path(args.out) if args.out else default_out(ds)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     print(f"{path}: {len(golden)} soru yazıldı.")
