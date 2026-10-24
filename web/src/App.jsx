@@ -6,6 +6,7 @@ import ClarificationCard from "./components/ClarificationCard.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import ErrorCard from "./components/ErrorCard.jsx";
 import LoadingSteps from "./components/LoadingSteps.jsx";
+import RulesScreen from "./components/RulesScreen.jsx";
 import Sidebar from "./components/Sidebar.jsx";
 import * as api from "./lib/api.js";
 import { askReducer, initialState } from "./lib/askState.js";
@@ -126,15 +127,47 @@ function AskScreen({ pending = null, onRefresh }) {
   );
 }
 
+// Kural ekranı: liste ile indeksin tazeliği aynı iki istekten gelir; kayıt, silme ve yeniden
+// kurma sonrası ekran bunları baştan okur (R5-16).
+function RulesFlow() {
+  const [data, setData] = useState(null); // {rules, index} | null: henüz okunmadı
+  const [tables, setTables] = useState([]);
+  const [error, setError] = useState("");
+
+  const refresh = () => {
+    api
+      .rulesList()
+      .then((payload) =>
+        setData({
+          rules: Array.isArray(payload?.rules) ? payload.rules : [],
+          index: payload?.index ?? null,
+        }),
+      )
+      .catch((failure) => setError(failure?.message || "Kurallar okunamadı."));
+    api
+      .tables()
+      .then((payload) => setTables(Array.isArray(payload?.tables) ? payload.tables : []))
+      .catch(() => {
+        // tablo adları yalnızca datalist'i doldurur; boş listeyle de yazılabilir
+      });
+  };
+
+  useEffect(refresh, []);
+
+  return (
+    <RulesScreen
+      rules={data?.rules ?? []}
+      index={data?.index ?? null}
+      tables={tables}
+      loading={!data}
+      error={error}
+      onRefresh={refresh}
+    />
+  );
+}
+
 function Screen({ route, pending, onRefresh }) {
-  if (route === "rules") {
-    return (
-      <section className="screen">
-        <h1 className="screen-title">İş kuralları</h1>
-        <p className="screen-lead">Kurallar, Bilgin'in bir soruda hangi terimi ne anladığını belirler.</p>
-      </section>
-    );
-  }
+  if (route === "rules") return <RulesFlow />;
   return <AskScreen pending={pending} onRefresh={onRefresh} />;
 }
 
