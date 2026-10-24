@@ -53,6 +53,19 @@ const PAYLOAD_KEYS = [
   "steps",
 ];
 
+// report/chart.chart_spec'in çıktısı: işlevi olmayan düz ECharts JSON'u + `bilgin` ipucu (R5-6).
+const CHART = {
+  type: "bar",
+  option: {
+    tooltip: { trigger: "axis" },
+    grid: { left: 40 },
+    xAxis: { type: "category", data: ["Siyah Çay 500 g", "Filtre Kahve 100 g"] },
+    yAxis: { type: "value" },
+    series: [{ type: "bar", name: "SATIS_MIKTARI", data: [2480, 1930] }],
+    bilgin: { value_format: "number", value_column: "SATIS_MIKTARI", label_column: "URUN_ADI" },
+  },
+};
+
 describe("AnswerCard", () => {
   it("durum satırı, cevap cümlesi ve kartın bütün kimlikleri", () => {
     const html = card(answered);
@@ -95,6 +108,30 @@ describe("AnswerCard", () => {
     expect(html).not.toContain('id="export-csv"');
     expect(html).not.toContain('id="export-xlsx"');
     expect(html).toContain('id="save-question"');
+  });
+
+  it("grafik kartın içindedir: tablonun altında, düğmelerin ve kanıtın üstünde", () => {
+    const html = card({ ...answered, chart: CHART });
+    const at = (mark) => {
+      expect(html).toContain(mark);
+      return html.indexOf(mark);
+    };
+    const cardStart = at('id="answer-card"');
+    const table = at('id="result-table"');
+    const chart = at('id="chart"');
+    const actions = at('id="save-question"');
+    const evidence = at('id="evidence-toggle"');
+    expect(chart).toBeGreaterThan(cardStart);
+    expect(chart).toBeGreaterThan(table);
+    expect(chart).toBeLessThan(actions);
+    expect(chart).toBeLessThan(evidence);
+  });
+
+  it("grafsiz cevapta #chart hiç kurulmaz, boş kutu kalmaz", () => {
+    const html = card(answered);
+    expect(html).toContain('id="answer-card"');
+    expect(html).not.toContain('id="chart"');
+    expect(html).not.toContain('class="chart"');
   });
 });
 

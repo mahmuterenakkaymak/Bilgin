@@ -4,10 +4,14 @@ import { formatNumber, formatPercent } from "./format.js";
 
 const FORMATS = { number: formatNumber, percent: formatPercent };
 
+// Başlığın boyutu kartın ölçeğinden: ECharts'ın varsayılan 18px kalın başlığı kartın içinde büyür.
+const TITLE = { fontSize: 14, fontWeight: 600 };
+
 export function withFormatters(option) {
   if (!option || typeof option !== "object") return option;
   // ASSUMPTION: `bilgin` yoksa biçim "number"dır; seçenek yine de Türkçe okunur.
   const format = FORMATS[option.bilgin?.value_format] ?? formatNumber;
+  const measure = measureName(option.bilgin?.value_column);
   const next = { ...option };
   if (next.tooltip) next.tooltip = { ...next.tooltip, formatter: tooltipFormatter(format, next.tooltip.trigger) };
   for (const key of ["xAxis", "yAxis"]) {
@@ -17,7 +21,28 @@ export function withFormatters(option) {
     next[key] = Array.isArray(next[key]) ? mapped : mapped[0];
   }
   if (Array.isArray(next.series)) next.series = next.series.map((series) => withLabelFormatter(series, format));
+  return withNames(next, measure);
+}
+
+// Çizilen şey option'dan okunmalı: başlık ve sayısal eksenin adı ölçü kolonunun adından gelir,
+// ölçüde hiçbir şey yeniden hesaplanmaz. Olan bir başlığa dokunulmaz.
+function withNames(option, measure) {
+  if (!measure) return option;
+  const next = { ...option };
+  if (!next.title?.text) next.title = { ...next.title, text: measure, textStyle: TITLE };
+  const axis = next.yAxis;
+  if (axis && !Array.isArray(axis) && axis.type === "value" && !axis.name) {
+    next.yAxis = { ...axis, name: measure, nameGap: 12 };
+  }
   return next;
+}
+
+// ASSUMPTION: kolon adı ERP'den ASCII gelir; başlık ondan türetilir, Türkçesi uydurulmaz.
+function measureName(column) {
+  const words = String(column ?? "").split("_").filter(Boolean);
+  if (!words.length) return "";
+  const text = words.join(" ").toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function tooltipFormatter(format, trigger) {

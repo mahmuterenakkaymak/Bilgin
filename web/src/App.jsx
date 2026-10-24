@@ -1,7 +1,6 @@
 import { useEffect, useReducer, useState } from "react";
 import AnswerCard from "./components/AnswerCard.jsx";
 import AskBox from "./components/AskBox.jsx";
-import ChartView from "./components/ChartView.jsx";
 import ClarificationCard from "./components/ClarificationCard.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import ErrorCard from "./components/ErrorCard.jsx";
@@ -36,7 +35,7 @@ function chipText(health) {
 }
 
 // Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Boş, bekleyen, cevap,
-// netleştirme ve hata yuvaları ile cevabın grafiği burada durur.
+// netleştirme ve hata yuvaları burada durur; cevabın grafiği kartın içindedir.
 function AskScreen({ pending = null, onRefresh }) {
   const [state, dispatch] = useReducer(askReducer, initialState);
   const [text, setText] = useState("");
@@ -112,13 +111,7 @@ function AskScreen({ pending = null, onRefresh }) {
       />
       {state.status === "idle" && <EmptyState examples={examples} onSelect={ask} />}
       {loading && <LoadingSteps />}
-      {state.status === "answered" && (
-        <>
-          <AnswerCard payload={state.payload} onSave={save} />
-          {/* ASSUMPTION: AnswerCard grafik yuvasını açmıyor (kendi notu), o yüzden #chart kartın altında. */}
-          <ChartView chart={state.payload?.chart} />
-        </>
-      )}
+      {state.status === "answered" && <AnswerCard payload={state.payload} onSave={save} />}
       {state.status === "clarifying" && (
         <ClarificationCard payload={state.payload} onChoose={choose} onChange={changeQuestion} />
       )}

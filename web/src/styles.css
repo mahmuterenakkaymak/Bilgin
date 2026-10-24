@@ -852,6 +852,11 @@ main {
   height: 260px;
 }
 
+/* Grafik kartın içinde, tablonun altında: aralık yalnız grafik varsa doğar, boş kutu kalmaz. */
+.answer-card .chart {
+  margin-top: calc(var(--space) * 2);
+}
+
 /* --- netleştirme kartı ---------------------------------------------------------- */
 
 .clarification-card {

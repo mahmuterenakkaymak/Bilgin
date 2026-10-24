@@ -1,14 +1,14 @@
 import { useState } from "react";
 import * as api from "../lib/api.js";
 import { formatSeconds } from "../lib/format.js";
+import ChartView from "./ChartView.jsx";
 import Evidence from "./Evidence.jsx";
 import ResultTable from "./ResultTable.jsx";
 import Warnings from "./Warnings.jsx";
 
 // Cevap kartı: aynı AskPayload'ın her parçası burada durur — durum satırı, cümle, uyarılar,
-// tablo, indirme ve kayıt düğmeleri, kanıt (R5-18). Kart hiçbir sayıyı yeniden hesaplamaz.
-// ASSUMPTION: `chart` alanını ChartView gösterir; kart onun yuvasını açmaz, burada yalnız
-// kanıtı ve tablosu okunan bir payload'dır.
+// tablo, grafiği, indirme ve kayıt düğmeleri, kanıt (R5-18). Kart hiçbir sayıyı yeniden hesaplamaz.
+// Grafik cevabın parçasıdır: kartın içinde, tablonun altında; `chart` yoksa ChartView kutu açmaz.
 export default function AnswerCard({ payload, onSave }) {
   const [phase, setPhase] = useState("idle"); // idle | saving | saved | error
   const [note, setNote] = useState("");
@@ -45,6 +45,7 @@ export default function AnswerCard({ payload, onSave }) {
         rowCount={payload?.row_count}
         truncated={Boolean(payload?.truncated)}
       />
+      <ChartView chart={payload?.chart} />
       <div className="answer-actions">
         {auditId && (
           <>

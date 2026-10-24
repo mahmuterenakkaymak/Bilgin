@@ -77,6 +77,53 @@ describe("withFormatters eksen ve etiket", () => {
   });
 });
 
+describe("withFormatters başlık ve eksen adı", () => {
+  it("ölçünün adı başlık ve sayısal eksenin adı olur", () => {
+    const next = withFormatters(barOption());
+    expect(next.title.text).toBe("Tutar");
+    expect(next.yAxis.name).toBe("Tutar");
+    expect(next.xAxis.name).toBeUndefined();
+  });
+
+  it("altyazılı ERP kolon adı Türkçe okunuşuna döner", () => {
+    const option = barOption();
+    option.bilgin.value_column = "SATIS_ADEDI";
+    const next = withFormatters(option);
+    expect(next.title.text).toBe("Satis adedi");
+    expect(next.yAxis.name).toBe("Satis adedi");
+  });
+
+  it("başlığı ve eksen adı hazır seçeneğe dokunulmaz, biçimleyiciler yine eklenir", () => {
+    const option = barOption();
+    option.title = { text: "Eylül 2026 satışı", left: "center" };
+    option.yAxis.name = "Tutar (TL)";
+    const next = withFormatters(option);
+    expect(next.title).toEqual({ text: "Eylül 2026 satışı", left: "center" });
+    expect(next.yAxis.name).toBe("Tutar (TL)");
+    expect(typeof next.yAxis.axisLabel.formatter).toBe("function");
+  });
+
+  it("pasta grafiğinde başlık vardır, eksen adı uydurulmaz", () => {
+    const next = withFormatters(pieOption());
+    expect(next.title.text).toBe("Tutar");
+    expect(next.yAxis).toBeUndefined();
+  });
+
+  it("ölçü kolonu yoksa başlık uydurulmaz ve kaynak seçenek olduğu gibi kalır", () => {
+    const bare = withFormatters({
+      tooltip: { trigger: "item" },
+      series: [{ type: "bar", data: [1] }],
+      bilgin: { value_format: "number" },
+    });
+    expect(bare.title).toBeUndefined();
+
+    const option = barOption();
+    expect(withFormatters(option).title.text).toBe("Tutar");
+    expect(option.title).toBeUndefined();
+    expect(option.yAxis.name).toBeUndefined();
+  });
+});
+
 describe("withFormatters veriyi değiştirmez", () => {
   it("veri, seri tipi ve bilgin bloğu aynı kalır; kaynak seçenek olduğu gibi durur", () => {
     const option = barOption();
