@@ -24,7 +24,7 @@ from pathlib import Path
 from openpyxl.utils.exceptions import InvalidFileException
 
 from nl2sql import config
-from nl2sql.agent import fake
+from nl2sql.agent import fake, prompt
 from nl2sql.agent.llm import ChatResponse, OpenAIClient
 from nl2sql.agent.loop import AgentRun, Step, run_agent
 from nl2sql.agent.modes import MODES, ToolContext, get_mode
@@ -83,6 +83,10 @@ WARNING_MARK = "⚠"
 VALUE_COUNT = re.compile(r"Değerler \((\d+)\)")
 RUNNING = "{mode} koşuluyor ..."
 NO_INDEX_NOTE = "İndeks yok/eski; full modda çalışılıyor."
+# R3-10: auto modun çözümü ekrana hem seçilen modu hem onu doğuran bağlam tahmini yazılır; eval
+# auto'yu kabul etmez, çünkü bir A/B ölçümünün hangi kolu ölçtüğü baştan belli olmalı.
+AUTO_LINE = "Mod: auto -> {mode} (bağlam tahmini {tokens} token)"
+EVAL_NO_AUTO = "eval auto modu kabul etmez; modu açıkça seçin: full, full_rules, rag."
 
 ENV_URL = "NL2SQL_LLM_BASE_URL"
 EMBED_ENV_URL = "NL2SQL_EMBED_BASE_URL"
@@ -246,26 +250,37 @@ def ask(
     db_path: str = config.DB_PATH,
     audit_path: str = config.AUDIT_LOG,
     index_dir: str = config.INDEX_DIR,
+    estimate: int | None = None,
 ) -> int:
     """Bir soru: modunu söyle, adımları işaretle ve gecikmesiyle dök, gönderilen SQL'i ve tabloyu göster.
 
     ``llm`` hazır bir istemcidir; ``mode`` hangi araçların konuşacağını ve bağlamın nereden
-    geleceğini söyler (rag indeksi ister, R2-9). Tablo için gönderilen SQL bir kez daha yürütülür,
-    çünkü döngü yanıtı metin olarak görür, satırları ekrana basacak biçimde elinde tutmaz. Tablo
-    şemanın pii işaretlerinden gelen maskeyle görünür ve maskelenen kolonların adı altta söylenir (R3-6).
+    geleceğini söyler (rag indeksi ister, R2-9). ``mode`` olarak ``auto`` da verilebilir (R3-10):
+    bağlam tahmini bütçeye sığıyorsa full_rules, sığmıyorsa rag denenir, indeksi yoksa notla full'a
+    düşülür; ``ask`` komutu argparse üzerinden auto ile açılır, ``main`` çözülmüş modu ve tahmini
+    buraya geçirir. ``estimate`` auto'nun tahminidir; verilirse mod satırı auto çözümü olarak basılır.
+    Tablo için gönderilen SQL bir kez daha yürütülür, çünkü döngü yanıtı metin olarak görür, satırları
+    ekrana basacak biçimde elinde tutmaz. Tablo şemanın pii işaretlerinden gelen maskeyle görünür ve
+    maskelenen kolonların adı altta söylenir (R3-6).
     """
     _utf8_stdout()
     if _db_missing(db_path):
         return _no_db(db_path)
     schema = doc.load_schema()
+    rules = load_rules()
+    if mode == "auto":
+        mode, estimate = resolve_auto(schema, rules, index_dir)
     executor = LocalExecutor(db_path=db_path, audit_path=audit_path, pii_schema=schema)
     try:
-        context = _context(mode, executor, schema, load_rules(), index_dir)
+        context = _context(mode, executor, schema, rules, index_dir)
     except (MissingIndexError, StaleIndexError) as exc:
         return _index_failed(str(exc))
     run = run_agent(question, llm, executor, schema, AUDIT_SOURCE, mode=mode, context=context)
 
-    print(f"Mod: {mode}")
+    if estimate is None:
+        print(f"Mod: {mode}")
+    else:
+        print(AUTO_LINE.format(mode=mode, tokens=_tokens(estimate)))
     print(f"Soru: {question}\n")
     if run.steps:  # daha ilk turda düşen bir uç noktanın gösterecek adımı yok
         print("Adımlar:")
@@ -845,8 +860,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     ask_cmd.add_argument(
         "--mode",
-        choices=config.MODES,
-        help="bağlam modu (verilmeyince taze indeks varsa rag, yoksa full)",
+        choices=(*config.MODES, "auto"),
+        default="auto",
+        help="bağlam modu (varsayılan %(default)s)",
     )
 
     eval_cmd = commands.add_parser("eval", help="altın soruları koşar ve raporu yazar")
@@ -864,9 +880,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     eval_cmd.add_argument(
         "--mode",
-        choices=config.MODES,
+        choices=(*config.MODES, "auto"),
         default=config.DEFAULT_EVAL_MODE,
-        help="bağlam modu (varsayılan %(default)s)",
+        help="bağlam modu (varsayılan %(default)s); auto yalnız ask'ta",
     )
     eval_cmd.add_argument(
         "--compare",
@@ -909,8 +925,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "make-login-script":
         return make_login_script(login=args.login)
     if args.command == "ask":
-        mode = args.mode or _ask_mode()
-        return ask(question=args.question, llm=make_client(args.llm, mode), mode=mode)
+        # ASSUMPTION: "ask'ın varsayılanı auto" komutun varsayılanıdır (argparse default); buradaki
+        # çözümleme istemciye de çözülmüş modu vermek için — sahte kayıt rag ile diğerlerinde farklı
+        # oynar. ask() fonksiyonunun kendi varsayılanı "full" kalır, doğrudan çağıranı etkilemesin.
+        mode, estimate = args.mode, None
+        if mode == "auto":
+            mode, estimate = resolve_auto(doc.load_schema(), load_rules(), config.INDEX_DIR)
+        return ask(
+            question=args.question, llm=make_client(args.llm, mode), mode=mode, estimate=estimate
+        )
+    if args.mode == "auto":
+        print(EVAL_NO_AUTO)
+        return EXIT_BAD_INPUT
     if args.compare:
         return compare_modes(
             lambda mode: make_client(args.llm, mode),
@@ -1090,6 +1116,24 @@ def _ask_mode(index_dir: str | Path = config.INDEX_DIR) -> str:
         print(NO_INDEX_NOTE)
         return "full"
     return "rag"
+
+
+def resolve_auto(schema: dict, rules: list[dict], index_dir: str | Path = config.INDEX_DIR) -> tuple[str, int]:
+    """``--mode auto``nun çözümü (R3-10): tam kurallı istem bütçeye sığıyorsa full_rules, sığmıyorsa rag.
+
+    Ölçüt tam kurallı sistem isteminin bağlam tahminidir: full_rules o istemi olduğu gibi bağlama
+    koyar, sığmıyorsa rag arama araçlarına geçer. Rag'in taze bir indeksi yoksa ölçüm yapılamaz,
+    tam nota full'a düşülür; tahmin her halükarda döner, ekrana yazılan satırın sağı solu olsun.
+    """
+    estimate = doc.estimate_tokens(prompt.full_rules_prompt(config.AS_OF, schema, rules))
+    if estimate <= config.AUTO_FULL_MAX_TOKENS:
+        return "full_rules", estimate
+    try:
+        load_search(index_dir, schema, rules)
+    except (MissingIndexError, StaleIndexError):
+        print(NO_INDEX_NOTE)
+        return "full", estimate
+    return "rag", estimate
 
 
 def _fingerprint(mode: str, kind: str, model: str, lines: list[dict], results, schema, rules) -> dict:
