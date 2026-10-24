@@ -263,14 +263,28 @@ def ping(profile: ModelProfile, timeout_s: float = config.PING_TIMEOUT_S) -> str
     return None
 
 
+def key_missing_reason(api_key_env: str | None) -> str | None:
+    """The named variable the profile needs and the user has not set, in its own sentence.
+
+    The CLI asks this before it repeats an endpoint failure: a missing key is not a down server,
+    and the advice it wants is the variable's name (PLAN R4-10). Naming no variable is no failure.
+    """
+    if not api_key_env:
+        return None
+    value = os.environ.get(api_key_env)
+    if not value or not value.strip():
+        return f"API anahtarı yok: {api_key_env} ortam değişkenini tanımlayın."
+    return None
+
+
 def _api_key(api_key_env: str | None) -> str:
     """Local endpoints take any key; a profile that names a variable requires it to be set."""
     if not api_key_env:
         return config.DEFAULT_LLM_API_KEY
-    value = os.environ.get(api_key_env)
-    if not value or not value.strip():
-        raise LLMError(f"API anahtarı yok: {api_key_env} ortam değişkenini tanımlayın.")
-    return value.strip()
+    reason = key_missing_reason(api_key_env)
+    if reason:
+        raise LLMError(reason)
+    return os.environ[api_key_env].strip()
 
 
 def _tool_call(call) -> ToolCall:

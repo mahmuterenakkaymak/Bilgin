@@ -719,7 +719,8 @@ def compare_models_cmd(
     ``models`` profil adlarıdır ve verildikleri sırayla koşulur; her model kendi penceresiyle
     (``profile.prompt_limit``) ölçer. ``--llm openai``da modelden önce uç nokta yoklanır: kapıysa
     model ``skipped``a sebebiyle yazılır ve hiçbir hücresi olmaz, açıksa her mod x tekrar
-    ``runner.run_eval``den geçer. ``--llm fake`` yoklamayı atlar ve altın kaydı aynı bütçeyle
+    ``runner.run_eval``den geçer; profilin anahtar değişkeni tanımsızsa sebep kapalı uç noktanınki
+    değil cümlenin kendisidir (R4-10). ``--llm fake`` yoklamayı atlar ve altın kaydı aynı bütçeyle
     oynatır, yani sahte bir karşılaştırma bile hangi modun hangi pencereye sığdığını gösterir.
 
     ``modes`` söylenmediğinde ``config.COMPARE_MODEL_MODES``; ``dataset`` ``evaluate``ınkiyle aynı
@@ -772,8 +773,13 @@ def compare_models_cmd(
     for model in models:
         profile = profiles[model]
         if llm_kind == "openai":
-            if ping(profile):
-                skipped[model] = MODEL_SKIPPED.format(url=profile.base_url)
+            # Eksik anahtar değişkeni kapalı uç noktadan önce sorulur: tavsiyesi kendi cümlesidir,
+            # açık bir sunucuya "GPU'da bu modeli açıp yeniden koşun" olmaz (R4-10, T151'in kapısı).
+            reason = llm.key_missing_reason(profile.api_key_env)
+            if not reason and ping(profile):
+                reason = MODEL_SKIPPED.format(url=profile.base_url)
+            if reason:
+                skipped[model] = reason
                 continue
         budget = profile.prompt_limit
         used[model] = profile
