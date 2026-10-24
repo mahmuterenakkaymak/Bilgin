@@ -19,6 +19,7 @@ import json
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import replace
 
+from nl2sql.agent.clarify import split_follow_up
 from nl2sql.agent.llm import UNREACHABLE, ChatResponse, LLMError, ToolCall
 
 # A script entry is the turn the model produces, or the failure that stops it.
@@ -120,14 +121,33 @@ def rag_replay(line: dict) -> list[Turn]:
     return [*turns, _ask("run_sql", sql=sql), _ask("submit_sql", sql=sql)]
 
 
+# A clarification on a golden question is a wrong answer (PLAN R5-12), so measuring that needs a
+# client that asks whatever was asked: the two options are only there to be a legal call.
+OVER_CLARIFY_QUESTION = "Sorunuz iki anlama geliyor; hangisini kastettiniz?"
+OVER_CLARIFY_OPTIONS = ["İlk okunuş", "İkinci okunuş"]
+
+
+def over_clarify() -> list[Turn]:
+    """The same ask_clarification every turn: the run always stops on a question, never answers."""
+    return [_ask("ask_clarification", question=OVER_CLARIFY_QUESTION, options=OVER_CLARIFY_OPTIONS)]
+
+
 def for_golden(
-    golden_lines: Iterable[dict], fallback_sql: str = FALLBACK_SQL, mode: str = "full"
+    golden_lines: Iterable[dict],
+    fallback_sql: str = FALLBACK_SQL,
+    mode: str = "full",
+    ambiguous: Iterable[dict] | None = None,
 ) -> FakeLLM:
     """One client for every question: golden replay when the question text matches, stock query else.
 
     A golden line with no question or no SQL is not registered, so it can never be answered with
     an empty query; such a question falls back to the stock one. In `rag` mode both paths go
     through the retrieval tools, because searching is all that mode can do.
+
+    `ambiguous` lines (PLAN R5-12) are the questions that have to be asked about: the question
+    itself gets one ask_clarification turn whose options are the reading labels, and its follow-up
+    (R5-11) runs the chosen reading's SQL - in `rag` mode after a search, like every other answer.
+    A choice no reading offers falls back to the stock query; a golden question never asks.
     """
     by_question = {}
     for line in golden_lines:
@@ -136,8 +156,26 @@ def for_golden(
         if question and sql:
             by_question[question] = line
 
+    by_ambiguous = {}
+    for line in ambiguous or ():
+        question = str(line.get("question") or "").strip()
+        if question and len(_readings(line)) >= 2:
+            by_ambiguous[question] = line
+
     def script(messages: list[dict]) -> list[Turn]:
-        question = _question(messages)
+        question, choice = split_follow_up(_question(messages))
+        line = by_ambiguous.get(question)
+        if line is not None:
+            readings = _readings(line)
+            if choice is None:
+                options = [label for label, _ in readings]
+                return [_ask("ask_clarification", question=_clarify_question(line), options=options)]
+            chosen = next((sql for label, sql in readings if label == choice), "") or fallback_sql
+            # ASSUMPTION: an ambiguous line has no requires_tables, so its rag follow-up searches
+            # for the tables the way rag_replay opens, then replays the reading as a golden answer.
+            if mode != "rag":
+                return golden_replay(chosen)
+            return [_ask("search_schema", query=question), *golden_replay(chosen)]
         line = by_question.get(question)
         if mode != "rag":
             return golden_replay(line["sql"] if line else fallback_sql)
@@ -211,6 +249,22 @@ def _question(messages: list[dict]) -> str:
         if message.get("role") == "user":
             return str(message.get("content") or "").strip()
     return ""
+
+
+def _readings(line: dict) -> list[tuple[str, str]]:
+    """(label, sql) of every reading that has both: a reading without one is not a choice to offer."""
+    readings = []
+    for reading in line.get("readings") or []:
+        label = str(reading.get("label") or "").strip()
+        sql = str(reading.get("sql") or "").strip()
+        if label and sql:
+            readings.append((label, sql))
+    return readings
+
+
+def _clarify_question(line: dict) -> str:
+    """The term is what only the user can define, so the question names it and nothing else (R5-11)."""
+    return f"'{str(line.get('term') or '').strip()}' ile neyi kastediyorsunuz?"
 
 
 def _first_fact(messages: list[dict]) -> dict | None:
