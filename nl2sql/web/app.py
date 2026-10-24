@@ -8,6 +8,8 @@ olduğunu kendi cümlesiyle söyler, node'a muhtaç kalmaz.
 
 from __future__ import annotations
 
+import json
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Response
@@ -23,9 +25,10 @@ from nl2sql.cli import main as cli
 from nl2sql.engine.result import Budget
 from nl2sql.eval import runner
 from nl2sql.index.search import load_search
-from nl2sql.index.store import MissingIndexError, StaleIndexError, content_hash
+from nl2sql.index.store import META_FILE, MissingIndexError, StaleIndexError, content_hash
 from nl2sql.report.export import MEDIA_TYPES, to_csv_bytes, to_xlsx_bytes
 from nl2sql.schema_map import doc
+from nl2sql.schema_map.rules_edit import normalize_rule, save_rules, validate_rule
 from nl2sql.web.saved import SavedStore
 
 # R5-15: boş soru koşum açmaya değmez; cümle ekranın gösterdiği cümledir.
@@ -36,6 +39,10 @@ NO_SAVED = "Kayıtlı soru bulunamadı."
 NO_ASK = "Bu sorunun kaydı bulunamadı."
 NOT_ANSWERED = "Yalnızca cevaplanmış bir soru dışa aktarılabilir."
 OTHER_DATASET = "Bu kayıt başka bir veri kümesine ait."
+# R5-16: kural API'sinin red cümleleri; 404 bilinmeyen kural, 409 çakışan kimlik, 500 kurulamayan indeks.
+NO_RULE = "Kural bulunamadı: {id}."
+DUPLICATE_RULE = "Bu kimlikte bir kural zaten var: {id}."
+REBUILD_FAILED = "İndeks yeniden kurulamadı: embedding uç noktası yanıt vermiyor olabilir."
 NO_UI = "Arayüz derlenmemiş"
 BUILD_COMMAND = "npm --prefix web run build"
 
@@ -137,6 +144,66 @@ def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir:
     def tables() -> dict:
         """Kural formunun tablo listesi: ölçülen şemanın adları, sırasıyla."""
         return {"tables": [table["name"] for table in session.schema["tables"]]}
+
+    @app.get("/api/rules")
+    def rules_list() -> dict:
+        """Kural ekranı: kümenin kuralları ve indeksin tazeliği (R5-16)."""
+        return {"rules": session.rules, "index": _index_block(session)}
+
+    @app.post("/api/rules")
+    def rules_add(rule: dict) -> dict:
+        """Yeni kural: çakışan kimlik 409, doğrulama hatası 422, sonra disk ve oturum tazelenir."""
+        rid = str(rule.get("id", "")).strip()
+        if any(existing.get("id") == rid for existing in session.rules):
+            raise HTTPException(
+                status_code=409, detail=[{"field": "id", "message": DUPLICATE_RULE.format(id=rid)}]
+            )
+        _check_rule(session, rule)
+        return _write_rules(session, session.rules + [normalize_rule(rule)])
+
+    @app.put("/api/rules/{rule_id}")
+    def rules_update(rule_id: str, rule: dict) -> dict:
+        """Kimliğiyle bulunan kuralı gövdeyle değiştirir; olmayan kimlik 404 (R5-16)."""
+        _find_rule(session, rule_id)
+        rule = {**rule, "id": rule_id}
+        _check_rule(session, rule, editing_id=rule_id)
+        return _write_rules(session, [
+            normalize_rule(rule) if existing.get("id") == rule_id else existing
+            for existing in session.rules
+        ])
+
+    @app.delete("/api/rules/{rule_id}")
+    def rules_delete(rule_id: str) -> dict:
+        """Kuralı hem diskten hem oturumdan çıkarır; olmayan kimlik 404 (R5-16)."""
+        _find_rule(session, rule_id)
+        return _write_rules(session, [r for r in session.rules if r.get("id") != rule_id])
+
+    @app.post("/api/index/rebuild")
+    def index_rebuild() -> dict:
+        """İndeksi mevcut kurallarla yeniden kurar; bayatlık ancak böyle kalkar (R5-16).
+
+        Embedder mevcut indeksin meta'sından alınır, yani aynı vektör uzayı korunur; indeks hiç
+        yoksa ``--llm fake`` sahte uzayı, aksi halde OpenAI uyumlu uç noktayı kullanır.
+        """
+        embed = cli._index_embedder(session.index_dir)
+        if not embed:
+            embed = "fake" if session.llm_kind == "fake" else "openai"
+        ds = session.dataset
+        started = time.perf_counter()
+        code = cli.build_index(
+            embed,
+            index_dir=session.index_dir,
+            schema_path=ds.schema_path if ds else config.SCHEMA_PATH,
+            rules_path=_rules_path(session),
+            dataset=ds.name if ds else None,
+        )
+        if code != 0:
+            raise HTTPException(status_code=500, detail=REBUILD_FAILED)
+        return {
+            "index": _index_block(session),
+            "counts": _index_counts(session),
+            "seconds": round(time.perf_counter() - started, 1),
+        }
 
     @app.get("/api/saved")
     def saved_list() -> dict:
@@ -257,6 +324,45 @@ def _index_block(session) -> dict:
     except (MissingIndexError, StaleIndexError) as exc:
         return {"fresh": False, "reason": str(exc), "embedder": None}
     return {"fresh": True, "reason": None, "embedder": cli._index_embedder(session.index_dir) or None}
+
+
+def _rules_path(session) -> Path:
+    """Kümenin kural dosyası: küme söylenmemişse config'in kuralı (R5-16)."""
+    return session.dataset.rules_path if session.dataset else config.RULES_PATH
+
+
+def _find_rule(session, rule_id: str) -> dict:
+    """Kimliğiyle kuralı bulur; yoksa ekranın okuyacağı 404 (R5-16)."""
+    for rule in session.rules:
+        if rule.get("id") == rule_id:
+            return rule
+    raise HTTPException(status_code=404, detail=NO_RULE.format(id=rule_id))
+
+
+def _check_rule(session, rule: dict, editing_id: str | None = None) -> None:
+    """Doğrulama hataları 422 olarak alanların hepsiyle birlikte yükselir (R5-16)."""
+    errors = validate_rule(rule, session.schema, session.rules, editing_id=editing_id)
+    if errors:
+        raise HTTPException(status_code=422, detail=errors)
+
+
+def _write_rules(session, rules: list[dict]) -> dict:
+    """Kuralları diske yazar, oturumu tazeler ve cevabı tazelikle birlikte döndürür (R5-16).
+
+    Kurallar değiştiği için imza kayar: indeks bayatlar, ekran ``indeksi yeniden kur``u önerir.
+    """
+    save_rules(rules, _rules_path(session))
+    session.reload_rules()
+    return {"rules": session.rules, "index": _index_block(session)}
+
+
+def _index_counts(session) -> dict:
+    """Yeni meta.json'daki koleksiyon sayıları; okunamazsa boş, ekran 0 gösterir (R5-16)."""
+    try:
+        meta = json.loads((session.index_dir / META_FILE).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return meta.get("counts") or {}
 
 
 def _mode_block(session) -> dict:
