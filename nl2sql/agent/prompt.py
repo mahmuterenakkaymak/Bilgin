@@ -42,6 +42,9 @@ _SEARCH_FIRST = """6. Aşağıdaki liste yalnız tablo adlarını sayıyor: kolo
 nasıl bağlandığını, iş terimlerinin ne anlama geldiğini ve kolonlardaki gerçek değerleri tahmin etme; \
 search_schema (ilgili tablolar), get_table_details (kolonlar), find_join_path (join koşulları), \
 search_rules (iş kuralları) ve sample_values (kolondaki değerler) araçlarını çağırıp öğren.
+
+7. 3 veya daha fazla tabloyu birleştirmeden ÖNCE find_join_path çağır; join koşullarını uydurma, \
+yolun verdiği birleştirmeyi kullan.
 """
 
 

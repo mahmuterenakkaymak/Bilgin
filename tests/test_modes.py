@@ -117,6 +117,12 @@ def test_the_rag_prompt_lists_tables_and_names_the_tools_it_wants_used(schema):
         assert name in text
 
 
+def test_the_rag_prompt_orders_a_join_path_before_a_three_table_join(schema, rules):
+    assert "3 veya daha fazla tabloyu birleştirmeden ÖNCE find_join_path çağır" in system_text("rag", schema)
+    for mode in ("full", "full_rules"):
+        assert "3 veya daha fazla tabloyu birleştirmeden" not in system_text(mode, schema, rules)
+
+
 def test_the_full_context_costs_much_more_than_rag(schema, rules):
     full = doc.estimate_tokens(system_text("full", schema, rules))
     rag = doc.estimate_tokens(system_text("rag", schema, rules))
