@@ -57,10 +57,12 @@ def entries(path) -> list[dict]:
 
 
 def test_tckn_keeps_only_its_last_four_digits(db, executor):
-    result = executor.execute("SELECT TCKN FROM TBLPERSONEL ORDER BY TCKN", FULL)
+    # Ordered by the personnel code, not by TCKN: a PII column in ORDER BY is rejected by policy (PLAN R3-6,
+    # tests/test_pii_order_by.py). Fixed 2026-10-24 with Eren's approval - this test predated that rule.
+    result = executor.execute("SELECT TCKN FROM TBLPERSONEL ORDER BY PERSONEL_KODU", FULL)
     assert result.error is None
     assert result.masked_columns == ["TCKN"]
-    expected = [row[0] for row in raw(db, "SELECT TCKN FROM TBLPERSONEL ORDER BY TCKN")]
+    expected = [row[0] for row in raw(db, "SELECT TCKN FROM TBLPERSONEL ORDER BY PERSONEL_KODU")]
     assert [row[0] for row in result.rows] == ["*******" + value[-4:] for value in expected]
 
 

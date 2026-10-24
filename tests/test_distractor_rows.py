@@ -67,9 +67,15 @@ def test_build_db_counts_the_schema_only_tables_and_still_creates_them_all(tmp_p
     out = capsys.readouterr().out
 
     yalniz = int(re.search(r"şema-yalnız (\d+)\)", out).group(1))
-    assert yalniz >= 60, out
-
     names = {table["name"] for table in schema["tables"]}
+    # Structure, not a fixed count (it was `>= 60`, written with 62 distractors; Run 3 gave the personnel and salary
+    # tables rows -> 59). Fixed 2026-10-24 with Eren's approval: the printed number equals the empty tables in the
+    # built file, and the schema-only tables are still the majority (the "kafa karıştırıcı şema" property).
+    with sqlite3.connect(database) as con:
+        empty = sum(1 for name in names if con.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0] == 0)
+    assert yalniz == empty, out
+    assert yalniz * 2 > len(names), out
+
     assert sqlite_tables(database) == names
     assert script_tables(script.read_text(encoding="utf-8")) == names
 
