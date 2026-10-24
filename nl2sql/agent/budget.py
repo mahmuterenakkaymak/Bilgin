@@ -18,6 +18,8 @@ from nl2sql.schema_map import doc
 
 # ASSUMPTION: N kısaltılan karakter sayısı - model hangi cevabın ne kadarının atıldığını görsün.
 TRIM_MARKER = "… (bağlam bütçesi için kısaltıldı: {removed} karakter)"
+TRIM_MARKER_PREFIX = TRIM_MARKER.split("{", 1)[0]
+TRIM_MARKER_SUFFIX = TRIM_MARKER.split("}", 1)[1]
 
 
 def estimate_prompt(messages: list[dict], tools: list[dict] | None = None) -> int:
@@ -32,8 +34,10 @@ def trim_tool_answers(
     """Cut tool answers oldest first until the estimate fits: returns (transcript, cuts, estimate).
 
     The newest tool answer is never cut - it is the one the model is about to answer - and no
-    message is ever removed, so every tool_call_id keeps its answer. When nothing more can be cut
-    the estimate comes back still over the limit; what that means is the caller's decision.
+    message is ever removed, so every tool_call_id keeps its answer. An answer that already carries
+    the marker is left alone, so one answer is counted once no matter how many turns re-measure the
+    transcript. When nothing more can be cut the estimate comes back still over the limit; what
+    that means is the caller's decision.
     """
     trimmed = list(messages)
     estimate = estimate_prompt(trimmed, tools)
@@ -47,7 +51,8 @@ def trim_tool_answers(
         if index == newest or message.get("role") != "tool":
             continue
         content = message.get("content") or ""
-        if len(content) <= config.TRIM_TOOL_CHARS:
+        # ASSUMPTION: "kırpma kısaltmıyorsa atla" marker'lı cevapla karşılanır; test_budget.py sınırın 1 üstündeki ilk kesimi sözleşme sayıyor.
+        if len(content) <= config.TRIM_TOOL_CHARS or _already_trimmed(content):
             continue
         removed = len(content) - config.TRIM_TOOL_CHARS
         trimmed[index] = {
@@ -59,6 +64,14 @@ def trim_tool_answers(
         if estimate <= limit:
             break
     return trimmed, cuts, estimate
+
+
+def _already_trimmed(content: str) -> bool:
+    """True when a previous pass already appended the marker: cutting again would only rewrite it."""
+    _, found, tail = content.rpartition(TRIM_MARKER_PREFIX)
+    if not found:
+        return False
+    return tail.endswith(TRIM_MARKER_SUFFIX) and tail[: -len(TRIM_MARKER_SUFFIX)].isdigit()
 
 
 def _prompt_text(messages: list[dict], tools: list[dict] | None) -> str:
