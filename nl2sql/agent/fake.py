@@ -152,6 +152,39 @@ def for_golden(
     return FakeLLM(script)
 
 
+# ------------------------------------------------------------------ narrators
+
+# The number no result has, written the way the guard would otherwise accept.
+INVENTED_NUMBER = "9.999.999"
+NARRATION_NO_FACTS = "Sonuçta anlatılacak sayısal özet yok."
+
+
+def narration_client() -> FakeLLM:
+    """A narrator that speaks the first fact's own display: deterministic, and the guard has seen it.
+
+    The facts are read back out of the `GERÇEKLER:` block the narrator was shown, so the sentence
+    stays a function of the result: the same answer narrated twice gets the same words twice.
+    """
+    return FakeLLM(lambda messages: [_says(_spoken_fact(messages))])
+
+
+def inventing_narrator() -> FakeLLM:
+    """A narrator that names a number the result does not have, every turn: the guard must fall back."""
+    return FakeLLM(lambda messages: [_says(f"Sonuç {INVENTED_NUMBER} olarak ölçüldü.")])
+
+
+def rounding_narrator() -> FakeLLM:
+    """One unit of the last shown digit wrong at first, the honest display on the retry."""
+
+    def script(messages: list[dict]) -> list[Turn]:
+        fact = _first_fact(messages)
+        if fact is not None and _turn_index(messages) == 0:
+            return [_says(_fact_sentence(fact, shift=True))]
+        return [_says(_spoken_fact(messages))]
+
+    return FakeLLM(script)
+
+
 # ------------------------------------------------------------------ internals
 
 def _ask(name: str, **arguments) -> ChatResponse:
@@ -178,6 +211,40 @@ def _question(messages: list[dict]) -> str:
         if message.get("role") == "user":
             return str(message.get("content") or "").strip()
     return ""
+
+
+def _first_fact(messages: list[dict]) -> dict | None:
+    """The first fact the narrator was shown, read back from the `GERÇEKLER:` block of the question."""
+    for message in messages:
+        if message.get("role") != "user":
+            continue
+        _, _, tail = str(message.get("content") or "").partition("GERÇEKLER:")
+        try:
+            shown = json.loads(tail.strip() or "[]")
+        except json.JSONDecodeError:
+            return None
+        return shown[0] if shown else None
+    return None
+
+
+def _spoken_fact(messages: list[dict]) -> str:
+    fact = _first_fact(messages)
+    return _fact_sentence(fact) if fact is not None else NARRATION_NO_FACTS
+
+
+def _fact_sentence(fact: dict, shift: bool = False) -> str:
+    """A sentence whose only number is the fact's own display, which is what the guard allows."""
+    display = str(fact.get("display") or "")
+    return f"{fact.get('label')} {_shift_last_digit(display) if shift else display}."
+
+
+def _shift_last_digit(text: str) -> str:
+    """Move the last shown digit by one: more than the half-unit tolerance ever forgives."""
+    for index in range(len(text) - 1, -1, -1):
+        if text[index].isdigit():
+            digit = int(text[index])
+            return text[:index] + str(digit - 1 if digit == 9 else digit + 1) + text[index + 1 :]
+    return text
 
 
 def _priced(turn: ChatResponse, messages: list[dict], index: int) -> ChatResponse:
