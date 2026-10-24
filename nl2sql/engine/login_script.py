@@ -14,15 +14,13 @@ whole script parseable while the statement stays exactly what a DBA would run.
 
 from __future__ import annotations
 
-from nl2sql.policy import pii
 from nl2sql.schema_map import doc
 
 DEFAULT_LOGIN = "nl2sql_ro"
 PASSWORD_PLACEHOLDER = "__DEGISTIR__"
-# ASSUMPTION: every table in the schema (PII columns included) lives in the default dbo schema,
-# as it does in a Netsis database; the cursor reads each owner from sys.tables, the explicit
-# column DENYs below name dbo directly.
-OWNER = "dbo"
+# The schema a bare table name lives in (PLAN R4-5): a Netsis database keeps everything in dbo,
+# while a qualified name carries its own schema, and every DENY below targets that schema.
+DEFAULT_SCHEMA = "dbo"
 
 
 def readonly_login_sql(schema: dict, login: str) -> str:
@@ -74,7 +72,10 @@ def _deny_other_tables(login: str, tables: list[str]) -> str:
         "DECLARE cur CURSOR LOCAL FAST_FORWARD FOR\n"
         f"SELECT 'DENY SELECT ON ' + QUOTENAME(SCHEMA_NAME(schema_id)) + '.' + QUOTENAME(name) + ' TO [{login}]'\n"
         "FROM sys.tables\n"
-        f"WHERE name NOT IN ({allowed});\n"
+        # allowlist tam adları tutar; dbo dışındaki bir tablonun sys.tables adı çıplak olduğu için
+        # karşılaştırma da tablonun kendi şemasıyla kurulur (PLAN R4-5).
+        f"WHERE CASE WHEN SCHEMA_NAME(schema_id) = '{DEFAULT_SCHEMA}' THEN name\n"
+        f"             ELSE SCHEMA_NAME(schema_id) + '.' + name END NOT IN ({allowed});\n"
         "OPEN cur;\n"
         "FETCH NEXT FROM cur INTO @sql;\n"
         "WHILE @@FETCH_STATUS = 0\n"
@@ -88,14 +89,24 @@ def _deny_other_tables(login: str, tables: list[str]) -> str:
 
 
 def _deny_pii_columns(login: str, schema: dict) -> str:
+    # read from the doc instead of pii.column_map: the script names each column the way the
+    # database declared it, so a mixed-case schema stays readable for a DBA.
     columns: dict[str, list[str]] = {}
-    for table, column in pii.column_map(schema):
-        columns.setdefault(table, []).append(column)
+    for table in schema["tables"]:
+        for column in table["columns"]:
+            if column.get("pii"):
+                columns.setdefault(table["name"], []).append(column["name"])
     lines = ["-- 3) PII kolonları: tablo okunabilse bile bu kolonlar hiç seçilemez."]
     for table in sorted(columns):
         cols = ", ".join(sorted(columns[table]))
-        lines.append(f"EXEC('DENY SELECT ({cols}) ON [{OWNER}].[{table}] TO [{login}]');")
+        lines.append(f"EXEC('DENY SELECT ({cols}) ON {_target(table)} TO [{login}]');")
     return "\n".join(lines)
+
+
+def _target(table: str) -> str:
+    """Bracketed DENY target: `Sales.Customers` -> `[Sales].[Customers]`, a bare name -> `[dbo].[X]`."""
+    schema, name = doc.split_name(table)
+    return f"[{schema or DEFAULT_SCHEMA}].[{name}]"
 
 
 def _deny_definition(login: str) -> str:

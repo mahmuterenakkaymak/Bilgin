@@ -19,6 +19,8 @@ from sqlglot.errors import SqlglotError
 from sqlglot.lineage import lineage
 from sqlglot.optimizer.qualify import qualify
 
+from nl2sql.schema_map import doc
+
 CLASSES = (
     "tckn",
     "vkn",
@@ -95,7 +97,10 @@ _MASKERS = {
 
 
 def column_map(schema: dict) -> dict[tuple[str, str], str]:
-    """{(TABLE, COLUMN): class} for every column the schema marks with a `pii` class.
+    """{(FULL_TABLE, COLUMN): class} for every column the schema marks with a `pii` class.
+
+    FULL_TABLE is the upper full name, so a table outside the default schema is keyed exactly the
+    way the policy allowlist names it: `SALES.CUSTOMERS` (PLAN R4-7).
 
     The classes are carried as the schema wrote them: a mark the maskers do not know is the
     caller's signal to hide the value entirely, never a reason to show it.
@@ -121,26 +126,28 @@ class Trace:
 
 
 def trace(sql: str, schema: dict) -> list[Trace]:
-    """Per output column, in select order: the [(TABLE, COLUMN)] pairs its values come from.
+    """Per output column, in select order: the [(FULL_TABLE, COLUMN)] pairs its values come from.
 
     Aliases, CTE renames, derived tables and subqueries are resolved, so a column reaches the
-    real schema columns behind it. `sources` is None when the lineage cannot be followed - and
-    then the caller masks the whole column, because an untraced column is never shown raw.
+    real schema columns behind it - a qualified table by its full `SALES.CUSTOMERS` name (R4-7).
+    `sources` is None when the lineage cannot be followed - and then the caller masks the whole
+    column, because an untraced column is never shown raw.
     `aggregate` names the aggregate function wrapped around the column; only "count" (COUNT and
     COUNT(DISTINCT x)) is on the R3-6 whitelist, and it keeps its sources so the caller can see
     what was counted.
 
     An empty list means the SQL could not be traced at all, which the caller reads the same way.
     """
-    doc = _lineage_schema(schema)
+    columns = _column_types(schema)
+    lineage_schema = _lineage_schema(columns)
     try:
         tree = parse_one(sql, read="tsql")
         if not isinstance(tree, exp.Query):
             return []
         # qualify first: it expands SELECT * and rewrites every reference to table.column, so
         # the lineage answer lines up with the output columns one by one.
-        tree = qualify(tree, dialect="tsql", schema=doc, validate_qualify_columns=False, identify=False)
-        nodes = lineage(None, tree, schema=doc, dialect="tsql")
+        tree = qualify(tree, dialect="tsql", schema=lineage_schema, validate_qualify_columns=False, identify=False)
+        nodes = lineage(None, tree, schema=lineage_schema, dialect="tsql")
     except SqlglotError:
         return []
     branches = _branches(tree)
@@ -149,17 +156,33 @@ def trace(sql: str, schema: dict) -> list[Trace]:
         # list can no longer be matched by position: nothing in this query is trusted.
         return []
     return [
-        Trace(name.upper(), _sources(node, doc), _aggregate(branches, position))
+        Trace(name.upper(), _sources(node, columns), _aggregate(branches, position))
         for position, (name, node) in enumerate(nodes.items())
     ]
 
 
-def _lineage_schema(schema: dict) -> dict:
-    """The schema doc as sqlglot wants it: {TABLE: {COLUMN: type}}."""
+def _column_types(schema: dict) -> dict:
+    """{FULL_TABLE: {COLUMN: type}}: the schema doc keyed by the full names the PII map uses."""
     return {
         table["name"].upper(): {column["name"].upper(): column.get("type") or "" for column in table["columns"]}
         for table in schema["tables"]
     }
+
+
+def _lineage_schema(columns: dict) -> dict:
+    """The column map as sqlglot wants it: a qualified table nests under its schema (R4-7).
+
+    ASSUMPTION: sqlglot's lineage schema has a single nesting level, so a doc that mixes bare and
+    qualified names cannot be handed over at all; trace then returns [] and the caller masks all.
+    """
+    lineage_schema: dict = {}
+    for name, types in columns.items():
+        schema_part, table = doc.split_name(name)
+        if schema_part:
+            lineage_schema.setdefault(schema_part, {})[table] = types
+        else:
+            lineage_schema[table] = types
+    return lineage_schema
 
 
 def _branches(query) -> list[list]:
@@ -182,7 +205,7 @@ def _aggregate(branches, position) -> str | None:
     return kinds.pop() if len(kinds) == 1 else None
 
 
-def _sources(node, doc) -> list[tuple[str, str]] | None:
+def _sources(node, columns) -> list[tuple[str, str]] | None:
     """The pairs a lineage graph bottoms out at; None as soon as any part of it cannot be read."""
     found: set[tuple[str, str]] = set()
     for step in node.walk():
@@ -193,14 +216,20 @@ def _sources(node, doc) -> list[tuple[str, str]] | None:
         if isinstance(step.source, exp.Table):
             pairs = [(_table_name(step.source), step.name.rpartition(".")[2])]
         else:
-            pairs = [(column.table, column.name) for column in step.expression.find_all(exp.Column)]
+            pairs = [(_column_table(column), column.name) for column in step.expression.find_all(exp.Column)]
         for table, column in pairs:
-            if column.upper() not in doc.get(table.upper(), {}):
+            if column.upper() not in columns.get(table.upper(), {}):
                 return None  # a table or column the schema doc does not know carries no pii flag to read
             found.add((table.upper(), column.upper()))
     return sorted(found)
 
 
 def _table_name(table) -> str:
-    """The declared table behind an alias: `TBLPERSONEL AS P` still reads as TBLPERSONEL."""
-    return (table.this.name if isinstance(table.this, exp.Identifier) else table.name).upper()
+    """The declared table behind an alias, schema included: `Sales.Customers AS C` reads as such."""
+    name = table.this.name if isinstance(table.this, exp.Identifier) else table.name
+    return f"{table.db}.{name}" if table.db else name
+
+
+def _column_table(column) -> str:
+    """The table a column reference names, schema included when the reference carries one."""
+    return f"{column.db}.{column.table}" if column.db else column.table
