@@ -96,7 +96,8 @@ def validate_option(option) -> list[str]:
 
 
 def _line(columns, rows, date, numbers, question):
-    ordered = sorted(rows, key=lambda row: row[date])
+    # Tür dolu hücrelerden okunur: NULL dönem çizgiye ulaşabilir, o yüzden sıralamada sonda kalır.
+    ordered = sorted(rows, key=lambda row: (row[date] is None, row[date]))
     series = [
         {"type": "line", "name": columns[index], "data": [_value(row[index]) for row in ordered]}
         for index in numbers

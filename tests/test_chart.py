@@ -54,6 +54,20 @@ def test_one_date_and_numbers_become_a_line_with_an_ascending_axis():
     assert chart.validate_option(option) == []
 
 
+def test_line_with_a_null_date_cell_does_not_raise():
+    """Tür dolu hücrelerden okunduğu için NULL dönemli bir kolon da çizgiye gelir (T208)."""
+    columns = ["TARIH", "CIRO"]
+    rows = [("2026-09-02", 200.0), (None, 150.0), ("2026-09-01", 100.0)]
+
+    spec = chart.chart_spec(columns, rows, "Günlük ciro ne kadar?")
+
+    assert spec is not None and spec["type"] == "line"
+    option = spec["option"]
+    assert option["xAxis"]["data"] == ["2026-09-01", "2026-09-02", ""], "NULL dönem sonda kalır"
+    assert option["series"][0]["data"] == [100.0, 200.0, 150.0], "seri aynı sırayı izler"
+    assert chart.validate_option(option) == []
+
+
 def test_a_category_and_one_number_become_a_bar_sorted_descending():
     spec = chart.chart_spec(BAR_COLUMNS, BAR_ROWS, "Ürüne göre satış miktarı ne?")
 
