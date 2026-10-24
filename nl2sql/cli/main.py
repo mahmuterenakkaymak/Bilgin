@@ -617,7 +617,10 @@ def evaluate(
         print(f"Uç nokta {len(results)} sorunun hiçbirini yanıtlamadı; rapor yazılmadı.\n")
         return _llm_failed(results[0].reason)
     narration = _narrate_results(results, executor, _narrator(llm)) if narrate else None
-    passed = sum(1 for result in results if result.outcome == "pass")
+    # Ekrandaki skor report.json ile aynı paydayı taşır (R5-12): belirsiz satırlar altın setin
+    # yerine geçmez, hemen altında basılan Doğruluk ile çelişmez.
+    judged = runner.scored(results)
+    passed = sum(1 for result in judged if result.outcome == "pass")
     kind, model = _client_kind(llm, profile)
     name = ds.name if ds else config.DEFAULT_DATASET
     run_dir = report.write_report(
@@ -638,7 +641,7 @@ def evaluate(
         profile=_profile_block(profile),
         narration=narration,
     )
-    print(f"Skor: {passed}/{len(results)}")
+    print(f"Skor: {passed}/{len(judged)}")
     if ambiguous:
         print(f"\n{METRICS_HEAD}")
         for line in report.metrics_block(metrics.compute_metrics(results)):

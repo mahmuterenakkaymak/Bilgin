@@ -195,6 +195,16 @@ def progress_line(result: QuestionResult) -> str:
     )
 
 
+def scored(results: Iterable[QuestionResult]) -> list[QuestionResult]:
+    """Skoru taşıyan satırlar: belirsiz set netleştirmeyi ölçer, altın cevabın yerine geçmez (R5-12).
+
+    Skorun üç göründüğü yer (report.json, report.md, konsol) aynı sayıyı saysın diye tek yerde
+    durur. Altın satır yoksa boş döner - belirsiz satırların kendi skoru yoktur, kill-gate'i onlar
+    vermez.
+    """
+    return [result for result in results if result.kind == "golden"]
+
+
 def _truth(line: dict, executor) -> Result:
     """The golden answer, executed once up front so a broken ground truth stops the run early."""
     qid = str(line.get("id") or "")

@@ -18,7 +18,7 @@ from pathlib import Path
 
 from nl2sql import config
 from nl2sql.eval.metrics import compute_metrics
-from nl2sql.eval.runner import QuestionResult
+from nl2sql.eval.runner import QuestionResult, scored
 from nl2sql.report import fmt
 
 STAMP = "%Y%m%d-%H%M%S"
@@ -169,7 +169,11 @@ def _report(
     profile: dict | None = None,
     narration: dict | None = None,
 ) -> dict:
-    passed = sum(1 for result in results if result.outcome == "pass")
+    # Kill-gate skoru altın setin sayısıdır (R5-12): belirsiz satırlar netleştirmeyi ölçer, altın
+    # cevabın yerine geçmez. Metrik bloğunun hemen üstünde başka bir paydaya bölünmüş bir skor,
+    # aynı koşunun iki ayrı ölçümü gibi okunur ve karar eşiklerini aşağı çeker.
+    judged = scored(results)
+    passed = sum(1 for result in judged if result.outcome == "pass")
     peaks = [result.max_prompt_tokens for result in results]
     # R4-11: bütçenin iki sayısı. Koşuda ne tepe tahmin ne taşma varsa hiç yazılmazlar (``schema``
     # gibi) - ikisi de sıfırken okuyana hiçbir şey söylemeyen bir satır, diskteki eski raporların
@@ -186,9 +190,9 @@ def _report(
         **({"profile": profile} if profile else {}),
         **({"schema": schema_info} if schema_info else {}),
         "config": dict(settings or {}),
-        "score": {"passed": passed, "total": len(results)},
+        "score": {"passed": passed, "total": len(judged)},
         "tags": _tags(results),
-        "decision": _decision(len(results), passed),
+        "decision": _decision(len(judged), passed),
         "context": {
             "max_prompt_tokens": max(peaks, default=0),
             "median_prompt_tokens": round(statistics.median(peaks)) if peaks else 0,
