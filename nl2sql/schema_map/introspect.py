@@ -21,7 +21,13 @@ class IntrospectError(RuntimeError):
 # ASSUMPTION: SQLite stores neither a length nor the VARCHAR/NVARCHAR/DATE distinction, so a skeleton
 # type is the affinity's T-SQL name; the tests compare it through build.SQLITE_TYPES instead of to the
 # schema's exact "VARCHAR(20)" text.
-SQLITE_TO_TSQL = {"INTEGER": "INT", "REAL": "DECIMAL", "TEXT": "VARCHAR"}
+SQLITE_TO_TSQL = {
+    "INTEGER": "INT",
+    "REAL": "DECIMAL",
+    "TEXT": "VARCHAR",
+    "BOOLEAN": "BIT",
+    "BLOB": "VARBINARY",
+}
 
 
 def normalize_type(declared: str) -> str:

@@ -42,9 +42,9 @@ def test_paths_absolute_and_named():
     expected = {
         "DB_PATH": "data/test.db",
         "MSSQL_SCRIPT": "db/mssql/build_test_db.sql",
-        "SCHEMA_PATH": "schema/schema.json",
-        "GOLDEN_PATH": "eval/golden.jsonl",
-        "TRAPS_PATH": "eval/traps.jsonl",
+        "SCHEMA_PATH": "datasets/synthetic_erp/schema.json",
+        "GOLDEN_PATH": "datasets/synthetic_erp/golden.jsonl",
+        "TRAPS_PATH": "datasets/synthetic_erp/traps.jsonl",
         "EVAL_OUT": "eval_out",
         "AUDIT_LOG": "logs/audit.jsonl",
     }

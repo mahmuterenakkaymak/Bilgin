@@ -24,6 +24,8 @@ SQLITE_TYPES = {
     # kalır, BIT 0/1, VARBINARY bytes olarak döner (PLAN R4-6).
     "BIT": "BOOLEAN",
     "DATETIME2": "DATETIME",
+    # DATETIME stays DATETIME when read back (introspect.normalize_type keeps it), so it needs its own entry.
+    "DATETIME": "DATETIME",
     "VARBINARY": "BLOB",
 }
 

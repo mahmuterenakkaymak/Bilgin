@@ -69,8 +69,8 @@ def test_retrieval_values_are_sane():
 
 def test_run2_paths_absolute_and_named():
     expected = {
-        "RULES_PATH": "schema/rules.json",
-        "PROFILE_PATH": "profiles/netsis.json",
+        "RULES_PATH": "datasets/synthetic_erp/rules.json",
+        "PROFILE_PATH": "datasets/synthetic_erp/profile.json",
         "INDEX_DIR": "index",
     }
     for name, relative in expected.items():
