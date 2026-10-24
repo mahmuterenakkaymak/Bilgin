@@ -49,9 +49,11 @@ from nl2sql.index.search import build_search, load_search
 from nl2sql.index.store import (
     META_FILE,
     FileStore,
+    ForeignIndexError,
     MissingIndexError,
     StaleIndexError,
     content_hash,
+    dataset_arg,
 )
 from nl2sql.policy import pii
 from nl2sql.schema_map import build, doc, excel, introspect, merge
@@ -103,7 +105,9 @@ EVAL_NO_AUTO = "eval auto modu kabul etmez; modu açıkça seçin: full, full_ru
 
 ENV_URL = "NL2SQL_LLM_BASE_URL"
 EMBED_ENV_URL = "NL2SQL_EMBED_BASE_URL"
-NO_DB = "Veritabanı yok: {path}\nÖnce `python -m nl2sql build-db` çalıştırın."
+# R4-14: ``--dataset`` verilmişse kurulması söylenen veritabanı da o kümenindir; adsız hali
+# sentetik dünyanın dosyasını kurar, yani ikinci bir dünyayla çalışana hiçbir şey kazandırmaz.
+NO_DB = "Veritabanı yok: {path}\nÖnce `python -m nl2sql build-db{ds}` çalıştırın."
 NO_TAG = "Bu etiketle soru yok: {tag}"
 LLM_HINT = f"Öneri: Strata'nın açık olup olmadığına bakın; adres farklıysa {ENV_URL} ile doğruyu verin."
 EMBED_HINT = (
@@ -316,6 +320,7 @@ def ask(
     index_dir: str | Path | None = None,
     estimate: int | None = None,
     dataset: str | None = None,
+    dataset_line: bool = True,
 ) -> int:
     """Bir soru: modunu söyle, adımları işaretle ve gecikmesiyle dök, gönderilen SQL'i ve tabloyu göster.
 
@@ -329,21 +334,34 @@ def ask(
     maskelenen kolonların adı altta söylenir (R3-6).
 
     ``dataset`` verildiğinde şema, kurallar, join profili, veritabanı, indeks ve referans tarihi o
-    kümenin tanımıdır (R4-4); açıkça verilen yol ya da mod onun önüne geçer.
+    kümenin tanımıdır (R4-4); açıkça verilen yol ya da mod onun önüne geçer. ``dataset_line``
+    False ise çağıran küme satırını çoktan basmıştır (R4-14): ``main`` auto çözümünden önce
+    bastığı için burada yinelenmez, yoksa satır ekranın ilk satırı olmaktan çıkar.
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
     if code:
         return code
-    _dataset_line(ds)
+    if dataset_line:
+        _dataset_line(ds)
     db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
     index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
     if _db_missing(db_path):
-        return _no_db(db_path)
+        return _no_db(db_path, ds.name if ds else None)
     schema = ds.schema() if ds else doc.load_schema()
     rules = ds.rules() if ds else load_rules()
     if mode == "auto":
-        mode, estimate = resolve_auto(schema, rules, index_dir, ds.as_of if ds else config.AS_OF)
+        try:
+            mode, estimate = resolve_auto(
+                schema,
+                rules,
+                index_dir,
+                ds.as_of if ds else config.AS_OF,
+                ds.name if ds else None,
+            )
+        except ForeignIndexError as exc:
+            # R4-8: başka dünyanın vektörleri düşülecek bir indeks değil, reddedilecek biridir.
+            return _index_failed(str(exc))
     executor = LocalExecutor(
         db_path=db_path,
         allowlist=doc.allowlist(schema),
@@ -424,7 +442,7 @@ def evaluate(
     index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
     out_dir = _or(out_dir, ds.eval_out if ds else None, config.EVAL_OUT)
     if _db_missing(db_path):
-        return _no_db(db_path)
+        return _no_db(db_path, ds.name if ds else None)
     schema_file = _schema_file(_or(schema_path, ds.schema_path if ds else None, FULL_SCHEMA))
     schema = _load_schema(schema_file)
     if schema is None:
@@ -524,7 +542,7 @@ def compare_modes(
     index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
     out_dir = _or(out_dir, ds.eval_out if ds else None, config.EVAL_OUT)
     if _db_missing(db_path):
-        return _no_db(db_path)
+        return _no_db(db_path, ds.name if ds else None)
     schema_file = _schema_file(_or(schema_path, ds.schema_path if ds else None, FULL_SCHEMA))
     schema = _load_schema(schema_file)
     if schema is None:
@@ -928,10 +946,10 @@ def _dataset_line(ds: datasets.Dataset | None) -> None:
 
 
 def _auto_inputs(ds: datasets.Dataset | None) -> tuple:
-    """``--mode auto``nun girdileri: küme verildiyse şema, kural, indeks ve tarih onun tanımıdır (R4-4)."""
+    """``--mode auto``nun girdileri: küme verildiyse şema, kural, indeks, tarih ve ad onun tanımıdır (R4-4)."""
     if ds:
-        return ds.schema(), ds.rules(), ds.index_dir, ds.as_of
-    return doc.load_schema(), load_rules(), config.INDEX_DIR, config.AS_OF
+        return ds.schema(), ds.rules(), ds.index_dir, ds.as_of, ds.name
+    return doc.load_schema(), load_rules(), config.INDEX_DIR, config.AS_OF, None
 
 
 def _eval_out(ds: datasets.Dataset | None, mode: str | None = None) -> Path:
@@ -1143,19 +1161,27 @@ def main(argv: list[str] | None = None) -> int:
         ds, code = _dataset(args.dataset)
         if code:
             return code
+        # R4-14: küme satırı her halükarda ilk satırdır; auto çözümü NO_INDEX_NOTE basabildiği için
+        # buraya alındı ve ask() kendisinin basmadığını ``dataset_line`` ile öğreniyor.
+        _dataset_line(ds)
         # ASSUMPTION: "ask'ın varsayılanı auto" komutun varsayılanıdır (argparse default); buradaki
         # çözümleme istemciye de çözülmüş modu vermek için — sahte kayıt rag ile diğerlerinde farklı
         # oynar. ask() fonksiyonunun kendi varsayılanı "full" kalır, doğrudan çağıranı etkilemesin.
         mode, estimate = args.mode, None
-        if mode == "auto":
-            mode, estimate = resolve_auto(*_auto_inputs(ds))
-        return ask(
-            question=args.question,
-            llm=make_client(args.llm, mode, ds),
-            mode=mode,
-            estimate=estimate,
-            **_given(dataset=args.dataset),
-        )
+        try:
+            if mode == "auto":
+                mode, estimate = resolve_auto(*_auto_inputs(ds))
+            return ask(
+                question=args.question,
+                llm=make_client(args.llm, mode, ds),
+                mode=mode,
+                estimate=estimate,
+                dataset_line=False,
+                **_given(dataset=args.dataset),
+            )
+        except ForeignIndexError as exc:
+            # R4-8: yabancı bir indeksin çözümü full'a düşmek değil, kendi kümesini kurmaktır.
+            return _index_failed(str(exc))
     if args.mode == "auto":
         print(EVAL_NO_AUTO)
         return EXIT_BAD_INPUT
@@ -1371,6 +1397,7 @@ def resolve_auto(
     rules: list[dict],
     index_dir: str | Path = config.INDEX_DIR,
     as_of: str = config.AS_OF,
+    dataset: str | None = None,
 ) -> tuple[str, int]:
     """``--mode auto``nun çözümü (R3-10): tam kurallı istem bütçeye sığıyorsa full_rules, sığmıyorsa rag.
 
@@ -1378,13 +1405,17 @@ def resolve_auto(
     koyar, sığmıyorsa rag arama araçlarına geçer. Rag'in taze bir indeksi yoksa ölçüm yapılamaz,
     tam nota full'a düşülür; tahmin her halükarda döner, ekrana yazılan satırın sağı solu olsun.
     ``as_of`` kümenin referans tarihidir (R4-4): tahmin, modelin gerçekten göreceği istem ölçülerek
-    bulunur, yani o da aynı tarihle kurulur.
+    bulunur, yani o da aynı tarihle kurulur. ``dataset`` verildiğinde indeks de o kümenin indeksiyle
+    denetlenir (R4-8): başka bir dünyanın vektörleri düşülecek bir indeks değildir, yani full'a
+    düşülmez, cümlesiyle reddedilir.
     """
     estimate = doc.estimate_tokens(prompt.full_rules_prompt(as_of, schema, rules))
     if estimate <= config.AUTO_FULL_MAX_TOKENS:
         return "full_rules", estimate
     try:
-        load_search(index_dir, schema, rules)
+        load_search(index_dir, schema, rules, dataset)
+    except ForeignIndexError:
+        raise
     except (MissingIndexError, StaleIndexError):
         print(NO_INDEX_NOTE)
         return "full", estimate
@@ -1508,9 +1539,12 @@ def _db_missing(db_path: str | Path) -> bool:
     return config.backend() == "sqlite" and not Path(db_path).exists()
 
 
-def _no_db(db_path: str | Path) -> int:
-    """Eksik veritabanı bir sorgu hatası gibi düşmesin: tek cümle, ne yapılacağı, kod 2."""
-    print(NO_DB.format(path=db_path))
+def _no_db(db_path: str | Path, dataset: str | None = None) -> int:
+    """Eksik veritabanı bir sorgu hatası gibi düşmesin: tek cümle, ne yapılacağı, kod 2.
+
+    ``dataset`` verildiğinde cümlenin söylediği ``build-db`` de o kümeyi kurar (R4-14).
+    """
+    print(NO_DB.format(path=db_path, ds=dataset_arg(dataset)))
     return EXIT_NO_DB
 
 

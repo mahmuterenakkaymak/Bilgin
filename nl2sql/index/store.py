@@ -23,8 +23,10 @@ DOCS_FILE = "docs.json"
 VECTORS_FILE = "vectors.json"
 META_FILE = "meta.json"
 
-MISSING = "İndeks bulunamadı: {path}. Önce `python -m nl2sql build-index` çalıştırın."
-STALE = "İndeks eski: `python -m nl2sql build-index` çalıştırın."
+# R4-14: küme söylenmişse çözümü söyleyen komut da o kümeyi hedefler; adsız hali sentetik dünyanın
+# indeksini kurar, yani `--dataset wwi` ile çalışan birine hiçbir şey kazandırmaz.
+MISSING = "İndeks bulunamadı: {path}. Önce `python -m nl2sql build-index{ds}` çalıştırın."
+STALE = "İndeks eski: `python -m nl2sql build-index{ds}` çalıştırın."
 # R4-8: indeks hangi veri kümesinin şemasını vektörlediğini meta'da taşır. Uyuşmazlık bayatlıktan daha
 # spesifik bir arıza, ama çözümü aynı komutun bir hali; o yüzden mesajı kendi, sınıfı StaleIndexError.
 FOREIGN = (
@@ -37,6 +39,11 @@ COUNTS = (
     "İndeks bozuk: {docs} dokümana karşılık {vectors} vektör var. "
     "`python -m nl2sql build-index` çalıştırın."
 )
+
+
+def dataset_arg(dataset: str | None) -> str:
+    """Kurtarma cümlesindeki komutun `--dataset AD` eklentisi; küme söylenmediyse boş (R4-14)."""
+    return f" --dataset {dataset}" if dataset else ""
 
 
 class MissingIndexError(RuntimeError):
@@ -91,8 +98,11 @@ class FileStore:
         _write(self.directory / VECTORS_FILE, [[float(v) for v in vector] for vector in vectors])
         _write(self.directory / META_FILE, _meta(docs, meta or {}))
 
-    def load(self) -> StoredIndex:
-        """Üç dosyayı okur; eksikse MissingIndexError, sıra bozuksa StaleIndexError."""
+    def load(self, dataset: str | None = None) -> StoredIndex:
+        """Üç dosyayı okur; eksikse MissingIndexError, sıra bozuksa StaleIndexError.
+
+        `dataset` içeriği değiştirmez, yalnız eksiklik cümlesinin önereceği komuta girer (R4-14).
+        """
         docs = [
             Doc(
                 id=item["id"],
@@ -101,10 +111,10 @@ class FileStore:
                 text=item["text"],
                 meta=item.get("meta") or {},
             )
-            for item in self._read(DOCS_FILE)
+            for item in self._read(DOCS_FILE, dataset)
         ]
-        vectors = [[float(v) for v in vector] for vector in self._read(VECTORS_FILE)]
-        meta = self._read(META_FILE)
+        vectors = [[float(v) for v in vector] for vector in self._read(VECTORS_FILE, dataset)]
+        meta = self._read(META_FILE, dataset)
         _check_counts(docs, vectors)
         return StoredIndex(docs=docs, vectors=vectors, meta=meta)
 
@@ -117,22 +127,24 @@ class FileStore:
         """
         # ASSUMPTION: dataset=None aidiyetin sorgulanmadığı anlamına gelir; --dataset'i henüz
         # taşımayan çağrılar eski davranışla devam etsin diye.
-        index = self.load()
+        index = self.load(dataset)
         stored = index.meta.get("dataset") or config.DEFAULT_DATASET
         if dataset is not None and stored != dataset:
             raise ForeignIndexError(FOREIGN.format(stored=stored, wanted=dataset))
         found = index.meta.get("content_hash", "")
         if found != expected_hash:
-            raise StaleIndexError(STALE)
+            raise StaleIndexError(STALE.format(ds=dataset_arg(dataset)))
         return index
 
-    def _read(self, name: str) -> list | dict:
+    def _read(self, name: str, dataset: str | None = None) -> list | dict:
         path = self.directory / name
         try:
             with open(path, encoding="utf-8") as handle:
                 return json.load(handle)
         except (FileNotFoundError, NotADirectoryError) as exc:
-            raise MissingIndexError(MISSING.format(path=path)) from exc
+            raise MissingIndexError(
+                MISSING.format(path=path, ds=dataset_arg(dataset))
+            ) from exc
 
 
 def content_hash(schema: dict, rules: list[dict]) -> str:
