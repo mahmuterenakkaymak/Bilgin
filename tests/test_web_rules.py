@@ -92,7 +92,19 @@ def test_invalid_post_is_422_with_field_messages_and_leaves_the_file(client, ses
     response = client.post("/api/rules", json=_rule(id="Kötü Kimlik", term=""))
 
     assert response.status_code == 422
-    assert {"id", "term"} <= {error["field"] for error in response.json()["detail"]}
+    assert {"id", "term"} <= {error["field"] for error in response.json()["errors"]}
+    assert rules_file(session).read_text(encoding="utf-8") == before
+
+
+def test_invalid_post_returns_the_errors_key(client, session):
+    before = rules_file(session).read_text(encoding="utf-8")
+    response = client.post("/api/rules", json=_rule(id="Kötü Kimlik", term=""))
+
+    assert response.status_code == 422
+    assert set(response.json()) == {"errors"}
+    errors = response.json()["errors"]
+    assert {"id", "term"} <= {error["field"] for error in errors}
+    assert all(set(error) == {"field", "message"} for error in errors)
     assert rules_file(session).read_text(encoding="utf-8") == before
 
 

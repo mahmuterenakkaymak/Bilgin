@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Response
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -100,6 +100,18 @@ class SavedBody(BaseModel):
     sql: str | None = None
 
 
+class RuleRejected(Exception):
+    """Kural doğrulamasının hataları (Contracts "rules API"): gövde ``{"errors": [...]}`` olur.
+
+    ``HTTPException``ın gövdesi her zaman ``detail`` anahtarının altına yerleştiği için alan
+    hataları onla yükselmez; ekran ``errors``ı okur.
+    """
+
+    def __init__(self, errors: list[dict]):
+        super().__init__(errors)
+        self.errors = errors
+
+
 def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir: str | Path = config.STATIC_DIR) -> FastAPI:
     """Oturumun üstünde API: soru, sağlık, örnekler, tablolar, kayıtlar, dışa aktarım ve arayüz."""
     app = FastAPI(title="Bilgin")
@@ -109,6 +121,11 @@ def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir:
     # Kayıtlar küme başına: ekran başlığın söylediği kümenin dışına çıkmaz (R5-16).
     dataset = _dataset_block(session)["name"]
     static = Path(static_dir)
+
+    @app.exception_handler(RuleRejected)
+    async def rule_rejected(request, exc: RuleRejected):
+        """Alan hataları 422 olarak üst düzey ``errors`` anahtarıyla döner (R5-15)."""
+        return JSONResponse(status_code=422, content={"errors": exc.errors})
 
     @app.post("/api/ask")
     def ask(body: AskBody) -> dict:
@@ -343,7 +360,7 @@ def _check_rule(session, rule: dict, editing_id: str | None = None) -> None:
     """Doğrulama hataları 422 olarak alanların hepsiyle birlikte yükselir (R5-16)."""
     errors = validate_rule(rule, session.schema, session.rules, editing_id=editing_id)
     if errors:
-        raise HTTPException(status_code=422, detail=errors)
+        raise RuleRejected(errors)
 
 
 def _write_rules(session, rules: list[dict]) -> dict:
