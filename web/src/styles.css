@@ -338,6 +338,11 @@ main {
   background: var(--surface);
 }
 
+/* Çocuğun min-width:auto'su nowrap örnek çipin metnini taban yapıp kutuyu 390px'te taşıyordu. */
+.ask-box > * {
+  min-width: 0;
+}
+
 .question {
   width: 100%;
   min-height: 76px;
