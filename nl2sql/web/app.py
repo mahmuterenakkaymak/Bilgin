@@ -17,15 +17,19 @@ from pydantic import BaseModel
 
 from nl2sql import config
 from nl2sql.agent import prompt
+from nl2sql.app import asklog
 from nl2sql.app.ask import ask_payload
 from nl2sql.cli import main as cli
 from nl2sql.eval import runner
 from nl2sql.index.search import load_search
 from nl2sql.index.store import MissingIndexError, StaleIndexError, content_hash
 from nl2sql.schema_map import doc
+from nl2sql.web.saved import SavedStore
 
 # R5-15: boş soru koşum açmaya değmez; cümle ekranın gösterdiği cümledir.
 BLANK_QUESTION = "Soru boş."
+# R5-16: silinmek istenen kayıt zaten yoksa ekranın okuyacağı cümle.
+NO_SAVED = "Kayıtlı soru bulunamadı."
 NO_UI = "Arayüz derlenmemiş"
 BUILD_COMMAND = "npm --prefix web run build"
 
@@ -75,11 +79,22 @@ class AskBody(BaseModel):
     choice: str | None = None
 
 
+class SavedBody(BaseModel):
+    """``POST /api/saved`` gövdesi (Contracts): soru zorunlu, mod ve SQL sorulabilir."""
+
+    question: str = ""
+    mode: str | None = None
+    sql: str | None = None
+
+
 def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir: str | Path = config.STATIC_DIR) -> FastAPI:
-    """Oturumun üstünde API: soru, sağlık, örnekler, tablolar ve derlenmiş arayüz."""
+    """Oturumun üstünde API: soru, sağlık, örnekler, tablolar, kayıtlar ve derlenmiş arayüz."""
     app = FastAPI(title="Bilgin")
     app.state.session = session
     app.state.saved_path = Path(saved_path)
+    saved = SavedStore(saved_path)
+    # Kayıtlar küme başına: ekran başlığın söylediği kümenin dışına çıkmaz (R5-16).
+    dataset = _dataset_block(session)["name"]
     static = Path(static_dir)
 
     @app.post("/api/ask")
@@ -116,6 +131,32 @@ def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir:
     def tables() -> dict:
         """Kural formunun tablo listesi: ölçülen şemanın adları, sırasıyla."""
         return {"tables": [table["name"] for table in session.schema["tables"]]}
+
+    @app.get("/api/saved")
+    def saved_list() -> dict:
+        """Kenar çubuğu: bu kümenin kayıtlı soruları, en yeni önce (R5-16)."""
+        return {"saved": saved.list(dataset)}
+
+    @app.post("/api/saved")
+    def saved_add(body: SavedBody) -> dict:
+        """Soruyu kenar çubuğuna eklemek: saklanan cevabı değil, sorunun metni ve SQL'i."""
+        question = body.question.strip()
+        if not question:
+            raise HTTPException(status_code=400, detail=BLANK_QUESTION)
+        # ASSUMPTION: POST tek kaydın kendisini döndürür; ekran istersen listeyi yeniden çeker.
+        return {"saved": saved.add(question, mode=body.mode, sql=body.sql, dataset=dataset)}
+
+    @app.delete("/api/saved/{id}")
+    def saved_delete(id: int) -> dict:
+        """Kaydı kenar çubuğundan çıkarır; olmayan kaydın silinecek bir şeyi yok (404)."""
+        if not saved.delete(id):
+            raise HTTPException(status_code=404, detail=NO_SAVED)
+        return {"deleted": id}
+
+    @app.get("/api/history")
+    def history() -> dict:
+        """Son sorular: soru günlüğünün satırları, en yeni önce; veri satırları asla (R5-4)."""
+        return {"history": asklog.history(session.ask_log)}
 
     assets = static / "assets"
     if assets.is_dir():
