@@ -5,14 +5,20 @@ think-block stripped so the model's private reasoning never reaches a report, to
 latency for the Step lines, and a single failure type. Any transport or HTTP problem becomes an
 `LLMError` carrying a readable Turkish sentence - the loop turns that into the `llm_error`
 outcome instead of letting a traceback reach the console.
+
+Model profiles (`config/models.json`) live here too: a profile names the endpoint, the model id,
+how large a window the loop may fill, and the environment variable its key sits in - never the
+key itself.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from openai import APIConnectionError, APIError, OpenAI
 
@@ -31,6 +37,10 @@ EMPTY_REPLY = "Model beklenen yanıt biçiminde bir yanıt dönmedi: {url}."
 
 class LLMError(RuntimeError):
     """Model endpoint'i çalışmadı ya da yanıtı çözülemedi; döngü bunu llm_error sayar."""
+
+
+class ProfileError(RuntimeError):
+    """Profil dosyası yok, bozuk ya da o adta bir profil yok; CLI bunu exit 2 sayar."""
 
 
 @dataclass(frozen=True)
@@ -60,6 +70,85 @@ def strip_think(text: str | None) -> str:
     return THINK_BLOCK.sub("", text or "").strip()
 
 
+@dataclass(frozen=True)
+class ModelProfile:
+    """One model endpoint and the window it was served with (PLAN R4-10)."""
+
+    name: str
+    base_url: str
+    model: str
+    api_key_env: str | None = None
+    context_budget: int = 0
+    max_output_tokens: int = 4096
+    sampling: dict = field(default_factory=dict)
+    enable_thinking: bool = config.ENABLE_THINKING
+    auto_full_max_tokens: int | None = None
+    description: str = ""
+
+    @property
+    def prompt_limit(self) -> int:
+        """Tokens the prompt may take: the window minus the answer still owed out of it."""
+        return self.context_budget - self.max_output_tokens
+
+
+def load_profiles(path: str | Path = config.MODELS_PATH) -> dict[str, ModelProfile]:
+    """`config/models.json` -> `name -> ModelProfile`, the contract defaults applied."""
+    file = Path(path)
+    try:
+        raw = json.loads(file.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ProfileError(
+            f"Model profili dosyası yok: {file}. `--models-file` ile bir tane gösterin."
+        ) from exc
+    except ValueError as exc:
+        raise ProfileError(f"Model profili dosyası okunamadı: {file} ({exc})") from exc
+    entries = raw.get("profiles")
+    if not isinstance(entries, dict):
+        raise ProfileError(f"Model profili dosyasında 'profiles' bölümü yok: {file}")
+    return {name: _profile(name, values) for name, values in entries.items()}
+
+
+def get_profile(name: str, path: str | Path | None = None) -> ModelProfile:
+    """The profile called `name`; an unknown name is answered with the known ones, sorted."""
+    profiles = load_profiles(config.MODELS_PATH if path is None else path)
+    if name not in profiles:
+        raise ProfileError(
+            f"Bilinmeyen model profili: {name} (bilinenler: {', '.join(sorted(profiles))})"
+        )
+    return profiles[name]
+
+
+def _profile(name: str, raw: dict) -> ModelProfile:
+    """One profile line, with the numbers checked: a window has to leave room for the answer."""
+    budget = raw.get("context_budget")
+    output = raw.get("max_output_tokens", 4096)
+    if not raw.get("base_url") or not raw.get("model"):
+        raise ProfileError(f"Model profili geçersiz: {name} (base_url ve model zorunlu)")
+    if (
+        not isinstance(budget, int)
+        or not isinstance(output, int)
+        or budget <= 0
+        or output <= 0
+        or budget <= output
+    ):
+        raise ProfileError(
+            f"Model profili geçersiz: {name} (bağlam bütçesi {budget}, en fazla çıktı {output} "
+            "token; bütçe çıktının üzerinde olmalı)"
+        )
+    return ModelProfile(
+        name=name,
+        base_url=raw["base_url"],
+        model=raw["model"],
+        api_key_env=raw.get("api_key_env"),
+        context_budget=budget,
+        max_output_tokens=output,
+        sampling=dict(raw.get("sampling") or {}),
+        enable_thinking=raw.get("enable_thinking", config.ENABLE_THINKING),
+        auto_full_max_tokens=raw.get("auto_full_max_tokens"),
+        description=raw.get("description") or "",
+    )
+
+
 class OpenAIClient:
     """OpenAI-compatible chat endpoint (Strata, vLLM, Unsloth Studio) with tool calling."""
 
@@ -69,11 +158,17 @@ class OpenAIClient:
         model: str | None = None,
         api_key: str | None = None,
         timeout_s: float | None = None,
+        max_tokens: int | None = None,
+        sampling: dict | None = None,
+        enable_thinking: bool | None = None,
     ) -> None:
         settings = config.llm_settings()
         self.base_url = base_url or settings.base_url
         self.model = model or settings.model
         self._timeout_s = timeout_s if timeout_s is not None else config.LLM_CALL_TIMEOUT_S
+        self._max_tokens = max_tokens
+        self._sampling = dict(sampling or {})
+        self._enable_thinking = enable_thinking
         self._sdk = OpenAI(
             base_url=self.base_url,
             api_key=api_key or settings.api_key,
@@ -84,12 +179,7 @@ class OpenAIClient:
         """One chat turn; raises LLMError instead of an openai exception on any failure."""
         started = time.perf_counter()
         try:
-            response = self._sdk.chat.completions.create(
-                model=self.model,
-                messages=list(messages),
-                tools=list(tools) if tools else None,
-                extra_body={"chat_template_kwargs": {"enable_thinking": config.ENABLE_THINKING}},
-            )
+            response = self._sdk.chat.completions.create(**self._request(messages, tools))
         except APIConnectionError as exc:
             raise LLMError(UNREACHABLE.format(url=self.base_url)) from exc
         except APIError as exc:
@@ -110,6 +200,49 @@ class OpenAIClient:
             completion_tokens=int(getattr(usage, "completion_tokens", 0) or 0),
             latency_ms=latency,
         )
+
+    def _request(self, messages: list[dict], tools: list[dict] | None) -> dict:
+        """The completion call's arguments; a profile's numbers join the plain request."""
+        kwargs: dict = {
+            "model": self.model,
+            "messages": list(messages),
+            "tools": list(tools) if tools else None,
+            "extra_body": {
+                "chat_template_kwargs": {
+                    "enable_thinking": (
+                        config.ENABLE_THINKING
+                        if self._enable_thinking is None
+                        else self._enable_thinking
+                    )
+                }
+            },
+        }
+        if self._max_tokens is not None:
+            kwargs["max_tokens"] = self._max_tokens
+        kwargs.update(self._sampling)
+        return kwargs
+
+
+def client_for(profile: ModelProfile) -> OpenAIClient:
+    """A client for one profile; the key is read from the environment here, not before."""
+    return OpenAIClient(
+        base_url=profile.base_url,
+        model=profile.model,
+        api_key=_api_key(profile.api_key_env),
+        max_tokens=profile.max_output_tokens,
+        sampling=profile.sampling,
+        enable_thinking=profile.enable_thinking,
+    )
+
+
+def _api_key(api_key_env: str | None) -> str:
+    """Local endpoints take any key; a profile that names a variable requires it to be set."""
+    if not api_key_env:
+        return config.DEFAULT_LLM_API_KEY
+    value = os.environ.get(api_key_env)
+    if not value or not value.strip():
+        raise LLMError(f"API anahtarı yok: {api_key_env} ortam değişkenini tanımlayın.")
+    return value.strip()
 
 
 def _tool_call(call) -> ToolCall:
