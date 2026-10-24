@@ -530,3 +530,140 @@ python -m nl2sql eval --compare --models strata --modes full_rules,rag --dataset
 Read the `compare_wwi_*.md` and `compare_synthetic_erp_*.md` reports side by side. A 27B that only
 survives in `rag` — `full_rules` overflowing at 16K while `rag` answers — is a **result to report, not
 a failure to hide**: it is the number that says what the customer-box model can carry.
+
+---
+
+# Run 5 — A Turkish web UI, and an answer that asks instead of guessing
+
+Run 5 puts a screen on the measurement. A user types a question and gets a short written answer, a
+chart when the data suits one, the result table, and the evidence behind it — or a clarification
+question when the question is genuinely ambiguous. The core rule from Run 1 holds: **the LLM writes
+SQL, words and clarification options — never a number that is not in the result.** Chart type and
+chart data are chosen by code; every execution still goes through the executor (policy, read-only,
+PII masking); nothing leaves the machine.
+
+## `serve` — the UI on your own machine
+
+```bash
+python -m nl2sql serve [--host 127.0.0.1] [--port 8777] [--llm openai|fake] [--dataset ...] [--model ...]
+```
+
+`serve` binds **`127.0.0.1` only** — single user, **no auth**. That is deliberate: this is a
+measurement tool run by one person on their own box, not a hosted service, so there is no login to
+build and nothing to leak to the network. The address is not a free choice either — a `--host`
+outside `127.0.0.1`/`localhost` is refused before anything starts listening, because a session that
+can already see a dataset must never be reachable from outside the machine. The startup line names
+which dataset, model and source are being served.
+
+`serve --llm fake` runs the whole UI on the golden SQL with **no model at all** — the demo and review
+path, so the screen can be opened and clicked through without Strata up.
+
+## Building the UI
+
+The frontend is React + Vite + ECharts in `web/`, built into `nl2sql/web/static` and served by
+FastAPI at `/`. There is no separate web server in production — `serve` serves the built files:
+
+```bash
+npm --prefix web install
+npm --prefix web run build          # -> nl2sql/web/static, served by `serve`
+npm --prefix web run dev            # dev server with hot reload, talks to a running `serve`
+```
+
+For the dev loop, run `python -m nl2sql serve --llm fake` and `npm --prefix web run dev` side by side:
+the Vite dev server proxies `/api` to the API, so you edit components without rebuilding.
+
+## What an answer shows
+
+Every part of the answer card is the **same payload** the API returns, so the screen and `ask --json`
+never disagree:
+
+- **Written answer** (`report/narrate.py`): the LLM gets the question, the column names, a few result
+  rows and a list of **facts computed by code** (totals, top item, share %, change vs the previous
+  period), and writes 1–3 sentences. A **number guard** then extracts every number in that text
+  (Turkish formats: `1.234,56`, `%12`, `12,5 bin`) and accepts it only if it equals a result cell or a
+  computed fact. A number that fails is retried once with the offenders named; if it still fails, a
+  **deterministic template sentence** is shown instead. A confident wrong number is never shown.
+- **Chart** (`report/chart.py`), chosen by code from the result shape — date + numeric → line, one
+  category + numeric and ≤ 20 rows → bar, a share question with ≤ 6 positive parts → pie, two numerics
+  → scatter only when asked, otherwise no chart. The LLM never picks the chart or its data.
+- **Warnings** (`engine/checks.py`), by code: empty result, an all-NULL column, a join whose row count
+  is far above its driving table (fan-out suspicion), a result truncated by `TOP`, masked columns.
+  Shown in amber; nothing is silently "fixed".
+- **"nasıl hesapladım"** (collapsible evidence): the SQL, `tables_used`, `rules_used`, the mode, the
+  masked columns and the timings — the same evidence the audit line carries.
+
+## Clarification instead of guessing
+
+When a business term is undefined, or two readings change the number ("satış" gross vs net of
+returns; cancelled invoices in or out), the agent may call `ask_clarification` instead of
+`submit_sql`. Both the CLI and the API return `needs_clarification` with the question and its
+options; the user's choice is sent back as a follow-up with the chosen reading, which is answered
+normally:
+
+```bash
+python -m nl2sql ask "Geçen ay satış ne kadar?" --choice "İadeler düşülmüş net"
+```
+
+The prompt only asks when the readings give **different numbers** — a term a business rule already
+defines is answered, not questioned.
+
+## `ask --json`
+
+```bash
+python -m nl2sql ask "..." --json
+```
+
+prints the **same payload as `POST /api/ask`** — status, answer text, chart, columns, rows, SQL,
+tables, rules, masked columns, warnings, timings — and nothing else on stdout, so the CLI and the web
+API are one code path, not two. The exit code is the status: `answered` and `needs_clarification` are
+success; anything else is non-zero.
+
+## Export: CSV and Excel
+
+The export buttons re-run the stored SQL through the executor (result rows are never stored) and
+stream the file. CSV is written **UTF-8 with a BOM and a `;` separator** so Turkish Excel opens it
+with the decimal comma intact; XLSX keeps numbers as number cells so a total can be re-summed. PII
+stays masked in both, because the mask is computed inside the executor before the file is built.
+
+## Saved questions and history
+
+Saved questions and the ask history live in a **local SQLite file, `data/bilgin.db`** — never in the
+analysed database — and every ask is appended to **`logs/asks.jsonl`**. Both hold the **question text
+and the SQL only, never result rows**: history is a list of what was asked, not a copy of the data.
+The sidebar re-asks a saved question or a history entry with one click.
+
+## Rules screen
+
+The rules screen lists, adds, edits and deletes the business rules, and a valid edit writes straight
+to the dataset's own **`datasets/<name>/rules.json`** (validated: id, name, synonyms, definition,
+`sql_hint`, tables; an invalid rule is rejected with a per-field message). Because these are demo
+files under git, **restore them with `git checkout -- datasets/<name>/rules.json`** after editing.
+
+Any rule change makes the retrieval index **stale** — its content hash no longer matches — and the UI
+shows an "İndeks eski" banner with an **"indeksi yeniden kur"** button (`POST /api/index/rebuild`),
+which rebuilds it and clears the banner. A stale index is never searched silently: like the CLI, the
+API refuses it rather than risk a table the index never had looking like a model error.
+
+## Eval additions
+
+```bash
+python -m nl2sql eval --ambiguous [--llm fake]     # adds the ambiguous set, prints the metrics block
+python -m nl2sql eval --narrate  [--llm fake]      # narrates each golden answer, counts the sources
+python -m nl2sql eval-retrieval --summaries on|off # recall@k with and without table summaries
+```
+
+`eval --ambiguous` runs the golden questions plus the dataset's ambiguous set and, besides accuracy,
+prints the metrics that describe *asking instead of guessing*: **Doğruluk**, **Cevaplanan %**,
+**Cevaplananlarda doğruluk**, **Yanlış cevap oranı**, **Netleştirme kesinliği** (precision) and
+**Netleştirme duyarlılığı** (recall). The scoring rule keeps the model honest: a clarification on a
+golden question counts as **not answered**, so asking too often lowers the score.
+
+`eval --narrate` runs each submitted golden answer back through the narrator and reports who wrote
+each sentence — `llm`, `llm_retry`, `şablon` — and the **template rate** (şablon oranı): how often the
+number guard rejected the LLM's text and fell back to the deterministic sentence. A high template
+rate is a signal the guard is doing real work, not a failure.
+
+`eval-retrieval --summaries on` adds one deterministic **table summary** document per table (its
+description, key columns, the rules that use it, its join neighbours) alongside the column documents,
+and reports recall@k with and without them. Whatever wins is kept; the eval is never tuned to
+manufacture a gain. The measured result on both datasets is recorded in **`eval/SUMMARIES.md`**.
