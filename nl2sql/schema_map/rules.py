@@ -8,6 +8,7 @@ taşır - retrieval'ın bir soruyu doğru kurala bağlaması bu kelimelerle olur
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from nl2sql import config
@@ -27,6 +28,22 @@ def load_rules(path: str | Path = config.RULES_PATH) -> list[dict]:
         for name in _LIST_FIELDS:
             rule.setdefault(name, [])
     return data["rules"]
+
+
+def matching_rules(rules: list[dict], sql: str) -> list[str]:
+    """Ids of the rules the SQL really carries: >= 1 marker and every marker hits, else never.
+
+    The same reading R2-11 tests - markers are regexes written against the SQL the rule's author
+    read, so whitespace collapses and case is ignored. A rule with no markers claims nothing,
+    because nothing ties its text to any query.
+    """
+    text = re.sub(r"\s+", " ", sql).strip()
+    return [
+        rule["id"]
+        for rule in rules
+        if rule.get("markers")
+        and all(re.search(marker, text, re.IGNORECASE) for marker in rule["markers"])
+    ]
 
 
 def rules_text(rules: list[dict]) -> str:
