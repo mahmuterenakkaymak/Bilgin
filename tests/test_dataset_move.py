@@ -114,9 +114,11 @@ def test_dataset_json_has_every_contract_key():
 
 def test_dataset_json_files_are_the_moved_files():
     files = dataset_doc()["files"]
-    assert set(files) == set(CONFIG_PATHS)
-    for name, filename in files.items():
-        assert CONFIG_PATHS[name] == config.ROOT / DATASET_DIR / filename, name
+    # "ambiguous" came with T187 (Run 5, R5-12): a new file, not a moved one, so it has no config constant.
+    # Updated 2026-10-24 with Eren's approval.
+    assert set(files) - {"ambiguous"} == set(CONFIG_PATHS)
+    for name, path in CONFIG_PATHS.items():
+        assert path == config.ROOT / DATASET_DIR / files[name], name
 
 
 def test_dataset_json_outputs_are_todays_paths():

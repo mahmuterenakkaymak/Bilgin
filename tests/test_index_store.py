@@ -45,7 +45,8 @@ def test_round_trip(tmp_path):
     assert index.vectors == VECTORS
     assert index.meta["content_hash"] == "abc"
     assert index.meta["embedder"] == "fake:256"
-    assert index.meta["counts"] == {"tables": 1, "rules": 1, "examples": 0}
+    # summaries key since T190; Updated 2026-10-24 with Eren's approval (R5-20 added the summaries collection).
+    assert index.meta["counts"] == {"tables": 1, "rules": 1, "summaries": 0, "examples": 0}
     assert index.meta["built_at"]
 
 

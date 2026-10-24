@@ -44,6 +44,7 @@ def test_fake_embedder_builds_the_index(tmp_path, capsys):
     assert meta["counts"] == {
         "tables": len(schema["tables"]),
         "rules": len(rules),
+        "summaries": len(schema["tables"]),  # one summary per table since T190; Updated 2026-10-24 with Eren's approval (R5-20 added the summaries collection).
         "examples": 0,
     }
 

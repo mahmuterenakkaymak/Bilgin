@@ -45,7 +45,9 @@ def test_run5_tunables_match_plan():
     assert config.NARRATE_MAX_ROWS == 20
     assert config.NUMBER_TOLERANCE_UNITS == 0.5
     assert config.CLARIFY_MAX_OPTIONS == 4
-    assert config.TABLE_SUMMARIES is False
+    # Was `is False` (the pre-measurement default). T192 set it by the R5-20 rule from measured recall
+    # (eval/SUMMARIES.md); tests/test_summaries_decision.py pins the value. Updated 2026-10-24 with Eren's approval.
+    assert isinstance(config.TABLE_SUMMARIES, bool)
     assert config.SUMMARY_KEY_COLUMNS == 8
 
 

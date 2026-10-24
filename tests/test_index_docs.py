@@ -31,7 +31,8 @@ def test_one_doc_per_table_and_rule():
 
 
 def test_examples_collection_exists_but_stays_empty():
-    assert COLLECTIONS == ("tables", "rules", "examples")
+    # summaries since T190; Updated 2026-10-24 with Eren's approval (R5-20 added the summaries collection).
+    assert COLLECTIONS == ("tables", "rules", "summaries", "examples")
     assert {doc.collection for doc in DOCS} == {"tables", "rules"}
 
 
