@@ -62,7 +62,7 @@ CHART_PIE_MAX_PARTS = 6
 NARRATE_MAX_ROWS = 20  # masked rows the narrator is shown
 NUMBER_TOLERANCE_UNITS = 0.5  # half a unit of the last shown decimal in the number guard
 CLARIFY_MAX_OPTIONS = 4  # upper bound of the mutually exclusive options
-TABLE_SUMMARIES = False  # R5-20: True only if measured recall@5 gains on both datasets
+TABLE_SUMMARIES = True  # R5-20: measured on both datasets, hybrid recall@5 gained (eval/SUMMARIES.md)
 SUMMARY_KEY_COLUMNS = 8  # key columns one table summary lists
 
 # ---------------------------------------------------------------- reference date

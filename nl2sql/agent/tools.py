@@ -319,7 +319,10 @@ def _search_schema(ctx, query: str) -> str:
     if ctx.search is None:
         return NO_SEARCH
     # R3-9: vuruşların join komşuları da cevaba girer; graphı olmayan bağlam genişletemez.
-    hits = expanded_hits(ctx.search, query, ctx.graph, ctx.schema, config.SEARCH_K)
+    # R5-20: taban sırayı sabit seçer - özetler ölçümde iki kümede de kazandı (eval/SUMMARIES.md).
+    hits = expanded_hits(
+        ctx.search, query, ctx.graph, ctx.schema, config.SEARCH_K, summaries=config.TABLE_SUMMARIES
+    )
     if not hits:
         return "Eşleşen tablo yok."
     tables = {table["name"]: table for table in ctx.schema.get("tables", [])}

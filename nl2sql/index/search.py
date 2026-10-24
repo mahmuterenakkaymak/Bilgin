@@ -213,6 +213,7 @@ def expanded_hits(
     k: int,
     expand: bool = config.NEIGHBOUR_EXPANSION,
     max_extra: int = config.NEIGHBOUR_MAX,
+    summaries: bool = False,
 ) -> list[Hit]:
     """R3-9: ilk k vuruşun join graphındaki 1 adımlık komşuları listenin sonuna eklenir.
 
@@ -220,8 +221,15 @@ def expanded_hits(
     cari hesabı da görmeli, yoksa ikinci bir aramayı onu tahmin etmekle harcıyor. Yalnız veri
     tabloları eklenir - bir dolgunun komşusu olmak onu ilginç kılmaz - ve her vuruş en fazla
     `max_extra` komşu getirir. `expand` kapalıyken sonuç tam olarak aramanın kendi listesidir.
+
+    `summaries` (R5-20) taban sırayı `search_tables`dan alır: tablo sırası tablo özetlerinin
+    sırasıyla kaynaşır. Kapalıyken aramanın kendi tablo araması okunur.
     """
-    hits = search.search(query, collection="tables", k=k)
+    hits = (
+        search.search_tables(query, k=k, summaries=True)
+        if summaries
+        else search.search(query, collection="tables", k=k)
+    )
     if not expand or graph is None or max_extra <= 0:
         return hits
     known = {hit.title for hit in hits}
