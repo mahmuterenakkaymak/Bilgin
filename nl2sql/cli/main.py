@@ -1679,6 +1679,10 @@ def serve(
     Oturumun kurulmuş olması adresin serbest olduğu anlamına gelmez: hangi veriyi gördüğü belli
     olan bir oturum, dinlemeye başlamadan önce reddedilir. Açılış satırı hangi dünyanın hangi
     modelle ve hangi kaynakla sunulduğunu söyler - ekranın kendisi henüz açılmamıştır.
+
+    Küme söylenmediğinde sunulan dünya adıyla da söylenir (`--ambiguous`ın yaptığı gibi): çipin
+    adı başka sunulan başka olmasın - belirsiz sorular, altın kayıt, ``as_of`` ve indeks kümden
+    gelir, yani küme tanınmadan sahte istemci R5-11'in kartını hiç açmaz.
     """
     # R5-1: web ve app içe yalnız burada girilir; cli'yi çağıran katmanlar döngü kurmasın.
     from nl2sql.app.session import SessionError, open_session
@@ -1687,7 +1691,7 @@ def serve(
     _utf8_stdout()
     try:
         session = open_session(
-            dataset=dataset,
+            dataset=dataset or config.DEFAULT_DATASET,
             model=model,
             llm=llm_kind,
             models_file=models_file,
