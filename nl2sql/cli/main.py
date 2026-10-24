@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sqlite3
 import sys
@@ -25,7 +26,15 @@ from openpyxl.utils.exceptions import InvalidFileException
 
 from nl2sql import config, datasets
 from nl2sql.agent import fake, prompt
-from nl2sql.agent.llm import ChatResponse, OpenAIClient
+from nl2sql.agent.llm import (
+    ChatResponse,
+    LLMError,
+    ModelProfile,
+    OpenAIClient,
+    ProfileError,
+    client_for,
+    get_profile,
+)
 from nl2sql.agent.loop import AgentRun, Step, run_agent
 from nl2sql.agent.modes import MODES, ToolContext, get_mode
 from nl2sql.cli.table import format_table
@@ -101,9 +110,15 @@ REPEAT_LINE = "Tekrar: her mod {repeat} kez koşuluyor (gürültü ölçümü)"
 BAD_REPEAT = "--repeat en az 1 olmalı."
 NO_INDEX_NOTE = "İndeks yok/eski; full modda çalışılıyor."
 # R3-10: auto modun çözümü ekrana hem seçilen modu hem onu doğuran bağlam tahmini yazılır; eval
-# auto'yu kabul etmez, çünkü bir A/B ölçümünün hangi kolu ölçtüğü baştan belli olmalı.
-AUTO_LINE = "Mod: auto -> {mode} (bağlam tahmini {tokens} token)"
+# auto'yu kabul etmez, çünkü bir A/B ölçümünün hangi kolu ölçtüğü baştan belli olmalı. R4-12: eşiği
+# profilin penceresi belirlediği için --model ile o eşik de satıra girer; söylenmediğinde config'in
+# sabitidir, yani satır Run 3'te nasıl basılıyorsa öyledir.
+AUTO_LINE = "Mod: auto -> {mode} (bağlam tahmini {tokens} token{budget})"
+AUTO_BUDGET = " · bütçe {budget}"
 EVAL_NO_AUTO = "eval auto modu kabul etmez; modu açıkça seçin: full, full_rules, rag."
+# R4-10/R4-14: --model hangi uç noktayla ve hangi pencereyle koşulduğunu ilk satırda söyler; bütçe
+# pencerenin kendisidir, yani cevabın payı henüz düşülmemiş hali.
+MODEL_LINE = "Model: {name} ({model}, bütçe {budget} token)"
 
 ENV_URL = "NL2SQL_LLM_BASE_URL"
 EMBED_ENV_URL = "NL2SQL_EMBED_BASE_URL"
@@ -324,6 +339,7 @@ def ask(
     dataset: str | None = None,
     dataset_line: bool = True,
     budget: int | None = None,
+    profile: ModelProfile | None = None,
 ) -> int:
     """Bir soru: modunu söyle, adımları işaretle ve gecikmesiyle dök, gönderilen SQL'i ve tabloyu göster.
 
@@ -344,6 +360,10 @@ def ask(
     ``budget`` tur başına istem bütçesidir (R4-11): döngü ona sığmayan cevabı kısaltır, kısaltma da
     yetmezse modele hiç gitmeden durur ve ekran hangi cevabın kısaltıldığını ya da cevabın neden
     hiç gelmediğini söyler.
+
+    ``profile`` ``--model``in profilidir (R4-10): ekran hangi modelle ve hangi pencereyle koşulduğunu
+    ilk satırlarda söyler, bütçe söylenmediyse profilin penceresinden gelir ve auto'nun eşiği de o
+    pencereye göre kurulur. Verilmediğinde koşum Run 3'ün halidir: config'in ucu, bütçe yok.
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
@@ -351,6 +371,9 @@ def ask(
         return code
     if dataset_line:
         _dataset_line(ds)
+    if profile:
+        print(_model_line(profile))
+    budget = _or(budget, profile.prompt_limit if profile else None)
     db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
     index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
     if _db_missing(db_path):
@@ -365,6 +388,7 @@ def ask(
                 index_dir,
                 ds.as_of if ds else config.AS_OF,
                 ds.name if ds else None,
+                max_tokens=_auto_limit(profile),
             )
         except ForeignIndexError as exc:
             # R4-8: başka dünyanın vektörleri düşülecek bir indeks değil, reddedilecek biridir.
@@ -379,14 +403,22 @@ def ask(
         context = _context(mode, executor, schema, rules, index_dir, ds)
     except (MissingIndexError, StaleIndexError) as exc:
         return _index_failed(str(exc))
+    # Bütçe yalnız verildiğinde geçirilir (R4-11: ``budget=None`` = Run 3'ün koşumu olduğu gibi).
     run = run_agent(
-        question, llm, executor, schema, AUDIT_SOURCE, mode=mode, context=context, budget=budget
+        question,
+        llm,
+        executor,
+        schema,
+        AUDIT_SOURCE,
+        mode=mode,
+        context=context,
+        **_given(budget=budget),
     )
 
     if estimate is None:
         print(f"Mod: {mode}")
     else:
-        print(AUTO_LINE.format(mode=mode, tokens=_tokens(estimate)))
+        print(_auto_line(mode, estimate, _auto_limit(profile)))
     print(f"Soru: {question}\n")
     if run.steps:  # daha ilk turda düşen bir uç noktanın gösterecek adımı yok
         print("Adımlar:")
@@ -426,6 +458,8 @@ def evaluate(
     index_dir: str | Path | None = None,
     schema_path: str | Path | None = None,
     dataset: str | None = None,
+    budget: int | None = None,
+    profile: ModelProfile | None = None,
 ) -> int:
     """Altın soruları bir modda koşar, her soru biter bitmez tek satır dökerek (Delight 4)
     ilerler, raporu ``out_dir`` altına yazar (CLI ona ``eval_out/<mode>`` verir, R2-12), skoru söyler; koşu tamamlandıysa kod 0'dır.
@@ -443,12 +477,18 @@ def evaluate(
 
     ``dataset`` verildiğinde altın sorular, kurallar, profil, veritabanı, indeks, rapor klasörü ve
     referans tarihi o kümenin tanımıdır (R4-4); açıkça verilen her yol onun önüne geçer.
+
+    ``profile`` ``--model``in profilidir (R4-10): bütçe söylenmediyse tur başına istem bütçesi onun
+    penceresinden gelir, rapor hangi modelle ve hangi pencereyle ölçtüğünü ondan yazar, imzaya da
+    bütçe yalnız o zaman girer. ``budget`` açıkça verildiğinde o kazanır; ikisi de yoksa Run 3'ün
+    koşumu olduğu gibi kalır - bütçesiz ve imzası Run 3'ün anahtarlarıyla.
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
     if code:
         return code
     _dataset_line(ds)
+    budget = _or(budget, profile.prompt_limit if profile else None)
     db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
     index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
     out_dir = _or(out_dir, ds.eval_out if ds else None, config.EVAL_OUT)
@@ -487,13 +527,13 @@ def evaluate(
         tags=tags,
         context=context,
         on_progress=lambda result: print(runner.progress_line(result)),
+        budget=budget,
     )
     if results and all(result.outcome == "llm_error" for result in results):
         print(f"Uç nokta {len(results)} sorunun hiçbirini yanıtlamadı; rapor yazılmadı.\n")
         return _llm_failed(results[0].reason)
     passed = sum(1 for result in results if result.outcome == "pass")
-    kind = "fake" if isinstance(llm, fake.FakeLLM) else "openai"
-    model = "fake" if kind == "fake" else config.llm_settings().model
+    kind, model = _client_kind(llm, profile)
     name = ds.name if ds else config.DEFAULT_DATASET
     run_dir = report.write_report(
         results,
@@ -503,11 +543,14 @@ def evaluate(
             "backend": config.backend(),
             "llm": model,
             "embedder": _embedder_id(mode, index_dir),
-            "fingerprint": _fingerprint(mode, kind, model, lines, results, schema, rules, name),
+            "fingerprint": _fingerprint(
+                mode, kind, model, lines, results, schema, rules, name, budget
+            ),
         },
         mode=mode,
         schema_info=info,
         dataset=name,
+        profile=_profile_block(profile),
     )
     print(f"Skor: {passed}/{len(results)}")
     print(f"Rapor: {run_dir / 'report.md'}")
@@ -524,6 +567,7 @@ def compare_modes(
     schema_path: str | Path | None = None,
     repeat: int = 1,
     dataset: str | None = None,
+    profile: ModelProfile | None = None,
 ) -> int:
     """Üç modu aynı sorularda koşar, tek karşılaştırma raporu yazar, mod başına tek satır söyler.
 
@@ -543,12 +587,16 @@ def compare_modes(
 
     ``dataset`` ``evaluate``ınkiyle aynı anlamı taşır (R4-4): üç mod da o kümenin sorularını,
     şemasını, kurallarını, veritabanını, indeksini ve rapor klasörünü kullanır.
+
+    ``profile`` ``evaluate``ınkiyle aynı anlamı taşır (R4-10): üç mod da o pencerenin bütçesiyle
+    koşar, yani bir kolun ``latest``i ancak aynı bütçeyle ölçüldüyse yeniden kullanılır.
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
     if code:
         return code
     _dataset_line(ds)
+    budget = profile.prompt_limit if profile else None
     db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
     index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
     out_dir = _or(out_dir, ds.eval_out if ds else None, config.EVAL_OUT)
@@ -567,9 +615,9 @@ def compare_modes(
         db_path=db_path, allowlist=doc.allowlist(schema), audit_path=audit_path, pii_schema=schema
     )
     clients = {mode: llm_factory(mode) for mode in config.MODES}
-    kind, model = _client_kind(clients[config.MODES[0]])
+    kind, model = _client_kind(clients[config.MODES[0]], profile)
     fingerprints = {
-        mode: _mode_fingerprint(mode, kind, model, lines, schema, rules, name)
+        mode: _mode_fingerprint(mode, kind, model, lines, schema, rules, name, budget)
         for mode in config.MODES
     }
     spaces = {mode: _embedder_id(mode, index_dir) for mode in config.MODES}
@@ -611,6 +659,7 @@ def compare_modes(
                 schema=schema,
                 mode=mode,
                 context=context,
+                budget=budget,
             )
             if results and all(result.outcome == "llm_error" for result in results):
                 print(f"Uç nokta {len(results)} sorunun hiçbirini yanıtlamadı; rapor yazılmadı.\n")
@@ -628,6 +677,7 @@ def compare_modes(
                 mode=mode,
                 schema_info=info,
                 dataset=name,
+                profile=_profile_block(profile),
             )
             runs.append(_mode_report(out_dir, mode))
         reports[mode] = runs
@@ -864,12 +914,16 @@ def make_login_script(
     return 0
 
 
-def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE, dataset=None):
+def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE, dataset=None, profile=None):
     """``--llm`` değerini istemciye çevirir: fake altın kaydı oynatır, openai config'teki endpoint'e gider.
 
     Sahte istemci oynatacağı kaydı moddan alır: ``rag`` aramadan geçerek, diğerleri şemadan.
     ``dataset`` verildiğinde kayıtlar o kümenin altın sorularıdır ve eşleşmeyen bir sorunun
     cevabı da kümenin kendi sorgusudur (R4-4) - başka bir kümenin tablosunu uydurmasın.
+
+    ``profile`` ``--model``in profilidir (R4-10): openai istemcisi onun uç noktasından, model
+    adından ve anahtar değişkeninden kurulur; anahtar tanımsızsa ``LLMError`` burada yükseltir.
+    Sahte istemci profil tanımaz - oynatacağı kayıt hangisinin olduğuyla değişmez, bütçe değişir.
     """
     if kind == "fake":
         return fake.for_golden(
@@ -877,6 +931,8 @@ def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE, dataset=None):
             dataset.fake_fallback_sql if dataset else fake.FALLBACK_SQL,
             mode=mode,
         )
+    if profile is not None:
+        return client_for(profile)
     settings = config.llm_settings()
     return OpenAIClient(settings.base_url, settings.model, settings.api_key)
 
@@ -899,6 +955,25 @@ def _add_dataset_option(command: argparse.ArgumentParser) -> None:
         "--dataset",
         metavar="AD",
         help=f"veri kümesi adı (varsayılan: {config.DEFAULT_DATASET})",
+    )
+
+
+def _add_model_options(command: argparse.ArgumentParser) -> None:
+    """``--model`` bir profil seçer (R4-10): uç nokta, model adı, anahtar değişkeni ve pencere.
+
+    Söylenmediğinde koşum Run 3'ün halidir - ``NL2SQL_LLM_*`` ile kurulan uç nokta, bütçe yok.
+    ``--models-file`` aynı profilin başka bir dosyadan okunmasıdır; testler kendi tmp dosyasını
+    verir, böylece gerçek ``config/models.json``a ve içindeki anahtar değişkenlerine dokunulmaz.
+    """
+    command.add_argument(
+        "--model",
+        metavar="PROFIL",
+        help=f"config/models.json profili (varsayılan: {config.llm_settings().base_url})",
+    )
+    command.add_argument(
+        "--models-file",
+        metavar="DOSYA.json",
+        help=f"--model için profil dosyası (varsayılan {config.MODELS_PATH})",
     )
 
 
@@ -954,6 +1029,21 @@ def _dataset_line(ds: datasets.Dataset | None) -> None:
     """Kümeyi kendisi seçen komut hangi dünyayla çalıştığını ilk satırda söyler (R4-14)."""
     if ds:
         print(DATASET_LINE.format(display_name=ds.display_name, name=ds.name))
+
+
+def _profile_arg(args) -> tuple[ModelProfile | None, int]:
+    """``--model`` profili ``--models-file``dan okunur; ad söylenmediyse ``(None, 0)``, yani Run 3'ün ucu.
+
+    Bilinmeyen ad, okunamayan dosya ya da içinde boşluk bırakmayan profil kullanıcının kendi
+    düzelteceği bir eksikliktir (Delight 3): cümleyi ``llm`` kurar, bilinenleri de sayarak.
+    """
+    if not args.model:
+        return None, 0
+    try:
+        return get_profile(args.model, args.models_file), 0
+    except ProfileError as exc:
+        print(exc)
+        return None, EXIT_BAD_INPUT
 
 
 def _auto_inputs(ds: datasets.Dataset | None) -> tuple:
@@ -1095,6 +1185,7 @@ def main(argv: list[str] | None = None) -> int:
         default="auto",
         help="bağlam modu (varsayılan %(default)s)",
     )
+    _add_model_options(ask_cmd)
     _add_dataset_option(ask_cmd)
 
     eval_cmd = commands.add_parser("eval", help="altın soruları koşar ve raporu yazar")
@@ -1137,6 +1228,7 @@ def main(argv: list[str] | None = None) -> int:
         metavar="DOSYA|full|skeleton",
         help="ölçümün şeması: tam ad ya da yol (varsayılan %(default)s)",
     )
+    _add_model_options(eval_cmd)
     _add_dataset_option(eval_cmd)
 
     args = parser.parse_args(argv)
@@ -1172,6 +1264,9 @@ def main(argv: list[str] | None = None) -> int:
         ds, code = _dataset(args.dataset)
         if code:
             return code
+        profile, code = _profile_arg(args)
+        if code:
+            return code
         # R4-14: küme satırı her halükarda ilk satırdır; auto çözümü NO_INDEX_NOTE basabildiği için
         # buraya alındı ve ask() kendisinin basmadığını ``dataset_line`` ile öğreniyor.
         _dataset_line(ds)
@@ -1181,44 +1276,58 @@ def main(argv: list[str] | None = None) -> int:
         mode, estimate = args.mode, None
         try:
             if mode == "auto":
-                mode, estimate = resolve_auto(*_auto_inputs(ds))
+                mode, estimate = resolve_auto(
+                    *_auto_inputs(ds), max_tokens=_auto_limit(profile)
+                )
             return ask(
                 question=args.question,
-                llm=make_client(args.llm, mode, ds),
+                llm=make_client(args.llm, mode, ds, profile),
                 mode=mode,
                 estimate=estimate,
                 dataset_line=False,
-                **_given(dataset=args.dataset),
+                **_given(dataset=args.dataset, profile=profile),
             )
         except ForeignIndexError as exc:
             # R4-8: yabancı bir indeksin çözümü full'a düşmek değil, kendi kümesini kurmaktır.
             return _index_failed(str(exc))
+        except LLMError as exc:
+            # R4-10: profilin gösterdiği anahtar değişkeni tanımsıysa koşacak bir uç nokta yoktur;
+            # düzeltmesi kullanıcının elinde olduğu için iz dökümü değil tek satır ve kod 2.
+            print(exc)
+            return EXIT_BAD_INPUT
     if args.mode == "auto":
         print(EVAL_NO_AUTO)
         return EXIT_BAD_INPUT
     ds, code = _dataset(args.dataset)
     if code:
         return code
+    profile, code = _profile_arg(args)
+    if code:
+        return code
     # ``--schema`` söylenmediyse küme kendi şemasını ölçer; ``full`` onun önüne geçmez (R4-4).
     schema = None if args.dataset and args.schema == FULL_SCHEMA else args.schema
-    if args.compare:
-        if args.repeat < 1:
-            print(BAD_REPEAT)
-            return EXIT_BAD_INPUT
-        return compare_modes(
-            lambda mode: make_client(args.llm, mode, ds),
-            fresh=args.fresh,
-            repeat=args.repeat,
-            **_given(schema_path=schema, dataset=args.dataset),
+    try:
+        if args.compare:
+            if args.repeat < 1:
+                print(BAD_REPEAT)
+                return EXIT_BAD_INPUT
+            return compare_modes(
+                lambda mode: make_client(args.llm, mode, ds, profile),
+                fresh=args.fresh,
+                repeat=args.repeat,
+                **_given(schema_path=schema, dataset=args.dataset, profile=profile),
+            )
+        return evaluate(
+            llm=make_client(args.llm, args.mode, ds, profile),
+            only=args.only,
+            tags=args.tag,
+            mode=args.mode,
+            out_dir=_eval_out(ds, args.mode),
+            **_given(schema_path=schema, dataset=args.dataset, profile=profile),
         )
-    return evaluate(
-        llm=make_client(args.llm, args.mode, ds),
-        only=args.only,
-        tags=args.tag,
-        mode=args.mode,
-        out_dir=_eval_out(ds, args.mode),
-        **_given(schema_path=schema, dataset=args.dataset),
-    )
+    except LLMError as exc:
+        print(exc)
+        return EXIT_BAD_INPUT
 
 
 def _step_lines(step: Step) -> list[str]:
@@ -1409,6 +1518,7 @@ def resolve_auto(
     index_dir: str | Path = config.INDEX_DIR,
     as_of: str = config.AS_OF,
     dataset: str | None = None,
+    max_tokens: int | None = None,
 ) -> tuple[str, int]:
     """``--mode auto``nun çözümü (R3-10): tam kurallı istem bütçeye sığıyorsa full_rules, sığmıyorsa rag.
 
@@ -1419,9 +1529,13 @@ def resolve_auto(
     bulunur, yani o da aynı tarihle kurulur. ``dataset`` verildiğinde indeks de o kümenin indeksiyle
     denetlenir (R4-8): başka bir dünyanın vektörleri düşülecek bir indeks değildir, yani full'a
     düşülmez, cümlesiyle reddedilir.
+
+    ``max_tokens`` eşiğin kendisidir (R4-12): ``--model`` profilin penceresinden gelir. Verilmediğinde
+    config'in sabiti çağrı anında okunur - bir testin onu oynatması da, Run 3'ün davranışı da budur.
     """
+    limit = config.AUTO_FULL_MAX_TOKENS if max_tokens is None else max_tokens
     estimate = doc.estimate_tokens(prompt.full_rules_prompt(as_of, schema, rules))
-    if estimate <= config.AUTO_FULL_MAX_TOKENS:
+    if estimate <= limit:
         return "full_rules", estimate
     try:
         load_search(index_dir, schema, rules, dataset)
@@ -1434,7 +1548,8 @@ def resolve_auto(
 
 
 def _fingerprint(
-    mode: str, kind: str, model: str, lines: list[dict], results, schema, rules, dataset=None
+    mode: str, kind: str, model: str, lines: list[dict], results, schema, rules, dataset=None,
+    budget=None,
 ) -> dict:
     """Koşunun neyi ölçtüğünün imzası (R2-12); iki koşu ancak eşitse birbirinin devamı sayılır.
 
@@ -1443,7 +1558,14 @@ def _fingerprint(
     """
     ran = {result.id for result in results}
     return _mode_fingerprint(
-        mode, kind, model, [line for line in lines if line["id"] in ran], schema, rules, dataset
+        mode,
+        kind,
+        model,
+        [line for line in lines if line["id"] in ran],
+        schema,
+        rules,
+        dataset,
+        budget,
     )
 
 
@@ -1455,8 +1577,13 @@ def _mode_fingerprint(
     schema: dict,
     rules: list[dict],
     dataset: str | None = None,
+    budget: int | None = None,
 ) -> dict:
-    """İmza koşu öncesi de kurulabilir: compare bir modun ``latest``ini ancak bu imza eşitse yeniden koşar."""
+    """İmza koşu öncesi de kurulabilir: compare bir modun ``latest``ini ancak bu imza eşitse yeniden koşar.
+
+    ``budget`` yalnız ``--model`` verildiğinde yazılır (R4-10): aynı model 16K ile de 256K ile de
+    ölçülebilir ve ikisi birbirinin devamı değildir.
+    """
     return report.fingerprint(
         mode=mode,
         llm=kind,
@@ -1467,6 +1594,7 @@ def _mode_fingerprint(
         index_hash=content_hash(schema, rules) if mode == "rag" else "",
         max_tool_calls=get_mode(mode).max_tool_calls,
         dataset=dataset,
+        budget=budget,
     )
 
 
@@ -1494,11 +1622,60 @@ def _index_embedder(index_dir: str | Path) -> str:
     return str(meta.get("embedder") or "")
 
 
-def _client_kind(llm) -> tuple[str, str]:
-    """İstemcinin adı ve raporun model hanesi: fake kendinin adını, openai config'teki modeli taşır."""
+def _client_kind(llm, profile: ModelProfile | None = None) -> tuple[str, str]:
+    """İstemcinin adı ve raporun model hanesi: fake kendinin adını, openai config'teki modeli taşır.
+
+    ``--model`` verildiğinde hane profilin model idsidir (R4-10): koşum başka bir uç noktada
+    yapılmışken config'in modelini yazmak raporu yanlış ölçmüş olurdu.
+    """
     if isinstance(llm, fake.FakeLLM):
         return "fake", "fake"
-    return "openai", config.llm_settings().model
+    return "openai", profile.model if profile else config.llm_settings().model
+
+
+def _profile_block(profile: ModelProfile | None) -> dict | None:
+    """report.json'ın ``profile`` bloğu (R4-14): koşunun hangi uç noktayla hangi pencerede ölçüldüğü."""
+    if profile is None:
+        return None
+    return {
+        "name": profile.name,
+        "model": profile.model,
+        "context_budget": profile.context_budget,
+        "max_output_tokens": profile.max_output_tokens,
+    }
+
+
+def _model_line(profile: ModelProfile) -> str:
+    """``ask``ın hangi modelle koştuğunu söyleyen satırı (R4-14); bütçe pencerenin kendisidir."""
+    return MODEL_LINE.format(
+        name=profile.name,
+        model=profile.model,
+        budget=_grouped(profile.context_budget),
+    )
+
+
+def _auto_line(mode: str, estimate: int, limit: int | None) -> str:
+    """auto çözümü: tahmin her halükarda söylenir, eşik yalnız ``--model`` ile bilinir (R4-12)."""
+    budget = AUTO_BUDGET.format(budget=_grouped(limit)) if limit is not None else ""
+    return AUTO_LINE.format(mode=mode, tokens=_tokens(estimate), budget=budget)
+
+
+def _auto_limit(profile: ModelProfile | None) -> int | None:
+    """auto'nun eşiği profilin penceresinden gelir (R4-12): ya profil kendisi söyler ya yarısı.
+
+    Yarının sebebi araç turları: full_rules istemi sığsa bile sonraki turlar ona eklenir. Profil
+    söylenmediğinde ``None`` döner ve eşik ``resolve_auto``da config'in sabitidir.
+    """
+    if profile is None:
+        return None
+    if profile.auto_full_max_tokens:
+        return profile.auto_full_max_tokens
+    return math.floor(profile.context_budget * config.AUTO_FULL_SHARE)
+
+
+def _grouped(value: int) -> str:
+    """Token sayısı Türkçede binlik ayıracıyla okunur: 16384 -> 16.384."""
+    return f"{value:,d}".replace(",", ".")
 
 
 def _mode_report(out_dir: str | Path, mode: str) -> dict | None:

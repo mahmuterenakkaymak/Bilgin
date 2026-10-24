@@ -39,6 +39,7 @@ def write_report(
     mode: str = "full",
     schema_info: dict | None = None,
     dataset: str = config.DEFAULT_DATASET,
+    profile: dict | None = None,
 ) -> Path:
     """Write ``<out_dir>/<timestamp>/report.json`` + ``report.md``, copy them to ``<out_dir>/latest``.
 
@@ -50,12 +51,13 @@ def write_report(
     ``schema_info`` (``schema_info()`` below) is what the run was measured against; a caller that
     does not name one leaves the field out rather than writing an empty schema nobody loaded.
     ``dataset`` names the world the run measured (PLAN R4-4), so two datasets' reports never read
-    as each other's continuation.
+    as each other's continuation. ``profile`` is the model profile the run was measured with
+    (PLAN R4-14) - the same rule as ``schema_info``: no profile, no field.
     """
     stamp = datetime.now()
     out = Path(out_dir)
     previous = _load(out / "latest" / REPORT_FILES[0])
-    report = _report(results, model, config, stamp, previous, mode, schema_info, dataset)
+    report = _report(results, model, config, stamp, previous, mode, schema_info, dataset, profile)
     run_dir = out / stamp.strftime(STAMP)
     _write(run_dir, report)
     _write(out / "latest", report)
@@ -72,6 +74,7 @@ def fingerprint(
     index_hash: str,
     max_tool_calls: int,
     dataset: str | None = None,
+    budget: int | None = None,
 ) -> dict:
     """Bir koşunun neyi ölçtüğünün imzası: iki koşun farkı ancak imzaları eşitse kıyaslanabilir.
 
@@ -80,6 +83,8 @@ def fingerprint(
     aittir, diğer modlar boş verir. ``dataset`` yalnız varsayılanın adı değilse yazılır (R4-4):
     iki kümenin imzaları birbirine karışmasın, ama varsayılanla ölçmüş Run 3 koşuları kendi
     imzalarını korusun, yoksa diskteki ``latest``leri bir daha hiç yeniden kullanılamazdı.
+    ``budget`` de aynı kuraldadır (R4-10): yalnız ``--model`` bir bütçe verdiğinde yazılır, çünkü
+    aynı model iki farklı pencerede iki farklı ölçümdür.
     """
     lines = list(golden)
     return {
@@ -103,6 +108,7 @@ def fingerprint(
         "index_hash": index_hash,
         "max_tool_calls": max_tool_calls,
         **({"dataset": dataset} if dataset and dataset != config.DEFAULT_DATASET else {}),
+        **({"budget": budget} if budget is not None else {}),
     }
 
 
@@ -139,6 +145,7 @@ def _report(
     mode: str = "full",
     schema_info: dict | None = None,
     dataset: str = config.DEFAULT_DATASET,
+    profile: dict | None = None,
 ) -> dict:
     passed = sum(1 for result in results if result.outcome == "pass")
     peaks = [result.max_prompt_tokens for result in results]
@@ -154,6 +161,7 @@ def _report(
         "model": model,
         "mode": mode,
         "dataset": dataset,
+        **({"profile": profile} if profile else {}),
         **({"schema": schema_info} if schema_info else {}),
         "config": dict(settings or {}),
         "score": {"passed": passed, "total": len(results)},
@@ -246,6 +254,8 @@ def _markdown(report: dict) -> str:
         f"- Model: `{report['model'] or '-'}`",
         f"- Mod: {report['mode']}",
     ]
+    if report.get("profile"):
+        lines.append(f"- {_profile_note(report)}")
     if report.get("schema"):
         lines.append(f"- Şema: {_schema_note(report['schema'])}")
     if report["config"]:
@@ -330,6 +340,21 @@ def _shared_note(previous: dict, score: dict) -> str:
     if shared == previous["score"]["total"] and shared == score["total"]:
         return ""
     return f" — {shared} ortak soru üzerinden"
+
+
+def _profile_note(report: dict) -> str:
+    """Model profilinin satırı (R4-14): hangi pencereyle ölçüldüğü ve o bütçenin iki sayısı.
+
+    Sayılar ``context``ten gelir; bütçe hiç aşmadıysa ikisi de 0'dır ve satır yine de okuyana
+    koşunun hangi window ile ölçüldüğünü söyler.
+    """
+    profile, context = report["profile"], report["context"]
+    return (
+        f"Model profili: {profile.get('name') or '-'}"
+        f" · bütçe {profile.get('context_budget') or 0}"
+        f" · tepe tahmin {context.get('peak_estimate') or 0}"
+        f" · taşma {context.get('overflows') or 0}"
+    )
 
 
 def _schema_note(info: dict) -> str:
