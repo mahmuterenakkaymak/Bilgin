@@ -86,6 +86,10 @@ BAD_EMBED = (
 )
 
 AUDIT_SOURCE = "ask"
+# R5-14: ``ask --json`` soruyu web ile aynı kapıdan koşar; günlük ve denetim satırları bu ada
+# bağlanır, çıkış kodu ise durumun adıdır — anlatı gelen cevaplar da başarılıdır.
+JSON_SOURCE = "cli"
+JSON_OK = ("answered", "needs_clarification")
 PROSE = "yanıt"
 SQL_TOOLS = ("run_sql", "submit_sql")
 NO_ANSWER = "Cevap gönderilmedi: {}"
@@ -1308,6 +1312,11 @@ def main(argv: list[str] | None = None) -> int:
         default="auto",
         help="bağlam modu (varsayılan %(default)s)",
     )
+    ask_cmd.add_argument(
+        "--json",
+        action="store_true",
+        help="yalnız cevabın JSON'unu yazdır (web API ile aynı tek kapı)",
+    )
     _add_model_options(ask_cmd)
     _add_dataset_option(ask_cmd)
 
@@ -1394,6 +1403,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "make-login-script":
         return make_login_script(login=args.login, **_given(dataset=args.dataset))
     if args.command == "ask":
+        if args.json:
+            return _ask_json(args)
         ds, code = _dataset(args.dataset)
         if code:
             return code
@@ -1477,6 +1488,36 @@ def main(argv: list[str] | None = None) -> int:
     except LLMError as exc:
         print(exc)
         return EXIT_BAD_INPUT
+
+
+def _ask_json(args) -> int:
+    """``ask --json``: ekranın yerini AskPayload alır (R5-14); stdout'da yalnız JSON durur.
+
+    Oturum ``open_session``dan geçer, yani eksik veritabanı, bilinmeyen küme ya da profil ve eksik
+    anahtar cümlesini ve kodunu oradan alır; ne küme satırı ne mod satırı basılır, auto'nun düşüş
+    notu payload'ın ``notes``unda kalır. Yollar çağrı anında config'den okunur, yani test kendi tmp
+    yolunu monkeypatch edebilir (``open_session``ın varsayılanları import'da bağlanıyor).
+    """
+    # R5-1: ``ask --json`` ile ``POST /api/ask`` aynı kapı; nl2sql.app içe yalnız burada girilir.
+    from nl2sql.app.ask import ask_payload
+    from nl2sql.app.session import SessionError, open_session
+
+    _utf8_stdout()
+    try:
+        session = open_session(
+            dataset=args.dataset,
+            model=args.model,
+            llm=args.llm,
+            models_file=args.models_file,
+            audit_path=config.AUDIT_LOG,
+            ask_log=config.ASK_LOG,
+        )
+    except SessionError as exc:
+        print(exc)
+        return exc.exit_code
+    payload = ask_payload(session, args.question, mode=args.mode, source=JSON_SOURCE)
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0 if payload["status"] in JSON_OK else 1
 
 
 def _step_lines(step: Step) -> list[str]:
