@@ -1,4 +1,5 @@
 import { useEffect, useReducer, useState } from "react";
+import AnswerCard from "./components/AnswerCard.jsx";
 import AskBox from "./components/AskBox.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import ErrorCard from "./components/ErrorCard.jsx";
@@ -30,8 +31,8 @@ function chipText(health) {
   return [health.dataset?.display_name, health.llm?.model].filter(Boolean).join(" · ");
 }
 
-// Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Cevap kartı ve netleştirme kartı
-// sonraki görevlerin; burada boş, bekleyen ve hata yuvaları durur.
+// Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Netleştirme kartı sonraki
+// görevin; burada boş, bekleyen, cevap ve hata yuvaları durur.
 function AskScreen() {
   const [state, dispatch] = useReducer(askReducer, initialState);
   const [text, setText] = useState("");
@@ -86,6 +87,7 @@ function AskScreen() {
       />
       {state.status === "idle" && <EmptyState examples={examples} onSelect={ask} />}
       {loading && <LoadingSteps />}
+      {state.status === "answered" && <AnswerCard payload={state.payload} />}
       {failed && <ErrorCard kind={state.error?.kind} message={state.error?.message} onRebuild={api.rebuild} />}
     </section>
   );

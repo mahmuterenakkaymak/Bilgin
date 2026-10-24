@@ -1,0 +1,74 @@
+import { useState } from "react";
+import * as api from "../lib/api.js";
+import { formatSeconds } from "../lib/format.js";
+import Evidence from "./Evidence.jsx";
+import ResultTable from "./ResultTable.jsx";
+import Warnings from "./Warnings.jsx";
+
+// Cevap kartı: aynı AskPayload'ın her parçası burada durur — durum satırı, cümle, uyarılar,
+// tablo, indirme ve kayıt düğmeleri, kanıt (R5-18). Kart hiçbir sayıyı yeniden hesaplamaz.
+// ASSUMPTION: `chart` alanını ChartView gösterir; kart onun yuvasını açmaz, burada yalnız
+// kanıtı ve tablosu okunan bir payload'dır.
+export default function AnswerCard({ payload, onSave }) {
+  const [phase, setPhase] = useState("idle"); // idle | saving | saved | error
+  const [note, setNote] = useState("");
+
+  const answer = typeof payload?.answer_text === "string" ? payload.answer_text : "";
+  const mode = typeof payload?.mode === "string" ? payload.mode : "";
+  const seconds = payload?.timings?.total_s;
+  // Tek ondalık basamak 0,04 saniyeyi "0,0 sn" yapar; okunur bir süre değildir, yazılmaz.
+  const elapsed = typeof seconds === "number" && seconds >= 0.05 ? formatSeconds(seconds) : "";
+  const auditId = typeof payload?.audit_id === "string" ? payload.audit_id : "";
+  const save = onSave ?? api.savedAdd;
+  const status = ["✓ Cevaplandı", mode, elapsed].filter(Boolean).join(" · ");
+
+  const saveQuestion = async () => {
+    setPhase("saving");
+    setNote("");
+    try {
+      await save({ question: payload?.question ?? "", mode: payload?.mode ?? null, sql: payload?.sql || null });
+      setPhase("saved");
+    } catch (error) {
+      setPhase("error");
+      setNote(error?.message || "Soru kaydedilemedi.");
+    }
+  };
+
+  return (
+    <section id="answer-card" className="card answer-card">
+      <p className="answer-status">{status}</p>
+      {answer && <p id="answer-text" className="answer-text">{answer}</p>}
+      <Warnings warnings={payload?.warnings} />
+      <ResultTable
+        columns={payload?.columns}
+        rows={payload?.rows}
+        rowCount={payload?.row_count}
+        truncated={Boolean(payload?.truncated)}
+      />
+      <div className="answer-actions">
+        {auditId && (
+          <>
+            <span className="answer-actions-label">Tamamını indir:</span>
+            <a className="btn" id="export-csv" href={api.exportUrl(auditId, "csv")}>
+              CSV
+            </a>
+            <a className="btn" id="export-xlsx" href={api.exportUrl(auditId, "xlsx")}>
+              Excel
+            </a>
+          </>
+        )}
+        <button
+          type="button"
+          id="save-question"
+          className="btn"
+          onClick={saveQuestion}
+          disabled={phase === "saving" || phase === "saved"}
+        >
+          {phase === "saving" ? "Kaydediliyor…" : phase === "saved" ? "Kaydedildi" : "Soruyu kaydet"}
+        </button>
+        {phase === "error" && <span className="answer-note">{note}</span>}
+      </div>
+      <Evidence payload={payload} />
+    </section>
+  );
+}

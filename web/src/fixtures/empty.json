@@ -1,0 +1,50 @@
+{
+  "status": "answered",
+  "question": "2024 yılında her departman için ödenen net maaş toplamı ne kadardı?",
+  "choice": null,
+  "answer_text": "Satır sayısı 0. Soru: 2024 yılında her departman için ödenen net maaş toplamı ne kadardı?",
+  "narration_source": "template",
+  "chart": null,
+  "facts": [
+    {
+      "name": "row_count",
+      "label": "Satır sayısı",
+      "column": null,
+      "value": 0,
+      "display": "0",
+      "percent": false
+    }
+  ],
+  "columns": ["DEPARTMAN_KODU", "NET_TOPLAM"],
+  "rows": [],
+  "row_count": 0,
+  "truncated": false,
+  "sql": "SELECT p.DEPARTMAN_KODU, SUM(m.NET_TUTAR) AS NET_TOPLAM FROM TBLMAAS m JOIN TBLPERSONEL p ON p.PERSONEL_KODU = m.PERSONEL_KODU WHERE m.TARIH >= '2024-01-01' AND m.TARIH < '2025-01-01' GROUP BY p.DEPARTMAN_KODU",
+  "tables_used": ["TBLMAAS", "TBLPERSONEL"],
+  "rules_used": [],
+  "masked_columns": [],
+  "warnings": [
+    {
+      "code": "empty",
+      "message": "Sonuç boş: bu koşullara uyan kayıt yok.",
+      "column": null
+    }
+  ],
+  "notes": [],
+  "mode": "full_rules",
+  "dataset": "synthetic_erp",
+  "model": "strata",
+  "timings": { "agent_s": 4.902, "execute_ms": 6.2, "narrate_s": 0.004, "total_s": 4.91 },
+  "audit_id": "0d55a19c3e71",
+  "clarification": null,
+  "error": null,
+  "steps": [
+    {
+      "tool": "get_schema",
+      "ok": true,
+      "summary": "TBLMAAS, TBLPERSONEL: kolonlar ve PERSONEL_KODU ilişkisi okundu."
+    },
+    { "tool": "run_sql", "ok": true, "summary": "Kolonlar: DEPARTMAN_KODU, NET_TOPLAM. Sonuç boş (0 satır)." },
+    { "tool": "submit_sql", "ok": true, "summary": "Sorgu kabul edildi." }
+  ]
+}
