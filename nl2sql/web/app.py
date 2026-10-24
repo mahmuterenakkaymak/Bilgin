@@ -1,0 +1,178 @@
+"""Web API'si: tek kullanıcılık FastAPI uygulaması (PLAN R5-15).
+
+Yolların ardında ikinci bir hesap kitap yok: ``/api/ask`` ``ask_payload``ı çağırır, yani ekran ile
+``ask --json`` aynı cevabı görür. Uygulama kimlik doğrulaması olmadığı için yalnız 127.0.0.1'e
+bağlanır (``serve`` söyler), arayüz derlenmemişse API yine çalışır - ``/`` o zaman neyin eksik
+olduğunu kendi cümlesiyle söyler, node'a muhtaç kalmaz.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
+from nl2sql import config
+from nl2sql.agent import prompt
+from nl2sql.app.ask import ask_payload
+from nl2sql.cli import main as cli
+from nl2sql.eval import runner
+from nl2sql.index.search import load_search
+from nl2sql.index.store import MissingIndexError, StaleIndexError, content_hash
+from nl2sql.schema_map import doc
+
+# R5-15: boş soru koşum açmaya değmez; cümle ekranın gösterdiği cümledir.
+BLANK_QUESTION = "Soru boş."
+NO_UI = "Arayüz derlenmemiş"
+BUILD_COMMAND = "npm --prefix web run build"
+
+# Arayüzün yerine geçen sayfa: R5-18'in renkleri, tek kart, tek cümle ve tek komut.
+NO_UI_PAGE = f"""<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bilgin</title>
+<style>
+  :root {{ color-scheme: light dark; --bg: #F6F5F1; --surface: #FFFFFF; --text: #1D1D1B;
+           --muted: #6A6963; --line: #E3E1DA; --accent: #1F5FAD; }}
+  @media (prefers-color-scheme: dark) {{ :root {{ --bg: #141413; --surface: #1D1D1B;
+           --text: #F6F5F1; --muted: #9A9891; --line: #33322E; --accent: #7FAEE8; }} }}
+  body {{ margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg);
+          color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }}
+  main {{ width: min(560px, calc(100% - 48px)); background: var(--surface); border: 1px solid var(--line);
+          border-radius: 10px; padding: 32px; }}
+  .mark {{ margin: 0 0 16px; color: var(--accent); font-weight: 650; letter-spacing: 0.02em; }}
+  h1 {{ margin: 0 0 8px; font-size: 22px; }}
+  p {{ margin: 0 0 16px; color: var(--muted); }}
+  code, pre {{ font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }}
+  code {{ background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }}
+  pre {{ margin: 0; padding: 12px; background: var(--bg); border: 1px solid var(--line);
+         border-radius: 10px; overflow-x: auto; }}
+</style>
+</head>
+<body>
+<main>
+  <p class="mark">Bilgin</p>
+  <h1>{NO_UI}</h1>
+  <p>API çalışıyor; ekranı görmek için arayüzü bir kez derleyin:</p>
+  <pre>{BUILD_COMMAND}</pre>
+  <p>Durumu okumak için: <code>GET /api/health</code></p>
+</main>
+</body>
+</html>
+"""
+
+
+class AskBody(BaseModel):
+    """``POST /api/ask`` gövdesi (Contracts): soru zorunlu, mod ve seçim sorulabilir."""
+
+    question: str = ""
+    mode: str | None = None
+    choice: str | None = None
+
+
+def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir: str | Path = config.STATIC_DIR) -> FastAPI:
+    """Oturumun üstünde API: soru, sağlık, örnekler, tablolar ve derlenmiş arayüz."""
+    app = FastAPI(title="Bilgin")
+    app.state.session = session
+    app.state.saved_path = Path(saved_path)
+    static = Path(static_dir)
+
+    @app.post("/api/ask")
+    def ask(body: AskBody) -> dict:
+        """Sorunun cevabı: CLI ile birebir aynı payload, kaynağı ``web`` (R5-1)."""
+        question = body.question.strip()
+        if not question:
+            raise HTTPException(status_code=400, detail=BLANK_QUESTION)
+        return ask_payload(session, question, mode=body.mode, choice=body.choice, source="web")
+
+    @app.get("/api/health")
+    def health() -> dict:
+        """Başlığın çipleri: hangi küme, model sağ mı, indeks taze mi, auto eşiği ne."""
+        return {
+            "status": "ok",
+            "dataset": _dataset_block(session),
+            "llm": _llm_block(session),
+            "index": _index_block(session),
+            "schema_hash": content_hash(session.schema, []),
+            "rules_hash": content_hash({}, session.rules),
+            "mode": _mode_block(session),
+            "budget": session.budget,
+        }
+
+    @app.get("/api/examples")
+    def examples() -> dict:
+        """Boş ekrandaki çipler: altın soruların ilki, yani gerçekten cevaplanabilenler."""
+        lines = runner.load_golden(
+            session.dataset.golden_path if session.dataset else config.GOLDEN_PATH
+        )
+        return {"examples": [{"question": line["question"], "kind": "golden"} for line in lines[: config.EXAMPLES_N]]}
+
+    @app.get("/api/tables")
+    def tables() -> dict:
+        """Kural formunun tablo listesi: ölçülen şemanın adları, sırasıyla."""
+        return {"tables": [table["name"] for table in session.schema["tables"]]}
+
+    assets = static / "assets"
+    if assets.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets), name="assets")
+
+    @app.get("/", response_class=HTMLResponse)
+    def index():
+        """Derlenmiş arayüz varsa o, yoksa neyin eksik olduğunu söyleyen sayfa (200)."""
+        page = static / "index.html"
+        if page.is_file():
+            return FileResponse(page, media_type="text/html")
+        return HTMLResponse(NO_UI_PAGE)
+
+    return app
+
+
+def _dataset_block(session) -> dict:
+    """Küme çipi: ad ve görünen ad; küme söylenmemişse ölçülen zaten config'in kümesidir."""
+    ds = session.dataset
+    if ds is None:
+        return {"name": config.DEFAULT_DATASET, "display_name": config.DEFAULT_DATASET}
+    return {"name": ds.name, "display_name": ds.display_name}
+
+
+def _llm_block(session) -> dict:
+    """Model çipi: uç noktanın adı ve adresi, yoklamanın cevabı ile birlikte (R5-1)."""
+    reason = session.ping()
+    if session.llm_kind == "fake":
+        # Sahte modelin yoklanacak adresi yok: çip "burada model konuşmuyor" der.
+        return {"kind": "fake", "model": "fake", "url": None, "reachable": reason is None, "reason": reason}
+    profile = session.profile
+    settings = config.llm_settings()
+    return {
+        "kind": session.llm_kind,
+        "model": profile.model if profile else settings.model,
+        "url": profile.base_url if profile else settings.base_url,
+        "reachable": reason is None,
+        "reason": reason,
+    }
+
+
+def _index_block(session) -> dict:
+    """İndeks bu şema ve kurallarla yüklenebiliyor mu: yüklenemiyorsa sebep kullanıcının cümlesi."""
+    ds = session.dataset
+    try:
+        load_search(session.index_dir, session.schema, session.rules, ds.name if ds else None)
+    except (MissingIndexError, StaleIndexError) as exc:
+        return {"fresh": False, "reason": str(exc), "embedder": None}
+    return {"fresh": True, "reason": None, "embedder": cli._index_embedder(session.index_dir) or None}
+
+
+def _mode_block(session) -> dict:
+    """auto'nun eşiği ve tam kurallı istemin bağlam tahmini - ``resolve_auto``nun ölçütüyle aynı."""
+    limit = cli._auto_limit(session.profile)
+    as_of = session.dataset.as_of if session.dataset else config.AS_OF
+    return {
+        "default": "auto",
+        "auto_full_max_tokens": config.AUTO_FULL_MAX_TOKENS if limit is None else limit,
+        "estimate": doc.estimate_tokens(prompt.full_rules_prompt(as_of, session.schema, session.rules)),
+    }

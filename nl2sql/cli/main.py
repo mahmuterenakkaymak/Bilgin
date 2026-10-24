@@ -90,6 +90,11 @@ AUDIT_SOURCE = "ask"
 # bağlanır, çıkış kodu ise durumun adıdır — anlatı gelen cevaplar da başarılıdır.
 JSON_SOURCE = "cli"
 JSON_OK = ("answered", "needs_clarification")
+# R5-14/R5-15: ``serve`` tek kullanıcı ve kimlik doğrulaması yok, o yüzden adresin seçimi kullanıcıya
+# bırakılmaz: kendi makinesinin dışına çıkmaz, çıkarsa hiçbir şey dinlemeye başlamaz.
+LOOPBACK_HOSTS = (config.SERVE_HOST, "localhost")
+LOOPBACK_ONLY = "Bilgin yalnız 127.0.0.1 üzerinde çalışır (tek kullanıcı, kimlik doğrulama yok)."
+SERVE_LINE = "Bilgin: {url}  (veri kümesi {dataset}, model {model}, llm {llm})"
 PROSE = "yanıt"
 SQL_TOOLS = ("run_sql", "submit_sql")
 NO_ANSWER = "Cevap gönderilmedi: {}"
@@ -1320,6 +1325,23 @@ def main(argv: list[str] | None = None) -> int:
     _add_model_options(ask_cmd)
     _add_dataset_option(ask_cmd)
 
+    serve_cmd = commands.add_parser(
+        "serve", help="web API'sini ve arayüzü kendi makinesine bağlı çalıştırır"
+    )
+    serve_cmd.add_argument(
+        "--host",
+        default=config.SERVE_HOST,
+        help=f"bağlanılacak adres (yalnız {', '.join(LOOPBACK_HOSTS)})",
+    )
+    serve_cmd.add_argument(
+        "--port", type=int, default=config.SERVE_PORT, help="bağlanılacak port (varsayılan %(default)s)"
+    )
+    serve_cmd.add_argument(
+        "--llm", choices=LLMS, default=DEFAULT_LLM, help="istem kaynağı (varsayılan %(default)s)"
+    )
+    _add_model_options(serve_cmd)
+    _add_dataset_option(serve_cmd)
+
     eval_cmd = commands.add_parser("eval", help="altın soruları koşar ve raporu yazar")
     eval_cmd.add_argument(
         "--llm", choices=LLMS, default=DEFAULT_LLM, help="istem kaynağı (varsayılan %(default)s)"
@@ -1439,6 +1461,13 @@ def main(argv: list[str] | None = None) -> int:
             # düzeltmesi kullanıcının elinde olduğu için iz dökümü değil tek satır ve kod 2.
             print(exc)
             return EXIT_BAD_INPUT
+    if args.command == "serve":
+        return serve(
+            host=args.host,
+            port=args.port,
+            llm_kind=args.llm,
+            **_given(dataset=args.dataset, model=args.model, models_file=args.models_file),
+        )
     if args.modes and not args.models:
         print(MODES_WITHOUT_MODELS)
         return EXIT_BAD_INPUT
@@ -1518,6 +1547,60 @@ def _ask_json(args) -> int:
     payload = ask_payload(session, args.question, mode=args.mode, source=JSON_SOURCE)
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0 if payload["status"] in JSON_OK else 1
+
+
+def serve(
+    host: str = config.SERVE_HOST,
+    port: int = config.SERVE_PORT,
+    llm_kind: str = DEFAULT_LLM,
+    dataset: str | None = None,
+    model: str | None = None,
+    models_file: str | Path | None = None,
+) -> int:
+    """``serve``: oturumu bir kez kurar, API'yi loopback'e bağlar (R5-15).
+
+    Oturumun kurulmuş olması adresin serbest olduğu anlamına gelmez: hangi veriyi gördüğü belli
+    olan bir oturum, dinlemeye başlamadan önce reddedilir. Açılış satırı hangi dünyanın hangi
+    modelle ve hangi kaynakla sunulduğunu söyler - ekranın kendisi henüz açılmamıştır.
+    """
+    # R5-1: web ve app içe yalnız burada girilir; cli'yi çağıran katmanlar döngü kurmasın.
+    from nl2sql.app.session import SessionError, open_session
+    from nl2sql.web.app import create_app
+
+    _utf8_stdout()
+    try:
+        session = open_session(
+            dataset=dataset,
+            model=model,
+            llm=llm_kind,
+            models_file=models_file,
+            audit_path=config.AUDIT_LOG,
+            ask_log=config.ASK_LOG,
+        )
+    except SessionError as exc:
+        print(exc)
+        return exc.exit_code
+    if host not in LOOPBACK_HOSTS:
+        print(LOOPBACK_ONLY)
+        return EXIT_BAD_INPUT
+    ds = session.dataset
+    print(
+        SERVE_LINE.format(
+            url=f"http://{host}:{port}",
+            dataset=ds.name if ds else config.DEFAULT_DATASET,
+            model=session.profile.name if session.profile else session.llm_kind,
+            llm=session.llm_kind,
+        )
+    )
+    run_server(create_app(session), host, port)
+    return 0
+
+
+def run_server(app, host: str, port: int) -> None:
+    """uvicorn'ın tek kapısı: test burayı yerine koyar, sunucuyu gerçekten kimse açmaz."""
+    import uvicorn
+
+    uvicorn.run(app, host=host, port=port)
 
 
 def _step_lines(step: Step) -> list[str]:
