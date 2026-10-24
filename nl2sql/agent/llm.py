@@ -201,6 +201,20 @@ class OpenAIClient:
             latency_ms=latency,
         )
 
+    def list_models(self, timeout_s: float | None = None) -> None:
+        """What the endpoint serves; the reachability probe asks this once, on a short clock.
+
+        A probe that retried would multiply its own timeout, so the retry the chat call wants is
+        switched off here - one answer, either way, is what "is it up" means.
+        """
+        options = {"max_retries": 0, **({} if timeout_s is None else {"timeout": timeout_s})}
+        try:
+            self._sdk.with_options(**options).models.list()
+        except APIConnectionError as exc:
+            raise LLMError(UNREACHABLE.format(url=self.base_url)) from exc
+        except APIError as exc:
+            raise LLMError(FAILED.format(url=self.base_url, error=_explain(exc))) from exc
+
     def _request(self, messages: list[dict], tools: list[dict] | None) -> dict:
         """The completion call's arguments; a profile's numbers join the plain request."""
         kwargs: dict = {
@@ -233,6 +247,20 @@ def client_for(profile: ModelProfile) -> OpenAIClient:
         sampling=profile.sampling,
         enable_thinking=profile.enable_thinking,
     )
+
+
+def ping(profile: ModelProfile, timeout_s: float = config.PING_TIMEOUT_S) -> str | None:
+    """Uç nokta sağ mı: ``models.list()`` yanıt verirse None, değilse tek cümlelik sebep.
+
+    Karşılaştırma koşusu bu cevabı bloktan önce sorar; kapalı bir endpoint bütün bloğu
+    düşürmesin diye sebep döner, fırlatılmaz (PLAN R4-13). Eksik API anahtarı da aynı kapıdan
+    geçer - ikisi de "şu yüzden bu modelle şimdi ölçüm yapılamaz" demektir.
+    """
+    try:
+        client_for(profile).list_models(timeout_s)
+    except LLMError as exc:
+        return str(exc)
+    return None
 
 
 def _api_key(api_key_env: str | None) -> str:
