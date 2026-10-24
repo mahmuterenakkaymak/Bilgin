@@ -261,7 +261,7 @@ def build_index(
 def eval_retrieval(
     embed: str = DEFAULT_EMBED,
     k: int = config.SEARCH_K,
-    out_dir: str | Path = retrieval.RETRIEVAL_OUT,
+    out_dir: str | Path | None = None,
     schema_path: str | Path | None = None,
     rules_path: str | Path | None = None,
     golden_path: str | Path | None = None,
@@ -275,7 +275,9 @@ def eval_retrieval(
     kendisi ``eval_out/retrieval`` altındaki raporda da durur. R3-9'un üç varyantı (taban,
     +komşu, +eşanlam) aynı sorular üzerinde koşar, o yüzden join graphı da burada kurulur.
     ``dataset`` ölçümün dört girdisini de o kümenin klasöründen getirir (R4-14): şema, kurallar,
-    profil ve altın sorular; açıkça verilen yol yine önüne geçer.
+    profil ve altın sorular. Rapor da o kümenin ``eval_out``u altına yazılır (R4-3, R4-4): iki
+    dünya aynı ``latest``i paylaşırsa ikincinin koşumu birincinin kıyasını yutar. Açıkça verilen
+    yol yine önüne geçer.
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
@@ -286,6 +288,7 @@ def eval_retrieval(
     rules_path = _or(rules_path, ds.rules_path if ds else None, config.RULES_PATH)
     golden_path = _or(golden_path, ds.golden_path if ds else None, config.GOLDEN_PATH)
     profile_path = _or(profile_path, ds.profile_path if ds else None, config.PROFILE_PATH)
+    out_dir = _or(out_dir, Path(ds.eval_out) / "retrieval" if ds else None, retrieval.RETRIEVAL_OUT)
     started = time.perf_counter()
     schema = doc.load_schema(schema_path)
     rules = load_rules(rules_path)
