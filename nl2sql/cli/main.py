@@ -211,7 +211,8 @@ def eval_retrieval(
 
     İndeks bellekte kurulur (R2-9): ölçüm diskteki indekse ya da veritabanına bakmaz, temiz bir
     koşumda da çalışır. Ekran soru başına bir satır, metod ve etiket ortalamalarıdır; sayıların
-    kendisi ``eval_out/retrieval`` altındaki raporda da durur.
+    kendisi ``eval_out/retrieval`` altındaki raporda da durur. R3-9'un üç varyantı (taban,
+    +komşu, +eşanlam) aynı sorular üzerinde koşar, o yüzden join graphı da burada kurulur.
     """
     _utf8_stdout()
     started = time.perf_counter()
@@ -221,7 +222,8 @@ def eval_retrieval(
         search = build_search(schema, rules, make_embedder(embed))
     except EmbedError as exc:
         return _embed_failed(str(exc))
-    result = retrieval.run_retrieval(search, runner.load_golden(golden_path), k)
+    graph = build_graph(schema, load_profile())
+    result = retrieval.run_variants(search, runner.load_golden(golden_path), k, graph, schema)
     print()
     for line in retrieval.console_lines(result):
         print(line)

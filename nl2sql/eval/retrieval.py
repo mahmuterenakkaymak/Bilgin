@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 from nl2sql import config
-from nl2sql.index.search import METHODS
+from nl2sql.index.search import METHODS, expanded_hits
 
 # ASSUMPTION: geri çağırma raporu eval/mod klasörlerinden ayrı durur; ölçülen şey model değil
 # arama indeksi olduğu için kendi dizini var.
@@ -27,21 +27,74 @@ REPORT_FILES = ("report.json", "report.md")
 TABLE_PREFIX = "table:"
 NOTHING_MISSING = "-"
 
+# R3-9 varyantları: iki düğme ayrı ayrı ölçülür; adlar raporda, etiketler ekran ve markdown'da.
+VARIANTS = {"base": (False, False), "neighbours": (True, False), "synonyms": (False, True)}
+VARIANT_LABELS = {"base": "taban", "neighbours": "+komşu", "synonyms": "+eşanlam"}
 
-def run_retrieval(search, golden: Iterable[dict], k: int = config.SEARCH_K) -> dict:
+
+def run_retrieval(
+    search,
+    golden: Iterable[dict],
+    k: int = config.SEARCH_K,
+    expand: bool = False,
+    rewrite: bool = False,
+    graph=None,
+    schema: dict | None = None,
+) -> dict:
     """Altın soruların her biri için üç yöntemin recall@k'sı, ortalamalar ve etiket ortalamaları.
 
     ``search`` aramanın kendisidir (``HybridSearch`` ya da testte elle yazılmış bir eşdeğeri):
-    yöntem başına bir kez, tablo koleksiyonu üzerinde ve istenen ``k`` ile çağrılır.
+    yöntem başına bir kez, tablo koleksiyonu üzerinde ve istenen ``k`` ile çağrılır. ``expand`` ve
+    ``rewrite`` R3-9'un iki düğmesidir; ikisi kapalıyken ölçülen tabandır, hangi yapılandırmanın
+    ölçüldüğünü ``variants`` söyler.
     """
-    questions = [_question(search, line, k) for line in golden]
+    # ASSUMPTION: komşu genişletmesi graph ve şema olmadan ölçülemez; sessizce taban ölçümüne
+    # düşmesin diye ikisi de açıkça isteniyor.
+    if expand and (graph is None or schema is None):
+        raise ValueError("Komşu genişletmesi ölçümü join graphı ve şema ister.")
+    hits = _hits(search, expand, rewrite, graph, schema)
+    questions = [_question(line, k, hits) for line in golden]
+    mean = _means(questions)
+    by_tag = _by_tag(questions)
     return {
         "k": k,
         "embedder": search.embedder.id,
         "questions": questions,
-        "mean": {method: _mean([item[method] for item in questions]) for method in METHODS},
-        "by_tag": _by_tag(questions),
+        "mean": mean,
+        "by_tag": by_tag,
+        "variants": {_variant(expand, rewrite): {"mean": mean, "by_tag": by_tag}},
     }
+
+
+def run_variants(
+    search,
+    golden: Iterable[dict],
+    k: int = config.SEARCH_K,
+    graph=None,
+    schema: dict | None = None,
+) -> dict:
+    """R3-9: taban, +komşu ve +eşanlam aynı sorular üzerinde koşar; rapor üçünün birden raporu.
+
+    Gövde taban ölçümüdür, yani ekran ve rapor bugünkü haliyle okunur; ``variants`` her varyantın
+    metod metod ortalamasını, etiket ortalamalarını ve soru başına sayısını taşır.
+    """
+    lines = list(golden)
+    reports = {
+        name: run_retrieval(search, lines, k, expand, rewrite, graph, schema)
+        for name, (expand, rewrite) in VARIANTS.items()
+    }
+    report = reports["base"]
+    report["variants"] = {
+        name: {
+            "mean": variant["mean"],
+            "by_tag": variant["by_tag"],
+            # ASSUMPTION: soru satırının tek sayısı hibrit geri çağırmasıdır - modelin gördüğü
+            # yöntem o; metodların tamamı ``mean`` içinde duruyor.
+            "questions": {item["id"]: item["hybrid"] for item in variant["questions"]},
+        }
+        for name, variant in reports.items()
+    }
+    return report
 
 
 def write_retrieval(report: dict, out_dir: str | Path = RETRIEVAL_OUT) -> Path:
@@ -70,6 +123,9 @@ def console_lines(report: dict) -> list[str]:
             + f"  {_missing_text(question)}"
         )
     lines += ["", _means_line(report)]
+    variants = _variant_lines(report)
+    if variants:
+        lines += ["", *variants]
     tags = _tag_lines(report)
     if tags:
         order = "/".join(METHODS)
@@ -77,7 +133,48 @@ def console_lines(report: dict) -> list[str]:
     return lines
 
 
-def _question(search, line: dict, k: int) -> dict:
+def _hits(search, expand: bool, rewrite: bool, graph, schema):
+    """Varyantın vuruş üreteni: ``(soru, yöntem, k)`` ile çağrılınca tablo vuruşlarını döndürür.
+
+    Eş anlamlı genişletmesi aramanın kendi düğmesidir; komşu genişletmesi aramanın değil şemanın
+    söylediği bir bağlantı olduğu için graph ve schema ile ``expanded_hits``e devredilir.
+    """
+
+    def hits(question: str, method: str, k: int):
+        if expand:
+            return expanded_hits(_Leg(search, method, rewrite), question, graph, schema, k, expand=True)
+        return _ask(search, question, k, method, rewrite)
+
+    return hits
+
+
+class _Leg:
+    """``expanded_hits``in beklediği arama kalıbı: koleksiyonu ve yöntemi bağlanmış tek bacak."""
+
+    def __init__(self, search, method: str, rewrite: bool) -> None:
+        self._search = search
+        self._method = method
+        self._rewrite = rewrite
+
+    def search(self, query, collection: str = "tables", k: int = config.SEARCH_K):
+        return _ask(self._search, query, k, self._method, self._rewrite)
+
+
+def _ask(search, question: str, k: int, method: str, rewrite: bool):
+    """Aramanın kendi çağrısı; ``rewrite`` yalnız açıkken geçirilir, eski imza onu bilmeyebilir."""
+    if rewrite:
+        return search.search(question, collection="tables", k=k, method=method, rewrite=True)
+    return search.search(question, collection="tables", k=k, method=method)
+
+
+def _variant(expand: bool, rewrite: bool) -> str:
+    """Ölçülen yapılandırmanın adı; iki düğme ayrı ayrı ölçülür, ikisi birden bir varyant değil."""
+    if expand:
+        return "neighbours"
+    return "synonyms" if rewrite else "base"
+
+
+def _question(line: dict, k: int, hits) -> dict:
     question = str(line.get("question") or "")
     requires = [str(table) for table in line.get("requires_tables") or []]
     entry: dict = {
@@ -87,7 +184,7 @@ def _question(search, line: dict, k: int) -> dict:
         "missing": {},
     }
     for method in METHODS:
-        found = _found(search, question, k, method)
+        found = _found(hits, question, k, method)
         # ASSUMPTION: requires_tables boşsa bulunacak bir şey yoktur; 1.0 böyle bir sorunun
         # ortalamayı sıfıra çekmesini engeller.
         entry[method] = 1.0 if not requires else len(set(requires) & found) / len(requires)
@@ -95,10 +192,13 @@ def _question(search, line: dict, k: int) -> dict:
     return entry
 
 
-def _found(search, question: str, k: int, method: str) -> set[str]:
-    """İlk k tablo vuruşunun tablo adları; ad doküman kimliğinin ``table:<AD>`` önekinden çıkar."""
-    hits = search.search(question, collection="tables", k=k, method=method)
-    return {hit.doc_id.removeprefix(TABLE_PREFIX) for hit in hits}
+def _found(hits, question: str, k: int, method: str) -> set[str]:
+    """Vuruşların tablo adları; ad doküman kimliğinin ``table:<AD>`` önekinden çıkar.
+
+    Genişletmede liste ``k``yı aşar ve aşması da ölçümdür: model aracı kullandığında komşuları da
+    görüyor, geri çağırma onun gördüğü kümenin kendisi.
+    """
+    return {hit.doc_id.removeprefix(TABLE_PREFIX) for hit in hits(question, method, k)}
 
 
 def _by_tag(questions: list[dict]) -> dict:
@@ -111,6 +211,10 @@ def _by_tag(questions: list[dict]) -> dict:
         tag: {method: _mean([item[method] for item in group]) for method in METHODS}
         for tag, group in sorted(groups.items())
     }
+
+
+def _means(questions: list[dict]) -> dict:
+    return {method: _mean([item[method] for item in questions]) for method in METHODS}
 
 
 def _mean(values: Sequence[float]) -> float:
@@ -137,6 +241,35 @@ def _means_line(report: dict) -> str:
         f"Ortalama: {values}  "
         f"(k={report['k']}, {len(report['questions'])} soru, {report['embedder']})"
     )
+
+
+def _variant_lines(report: dict) -> list[str]:
+    """R3-9 ekranı: soru başına üç varyantın sayısı, alta metod metod varyant ortalamaları.
+
+    Tek varyantlı ölçüm (``run_retrieval``ın kendi koşumu) karşılaştırılacak bir şey olmadığı için
+    gösterilmez; ekranın gövdesi zaten o ölçümün metod metod halidir.
+    """
+    variants = report.get("variants") or {}
+    if len(variants) < 2:
+        return []
+    return [
+        f"{'Soru':<6}" + "".join(f"{VARIANT_LABELS[name]:>10}" for name in variants),
+        *(
+            f"{question['id']:<6}"
+            + "".join(
+                f"{entry['questions'].get(question['id'], 0.0):>10.2f}"
+                for entry in variants.values()
+            )
+            for question in report["questions"]
+        ),
+        "",
+        f"Varyant ortalamaları ({'/'.join(METHODS)}):",
+        *(
+            f"  {VARIANT_LABELS[name]:<10}"
+            + "".join(f"{entry['mean'][method]:>8.2f}" for method in METHODS)
+            for name, entry in variants.items()
+        ),
+    ]
 
 
 def _tag_lines(report: dict) -> list[str]:
@@ -184,6 +317,7 @@ def _markdown(report: dict) -> str:
             + " | ".join(_recalls(question))
             + f" | {_missing_text(question)} |"
         )
+    lines += _variant_section(report)
     lines += ["", "## Etiket ortalamaları", ""]
     if not report["by_tag"]:
         return "\n".join([*lines, "Soru etiketi yok."]) + "\n"
@@ -199,6 +333,41 @@ def _markdown(report: dict) -> str:
             + " |"
         )
     return "\n".join(lines) + "\n"
+
+
+def _variant_section(report: dict) -> list[str]:
+    """Markdown'ın R3-9 bölümü: soru başına üç varyant, alta varyant başına üç metod."""
+    variants = report.get("variants") or {}
+    if len(variants) < 2:
+        return []
+    names = list(variants)
+    lines = [
+        "",
+        "## Varyantlar",
+        "",
+        "| Soru | " + " | ".join(VARIANT_LABELS[name] for name in names) + " |",
+        "| --- | " + " | ".join("---:" for _ in names) + " |",
+    ]
+    for question in report["questions"]:
+        lines.append(
+            f"| {question['id']} | "
+            + " | ".join(
+                f"{variants[name]['questions'].get(question['id'], 0.0):.2f}" for name in names
+            )
+            + " |"
+        )
+    lines += [
+        "",
+        "| Varyant | " + " | ".join(METHODS) + " |",
+        "| --- | " + " | ".join("---:" for _ in METHODS) + " |",
+    ]
+    for name, entry in variants.items():
+        lines.append(
+            f"| {VARIANT_LABELS[name]} | "
+            + " | ".join(f"{entry['mean'][method]:.2f}" for method in METHODS)
+            + " |"
+        )
+    return lines
 
 
 def _tag_counts(report: dict) -> Counter:
