@@ -12,7 +12,7 @@ from dataclasses import replace
 from functools import partial
 from pathlib import Path
 
-from sqlglot import exp, transpile
+from sqlglot import exp, parse
 from sqlglot.dialects.sqlite import SQLite
 from sqlglot.dialects.tsql import TSQL
 from sqlglot.errors import SqlglotError, UnsupportedError
@@ -154,6 +154,40 @@ class _SQLiteDates(SQLite):
             return sql
 
 
+# ----------------------------------------------------------------- tsql -> sqlite şemalı adlar
+#
+# SQLite'ta nokta iki parçayı ayırır: "Sales"."Orders" bir şema ile tablosu sayılır, oysa
+# build.write_sqlite tabloyu tek ad "Sales.Orders" olarak kurar (PLAN R4-6). Çeviri o tek ada
+# iner; PolicyResult.sql T-SQL olarak kaldığı için bu yalnız SQLite yolunun işidir.
+
+
+def transpile(sql: str) -> list[str]:
+    """T-SQL cümlelerini SQLite'a çevirir; şemalı adlar tek kimliğe indikten sonra üretilir."""
+    statements = []
+    for tree in parse(sql, read="tsql"):
+        if tree is not None:
+            statements.append(_flatten_schemas(tree).sql(dialect=_SQLiteDates))
+    return statements
+
+
+def _flatten_schemas(tree: exp.Expression) -> exp.Expression:
+    """Tablonun ve üç parçalı kolon önekinin şema+tablo ikilisi tek ada iner: "Sales.Orders"."""
+    return tree.transform(_flatten_schema)
+
+
+def _flatten_schema(node: exp.Expression) -> exp.Expression:
+    if isinstance(node, exp.Table) and node.db:
+        node.set("this", exp.to_identifier(f"{node.db}.{node.name}", quoted=True))
+    elif isinstance(node, exp.Column) and node.db and node.table:
+        node.set("table", exp.to_identifier(f"{node.db}.{node.table}", quoted=True))
+    else:
+        return node
+    # Üçüncü bir parça politikanın reddettiği yer; burada kalsa bile SQLite'a taşınmaz.
+    node.set("catalog", None)
+    node.set("db", None)
+    return node
+
+
 class LocalExecutor:
     """Runs read-only T-SQL against one backend under a Budget."""
 
@@ -192,7 +226,7 @@ class LocalExecutor:
         if self._backend != "sqlite":
             return self._masked(_mssql.run(verdict.sql, budget), verdict)
         try:
-            statements = transpile(verdict.sql, read="tsql", write=_SQLiteDates)
+            statements = transpile(verdict.sql)
         except SqlglotError as exc:
             return _error("transpile", _explain(exc))
         if len(statements) != 1:

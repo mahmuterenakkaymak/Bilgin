@@ -20,6 +20,11 @@ SQLITE_TYPES = {
     "DECIMAL": "REAL",
     "VARCHAR": "TEXT",
     "NVARCHAR": "TEXT",
+    # SQLite'ta bunlar yalnız bildirilen ad, yakınlık yeter: sayıya dönmeyen ISO tarih metin
+    # kalır, BIT 0/1, VARBINARY bytes olarak döner (PLAN R4-6).
+    "BIT": "BOOLEAN",
+    "DATETIME2": "DATETIME",
+    "VARBINARY": "BLOB",
 }
 
 
@@ -50,12 +55,12 @@ def write_sqlite(dataset: dict, schema: dict, path: str | Path = config.DB_PATH)
 
 
 def write_mssql_script(dataset: dict, schema: dict, path: str | Path = config.MSSQL_SCRIPT) -> None:
-    """T-SQL build script: CREATE TABLE per table, then the rows as batched INSERTs, GO-separated."""
+    """T-SQL build script: CREATE SCHEMA per schema, CREATE TABLE per table, then the rows as batched INSERTs, GO-separated."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    statements = [_CREATE_HEADER]
+    statements = [_CREATE_HEADER, *_create_schemas(schema)]
     for table in schema["tables"]:
-        statements.append(f"CREATE TABLE {table['name']} ({_tsql_columns(table)});")
+        statements.append(f"CREATE TABLE {_tsql_name(table['name'])} ({_tsql_columns(table)});")
         statements.extend(_insert_statements(table, dataset.get(table["name"], [])))
     path.write_text("\nGO\n\n".join(statements) + "\n", encoding="utf-8")
 
@@ -108,10 +113,27 @@ _CREATE_HEADER = (
 )
 
 
+def _create_schemas(schema: dict) -> list[str]:
+    """Her şema bir kez, tablolarından önce; dbo veritabanıyla birlikte zaten vardır (PLAN R4-6)."""
+    statements, written = [], set()
+    for table in schema["tables"]:
+        name, _ = doc.split_name(table["name"])
+        if name and name.upper() not in written and name.upper() != "DBO":
+            written.add(name.upper())
+            statements.append(f"CREATE SCHEMA [{name}];")
+    return statements
+
+
+def _tsql_name(name: str) -> str:
+    """Nitelikli ad köşeli parantezle yazılır: [Sales].[Orders]; çıplak ad bugünkü gibi düzdür."""
+    name_schema, table = doc.split_name(name)
+    return f"[{name_schema}].[{table}]" if name_schema else name
+
+
 def _insert_statements(table: dict, rows: list[dict]) -> list[str]:
     columns = table["columns"]
     names = ", ".join(column["name"] for column in columns)
-    head = f"INSERT INTO {table['name']} ({names}) VALUES"
+    head = f"INSERT INTO {_tsql_name(table['name'])} ({names}) VALUES"
     batches = []
     for start in range(0, len(rows), INSERT_BATCH_ROWS):
         values = ",\n".join(
@@ -125,6 +147,8 @@ def _insert_statements(table: dict, rows: list[dict]) -> list[str]:
 def _tsql_value(value, sql_type: str) -> str:
     if value is None:
         return "NULL"
+    if isinstance(value, (bytes, bytearray)):
+        return f"0x{bytes(value).hex()}"
     if isinstance(value, (int, float)):
         return repr(value)
     text = str(value).replace("'", "''")
