@@ -461,3 +461,228 @@ R3-14. **Real-data checklist** in README: introspect -> import-map -> diff-map -
 - **M10 - Retrieval + modes** (T102-T109): neighbour expansion, synonym rewriting, eval-retrieval variants,
   embed-model config, rag join hint, --mode auto, --repeat noise, README + smoke. Integration: real index + graph +
   FakeEmbedder through eval-retrieval; real CLI auto + compare --repeat.
+
+---
+
+# PLAN - NL2SQL Run 4 (datasets + WideWorldImporters, model profiles + context budget)
+
+Source: `PROJECT_BRIEF_RUN4.md`. Everything above stays valid unless a numbered "Run 4 decision" says it changes.
+Stack unchanged, **no new dependency** (WWI fixture in SQLite via the stdlib, endpoint check via the `openai` SDK
+already pinned). Still CLI-only: the web UI is Run 5, so Decision 14 stands and there is still no
+`.hybrid/visual.json`; "what users see" is CLI output and the markdown reports (R4-14). The brief names `serve`
+for `--model`; there is no `serve` command yet (Run 5), so `--model` lands on `ask` and `eval` only.
+
+Open before this run (not blocking it): T101 (README Run 3 section), T109 (Run 3 smoke file) and T120 (`_t101check/`
+cleanup) are still `[ ]`; T120's deletion is staged in the working tree. Run 4 tasks do not depend on them.
+
+## Run 4 architecture
+
+```
+datasets/<name>/dataset.json + schema.json rules.json profile.json golden.jsonl [traps.jsonl] [builder.py reference.py]
+        |  nl2sql/datasets.load_dataset(name) -> Dataset (paths, as_of, seed, builder, generator, references)
+        v
+--dataset X --> build-db | build-index | eval-retrieval | ask | eval | eval --compare | make-login-script
+        schema "Sales.Orders" --policy (qualified allowlist, unqualified -> resolved) --> executor
+        --sqlite: rewrite Sales.Orders -> "Sales.Orders" (one quoted identifier) | mssql: as written
+config/models.json --nl2sql/agent/llm.load_profiles--> ModelProfile --> client_for(profile), budget
+loop: before every chat: estimate(messages+tools) > budget? trim old tool answers -> still over? context_overflow
+eval --compare --models a,b --modes m1,m2 --dataset d [--repeat N]
+        -> per model: ping endpoint (skip block + message if down) -> per mode x repeat: run_eval(budget)
+        -> nl2sql/eval/compare_models -> eval_out/compare_<dataset>_<ts>.json|md (model x mode table)
+```
+
+## Run 4 file layout additions
+
+```
+datasets/synthetic_erp/        dataset.json + MOVED (paths only, content byte-identical):
+                               schema/schema.json -> schema.json, schema/rules.json -> rules.json,
+                               profiles/netsis.json -> profile.json, eval/golden.jsonl -> golden.jsonl,
+                               eval/traps.jsonl -> traps.jsonl
+                               (Python stays where it is: nl2sql/schema_map/{generator,extra,build}.py,
+                               eval/reference.py + eval/reference_run2.py; dataset.json points at them)
+datasets/wwi/                  dataset.json schema.json rules.json profile.json golden.jsonl traps.jsonl
+                               builder.py (generate + build_db) reference.py (REFERENCES)
+nl2sql/datasets.py             Dataset, load_dataset(name, root), list_datasets(root), DatasetError
+nl2sql/agent/budget.py         estimate_prompt(messages, tools), trim_tool_answers(messages, limit)
+nl2sql/eval/compare_models.py  build_model_compare(cells, ...), render md, write_model_compare
+config/models.json             model profiles (no secrets: only the NAME of the key's env variable)
+tests/fixtures/datasets/mini/  3-table qualified-name dataset (Sales/Warehouse), for M11 tests before WWI exists
+tests/data/pii_bypass_wwi.jsonl  >= 20 bypass cases on WWI names
+data/wwi.db  db/mssql/build_wwi.sql  index/wwi/  eval_out/wwi/   (generated, ignored like their synthetic twins)
+```
+
+## Run 4 decisions
+
+R4-1. **Dataset = folder + `dataset.json`** (Contracts). `nl2sql/datasets.load_dataset(name, root=None)`; `root`
+      default = `config.datasets_dir()` (env `NL2SQL_DATASETS_DIR`, read at call time, default `<ROOT>/datasets`) so
+      tests point at `tests/fixtures/datasets` without monkeypatching globals (Decision 9). Code references in
+      dataset.json are `"module.path:attr"` (imported) or `"file.py:attr"` (loaded by path from the dataset folder
+      with `importlib.util.spec_from_file_location`, module name `nl2sql_dataset_<name>_<stem>`; the repo-root
+      `datasets/` folder is never imported as a package - it would shadow HuggingFace `datasets`). Unknown name ->
+      `DatasetError("Bilinmeyen veri kümesi: x (bilinenler: synthetic_erp, wwi)")`, CLI exit 2.
+R4-2. **The synthetic move is paths only** (brief §9). The five data files move with their bytes unchanged
+      (sha256 before == after, asserted in the task's test); `config.SCHEMA_PATH/RULES_PATH/PROFILE_PATH/
+      GOLDEN_PATH/TRAPS_PATH` point at the new places, so every module that defaults to config follows with no
+      code change. **Changes an old decision:** the path literals pinned in `tests/test_config.py` (SCHEMA_PATH,
+      GOLDEN_PATH, TRAPS_PATH) and `tests/test_config_run2.py` (RULES_PATH, PROFILE_PATH) change to the new
+      locations - these two tests pin a location the brief deliberately moves; no other existing test changes.
+      `profiles/excel_headers.json` is not dataset data and stays. `tests/fixtures/make_maps.py` reads
+      `config.SCHEMA_PATH` instead of its own literal. Generated Run 3 outputs (`schema/imported.json`,
+      `skeleton.json`, `diff.*`, `mapping.*`, `merged.json`) stay under `schema/` (config.SCHEMA_DIR unchanged).
+R4-3. **Outputs per dataset.** dataset.json `outputs` (all optional): `db` (default `data/<name>.db`),
+      `mssql_script` (`db/mssql/build_<name>.sql`), `index_dir` (`index/<name>`), `eval_out` (`eval_out/<name>`).
+      synthetic_erp spells today's paths (`data/test.db`, `db/mssql/build_test_db.sql`, `index`, `eval_out`), so a
+      run without `--dataset` reads and writes exactly what it did in Run 3.
+R4-4. **`--dataset <name>` (default `config.DEFAULT_DATASET` = "synthetic_erp")** on build-db, build-index,
+      eval-retrieval, ask, eval (incl. `--compare`) and make-login-script. Whole: the Dataset supplies EVERY one of
+      schema, rules, profile (join graph), golden (eval, eval-retrieval, fake replay), seed, builder, db path, T-SQL
+      script path, index dir, eval_out, `as_of` and the fake fallback SQL - no command may keep a `config.*` default
+      for any of them once `--dataset` exists. `as_of` reaches the model through `ToolContext.as_of`
+      (default `config.AS_OF`; modes.py's three prompts read it instead of `config.AS_OF`) and the auto estimate.
+      `--schema` (R3-5) still overrides the dataset's schema for eval.
+R4-5. **Qualified table names.** A schema table `name` is `"Schema.Table"` when it lives outside the dataset's
+      `default_schema`; synthetic tables stay bare (default_schema `dbo`). Helpers in doc.py: `split_name(name) ->
+      (schema|None, table)`, `split_fk("Sales.Orders.CustomerID") -> ("Sales.Orders", "CustomerID")` (rsplit once),
+      `allowlist()` = upper-cased full names (unchanged for synthetic). Policy (`_check_table`):
+      - `schema.table` whose upper full name is in the allowlist -> allowed; `tables` records the full name.
+      - a 3- or 4-part name (catalog/server) -> rejected as today; `sys.*`/`INFORMATION_SCHEMA.*` -> as today.
+      - a 2-part name not in the allowlist (`Website.Customers`, `[dbo].[TBLSTHAR]`) -> "İzin verilmeyen tablo:
+        WEBSITE.CUSTOMERS — başka şema, veritabanı ya da sunucu okunamaz." (keeps the "veritabanı" every existing
+        malicious case expects).
+      - a bare name: in the allowlist -> as today; else exactly one allowlisted `X.<name>` -> the node is
+        rewritten to `X.<name>` (so SQL Server sees the qualified name too); several -> "Belirsiz tablo adı:
+        ORDERS (PURCHASING.PURCHASEORDERS, ...); şemasıyla yazın."; none -> as today.
+      `check()` gains no parameter: resolution reads the allowlist only.
+R4-6. **SQLite storage of qualified names**: the SQLite table is created as the single quoted identifier
+      `"Sales.Orders"` (build.write_sqlite already quotes); `executor` rewrites every `exp.Table` with a `db` part to
+      `Identifier("Sales.Orders", quoted=True)` (and a column's 3-part `Sales.Orders.Col` prefix likewise) in the
+      transpile step only - PolicyResult.sql stays T-SQL. T-SQL script: `CREATE SCHEMA [Sales];` once per schema
+      before the tables, names bracketed `[Sales].[Orders]`. Type map gains `BIT`->`BOOLEAN`, `DATETIME2`->
+      `DATETIME`, `VARBINARY`->`BLOB` (declared SQLite type names; affinity keeps text dates text) and
+      introspect.normalize_type stays the exact inverse (synthetic round trip unchanged). Introspection: SQLite
+      names come back dotted as stored; MSSQL `rows_to_skeleton` names `f"{schema}.{table}"` unless schema == "dbo"
+      (supersedes Run 3's "bare names" ASSUMPTION; Netsis in dbo is unchanged), fks the same way.
+R4-7. **PII on qualified names + denied columns.** `pii.column_map` keys are `(FULL_TABLE_NAME_UPPER, COLUMN)`;
+      `pii.trace` builds the sqlglot lineage schema nested `{schema: {table: {col: type}}}` for qualified tables;
+      `_filter_target`/`_aliases` in policy use full names. New optional column field `deny` (default false): the
+      column is left out of every model-facing text (`table_detail`, `full_text`, index docs), the policy rejects
+      any reference to it anywhere ("Erişimi kapalı kolon: APPLICATION.PEOPLE.HASHEDPASSWORD.") and rejects
+      `SELECT *` / `t.*` over a table that has one ("Bu tabloda kapalı kolon var; kolonları adıyla yazın."); the
+      login script DENYs it like a pii column. WWI: `Application.People.HashedPassword` and `.Photo` are `deny`
+      (the brief says "PhotoPath"; WWI's real column is `Photo` varbinary - the real name wins), `FullName`/
+      `PreferredName` person_name, `EmailAddress`/`LogonName` email, `PhoneNumber`/`FaxNumber` phone; Customers and
+      Suppliers `PhoneNumber`/`FaxNumber` phone, `DeliveryAddressLine1/2`/`PostalAddressLine1/2` address.
+      Login script: `OWNER = "dbo"` is replaced by each table's own schema (bracketed), dbo for bare names.
+R4-8. **Index belongs to a dataset.** build-index writes `meta.dataset`; `FileStore.load_checked(expected_hash,
+      dataset=None)` raises `ForeignIndexError` (subclass of `StaleIndexError`, so every existing `except` keeps
+      catching it) with "İndeks başka veri kümesine ait: <stored> (istenen <wanted>); `python -m nl2sql build-index
+      --dataset <wanted>` çalıştırın." when they differ; meta without `dataset` counts as "synthetic_erp".
+      Search answers, ask's step notes and the eval-retrieval table print qualified names: the CLI regexes
+      `SCHEMA_HIT`/`DETAIL_HEAD` in nl2sql/cli/main.py accept `Schema.Table` (mixed case, one dot).
+R4-9. **WWI dataset (fictional rows, Microsoft's public names).** 20 tables: Application.{Countries,
+      StateProvinces, Cities, DeliveryMethods, People}, Sales.{BuyingGroups, Customers, Orders, OrderLines, Invoices,
+      InvoiceLines, CustomerTransactions}, Warehouse.{StockGroups, StockItems, StockItemStockGroups,
+      StockItemTransactions, StockItemHoldings}, Purchasing.{Suppliers, PurchaseOrders, PurchaseOrderLines}
+      (BuyingGroups and StockItemStockGroups added to the brief's list: the buying-group trap and stock groups need
+      them). Columns: the reporting subset of the real ones with the real names and T-SQL types (e.g. Sales.Invoices:
+      InvoiceID, CustomerID, BillToCustomerID, OrderID, DeliveryMethodID, SalespersonPersonID, InvoiceDate,
+      IsCreditNote BIT, ConfirmedDeliveryTime DATETIME2 NULL; InvoiceLines: InvoiceLineID, InvoiceID, StockItemID,
+      Description, Quantity, UnitPrice, TaxRate, TaxAmount, LineProfit, ExtendedPrice). English descriptions,
+      Turkish `keywords` per table, `module` = the schema name, fks as `"Sales.Customers.CustomerID"`,
+      `default_schema` null, `as_of` "2016-05-31" (the real sample ends there), seed 42. Fixture = small
+      deterministic rows (`random.Random(f"{seed}:wwi")`), Jan-May 2016, with traps: orders never invoiced; credit
+      notes (`IsCreditNote = 1`, negative line quantities/amounts); back-orders (`Orders.BackorderOrderID`);
+      several StockItemTransactions per item (signed quantities); NULL `ConfirmedDeliveryTime` /
+      `PickingCompletedWhen`; one customer name on two CustomerIDs in two buying groups; purchase orders received
+      after `ExpectedDeliveryDate`. Business terms (rules.json, Turkish): ciro = SUM(Quantity*UnitPrice) of
+      non-credit-note invoice lines (KDV/vergi hariç), net_satis = ciro with credit notes subtracted, brut_kar =
+      SUM(LineProfit), eldeki_stok = StockItemHoldings.QuantityOnHand, geciken_teslimat, faturalanmamis_siparis,
+      geri_siparis, gecen_ay/bu_yil relative to 2016-05-31, plus what the golden needs. Golden >= 25 Turkish
+      questions, same line contract, Python references in `datasets/wwi/reference.py` never reading SQL. Tag
+      vocabulary as R2-15 (trap tags from `datasets/wwi/traps.jsonl`); targets for WWI: >= 6 needs_rule, >= 6
+      multi_join, >= 4 needs_values, every trap >= 1. Licence: Microsoft publishes the sample under MIT in
+      `sql-server-samples`; README repeats "re-check before publishing" (brief §9).
+R4-10. **Model profiles** (`config/models.json`, read by `llm.load_profiles(path=config.MODELS_PATH)`): name ->
+      `ModelProfile` (Contracts). Shipped: `strata` (http://127.0.0.1:8080/v1, model "strata", no key variable,
+      budget 262144, max output 8192), `qwen27b-24k` / `qwen27b-16k` (http://127.0.0.1:8888/v1, model
+      "unsloth/Qwen3.8-27B-GGUF", key variable `UNSLOTH_API_KEY`, budgets 24576 / 16384, max output 4096).
+      `llm.client_for(profile)` reads the key from the named variable at call time (none named -> "local"; named
+      but unset -> `LLMError("API anahtarı yok: UNSLOTH_API_KEY ortam değişkenini tanımlayın.")`, CLI exit 2) and
+      passes `max_tokens`, sampling and `enable_thinking` to the request. `--model` absent = Run 3 behaviour
+      (`config.llm_settings()`, no budget). `--models-file <path>` on ask/eval overrides the file (tests).
+      A test scans models.json: no field other than `api_key_env` mentions a key, no value looks like a secret.
+R4-11. **Context budget, enforced by code.** `prompt_limit = context_budget - max_output_tokens`. Before EVERY
+      `llm.chat` the loop computes `budget.estimate_prompt(messages, tools)` = ceil(chars of every message content
+      + JSON of every tool_calls entry + JSON of the tool schemas, / CHARS_PER_TOKEN) + `MESSAGE_OVERHEAD_TOKENS`
+      per message (the `doc.estimate_tokens` rule `--mode auto` uses). Over the limit -> `trim_tool_answers`: tool
+      messages oldest first, the latest tool message never, each cut to `config.TRIM_TOOL_CHARS` chars + "…
+      (bağlam bütçesi için kısaltıldı: N karakter)", re-estimating after each; the message stays (every
+      tool_call_id must keep its answer), the cut is permanent in the transcript. Still over -> the run stops with
+      status `context_overflow`, stop reason "Bağlam bütçesi aşıldı: tahmin E > sınır L token." - nothing is sent.
+      A system prompt that alone does not fit overflows on turn 1 (a 27B in 16K with full_rules on the synthetic
+      set): that is a result, not a failure to hide (brief §9). AgentRun records `peak_estimate`, `trimmed`,
+      `overflows` (0/1); `max_prompt_tokens` stays the server-reported peak. QuestionResult gains outcome
+      `context_overflow` (runner.OUTCOMES grows to 9; **changes** the count pinned in
+      `tests/test_eval_runner.py`, which that task edits) and the three numbers. `budget=None` = no enforcement,
+      so every pre-Run 4 caller is unchanged.
+R4-12. **`--mode auto` per profile**: `resolve_auto(schema, rules, index_dir, max_tokens=None)`; None -> reads
+      `config.AUTO_FULL_MAX_TOKENS` at call time (tests/test_cli_auto_mode.py monkeypatches it); with `--model` the
+      threshold is the profile's `auto_full_max_tokens` or `floor(context_budget * config.AUTO_FULL_SHARE)`
+      (0.5: half the window for tool rounds; 24K -> 12288, 16K -> 8192). The AUTO_LINE gains "· bütçe 16.384".
+R4-13. **Model comparison eval** (`eval --compare --models a,b [--modes full_rules,rag] [--repeat N] --dataset d
+      [--llm fake|openai] [--models-file p]`; without `--models` the Run 2/3 mode compare is unchanged; `--modes`
+      without `--models` -> "--modes yalnız --models ile kullanılır." exit 2). Per model, in the order given:
+      `--llm openai` -> `llm.ping(profile)` (`models.list()` with `config.PING_TIMEOUT_S`); down -> print "⚠ <model>:
+      uç nokta yanıt vermiyor (<url>) — bu blok atlandı; GPU'da bu modeli açıp yeniden koşun." and record it in
+      `skipped`; up -> each mode x repeat through `runner.run_eval(..., budget=prompt_limit)`. `--llm fake` skips the
+      ping and replays the golden through the same budget, so a fake compare already shows which mode fits which
+      window (deterministic dry run). Output `eval_out/compare_<dataset>_<YYYYmmdd-HHMMSS>.json|md` (directly under
+      eval_out, as the brief names it): model x mode cells with accuracy mean/min/max over repeats, answered %
+      (status submitted), peak estimate vs budget, peak server tokens, overflows, trimmed, seconds per question,
+      per-tag mean/min/max, and per-question outcomes. All blocks skipped -> no report, exit 3; else exit 0.
+      The GPU holds one heavy model at a time: README tells to run Strata and the 27B one after the other.
+R4-14. **What the user sees (CLI states)**: every command with `--dataset` prints "Veri kümesi: <display_name>
+      (<name>)" as its first line; build-db on wwi prints the same table/token lines as synthetic; `ask --model`
+      prints "Model: qwen27b-16k (unsloth/Qwen3.8-27B-GGUF, bütçe 16.384 token)"; a trimmed run adds a step-less
+      note "✂ bağlam: N araç cevabı kısaltıldı"; an overflow prints "Cevap gönderilmedi: Bağlam bütçesi aşıldı:
+      ..." (exit 1, like no_submission); the eval progress line shows `context_overflow` like the other
+      outcomes; report.md gains "Model profili: <name> · bütçe B · tepe tahmin P · taşma O". The model compare
+      prints one line per cell "<model> | <mode> | 18/26 (ort.) | cevap %92 | tepe 14.2K/16.4K | taşma 2 | 9.1
+      sn/soru", the skipped lines, then the report path. Unknown profile -> "Bilinmeyen model profili: x
+      (bilinenler: qwen27b-16k, qwen27b-24k, strata)" exit 2. A foreign index -> R4-8 message, exit 2.
+R4-15. **Test rule kept** (brief §0, R3-12): tests over golden sets, datasets or profiles assert structure, never a
+      count; tests never call a real model or a real SQL Server; the ping is tested on a closed localhost port.
+
+## Contracts (Run 4 additions)
+
+| Shape | Producer -> Consumer | Fields (optional = default) |
+|---|---|---|
+| dataset.json | `datasets/<name>/` -> nl2sql/datasets.py | `{"name", "display_name"=name, "dialect"="tsql", "connection"="sqlite" ("sqlite"\|"mssql"), "default_schema"=null, "as_of", "seed"=42, "files":{"schema"="schema.json","rules"="rules.json","profile"="profile.json","golden"="golden.jsonl","traps"=null}, "builder" ("mod:attr"\|"file.py:attr", `build_db(seed, db_path, sql_path) -> checksum`), "generator" (`generate(seed) -> Dataset rows`), "references" (`REFERENCES` dict), "fake_fallback_sql"=first golden SQL, "outputs":{"db","mssql_script","index_dir","eval_out"} (R4-3 defaults)}` |
+| `Dataset` | datasets.load_dataset -> CLI, runner, tests | frozen: `name, display_name, dialect, connection, default_schema, as_of, seed, root: Path, schema_path, rules_path, profile_path, golden_path, traps_path: Path\|None, db_path, mssql_script, index_dir, eval_out, fake_fallback_sql`; methods `build_db(seed=None, db_path=None, sql_path=None)`, `generate(seed=None)`, `references() -> dict`, `schema()`, `rules()`, `golden()` (runner.load_golden defaults) |
+| table name | schema.json -> doc, policy, executor, graph, index, pii, login script | `"Schema.Table"` outside `default_schema`, bare inside; fk `"Schema.Table.Column"` (split with `doc.split_fk`) |
+| column (ext.) | schema.json -> doc, index.docs, policy, login_script | + `deny`=false |
+| `PolicyResult.tables` (ext.) | policy -> executor, tests | upper-cased FULL names (`SALES.ORDERS`) |
+| index meta (ext.) | build-index -> FileStore.load_checked | + `dataset`="synthetic_erp" when absent |
+| models.json | `config/models.json` -> llm.load_profiles | `{"profiles":{name:{"base_url","model","api_key_env"=null,"context_budget":int,"max_output_tokens"=4096,"sampling"={} (temperature, top_p, ...),"enable_thinking"=config.ENABLE_THINKING,"auto_full_max_tokens"=null,"description"=""}}}` |
+| `ModelProfile` | llm -> CLI, loop (via budget), compare_models | frozen: `name, base_url, model, api_key_env, context_budget, max_output_tokens, sampling, enable_thinking, auto_full_max_tokens, description`; property `prompt_limit = context_budget - max_output_tokens` |
+| `ToolContext` (ext.) | caller -> loop -> modes | + `as_of`=config.AS_OF |
+| `run_agent` kwarg | caller -> loop | + `budget: int\|None`=None (prompt limit in tokens) |
+| `AgentRun` (ext.) | loop -> runner, CLI | status + "context_overflow"; + `peak_estimate`=0, `trimmed`=0, `overflows`=0 |
+| `QuestionResult` (ext.) | runner -> report, compare_models | outcome + "context_overflow"; + `peak_estimate`=0, `trimmed`=0, `overflows`=0, `submitted`=False |
+| report.json (ext.) | report -> report.md, compare | + `"dataset"`="synthetic_erp", `"profile"`: {"name","model","context_budget","max_output_tokens"} \| null; `context` + `peak_estimate`, `overflows`; `config.fingerprint` gains `"budget"` and `"dataset"` ONLY when not default/None, so Run 3 fingerprints stay byte-equal and `latest` reuse keeps working |
+| model compare report | compare_models -> json/md, CLI | `{"timestamp","dataset","questions":int,"repeat":int,"models":[name],"modes":[name],"cells":{model:{mode:{"profile":{"model","context_budget","prompt_limit"},"scores":{"mean","min","max"},"answered_pct","peak_estimate","peak_reported","overflows","trimmed","seconds_per_question","tags":{tag:{"mean","min","max"}},"outcomes":{qid:[outcome per repeat]}}}},"skipped":{model: reason}}` |
+| bypass case (WWI) | `tests/data/pii_bypass_wwi.jsonl` -> test | Run 3 bypass shape; `expect` + "denied" (policy rejects a `deny` column) |
+
+## Run 4 milestones
+
+- **M11 - Datasets** (T121-T135): config, the paths-only move, dataset loader, a qualified mini fixture dataset,
+  qualified names through doc/policy/executor/build/introspect/pii/login/index/graph/tools/CLI, index meta
+  dataset, `--dataset` on every command. Integration: real loader -> real builder -> real executor -> golden ==
+  references for synthetic_erp and the mini dataset; build-index on one dataset refused by the other.
+- **M12 - WWI** (T136-T145): schema + deny columns, fixture builder with traps, profile + rules, traps + golden +
+  references, PII bypass on WWI names. Integration: real WWI builder -> executor -> every golden == reference;
+  build-index + eval-retrieval + eval (fake) on wwi end to end.
+- **M13 - Models + budget** (T146-T155): profiles, budget estimate/trim, loop enforcement, outcome wiring, `--model`
+  and auto per profile, ping + compare report, CLI compare, README Run 4 + "27B test", smoke. Integration: real
+  profiles file + real loop + FakeLLM + real executor through the model compare on wwi and synthetic_erp, a tiny
+  budget profile shows overflows in the table.
