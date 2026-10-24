@@ -23,10 +23,16 @@ def _schema() -> dict:
 
 
 def _expected() -> dict:
-    """convert'in ürettiği alanlar; kind/keywords Run 2 ekleri, Excel başlığında karşılığı yok."""
+    """convert'in ürettiği alanlar; kind/keywords Run 2, pii Run 3 ekleri — Excel başlığında karşılığı yok."""
     return {
         "tables": [
-            {k: t[k] for k in ("name", "description", "module", "columns")}
+            {
+                **{k: t[k] for k in ("name", "description", "module")},
+                "columns": [
+                    {k: column[k] for k in ("name", "type", "description", "fk", "values", "nullable")}
+                    for column in t["columns"]
+                ],
+            }
             for t in _schema()["tables"]
         ]
     }

@@ -1,4 +1,6 @@
-# NL2SQL — Run 1
+# Bilgin — Run 1
+
+Product name **Bilgin**; the package and the CLI stay `nl2sql`.
 
 A measurement tool for one question: **can a local LLM write correct T-SQL over a Netsis-like
 schema?** Ten golden Turkish questions run against a synthetic database through a read-only,
@@ -220,3 +222,155 @@ business *intent*. `eval/REVIEW.md` prints every golden question with its tags, 
 SQL and the first five rows of the pure-Python reference answer — computed from
 `eval.reference.REFERENCES`, never from the database — each under an unchecked `- [ ] niyet doğru`
 box. Regenerate it whenever `eval/golden.jsonl` changes.
+
+---
+
+# Run 3 — A schema from the outside, and personal data that never leaves the executor
+
+Run 3 does two things. It gets a customer's schema into the system without anyone hand-writing
+`schema/schema.json` — an Excel map, a live database, or both — and it makes the tool safe to point at a
+real ERP database: every value that traces back to a column marked as personal data is masked inside the
+executor, before the model, the screen or the eval ever sees a row.
+
+## Commands
+
+```bash
+python -m nl2sql import-map HARITA.xlsx [--llm openai|fake] [--accept] [--mapping m.json]
+                      [--out schema/imported.json]
+python -m nl2sql introspect [--out schema/skeleton.json] [--sample]
+python -m nl2sql diff-map --excel schema/imported.json (--db | --db-schema schema/skeleton.json)
+python -m nl2sql merge-map --excel schema/imported.json (--db | --db-schema schema/skeleton.json)
+                      [--out schema/merged.json]
+python -m nl2sql make-login-script [--login nl2sql_ro]
+python -m nl2sql eval   [--llm openai|fake] [--schema DOSYA|full|skeleton] [--mode ...]
+                      [--compare [--repeat N]]
+python -m nl2sql ask "..." [--mode auto|full|full_rules|rag]      # auto is the default now
+```
+
+`build-db`, `build-index` and `eval-retrieval` are unchanged from Run 2. The generated files
+(`schema/mapping.<name>.json`, `schema/imported.json`, `schema/skeleton.json`, `schema/diff.json|md`,
+`db/mssql/readonly_login.sql`) are gitignored or carry a password placeholder, so none of them leaks
+anything by being on disk.
+
+## Getting a customer's schema in
+
+One rule runs through all four commands: **the LLM proposes, code converts.** The model sees sheet names,
+headers and twenty preview rows — never the rows themselves — and the conversion of every row after that is
+plain Python over the whole workbook.
+
+`import-map` is two phases on purpose. Without `--accept` it prints the mapping proposal (sheet, header row,
+which field each column was read as), writes `schema/mapping.<name>.json` and stops, so you can edit it;
+where the model and the deterministic header dictionary (`profiles/excel_headers.json`) disagree, the line
+is printed as `⚠ uyuşmuyor:` rather than resolved silently. With `--accept` the mapping — the one just
+written, or a corrected one via `--mapping` — is applied to every row and the canonical schema lands in
+`--out`. An unreachable model is not an error here: the dictionary maps the workbook alone and says so.
+
+`introspect` reads the database itself (SQLite `PRAGMA`, SQL Server `INFORMATION_SCHEMA` + `sys.foreign_keys`)
+and writes a skeleton: names, types, nullability, foreign keys. Empty descriptions are not a gap — the
+skeleton carries structure, the Excel map carries meaning. `--sample` adds up to five distinct values per
+short text column, and those queries go through the same executor as model SQL, so they are policy-checked
+and audited too.
+
+`diff-map` answers "does the map describe this database?" — Excel-only and DB-only tables and columns, type
+mismatches, foreign keys the map claims that the DB does not have — as `schema/diff.json` plus a readable
+`schema/diff.md`. `merge-map` produces the schema both sides agree on: the database decides existence,
+types, nullability and keys; the Excel decides description, coded values and module.
+
+`eval --schema <path|full|skeleton>` measures the schema it names — allowlist, prompt text, join graph and
+index signature all come from that file — prints `Şema: <path> (<hash8>)` before the live lines and records
+path and hash in `report.json`. That is what makes "hand-written schema vs skeleton-only" a measurement
+rather than two incomparable runs, and it keeps the Run 2 refusal: an index built from a different schema is
+rejected, not silently rebuilt.
+
+## PII: eight classes, one choke point
+
+A schema column may carry `pii`: `tckn`, `vkn`, `iban`, `phone`, `email`, `address`, `salary`,
+`person_name`. Nothing else in the system decides what happens to it — masking lives **inside the
+executor, after the backend and before the Result is returned**, so the agent's tools, `ask`'s table and
+the eval all read the same masked rows. There is no second place to forget.
+
+Each class keeps the smallest part that still lets a reader recognise the row, and none of it is
+reversible:
+
+| Class | What you see |
+| --- | --- |
+| `tckn`, `vkn` | `*******1234` |
+| `iban` | `TR** **** **** **** 1234` |
+| `phone` | `*** ** 456` |
+| `email` | `e***@ornek.com` |
+| `address` | the city — the first segment only |
+| `person_name` | initials, `E. K.` |
+| `salary` | `***` |
+
+Which output columns to mask is decided by tracing each one back to its source columns with sqlglot
+lineage, so an alias, a CTE rename, a `CAST`/`CONVERT`, a `SUBSTRING`, a `CASE`, a `UNION` into a
+non-personal column position, a scalar subquery or a derived table does not lose the mark. `COUNT` and
+`COUNT(DISTINCT ...)` are whitelisted — a count leaks no value — while `MAX` and `AVG` over a salary are
+masked, because the aggregate *is* the value. A column whose lineage cannot be resolved is masked in full:
+fail closed, and the CLI prints how many columns were hidden that way.
+
+The other half is the filter. `WHERE TCKN LIKE '1%'` returns no personal value and still answers a personal
+question, so a marked column in `WHERE`, `JOIN ON`, `GROUP BY` or `ORDER BY` is rejected outright, with the
+column named in the reason. `config.PII_FILTER` holds the classes that are filtered this way; drop a class
+from the set and only the masking still applies to it.
+
+`Result.masked_columns` carries the masked names, `ask` prints `Maskelendi: TCKN, TELEFON` under the table,
+and `logs/audit.jsonl` records the names — never the values. `sample_values` and `introspect --sample`
+inherit all of it because they go through the same door.
+
+## Two layers, and the database is the first one
+
+The Python policy is **not** the boundary. It reads the table names a query mentions, and a VIEW, a SYNONYM
+or a table-valued function can wrap a table that is not on the allowlist — the query only ever names the
+wrapper, so the parser cannot see through it. The durable control is a database permission, and
+`make-login-script` generates it: `db/mssql/readonly_login.sql` creates the login with the password
+placeholder `__DEGISTIR__` (never a real secret, which is why the file can live in the repo), adds
+`db_datareader`, then takes it back — `DENY SELECT` for every table outside the schema allowlist,
+column-level `DENY SELECT` for every personal column, `DENY VIEW DEFINITION` and `DENY EXECUTE`. DENY beats
+GRANT, so the login can read the allowed tables and cannot see a personal column at all.
+
+The sqlglot policy is the second layer: it catches a mistake before a query is sent, caps rows with `TOP`,
+refuses multi-statement batches and `sys`/`INFORMATION_SCHEMA` reads, and rejects the filter side channels
+above. Two layers because they fail differently — the login script is what limits damage if the parser is
+fooled, and the parser is what tells the model *why* its query was wrong.
+
+## Real-data checklist
+
+Against a **copy** of the customer's Netsis database. Never the live one, and never with the account you use
+to administer it.
+
+1. Restore the copy, and create the read-only login **first**: `python -m nl2sql make-login-script`,
+   replace `__DEGISTIR__` with a real password, run the script in the copy's database context. Windows auth
+   on this machine is sysadmin — it is never used, because a login that can do anything makes every guardrail
+   above decorative.
+2. Point the tool at it: `NL2SQL_BACKEND=mssql` and `NL2SQL_MSSQL_CONN` with that login and
+   `ApplicationIntent=ReadOnly`.
+3. `introspect --sample` → `schema/skeleton.json`. This is the first step precisely because it needs no
+   schema: the skeleton is introspected from tables the hand-written `schema.json` has never heard of.
+4. `import-map customer.xlsx` → edit `schema/mapping.customer.json` if a header was read wrong →
+   `import-map customer.xlsx --accept --mapping ...` → `schema/imported.json`.
+5. `diff-map --excel schema/imported.json --db` → read `schema/diff.md`; then
+   `merge-map --excel schema/imported.json --db --out schema/merged.json`.
+6. `build-index` from the merged schema, then `eval --schema schema/merged.json --llm fake` (scores the
+   pipeline with no model), then the same without `--llm fake`, then `ask`.
+
+Nothing in the test suite touches a real server. The SQL Server query texts are parse-tested and the
+rows-to-skeleton conversion is a pure function over hand-built rows, so `pyodbc` is never connected; every
+test that executes SQL runs it against a SQLite file that `build-db` wrote in a temp directory.
+
+<!-- ASSUMPTION: --mode auto (R3-10) and --repeat (R3-11) are Run 3 surface documented here at the M9
+close; they ship in M10 (T107, T108), which is why the Run 3 command list already names them. -->
+
+## `--mode auto` and `--repeat`
+
+`ask` now defaults to `--mode auto`: the full_rules prompt is measured, and a schema small enough to fit
+`config.AUTO_FULL_MAX_TOKENS` (12000 by default — a 16–24K context box) runs with every rule written out,
+while a bigger one falls back to `rag`, or to `full` with the Run 2 note when no fresh index exists. The
+resolved mode and the estimate are printed and land in the audit line, so a run says which budget it paid.
+`eval` refuses `auto`: a measurement has to name its mode.
+
+`eval --compare --repeat N` runs each mode N times and reports mean, min and max per mode and per tag, plus
+how many questions flipped between repeats of the *same* mode. The verdict compares means and adds
+`fark gürültü içinde` when two mode means differ by less than the spread of either — a one-run difference on
+a local model is not a result, and Run 2's rag-vs-full_rules tie is exactly the kind of number this
+measures.

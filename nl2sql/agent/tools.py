@@ -14,6 +14,7 @@ import re
 from nl2sql import config
 from nl2sql.engine.result import Budget
 from nl2sql.graph.graph import GraphError, join_text
+from nl2sql.index.search import expanded_hits
 from nl2sql.schema_map import doc
 from nl2sql.schema_map.rules import rule_text
 
@@ -248,11 +249,16 @@ def _unknown(name: str, known: list[str]) -> str:
 def _search_schema(ctx, query: str) -> str:
     if ctx.search is None:
         return NO_SEARCH
-    hits = ctx.search.search(query, collection="tables", k=config.SEARCH_K)
+    # R3-9: vuruşların join komşuları da cevaba girer; graphı olmayan bağlam genişletemez.
+    hits = expanded_hits(ctx.search, query, ctx.graph, ctx.schema, config.SEARCH_K)
     if not hits:
         return "Eşleşen tablo yok."
     tables = {table["name"]: table for table in ctx.schema.get("tables", [])}
-    return "\n".join(_hit_line(tables.get(hit.title), hit.title) for hit in hits)
+    return "\n".join(
+        _hit_line(tables.get(hit.title), hit.title)
+        + (" (komşu)" if hit.meta.get("komşu") else "")
+        for hit in hits
+    )
 
 
 def _hit_line(table: dict | None, name: str) -> str:

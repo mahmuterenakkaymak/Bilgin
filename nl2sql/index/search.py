@@ -13,8 +13,8 @@ sıfır vektörü ya da vektörü olmayan bir doküman böylece hiç öne çıkm
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from nl2sql import config
@@ -29,13 +29,17 @@ METHODS = ("hybrid", "bm25", "dense")
 
 @dataclass
 class Hit:
-    """Tek bir arama sonucu; `rank` 1'den başlar, `score` yöntemin kendi ölçeğindedir."""
+    """Tek bir arama sonucu; `rank` 1'den başlar, `score` yöntemin kendi ölçeğindedir.
+
+    `meta` sıralamaya girmeyen bilgiyi taşır - komşu olarak eklenen vuruşun işareti gibi.
+    """
 
     doc_id: str
     title: str
     score: float
     rank: int
     text: str = ""
+    meta: dict = field(default_factory=dict)
 
 
 def rrf(rankings: Sequence[Sequence[str]], k: int = config.RRF_K) -> list[tuple[str, float]]:
@@ -114,6 +118,57 @@ class HybridSearch:
                 [doc_id for doc_id, _ in self._rank_dense(query, members, window)],
             ]
         )[:k]
+
+
+def expanded_hits(
+    search: HybridSearch,
+    query: str,
+    graph,
+    schema: dict,
+    k: int,
+    expand: bool = config.NEIGHBOUR_EXPANSION,
+    max_extra: int = config.NEIGHBOUR_MAX,
+) -> list[Hit]:
+    """R3-9: ilk k vuruşun join graphındaki 1 adımlık komşuları listenin sonuna eklenir.
+
+    Komşu aramanın değil şemanın söylediği bir bağlantıdır: model fatura tablosunu bulduğunda
+    cari hesabı da görmeli, yoksa ikinci bir aramayı onu tahmin etmekle harcıyor. Yalnız veri
+    tabloları eklenir - bir dolgunun komşusu olmak onu ilginç kılmaz - ve her vuruş en fazla
+    `max_extra` komşu getirir. `expand` kapalıyken sonuç tam olarak aramanın kendi listesidir.
+    """
+    hits = search.search(query, collection="tables", k=k)
+    if not expand or graph is None or max_extra <= 0:
+        return hits
+    known = {hit.title for hit in hits}
+    data = {
+        table["name"]
+        for table in schema.get("tables", [])
+        if table.get("kind") != "distractor"
+    }
+    names: list[str] = []
+    for hit in hits:
+        taken = 0
+        for name in sorted(set(_neighbours(graph, hit.title))):
+            if taken == max_extra:
+                break
+            if name in known or name not in data:
+                continue
+            known.add(name)
+            names.append(name)
+            taken += 1
+    return [
+        *hits,
+        *(
+            Hit(doc_id=f"table:{name}", title=name, score=0.0, rank=rank, meta={"komşu": True})
+            for rank, name in enumerate(names, start=len(hits) + 1)
+        ),
+    ]
+
+
+def _neighbours(graph, name: str) -> Iterable[str]:
+    """Bir tabloya kenarla bağlı tablolar; graphın tanımadığı bir ad komşusuzdur."""
+    for edge in graph.adjacency.get(name, []):
+        yield edge.right_table if edge.left_table == name else edge.left_table
 
 
 def build_search(schema: dict, rules: list[dict], embedder: Embedder) -> HybridSearch:

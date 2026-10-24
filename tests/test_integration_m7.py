@@ -23,10 +23,19 @@ MESSY_REL = "tests/fixtures/map_customer_map.xlsx"
 
 
 def _tables() -> list[dict]:
-    """Şemanın convert'in ürettiği alanları; kind/keywords Run 2 ekleri, Excel'de karşılığı yok."""
+    """Şemanın convert'in ürettiği alanları; kind/keywords Run 2, pii Run 3 ekleri — Excel'de karşılığı yok."""
     with open(config.SCHEMA_PATH, encoding="utf-8") as handle:
         tables = json.load(handle)["tables"]
-    return [{k: t[k] for k in ("name", "description", "module", "columns")} for t in tables]
+    return [
+        {
+            **{k: t[k] for k in ("name", "description", "module")},
+            "columns": [
+                {k: column[k] for k in ("name", "type", "description", "fk", "values", "nullable")}
+                for column in t["columns"]
+            ],
+        }
+        for t in tables
+    ]
 
 
 def test_tidy_fixture_round_trips_to_the_canonical_schema():

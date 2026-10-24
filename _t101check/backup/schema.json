@@ -1,0 +1,5743 @@
+{
+  "tables": [
+    {
+      "name": "TBLSTGRUP",
+      "description": "Stok grupları; ürünlerin ana kategori ağacı.",
+      "module": "Stok",
+      "columns": [
+        {
+          "name": "GRUP_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Grup kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "GRUP_ISIMI",
+          "type": "NVARCHAR(60)",
+          "description": "Grubun adı (ör. Gıda, Temizlik).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Grup açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSTSABIT",
+      "description": "Stok kartları; her ürün bir satırdır.",
+      "module": "Stok",
+      "columns": [
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Ürün kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_ADI",
+          "type": "NVARCHAR(100)",
+          "description": "Ürün adı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "GRUP_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Ürünün bağlı olduğu stok grubu.",
+          "fk": "TBLSTGRUP.GRUP_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OLCU_BR1",
+          "type": "VARCHAR(8)",
+          "description": "Temel ölçü birimi (ADET, KG, M).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "KDV_ORANI",
+          "type": "DECIMAL(18,2)",
+          "description": "Satış KDV oranı, yüzde olarak (10,00 veya 20,00).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BIRIM_FIYAT",
+          "type": "DECIMAL(18,2)",
+          "description": "Kart üzerindeki liste birim fiyatı (KDV hariç). Satış fiyatı değildir: gerçek satışlar fatura satırındaki net fiyattan yapılır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "AKTIF",
+          "type": "VARCHAR(1)",
+          "description": "Kartın durumunu gösteren kod.",
+          "fk": null,
+          "values": {
+            "E": "aktif kart",
+            "H": "pasif kart"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLDEPO",
+      "description": "Depolar; her stok hareketi bir depoya bağlıdır, aynı ürün birden çok depoda tutulur.",
+      "module": "Stok",
+      "columns": [
+        {
+          "name": "DEPO_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Depo kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPO_ISIMI",
+          "type": "NVARCHAR(60)",
+          "description": "Deponun adı (ör. Merkez Depo).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IL",
+          "type": "NVARCHAR(40)",
+          "description": "Deponun bulunduğu il.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "VARSAYILAN",
+          "type": "VARCHAR(1)",
+          "description": "Firmanın varsayılan deposu olup olmadığını gösteren kod.",
+          "fk": null,
+          "values": {
+            "E": "varsayılan depo",
+            "H": "normal depo"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLPLASIYER",
+      "description": "Plasiyer (satış temsilcisi) kartları; cariler bir plasiyere bağlıdır.",
+      "module": "Satış",
+      "columns": [
+        {
+          "name": "PLASIYER_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Plasiyer kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "AD_SOYAD",
+          "type": "NVARCHAR(60)",
+          "description": "Plasiyerin adı soyadı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IL",
+          "type": "NVARCHAR(40)",
+          "description": "Plasiyerin çalıştığı il.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TELEFON",
+          "type": "VARCHAR(20)",
+          "description": "Telefon numarası; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLCASABIT",
+      "description": "Cari kartları; alıcı ve satıcılar aynı tabloda tutulur, CARI_TIP kodu ayırır.",
+      "module": "Cari",
+      "columns": [
+        {
+          "name": "CARI_KOD",
+          "type": "VARCHAR(20)",
+          "description": "Cari kodu; birincil anahtar. Diğer tablolar bu koda CARI_KODU adıyla bağlanır.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_ISIM",
+          "type": "NVARCHAR(120)",
+          "description": "Cari ünvanı / adı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_TIP",
+          "type": "VARCHAR(1)",
+          "description": "Carinin tipi. Alıcı ararken yalnız 'A' yetmez, 'H' olanlar da alıcıdır; satıcı ararken de 'H' dahil edilir.",
+          "fk": null,
+          "values": {
+            "A": "alıcı",
+            "S": "satıcı",
+            "H": "hem alıcı hem satıcı"
+          },
+          "nullable": false
+        },
+        {
+          "name": "IL",
+          "type": "NVARCHAR(40)",
+          "description": "Carinin bulunduğu il (büyük harfle, ör. ANKARA).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PLASIYER_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Cariyle ilgilenen plasiyer; atanmamışsa NULL.",
+          "fk": "TBLPLASIYER.PLASIYER_KODU",
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLFATUIRS",
+      "description": "Fatura başlıkları; satış, alış ve satış iade faturaları aynı tabloda FTIRSIP kodu ile ayrılır. Satır toplamlı işlemlerde başlık tutarları tekrarlanır, bu yüzden satırlarla join edip GENELTOPLAM toplamak sayıyı şişirir.",
+      "module": "Fatura",
+      "columns": [
+        {
+          "name": "FTIRSIP",
+          "type": "INT",
+          "description": "Fatura tipi kodu.",
+          "fk": null,
+          "values": {
+            "1": "satış faturası",
+            "2": "alış faturası",
+            "3": "satış iade faturası"
+          },
+          "nullable": false
+        },
+        {
+          "name": "FATIRS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Fatura (fiş) numarası; birincil anahtar. Stok ve cari hareketleri bu numaraya bağlanır.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Faturanın cari tarafı (satışta alıcı, alışta satıcı).",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Fatura tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "GENELTOPLAM",
+          "type": "DECIMAL(18,2)",
+          "description": "Faturanın genel toplamı (KDV dahil, iptal edilmemiş faturalar için geçerli).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IPTAL",
+          "type": "VARCHAR(1)",
+          "description": "İptal durumu. 'E' olan faturalar geçersizdir; tutarları hiçbir toplama dahil edilmez.",
+          "fk": null,
+          "values": {
+            "E": "iptal edilmiş",
+            "H": "geçerli"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLSTHAR",
+      "description": "Stok hareketleri; giriş ve çıkış miktarları satır satır tutulur. Faturasız hareketler (transfer, sayım) da buradadır, o yüzden fatura tablosuyla INNER JOIN kayıp satır yaratır.",
+      "module": "Stok",
+      "columns": [
+        {
+          "name": "STHAR_ID",
+          "type": "INT",
+          "description": "Hareket numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Harekete konu ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPO_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Hareketin yapıldığı depo.",
+          "fk": "TBLDEPO.DEPO_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STHAR_GCKOD",
+          "type": "VARCHAR(1)",
+          "description": "Giriş/çıkış yönü kodu.",
+          "fk": null,
+          "values": {
+            "G": "giriş",
+            "C": "çıkış"
+          },
+          "nullable": false
+        },
+        {
+          "name": "STHAR_GCMIK",
+          "type": "DECIMAL(18,2)",
+          "description": "Hareket miktarı (daima pozitif; yön STHAR_GCKOD ile belirlenir).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STHAR_NF",
+          "type": "DECIMAL(18,2)",
+          "description": "Hareketin net birim fiyatı (KDV hariç). Aynı ürün tarih veya müşteriye göre farklı fiyat taşıyabilir; ciro için kart fiyatı değil bu alan kullanılır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "STHAR_TARIH",
+          "type": "DATE",
+          "description": "Hareket tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STHAR_HTUR",
+          "type": "VARCHAR(1)",
+          "description": "Hareket türü kodu; yön STHAR_GCKOD ile birlikte okunur.",
+          "fk": null,
+          "values": {
+            "S": "satış (çıkış)",
+            "A": "alış (giriş)",
+            "I": "satış iadesi (giriş) - satıştan düşülür",
+            "T": "depo transferi (çıkış + giriş çifti, faturasız)",
+            "D": "sayım/devir (giriş, faturasız)"
+          },
+          "nullable": false
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Hareketi doğuran fatura numarası; transfer ve sayım hareketlerinde NULL.",
+          "fk": "TBLFATUIRS.FATIRS_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Hareketin cari tarafı; faturasız hareketlerde NULL.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLCAHAR",
+      "description": "Cari hesap hareketleri; borç ve alacak kayıtları.",
+      "module": "Cari",
+      "columns": [
+        {
+          "name": "CAHAR_ID",
+          "type": "INT",
+          "description": "Cari hesap hareket numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Hareketin cari hesabı.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Hareket tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BA",
+          "type": "VARCHAR(1)",
+          "description": "Borç/alacak yönü kodu.",
+          "fk": null,
+          "values": {
+            "B": "borç",
+            "A": "alacak"
+          },
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Hareket tutarı (pozitif; yönü BA alanındadır).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Kaynak fiş numarası; el ile girilen kayıtlarda NULL.",
+          "fk": "TBLFATUIRS.FATIRS_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Hareket açıklaması; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSIPAMAS",
+      "description": "Sipariş başlıkları; siparişler faturaya dönüşmemiş olabilir.",
+      "module": "Sipariş",
+      "columns": [
+        {
+          "name": "SIPARIS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Sipariş numarası; birincil anahtar. Satırlar bu numaraya bağlanır.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Siparişi veren cari.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Sipariş tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TOPLAM_TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Siparişin toplam tutarı (KDV dahil).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLSIPATRA",
+      "description": "Sipariş satırları; bir siparişin ürün satırlarıdır.",
+      "module": "Sipariş",
+      "columns": [
+        {
+          "name": "SIPATRA_ID",
+          "type": "INT",
+          "description": "Satır numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SIPARIS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Satırın ait olduğu sipariş.",
+          "fk": "TBLSIPAMAS.SIPARIS_NO",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Sipariş edilen ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MIKTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Sipariş edilen miktar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BIRIM_FIYAT",
+          "type": "DECIMAL(18,2)",
+          "description": "Satır birim fiyatı (KDV hariç).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Satır toplamı (miktar x birim fiyat, KDV hariç).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TESLIM_TARIHI",
+          "type": "DATE",
+          "description": "Kararlaştırılan teslim tarihi; henüz belirlenmemişse NULL. Teslim tarihi olmayan satırlar sayılırken TESLIM_TARIHI IS NULL kullanılır, tarih alanına koşul yazmak onları sessizce eler.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSTOKFIAT",
+      "description": "Ürün fiyat satırları; aynı ürün için tarih aralıklı birden fazla fiyat bulunabilir. 'Liste fiyatı' sorulduğunda sorulan tarihe kadar geçerli olan en yeni satır alınır, stok kartının BIRIM_FIYAT alanı değil.",
+      "module": "Stok",
+      "kind": "data",
+      "keywords": ["fiyat", "liste fiyatı", "fiyat geçmişi", "zam", "birim fiyat"],
+      "columns": [
+        {
+          "name": "FIAT_ID",
+          "type": "INT",
+          "description": "Fiyat satırı numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Fiyatı tutulan ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FIYAT_TIPI",
+          "type": "VARCHAR(1)",
+          "description": "Fiyatın ait olduğu yön kodu; satış fiyatı ile alış fiyatı aynı üründe ayrı satırlardır.",
+          "fk": null,
+          "values": {
+            "S": "satış fiyatı",
+            "A": "alış fiyatı"
+          },
+          "nullable": false
+        },
+        {
+          "name": "FIYAT",
+          "type": "DECIMAL(18,2)",
+          "description": "Birim fiyat (KDV hariç).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "GECERLILIK_TARIHI",
+          "type": "DATE",
+          "description": "Satırın geçerli olmaya başladığı tarih (YYYY-MM-DD); aynı üründeki daha eski satırın yerini alır.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLSTHAR_ARSIV",
+      "description": "2025 yılı stok hareketleri arşivi; sütunları ve kodları TBLSTHAR ile birebir aynıdır. Bu tabloda 2026 hareketleri yoktur; TBLSTHAR'da 2025 hareketleri yoktur: 2025 soruları yalnız bu tablodan, 2026 soruları yalnız TBLSTHAR'dan cevaplanır.",
+      "module": "Stok",
+      "kind": "data",
+      "keywords": ["arşiv", "2025", "geçen yıl", "stok hareketi", "devir"],
+      "columns": [
+        {
+          "name": "STHAR_ID",
+          "type": "INT",
+          "description": "Hareket numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Harekete konu ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPO_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Hareketin yapıldığı depo.",
+          "fk": "TBLDEPO.DEPO_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STHAR_GCKOD",
+          "type": "VARCHAR(1)",
+          "description": "Giriş/çıkış yönü kodu.",
+          "fk": null,
+          "values": {
+            "G": "giriş",
+            "C": "çıkış"
+          },
+          "nullable": false
+        },
+        {
+          "name": "STHAR_GCMIK",
+          "type": "DECIMAL(18,2)",
+          "description": "Hareket miktarı (daima pozitif; yön STHAR_GCKOD ile belirlenir).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STHAR_NF",
+          "type": "DECIMAL(18,2)",
+          "description": "Hareketin net birim fiyatı (KDV hariç). Aynı ürün tarih veya müşteriye göre farklı fiyat taşıyabilir; ciro için kart fiyatı değil bu alan kullanılır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "STHAR_TARIH",
+          "type": "DATE",
+          "description": "Hareket tarihi (YYYY-MM-DD); arşivde tümü 2025 yılına aittir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STHAR_HTUR",
+          "type": "VARCHAR(1)",
+          "description": "Hareket türü kodu; yön STHAR_GCKOD ile birlikte okunur.",
+          "fk": null,
+          "values": {
+            "S": "satış (çıkış)",
+            "A": "alış (giriş)",
+            "I": "satış iadesi (giriş) - satıştan düşülür",
+            "T": "depo transferi (çıkış + giriş çifti, faturasız)",
+            "D": "sayım/devir (giriş, faturasız)"
+          },
+          "nullable": false
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Hareketi doğuran belge numarası; faturasız hareketlerde NULL, arşiv kayıtlarında 'ARS' ile başlayan arşiv numarası. TBLFATUIRS'e bağlanmaz, 2026 faturalarıyla join edilmez.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Hareketin cari tarafı; faturasız hareketlerde NULL.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLDOVKUR",
+      "description": "Günlük döviz kurları; her gün ve her döviz kodu için tek satır. Döviz tutarının TL karşılığı, işlemin tarihindeki satırın ALIS veya SATIS kurundan hesaplanır.",
+      "module": "Döviz",
+      "kind": "data",
+      "keywords": ["döviz", "kur", "dolar", "euro", "tl karşılığı", "çevrim"],
+      "columns": [
+        {
+          "name": "KUR_TARIH",
+          "type": "DATE",
+          "description": "Kur tarihi (YYYY-MM-DD); DOVIZ_KODU ile birlikte satırı benzersiz kılar, birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DOVIZ_KODU",
+          "type": "VARCHAR(3)",
+          "description": "Döviz kodu; aynı günde her kod için bir satır bulunur.",
+          "fk": null,
+          "values": {
+            "USD": "ABD doları",
+            "EUR": "euro"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ALIS",
+          "type": "DECIMAL(18,2)",
+          "description": "Dövizin alış kuru (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SATIS",
+          "type": "DECIMAL(18,2)",
+          "description": "Dövizin satış kuru (TL); aynı günün ALIS kurundan yüksektir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLCARISUBE",
+      "description": "Cari şubeleri; bir carinin birden çok şubesi olabilir ya da hiç şubesi olmayabilir. Şubenin ili cari kartının IL alanından farklı olabilir, bu yüzden il filtrelerinde hangi tablodaki il alanının kullanılacağına dikkat edilir.",
+      "module": "Cari",
+      "kind": "data",
+      "keywords": ["şube", "şubeler", "il", "ilçe", "aktif şube"],
+      "columns": [
+        {
+          "name": "SUBE_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Şube kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KOD",
+          "type": "VARCHAR(20)",
+          "description": "Şubenin bağlı olduğu cari.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SUBE_ADI",
+          "type": "NVARCHAR(100)",
+          "description": "Şubenin adı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IL",
+          "type": "NVARCHAR(40)",
+          "description": "Şubenin bulunduğu il (büyük harfle, ör. İSTANBUL); carinin kendi IL alanından farklı olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ILCE",
+          "type": "NVARCHAR(40)",
+          "description": "Şubenin bulunduğu ilçe; girilmemişse NULL.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "AKTIF",
+          "type": "VARCHAR(1)",
+          "description": "Şubenin durumu; kapalı şubeler tarihçede kalır.",
+          "fk": null,
+          "values": {
+            "E": "aktif şube",
+            "H": "kapalı şube"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ADRES",
+          "type": "NVARCHAR(200)",
+          "description": "Şubenin açık adresi; il, ilçe ve sokak virgülle ayrılır.",
+          "pii": "address",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TELEFON",
+          "type": "VARCHAR(20)",
+          "description": "Şube telefon numarası.",
+          "pii": "phone",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "E_POSTA",
+          "type": "NVARCHAR(100)",
+          "description": "Şube e-posta adresi.",
+          "pii": "email",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLKAMPANYA",
+      "description": "Kampanya tanımları; bir ürün için belirli bir tarih aralığında uygulanan indirim oranı. Kampanyalı satış aranırken hareket tarihinin BASLANGIC ile BITIS arasına düştüğüne bakılır, ürünün kampanya satırının olması o satışın kampanyalı olduğu anlamına gelmez.",
+      "module": "Kampanya",
+      "kind": "data",
+      "keywords": ["kampanya", "kampanyalı satış", "indirim", "indirim oranı"],
+      "columns": [
+        {
+          "name": "KAMPANYA_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Kampanya kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "KAMPANYA_ADI",
+          "type": "NVARCHAR(100)",
+          "description": "Kampanyanın adı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Kampanyaya konu ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BASLANGIC",
+          "type": "DATE",
+          "description": "Kampanyanın başladığı tarih (YYYY-MM-DD), o gün dahil.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BITIS",
+          "type": "DATE",
+          "description": "Kampanyanın bittiği tarih (YYYY-MM-DD), o gün dahil.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "INDIRIM_ORANI",
+          "type": "DECIMAL(18,2)",
+          "description": "Uygulanan indirim oranı, yüzde olarak (ör. 15,00).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLMUHFIS",
+      "description": "Muhasebe fiş satırları; faturaların hesap kodlu kayıtları. İptal edilmiş faturaların kayıtları da burada durur ve KDV satırı ayrı bir satırdır, bu yüzden ciro için TBLSTHAR yerine bu tablo kullanılırsa iptaller ve KDV toplama girer.",
+      "module": "Muhasebe",
+      "kind": "data",
+      "keywords": ["muhasebe", "fiş", "hesap kodu", "mizanisa", "kayıt"],
+      "columns": [
+        {
+          "name": "MUHFIS_ID",
+          "type": "INT",
+          "description": "Fiş satırı numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FIS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Muhasebe fiş numarası; aynı fişin borç ve alacak satırları bu numarada toplanır.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Fiş tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "HESAP_KODU",
+          "type": "VARCHAR(6)",
+          "description": "Muhasebe hesap kodu; satış geliri ile KDV ve maliyet hesapları ayrı satırlardır.",
+          "fk": null,
+          "values": {
+            "600": "yurtiçi satış",
+            "610": "satış iadesi",
+            "153": "ticari mallar",
+            "391": "hesaplanan KDV"
+          },
+          "nullable": false
+        },
+        {
+          "name": "BA",
+          "type": "VARCHAR(1)",
+          "description": "Satırın borç/alacak yönü.",
+          "fk": null,
+          "values": {
+            "B": "borç",
+            "A": "alacak"
+          },
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Fiş satırı tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FATIRS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Kaydı doğuran fatura numarası; iptal edilmiş faturaların kayıtları da bu numarada bulunur.",
+          "fk": "TBLFATUIRS.FATIRS_NO",
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLMUHHESAP",
+      "description": "Tek düzen hesap planı; muhasebe hesaplarının listesi. Ciro ve satış sorularında hesap kodundan gitmek cazip görünür ama burada ürün, depo, fatura veya miktar bilgisi yoktur.",
+      "module": "Muhasebe",
+      "kind": "distractor",
+      "keywords": [
+        "hesap planı",
+        "muhasebe kodu",
+        "hesap",
+        "tek düzen hesap planı"
+      ],
+      "columns": [
+        {
+          "name": "HESAP_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Hesap kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "HESAP_ADI",
+          "type": "NVARCHAR(100)",
+          "description": "Hesabın adı (ör. Yurtiçi Satışlar).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "UST_HESAP",
+          "type": "VARCHAR(12)",
+          "description": "Bağlı olduğu üst hesap kodu; ana hesaplarda boş kalır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "HESAP_TIPI",
+          "type": "VARCHAR(1)",
+          "description": "Hesabın ait olduğu tablo.",
+          "fk": null,
+          "values": {
+            "G": "gelir tablosu",
+            "B": "bilanço"
+          },
+          "nullable": false
+        },
+        {
+          "name": "AKTIF",
+          "type": "VARCHAR(1)",
+          "description": "Hesabın kullanım durumu.",
+          "fk": null,
+          "values": {
+            "E": "aktif",
+            "H": "pasif"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Hesap açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLMUHDETAY",
+      "description": "Muhasebe detay (ek hesap) kodları; hesap planının alt kırılımı. Cari veya ürün kırılımı değildir, detay kodu cari kartının koduyla karıştırılmaz.",
+      "module": "Muhasebe",
+      "kind": "distractor",
+      "keywords": [
+        "detay kodu",
+        "ek hesap",
+        "analitik takip",
+        "muhasebe detayı"
+      ],
+      "columns": [
+        {
+          "name": "DETAY_KODU",
+          "type": "VARCHAR(16)",
+          "description": "Detay kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DETAY_ADI",
+          "type": "NVARCHAR(80)",
+          "description": "Detayın adı (ör. Proje 2026).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "GRUBU",
+          "type": "VARCHAR(12)",
+          "description": "Detayın içinde toplandığı grup kodu; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "AKTIF",
+          "type": "VARCHAR(1)",
+          "description": "Detayın kullanım durumu.",
+          "fk": null,
+          "values": {
+            "E": "aktif",
+            "H": "pasif"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Detay açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLFISGRUBU",
+      "description": "Muhasebe fiş grubu tanımları; fişlerin hangi iş akışına ait olduğunu gösteren kod listesi.",
+      "module": "Muhasebe",
+      "kind": "distractor",
+      "keywords": [
+        "fiş grubu",
+        "fiş tipi",
+        "muhasebe fişi"
+      ],
+      "columns": [
+        {
+          "name": "FIS_GRUBU",
+          "type": "VARCHAR(4)",
+          "description": "Fiş grubu kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FIS_GRUBU_ADI",
+          "type": "NVARCHAR(60)",
+          "description": "Fiş grubunun adı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OTOMATIK",
+          "type": "VARCHAR(1)",
+          "description": "Fişin sistem tarafından mı yoksa elle mi oluşturulduğu.",
+          "fk": null,
+          "values": {
+            "E": "otomatik",
+            "H": "elle"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Grup açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLFISBASLIGI",
+      "description": "Muhasebe fişlerinin başlık satırları; fişin tarihi, grubu ve açıklaması burada, satır tutarları TBLMUHFIS tablosundadır. Fatura başlığı ile karıştırılmaz, buradaki fiş numarası fatura numarası değildir.",
+      "module": "Muhasebe",
+      "kind": "distractor",
+      "keywords": [
+        "fiş başlığı",
+        "fiş tarihi",
+        "muhasebe fişi",
+        "fiş no"
+      ],
+      "columns": [
+        {
+          "name": "FIS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Muhasebe fiş numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Fiş tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FIS_GRUBU",
+          "type": "VARCHAR(4)",
+          "description": "Fişin ait olduğu grup kodu.",
+          "fk": "TBLFISGRUBU.FIS_GRUBU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "KULLANICI",
+          "type": "VARCHAR(20)",
+          "description": "Fişi kaydeden kullanıcı kodu; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ONAY",
+          "type": "VARCHAR(1)",
+          "description": "Fişin onay durumu; onaysız fişler mizana girmez.",
+          "fk": null,
+          "values": {
+            "E": "onaylı",
+            "H": "onaysız"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Fiş açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLMIZAN",
+      "description": "Dönem sonu mizanı; hesap bazında borç ve alacak toplamları. Ürün, depo, plasiyer veya cari kırılımı bulunmadığı için satış ve ciro sorularının kaynağı değildir.",
+      "module": "Muhasebe",
+      "kind": "distractor",
+      "keywords": [
+        "mizan",
+        "borç toplamı",
+        "alacak toplamı",
+        "dönem",
+        "hesap özeti"
+      ],
+      "columns": [
+        {
+          "name": "MIZAN_ID",
+          "type": "INT",
+          "description": "Mizan satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "HESAP_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Mizan satırının hesabı.",
+          "fk": "TBLMUHHESAP.HESAP_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DETAY_KODU",
+          "type": "VARCHAR(16)",
+          "description": "Detay kodu; detaysız kayıtlarda boş kalır.",
+          "fk": "TBLMUHDETAY.DETAY_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DONEM",
+          "type": "VARCHAR(6)",
+          "description": "Dönem (YYYY-MM).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BORC",
+          "type": "DECIMAL(18,2)",
+          "description": "Dönem içi borç toplamı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ALACAK",
+          "type": "DECIMAL(18,2)",
+          "description": "Dönem içi alacak toplamı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "KALAN",
+          "type": "DECIMAL(18,2)",
+          "description": "Dönem sonu kalan (TL); yönü BA alanından anlaşılır.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLKEBIR",
+      "description": "Kebir defteri kayıtları; hesap ve cari bazında borç/alacak dökümü. Satır başına tek yönlü tutar taşır, muhasebe kaydı olduğu için satış adedi veya birim fiyat içermez.",
+      "module": "Muhasebe",
+      "kind": "distractor",
+      "keywords": [
+        "kebir",
+        "borç alacak dökümü",
+        "hesap hareketi",
+        "cari bakiye"
+      ],
+      "columns": [
+        {
+          "name": "KEBIR_ID",
+          "type": "INT",
+          "description": "Kebir satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Kayıt tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "HESAP_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Kaydın hesabı.",
+          "fk": "TBLMUHHESAP.HESAP_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Kayda bağlı cari; cari tarafı olmayan kayıtlarda boş kalır.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Kaydı doğuran muhasebe fişi.",
+          "fk": "TBLFISBASLIGI.FIS_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "BORC",
+          "type": "DECIMAL(18,2)",
+          "description": "Borç tutarı (TL); alacak satırlarında boş kalır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ALACAK",
+          "type": "DECIMAL(18,2)",
+          "description": "Alacak tutarı (TL); borç satırlarında boş kalır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Satır açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLBUTCE",
+      "description": "Yıl ve hesap bazında bütçe satırları; planlanan tutar burada durur. Gerçekleşen satış değil plan olduğu için satış, ciro veya kâr sorularında gerçekleşme yerine kullanılamaz.",
+      "module": "Muhasebe",
+      "kind": "distractor",
+      "keywords": [
+        "bütçe",
+        "planlanan tutar",
+        "bütçe hedefi",
+        "yıl bütçesi"
+      ],
+      "columns": [
+        {
+          "name": "BUTCE_ID",
+          "type": "INT",
+          "description": "Bütçe satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "YIL",
+          "type": "INT",
+          "description": "Bütçe yılı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "HESAP_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Bütçelenen hesap.",
+          "fk": "TBLMUHHESAP.HESAP_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DETAY_KODU",
+          "type": "VARCHAR(16)",
+          "description": "Bütçe detayı; boş olabilir.",
+          "fk": "TBLMUHDETAY.DETAY_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Cari bazlı bütlemelerde cari; boş olabilir.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Ürün bazlı bütlemelerde ürün kodu; hesap bazlı satırlarda boş kalır. Bütçe satırı satış hareketi değildir.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Yıl için planlanan tutar (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "HARCANAN",
+          "type": "DECIMAL(18,2)",
+          "description": "Gerçekleşen tutar (TL); henüz hareket yoksa boş kalır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLBUTCEHAR",
+      "description": "Bütçe hareketleri; bütçe satırına işleyen harcamalar. Alış fişi veya fatura ile bağlantısı yoktur, bu yüzden buradaki tutarlar satın alma hacmi sayılmaz.",
+      "module": "Muhasebe",
+      "kind": "distractor",
+      "keywords": [
+        "bütçe hareketi",
+        "harcama",
+        "bütçe gerçekleşmesi"
+      ],
+      "columns": [
+        {
+          "name": "HAR_ID",
+          "type": "INT",
+          "description": "Bütçe hareketinin numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BUTCE_ID",
+          "type": "INT",
+          "description": "Hareketin işlendiği bütçe satırı.",
+          "fk": "TBLBUTCE.BUTCE_ID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Hareket tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Hareket tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Hareket açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLKDVTAH",
+      "description": "Dönemsel KDV tahakkuk kayıtları; matrah ve hesaplanan KDV burada tutulur. KDV dahil satış arayan bir soruda matrah satışın kendisi değildir, beyanname içindir.",
+      "module": "Muhasebe",
+      "kind": "distractor",
+      "keywords": [
+        "kdv",
+        "matrah",
+        "hesaplanan kdv",
+        "tahakkuk",
+        "vergi"
+      ],
+      "columns": [
+        {
+          "name": "KDV_ID",
+          "type": "INT",
+          "description": "Tahakkuk satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DONEM",
+          "type": "VARCHAR(6)",
+          "description": "Dönem (YYYY-MM).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Tahakkuk tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "HESAP_KODU",
+          "type": "VARCHAR(12)",
+          "description": "KDV hesabının kodu.",
+          "fk": "TBLMUHHESAP.HESAP_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MATRAH",
+          "type": "DECIMAL(18,2)",
+          "description": "Vergi matrahı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "KDV_TUTARI",
+          "type": "DECIMAL(18,2)",
+          "description": "Hesaplanan KDV (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ORAN",
+          "type": "DECIMAL(5,2)",
+          "description": "Uygulanan KDV oranı (yüzde).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLBANKA",
+      "description": "Banka hesap kartları; şirketin bankalardaki hesapları. Bir carinin banka hesabı değil, şirketin kendi hesabı olduğu için cari tahsilatı buradan takip edemezsin.",
+      "module": "Banka",
+      "kind": "distractor",
+      "keywords": [
+        "banka",
+        "banka hesabı",
+        "iban",
+        "şube"
+      ],
+      "columns": [
+        {
+          "name": "BANKA_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Banka hesap kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BANKA_ADI",
+          "type": "NVARCHAR(60)",
+          "description": "Bankanın adı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SUBE_ADI",
+          "type": "NVARCHAR(60)",
+          "description": "Şube adı; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "HESAP_NO",
+          "type": "VARCHAR(26)",
+          "description": "Hesap numarası; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "IBAN",
+          "type": "VARCHAR(30)",
+          "description": "IBAN; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DOVIZ_KODU",
+          "type": "VARCHAR(3)",
+          "description": "Hesabın dövizi.",
+          "fk": null,
+          "values": {
+            "USD": "dolar",
+            "EUR": "euro",
+            "TL": "lira"
+          },
+          "nullable": false
+        },
+        {
+          "name": "AKTIF",
+          "type": "VARCHAR(1)",
+          "description": "Hesabın kullanım durumu.",
+          "fk": null,
+          "values": {
+            "E": "aktif",
+            "H": "pasif"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLBNKSUBE",
+      "description": "Banka şubelerinin kaydı; şubenin ili cari kartının ili ile aynı olmak zorunda değildir, il filtrelerinde hangi tablodaki il alanının kullanıldığına dikkat edilir.",
+      "module": "Banka",
+      "kind": "distractor",
+      "keywords": [
+        "banka şubesi",
+        "şube",
+        "il",
+        "iban öneki"
+      ],
+      "columns": [
+        {
+          "name": "SUBE_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Şube kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BANKA_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Şubenin ait olduğu banka hesap kodu.",
+          "fk": "TBLBANKA.BANKA_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SUBE_ADI",
+          "type": "NVARCHAR(60)",
+          "description": "Şubenin adı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IL",
+          "type": "NVARCHAR(40)",
+          "description": "Şubenin ili.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ILCE",
+          "type": "NVARCHAR(40)",
+          "description": "Şubenin ilçesi; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLBNKHAR",
+      "description": "Banka hesap hareketleri; havale, EFT ve ödeme giriş çıkışları. Banka cirosu ve tahsilat burada durur, satış cirosu değildir; aynı faturanın iki tahsilatı iki ayrı satırdır.",
+      "module": "Banka",
+      "kind": "distractor",
+      "keywords": [
+        "banka hareketi",
+        "havale",
+        "eft",
+        "tahsilat",
+        "banka cirosu"
+      ],
+      "columns": [
+        {
+          "name": "BNKHAR_ID",
+          "type": "INT",
+          "description": "Banka hareketinin numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BANKA_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Hareketin yaptığı banka hesap kodu.",
+          "fk": "TBLBANKA.BANKA_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Hareket tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BA",
+          "type": "VARCHAR(1)",
+          "description": "Hareketin yönü.",
+          "fk": null,
+          "values": {
+            "B": "borç",
+            "A": "alacak"
+          },
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Hareket tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Taraftaki cari; banka içi hareketlerde boş kalır.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DEKONT_NO",
+          "type": "VARCHAR(20)",
+          "description": "Dekont numarası; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Hareket açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLBNKEKSTRE",
+      "description": "Bankadan içe aktarılan ekstre satırları; TBLBNKHAR ile büyük ölçüde aynı tutarları taşır ama bir kısmı muhasebeleşmemiştir. İki tabloyu üst üste eklemek aynı hareketi iki kez sayar.",
+      "module": "Banka",
+      "kind": "distractor",
+      "keywords": [
+        "ekstre",
+        "banka ekstresi",
+        "eşleştirme",
+        "banka hareketi"
+      ],
+      "columns": [
+        {
+          "name": "EKSTRE_ID",
+          "type": "INT",
+          "description": "Ekstre satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BANKA_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Ekstrenin ait olduğu banka hesap kodu.",
+          "fk": "TBLBANKA.BANKA_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Ekstre satırının tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Ekstre satırı tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KOD",
+          "type": "VARCHAR(20)",
+          "description": "Bankanın açıklamasından okunan karşı taraf carisi; boş kalabilir.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Kayıtla eşleşme durumu; eşleşmemiş satırlar defterde karşılığı olmayan hareketlerdir.",
+          "fk": null,
+          "values": {
+            "E": "eşleşmiş",
+            "H": "eşleşmemiş"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Bankanın yazdığı açıklama; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLBNKPOS",
+      "description": "Kartlı satışların taksit planı; bir faturanın tahsilatı birkaç vadeye bölünür. Taksit tutarlarını toplamak satış cirosu değil vadelenmiş tahsilattır, aynı fatura birden çok satır taşır.",
+      "module": "Banka",
+      "kind": "distractor",
+      "keywords": [
+        "pos",
+        "taksit",
+        "kartlı satış",
+        "vade",
+        "tahsilat"
+      ],
+      "columns": [
+        {
+          "name": "POS_ID",
+          "type": "INT",
+          "description": "Taksit satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BANKA_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Taksidi tahsil eden banka hesap kodu.",
+          "fk": "TBLBANKA.BANKA_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Satışın/ilk taksitin tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TAKSIT_NO",
+          "type": "INT",
+          "description": "Taksitin sıra numarası.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TAKSIT_TUTARI",
+          "type": "DECIMAL(18,2)",
+          "description": "Taksit tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "VADE_TARIHI",
+          "type": "DATE",
+          "description": "Taksitin vade tarihi; henüz belirlenmemişse boş kalır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Taksidin bağlı olduğu fatura numarası; boş olabilir.",
+          "fk": "TBLFATUIRS.FATIRS_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Kart sahibinin cari kodu; boş olabilir.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLBNKDOT",
+      "description": "Döviz alım satım kayıtları; şirketin bankadan aldığı veya sattığı döviz ve uygulanan kur. Faturaların döviziyle ilgisi yoktur; kur sorusunda TBLDOVKUR yerine bu tablo seçilirse işlem anındaki özel kur kullanılır.",
+      "module": "Banka",
+      "kind": "distractor",
+      "keywords": [
+        "döviz alım",
+        "döviz satım",
+        "kur",
+        "döviz transferi"
+      ],
+      "columns": [
+        {
+          "name": "DOT_ID",
+          "type": "INT",
+          "description": "Döviz işleminin numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BANKA_KODU",
+          "type": "VARCHAR(12)",
+          "description": "İşlemin yapıldığı banka hesap kodu.",
+          "fk": "TBLBANKA.BANKA_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "İşlem tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DOVIZ_KODU",
+          "type": "VARCHAR(3)",
+          "description": "Alınıp satılan döviz.",
+          "fk": null,
+          "values": {
+            "USD": "dolar",
+            "EUR": "euro",
+            "TL": "lira"
+          },
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "İşlem tutarı (TL karşılığı).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "KUR",
+          "type": "DECIMAL(18,6)",
+          "description": "Uygulanan kur; TBLDOVKUR tablosundaki günlük kurdan farklı olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "İşlem açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLBNKVADE",
+      "description": "Vadeli mevduat ve kredi vadeleri; anapara, faiz oranı ve vade tarihleri. Satış veya tahsilat hareketi içermez, vade tutarları ciro toplamına katılmaz.",
+      "module": "Banka",
+      "kind": "distractor",
+      "keywords": [
+        "vadeli hesap",
+        "kredi",
+        "faiz",
+        "anapara",
+        "vade"
+      ],
+      "columns": [
+        {
+          "name": "VADE_ID",
+          "type": "INT",
+          "description": "Vade kaydının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BANKA_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Vadenin bağlı olduğu banka hesap kodu.",
+          "fk": "TBLBANKA.BANKA_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BASLANGIC",
+          "type": "DATE",
+          "description": "Vade başlangıç tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BITIS",
+          "type": "DATE",
+          "description": "Vade bitiş tarihi; vadesi açılmamış kayıtlarda boş kalır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ANAPARA",
+          "type": "DECIMAL(18,2)",
+          "description": "Anapara (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FAIZ_ORANI",
+          "type": "DECIMAL(5,2)",
+          "description": "Yıllık faiz oranı (yüzde).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Vadenin durumu.",
+          "fk": null,
+          "values": {
+            "A": "açık",
+            "K": "kapalı"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLCEKSEN",
+      "description": "Çek ve senet kayıtları; alacak ve borç tarafı aynı tabloda TIPI kodu ile ayrılır. Vadeli tahsilat burada durur, satış cirosu değildir; vadesi gelmemiş alacak satış sayılmaz.",
+      "module": "Çek/Senet",
+      "kind": "distractor",
+      "keywords": [
+        "çek",
+        "senet",
+        "vadeli alacak",
+        "tahsilat",
+        "çek senet"
+      ],
+      "columns": [
+        {
+          "name": "CEKSEN_NO",
+          "type": "VARCHAR(20)",
+          "description": "Çek/senet kayıt numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TIPI",
+          "type": "VARCHAR(1)",
+          "description": "Evrakın tipi.",
+          "fk": null,
+          "values": {
+            "C": "çek",
+            "S": "senet"
+          },
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Evrakın tarafta olduğu cari; boş olabilir.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Evrak tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DUZENLEME_TARIHI",
+          "type": "DATE",
+          "description": "Evrakın düzenlenme tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "VADE_TARIHI",
+          "type": "DATE",
+          "description": "Vade tarihi; vadesiz çeklerde boş kalır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Evrakın güncel durumu.",
+          "fk": null,
+          "values": {
+            "B": "kasada bekliyor",
+            "T": "tahsil edildi",
+            "I": "iade edildi"
+          },
+          "nullable": false
+        },
+        {
+          "name": "BANKA_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Çeklerin takibe alındığı banka hesap kodu; senetlerde boş kalır.",
+          "fk": "TBLBANKA.BANKA_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Evrak açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLCEKHAR",
+      "description": "Çek ve senet hareketleri; her el değiştirme bir satırdır. Aynı evrak birden çok hareket satırı taşıyabilir, bu yüzden hareket tutarlarını toplamak evrak tutarını iki kez sayar.",
+      "module": "Çek/Senet",
+      "kind": "distractor",
+      "keywords": [
+        "çek hareketi",
+        "senet hareketi",
+        "ciro",
+        "iade",
+        "tahsil"
+      ],
+      "columns": [
+        {
+          "name": "CEKHAR_ID",
+          "type": "INT",
+          "description": "Hareket satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CEKSEN_NO",
+          "type": "VARCHAR(20)",
+          "description": "Hareketin ait olduğu evrak.",
+          "fk": "TBLCEKSEN.CEKSEN_NO",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Hareket tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "HAREKET_TIPI",
+          "type": "VARCHAR(1)",
+          "description": "Hareketin türü.",
+          "fk": null,
+          "values": {
+            "A": "alındı",
+            "V": "verildi",
+            "T": "tahsil edildi",
+            "I": "iade edildi"
+          },
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Hareket tutarı (TL); kısmi işlemlerde evrak tutarından küçük olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Hareketin taraftaki carisi; boş olabilir.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Hareket açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLCEK",
+      "description": "Bankadan alınan çek yaprakları; şirketin kendi keşide ettiği çekler. Ödeme tarafı olduğu için müşteri tahsilatını ve alacak yaşlandırmasını buradan çıkaramazsın.",
+      "module": "Çek/Senet",
+      "kind": "distractor",
+      "keywords": [
+        "çek yaprağı",
+        "çek defteri",
+        "keşide",
+        "ödeme çeki"
+      ],
+      "columns": [
+        {
+          "name": "CEK_NO",
+          "type": "VARCHAR(24)",
+          "description": "Çek yaprak numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BANKA_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Çek defterinin alındığı banka hesap kodu.",
+          "fk": "TBLBANKA.BANKA_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Çekin verildiği cari; kullanılmamış yapraklarda boş kalır.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Çekin kesildiği tarih; kullanılmamış yapraklarda boş kalır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Çek tutarı (TL); kullanılmamış yapraklarda boş kalır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Yaprak durumu.",
+          "fk": null,
+          "values": {
+            "B": "boş",
+            "K": "kullanılmış",
+            "I": "iptal"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLSENET",
+      "description": "Senet kayıtları; TBLCEKSEN ile kısmen aynı kayıtları taşır, yalnız senet tipindekiler buradadır. İki tabloyu birleştirip toplamak aynı senedi iki kez sayar.",
+      "module": "Çek/Senet",
+      "kind": "distractor",
+      "keywords": [
+        "senet",
+        "alacak senedi",
+        "borç senedi",
+        "keşideci"
+      ],
+      "columns": [
+        {
+          "name": "SENET_NO",
+          "type": "VARCHAR(20)",
+          "description": "Senet numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Senedin tarafta olduğu cari; boş olabilir.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Senedin düzenlenme tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "VADE_TARIHI",
+          "type": "DATE",
+          "description": "Vade tarihi; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Senet tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "KESIDECI",
+          "type": "NVARCHAR(60)",
+          "description": "Keşidecinin adı; unvan elle girildiği için cari adı ile birebir uymayabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Senedin güncel durumu.",
+          "fk": null,
+          "values": {
+            "B": "elded",
+            "T": "tahsil edildi",
+            "P": "protesto"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLSENETHAR",
+      "description": "Senet hareketleri; senedin her el değiştirmesi ayrı satırdır. TBLCEKHAR ile birlikte okunursa aynı evrak iki kez hareketlenmiş olur.",
+      "module": "Çek/Senet",
+      "kind": "distractor",
+      "keywords": [
+        "senet hareketi",
+        "prolonge",
+        "ciro",
+        "senet ödemesi"
+      ],
+      "columns": [
+        {
+          "name": "HAR_ID",
+          "type": "INT",
+          "description": "Hareket satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SENET_NO",
+          "type": "VARCHAR(20)",
+          "description": "Hareketin ait olduğu senet.",
+          "fk": "TBLSENET.SENET_NO",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Hareket tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "HAREKET_TIPI",
+          "type": "VARCHAR(1)",
+          "description": "Hareketin türü.",
+          "fk": null,
+          "values": {
+            "P": "prolonge",
+            "C": "ciro",
+            "O": "ödeme",
+            "I": "iade"
+          },
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Hareket tutarı (TL); boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Hareket açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLCEKKARSI",
+      "description": "Karşılıksız çıkan çekler ve yasal takip kayıtları; tahsil edilememiş tutarlar burada durur. Tahsilat raporuna eklenirse hiç tahsil edilmemiş tutar da tahsilat görünür.",
+      "module": "Çek/Senet",
+      "kind": "distractor",
+      "keywords": [
+        "karşılıksız çek",
+        "iade çek",
+        "icra",
+        "takip"
+      ],
+      "columns": [
+        {
+          "name": "KARSI_ID",
+          "type": "INT",
+          "description": "Karşılıksız çek kaydının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CEKSEN_NO",
+          "type": "VARCHAR(20)",
+          "description": "Takibe konu evrak.",
+          "fk": "TBLCEKSEN.CEKSEN_NO",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KOD",
+          "type": "VARCHAR(20)",
+          "description": "Borçlu carinin kodu; boş olabilir.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Karşılıksız kalma tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Tahsil edilemeyen tutar (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TAKIP",
+          "type": "VARCHAR(1)",
+          "description": "Yasal takip durumu.",
+          "fk": null,
+          "values": {
+            "E": "icra takibi başladı",
+            "H": "takip yok"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLPROTESTO",
+      "description": "Protesto ve ihbar kayıtları; ödenmeyen evraklar için noter kayıtları. Alacak bakiyesini bu tablodan almak, karşılığı olan evrakları da kayıp gibi gösterir.",
+      "module": "Çek/Senet",
+      "kind": "distractor",
+      "keywords": [
+        "protesto",
+        "ihbar",
+        "ödenmeyen senet",
+        "noter kaydı"
+      ],
+      "columns": [
+        {
+          "name": "PROTESTO_ID",
+          "type": "INT",
+          "description": "Protesto kaydının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CEKSEN_NO",
+          "type": "VARCHAR(20)",
+          "description": "Protesto edilen evrak; boş olabilir.",
+          "fk": "TBLCEKSEN.CEKSEN_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Protesto tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Protesto tutarı (TL); boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Noter açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLVADEPLANI",
+      "description": "Faturaların vadeye bölünmüş ödeme planı; bir fatura birden çok vade satırı taşır. Faturayla join edilince fatura tutarı her vade satırında tekrarlanır, vade toplamı fatura toplamına eşit çıkmaz.",
+      "module": "Çek/Senet",
+      "kind": "distractor",
+      "keywords": [
+        "vade planı",
+        "ödeme planı",
+        "vade tarihi",
+        "gecikme"
+      ],
+      "columns": [
+        {
+          "name": "VADE_ID",
+          "type": "INT",
+          "description": "Vade satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FATIRS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Vade planının dayandığı fatura; boş olabilir.",
+          "fk": "TBLFATUIRS.FATIRS_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Borçlu cari; boş olabilir.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "VADE_TARIHI",
+          "type": "DATE",
+          "description": "Vade tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Vade tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Vade durumu.",
+          "fk": null,
+          "values": {
+            "A": "açık",
+            "K": "kapalı",
+            "G": "gecikmiş"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLPERSONEL",
+      "description": "Personel kartları; adı, departmanı ve görev bilgisi burada durur. Maaş, puantaj ve izin kayıtları ayrı tablolardadır, burada hiçbir tutar yoktur.",
+      "module": "Personel",
+      "kind": "data",
+      "keywords": [
+        "personel",
+        "çalışan",
+        "özlük",
+        "kart"
+      ],
+      "columns": [
+        {
+          "name": "PERSONEL_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Personel numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "AD_SOYAD",
+          "type": "NVARCHAR(100)",
+          "description": "Personelin adı ve soyadı.",
+          "pii": "person_name",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPARTMAN_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Bağlı olduğu departman.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "IL",
+          "type": "VARCHAR(30)",
+          "description": "Çalıştığı il.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "GOREV_UNVANI",
+          "type": "NVARCHAR(60)",
+          "description": "Görev unvanı.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TELEFON",
+          "type": "VARCHAR(20)",
+          "description": "İletişim numarası; boş olabilir.",
+          "pii": "phone",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "AKTIF",
+          "type": "VARCHAR(1)",
+          "description": "Kartın kullanım durumu.",
+          "fk": null,
+          "values": {
+            "E": "aktif",
+            "H": "pasif"
+          },
+          "nullable": false
+        },
+        {
+          "name": "TCKN",
+          "type": "VARCHAR(11)",
+          "description": "T.C. kimlik numarası; 11 haneli sayı.",
+          "pii": "tckn",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "VKN",
+          "type": "VARCHAR(11)",
+          "description": "Vergi kimlik numarası; girilmemişse boş.",
+          "pii": "vkn",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "IBAN",
+          "type": "VARCHAR(34)",
+          "description": "Maaşın yattığı hesap (TR ile başlayan IBAN).",
+          "pii": "iban",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "E_POSTA",
+          "type": "NVARCHAR(100)",
+          "description": "E-posta adresi.",
+          "pii": "email",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ADRES",
+          "type": "NVARCHAR(200)",
+          "description": "Açık ev adresi; il, ilçe, mahalle ve sokak virgülle ayrılır.",
+          "pii": "address",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLDEPARTMAN",
+      "description": "Departman (maliyet merkezi) listesi. Personelin giderleri burada toplanır; satış, stok veya fatura verisiyle hiçbir bağıntısı yoktur.",
+      "module": "Personel",
+      "kind": "distractor",
+      "keywords": [
+        "departman",
+        "maliyet merkezi",
+        "bölüm"
+      ],
+      "columns": [
+        {
+          "name": "DEPARTMAN_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Departman kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPARTMAN_ADI",
+          "type": "NVARCHAR(60)",
+          "description": "Departmanın adı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "UST_DEPARTMAN",
+          "type": "VARCHAR(12)",
+          "description": "Bağlı olduğu üst departman; ana departmanlarda boş kalır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "AKTIF",
+          "type": "VARCHAR(1)",
+          "description": "Departmanın kullanım durumu.",
+          "fk": null,
+          "values": {
+            "E": "aktif",
+            "H": "pasif"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Departman açıklaması; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLPUANTAJ",
+      "description": "Günlük puantaj kayıtları; personelin giriş ve çıkış saatleri. Çalışma süresi buradan çıkarılır, ücret hesabı TBLMAAS tablosunda yapılır.",
+      "module": "Personel",
+      "kind": "distractor",
+      "keywords": [
+        "puantaj",
+        "giriş çıkış",
+        "mesai",
+        "devam durumu"
+      ],
+      "columns": [
+        {
+          "name": "PUANTAJ_ID",
+          "type": "INT",
+          "description": "Puantaj kaydının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PERSONEL_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Karta ait personel.",
+          "fk": "TBLPERSONEL.PERSONEL_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Puantaj tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "GIRIS_SAATI",
+          "type": "VARCHAR(8)",
+          "description": "İşe giriş saati (ör. 08:47).",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CIKIS_SAATI",
+          "type": "VARCHAR(8)",
+          "description": "İşten çıkış saati; eksik okumalarda boş kalır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "EK_SURE",
+          "type": "DECIMAL(6,2)",
+          "description": "Fazla çalışma saati.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Vardiya veya eksik okuma notu.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLMAAS",
+      "description": "Aylık maaş bordrolarının üst satırı; brüt, kesinti ve net tutar. Personel başına ayda tek satırdır, kazanç ve kesinti kalemleri TBLMAASDETAY tablosundadır.",
+      "module": "Personel",
+      "kind": "data",
+      "keywords": [
+        "maaş",
+        "bordro",
+        "ücret",
+        "brüt"
+      ],
+      "columns": [
+        {
+          "name": "MAAS_ID",
+          "type": "INT",
+          "description": "Bordro satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PERSONEL_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Bordrosu ödenen personel.",
+          "fk": "TBLPERSONEL.PERSONEL_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DONEM",
+          "type": "VARCHAR(7)",
+          "description": "Bordro dönemi (YYYY-AA).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Ödeme tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BRUT_TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Brüt ücret (TL).",
+          "pii": "salary",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "KESINTI_TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Vergi ve sigorta kesintileri toplamı (TL).",
+          "pii": "salary",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "NET_TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Ödenen net tutar (TL).",
+          "pii": "salary",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Muhasebe fiş numarası; henüz fişlenmemiş bordrolarda boş.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLMAASDETAY",
+      "description": "Bordronun kazanç ve kesinti kalemleri; bir bordro birden çok kalem satırı taşır. Bordroyla join yapılırsa net tutar her kalemde tekrarlanır.",
+      "module": "Personel",
+      "kind": "data",
+      "keywords": [
+        "bordro kalemi",
+        "kazanç",
+        "kesinti",
+        "ikramiye"
+      ],
+      "columns": [
+        {
+          "name": "MAASDETAY_ID",
+          "type": "INT",
+          "description": "Kalem satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MAAS_ID",
+          "type": "INT",
+          "description": "Kalemin ait olduğu bordro.",
+          "fk": "TBLMAAS.MAAS_ID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUR",
+          "type": "VARCHAR(1)",
+          "description": "Kalemin yönü.",
+          "fk": null,
+          "values": {
+            "K": "kazanç",
+            "S": "kesinti"
+          },
+          "nullable": false
+        },
+        {
+          "name": "KALEM_ADI",
+          "type": "NVARCHAR(60)",
+          "description": "Kalemin adı (ör. fazla mesai, gelir vergisi).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Kalem tutarı (TL).",
+          "pii": "salary",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLIZIN",
+      "description": "Yıllık, hastalık ve ücretsiz izin kayıtları. İzin günleri puantajdan düşülür; maaş veya maliyet bilgisi bu tabloda yoktur.",
+      "module": "Personel",
+      "kind": "distractor",
+      "keywords": [
+        "izin",
+        "yıllık izin",
+        "rapor",
+        "devamsızlık"
+      ],
+      "columns": [
+        {
+          "name": "IZIN_ID",
+          "type": "INT",
+          "description": "İzin kaydının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PERSONEL_KODU",
+          "type": "VARCHAR(12)",
+          "description": "İzin kullanan personel.",
+          "fk": "TBLPERSONEL.PERSONEL_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "İznin ilk günü.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BITIS_TARIHI",
+          "type": "DATE",
+          "description": "İznin son günü.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "GUN_SAYISI",
+          "type": "INT",
+          "description": "İzin günü sayısı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IZIN_TURU",
+          "type": "VARCHAR(1)",
+          "description": "İznin türü.",
+          "fk": null,
+          "values": {
+            "Y": "yıllık",
+            "H": "hastalık raporu",
+            "U": "ücretsiz"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "İzin notu; boş bırakılabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLGOREV",
+      "description": "Personelin departman ve unvan değişikliği geçmişi; her satır bir atamadır. Güncel departman TBLPERSONEL tablosunda durur, geçmiş satırların toplamı alınmaz.",
+      "module": "Personel",
+      "kind": "distractor",
+      "keywords": [
+        "görev değişikliği",
+        "atama",
+        "unvan"
+      ],
+      "columns": [
+        {
+          "name": "GOREV_ID",
+          "type": "INT",
+          "description": "Atama kaydının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PERSONEL_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Atanan personel.",
+          "fk": "TBLPERSONEL.PERSONEL_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPARTMAN_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Atandığı departman.",
+          "fk": "TBLDEPARTMAN.DEPARTMAN_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Atamanın geçerlilik tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "GOREV_UNVANI",
+          "type": "NVARCHAR(60)",
+          "description": "Atandığı unvan.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Atama açıklaması.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLURETIM",
+      "description": "Üretim emirleri; hangi üründen ne kadar üretileceği burada planlanır. Emir planlananı tutar, fiilen üretilen TBLURETINFIS tablosundadır.",
+      "module": "Üretim",
+      "kind": "distractor",
+      "keywords": [
+        "üretim emri",
+        "üretim planı"
+      ],
+      "columns": [
+        {
+          "name": "URETIM_NO",
+          "type": "VARCHAR(20)",
+          "description": "Üretim emri numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Üretilecek ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPO_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Üretimin gireceği depo.",
+          "fk": "TBLDEPO.DEPO_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Planlanan üretim tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MIKTAR",
+          "type": "DECIMAL(18,3)",
+          "description": "Planlanan üretim miktarı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Emrin durumu.",
+          "fk": null,
+          "values": {
+            "A": "açık",
+            "U": "üretimde",
+            "K": "kapalı",
+            "I": "iptal"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Emir açıklaması.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLRECETE",
+      "description": "Ürün reçetelerinin (ürün ağacının) üst satırı; bir ürünün birden çok versiyonu olabilir. Reçete bir plandır, gerçekleşen tüketim burada tutulmaz.",
+      "module": "Üretim",
+      "kind": "distractor",
+      "keywords": [
+        "reçete",
+        "ürün ağacı",
+        "versiyon"
+      ],
+      "columns": [
+        {
+          "name": "RECETE_ID",
+          "type": "INT",
+          "description": "Reçete satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Reçeteye konu ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "VERSIYON_NO",
+          "type": "VARCHAR(8)",
+          "description": "Reçete versiyonu.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Versiyonun yürürlük tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "REFERANS_MIKTAR",
+          "type": "DECIMAL(18,3)",
+          "description": "Kalemlerin ölçüldüğü referans üretim miktarı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "AKTIF",
+          "type": "VARCHAR(1)",
+          "description": "Versiyonun kullanım durumu.",
+          "fk": null,
+          "values": {
+            "E": "aktif",
+            "H": "pasif"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLRECETED",
+      "description": "Reçetenin hammadde kalemleri; bir reçete birden çok kalem taşır. Reçeteyle join edilirse reçete başlık bilgisi her kalemde tekrarlanır.",
+      "module": "Üretim",
+      "kind": "distractor",
+      "keywords": [
+        "reçete kalemi",
+        "hammadde",
+        "fire oranı"
+      ],
+      "columns": [
+        {
+          "name": "RECETED_ID",
+          "type": "INT",
+          "description": "Kalem satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "RECETE_ID",
+          "type": "INT",
+          "description": "Kalemin ait olduğu reçete.",
+          "fk": "TBLRECETE.RECETE_ID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Kullanılacak hammadde.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MIKTAR",
+          "type": "DECIMAL(18,3)",
+          "description": "Referans miktar başına gereken hammadde.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FIRE_ORANI",
+          "type": "DECIMAL(5,2)",
+          "description": "Beklenen fire yüzdesi.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Kalem açıklaması.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLURETINFIS",
+      "description": "Üretim fişleri; fiilen üretilip depoya giren miktarlar. Bir emre birden çok fiş düşebilir, emrin miktarı ile fişlerin toplamı eşit olmak zorunda değildir.",
+      "module": "Üretim",
+      "kind": "distractor",
+      "keywords": [
+        "üretim fişi",
+        "fiilen üretim",
+        "depoya giriş"
+      ],
+      "columns": [
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Üretim fişi numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "URETIM_NO",
+          "type": "VARCHAR(20)",
+          "description": "Fişin dayandığı üretim emri; boş olabilir.",
+          "fk": "TBLURETIM.URETIM_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Üretilen ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPO_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Ürünün girdiği depo.",
+          "fk": "TBLDEPO.DEPO_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Fiş tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MIKTAR",
+          "type": "DECIMAL(18,3)",
+          "description": "Fişlenen miktar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Fişin maliyet tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLMAKINA",
+      "description": "Makine parkı kartları; kapasite ve bağlı departman bilgisi. Duruş ve arıza kayıtları TBLMAKINAARIZA tablosundadır.",
+      "module": "Üretim",
+      "kind": "distractor",
+      "keywords": [
+        "makine",
+        "tezgah",
+        "kapasite"
+      ],
+      "columns": [
+        {
+          "name": "MAKINA_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Makine kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MAKINA_ADI",
+          "type": "NVARCHAR(80)",
+          "description": "Makinenin adı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPARTMAN_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Makinenin bulunduğu departman.",
+          "fk": "TBLDEPARTMAN.DEPARTMAN_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "KAPASITE",
+          "type": "DECIMAL(18,3)",
+          "description": "Günlük nominal kapasite.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "AKTIF",
+          "type": "VARCHAR(1)",
+          "description": "Makinenin kullanım durumu.",
+          "fk": null,
+          "values": {
+            "E": "aktif",
+            "H": "pasif"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Makine açıklaması.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLMAKINAARIZA",
+      "description": "Makine arıza ve duruş kayıtları; duruş süresi ile onarım tutarı. Üretim kaybı burada izlenir, stok veya fatura hareketi bu tabloda yoktur.",
+      "module": "Üretim",
+      "kind": "distractor",
+      "keywords": [
+        "arıza",
+        "duruş",
+        "onarım"
+      ],
+      "columns": [
+        {
+          "name": "MAKINAARIZA_ID",
+          "type": "INT",
+          "description": "Arıza kaydının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MAKINA_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Arızalanan makine.",
+          "fk": "TBLMAKINA.MAKINA_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Arızanın başladığı tarih.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DURUS_SURESI",
+          "type": "DECIMAL(6,2)",
+          "description": "Duruş süresi (saat).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Onarım maliyeti (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Arıza ve onarım notu.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLFIREHAR",
+      "description": "Üretim fire hareketleri; fireye ayrılan hammadde miktarları. Stok hareketlerinden ayrı tutulur, satış veya fatura ile bağıntısı yoktur.",
+      "module": "Üretim",
+      "kind": "distractor",
+      "keywords": [
+        "fire",
+        "zayiat",
+        "fire hareketi"
+      ],
+      "columns": [
+        {
+          "name": "FIREHAR_ID",
+          "type": "INT",
+          "description": "Fire hareketinin numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "URETIM_NO",
+          "type": "VARCHAR(20)",
+          "description": "Firenin ait olduğu üretim emri; boş olabilir.",
+          "fk": "TBLURETIM.URETIM_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Fire olan malzeme.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPO_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Firenin düşüldüğü depo.",
+          "fk": "TBLDEPO.DEPO_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Fire tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MIKTAR",
+          "type": "DECIMAL(18,3)",
+          "description": "Fire miktarı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Firenin maliyet tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSERVIS",
+      "description": "Teknik servis kayıtları; hangi müşterinin cihazının geldiği burada açılır. Servisin gelir ve maliyet rakamları ayrı tablolardadır, burada ciroya bakılmaz.",
+      "module": "Servis",
+      "kind": "distractor",
+      "keywords": [
+        "servis",
+        "servis kaydı",
+        "teknik servis"
+      ],
+      "columns": [
+        {
+          "name": "SERVIS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Servis kaydı numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Cihazı getiren cari.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Servise gelen cihaz; boş olabilir.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Kaydın açıldığı tarih.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SERVIS_TURU",
+          "type": "VARCHAR(1)",
+          "description": "Servisin türü.",
+          "fk": null,
+          "values": {
+            "G": "garanti",
+            "O": "opsiyonlu",
+            "U": "ücretli"
+          },
+          "nullable": false
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Kaydın durumu.",
+          "fk": null,
+          "values": {
+            "A": "açık",
+            "B": "işlemde",
+            "K": "kapatıldı",
+            "I": "iptal"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ARIZA_TANIMI",
+          "type": "NVARCHAR(200)",
+          "description": "Müşterinin bildirdiği arıza.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Servis notu.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSERVISHIZMET",
+      "description": "Servis kaydında yapılan işlemlerin satırları; bir kayıt birden çok işlem taşır. Kayıtla join edilirse kayıt başlık bilgisi her satırda tekrarlanır.",
+      "module": "Servis",
+      "kind": "distractor",
+      "keywords": [
+        "yapılan işlem",
+        "servis işçiliği"
+      ],
+      "columns": [
+        {
+          "name": "SERVISHIZMET_ID",
+          "type": "INT",
+          "description": "İşlem satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SERVIS_NO",
+          "type": "VARCHAR(20)",
+          "description": "İşlemin ait olduğu servis kaydı.",
+          "fk": "TBLSERVIS.SERVIS_NO",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ISLEM_ADI",
+          "type": "NVARCHAR(80)",
+          "description": "Yapılan işlemin adı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SURE",
+          "type": "DECIMAL(6,2)",
+          "description": "İşlem süresi (saat).",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "İşlem ücreti (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSERVISPARCA",
+      "description": "Serviste değiştirilen parçalar; parçalar depodan çıkış yapılır. Parçanın maliyeti ile müşteriye yansıtılan tutar farklı sayılardır, ikisi aynı sütun değildir.",
+      "module": "Servis",
+      "kind": "distractor",
+      "keywords": [
+        "parça değişimi",
+        "yedek parça",
+        "malzeme çıkışı"
+      ],
+      "columns": [
+        {
+          "name": "SERVISPARCA_ID",
+          "type": "INT",
+          "description": "Parça satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SERVIS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Parçanın kullanıldığı servis kaydı.",
+          "fk": "TBLSERVIS.SERVIS_NO",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Değiştirilen parça.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPO_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Parçanın çıktığı depo.",
+          "fk": "TBLDEPO.DEPO_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "MIKTAR",
+          "type": "DECIMAL(18,3)",
+          "description": "Kullanılan parça miktarı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Parçanın müşteriye yansıtılan tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Malzeme çıkış fişi numarası; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSERVISFATURA",
+      "description": "Ücretli servis kayıtları için kesilen faturaların eşleştirme tablosu. Aynı fatura birden çok servis kaydını kapsayabilir; fatura tutarı servis kayıtları arasında bölünmez.",
+      "module": "Servis",
+      "kind": "distractor",
+      "keywords": [
+        "servis faturası",
+        "servis geliri"
+      ],
+      "columns": [
+        {
+          "name": "SERFIS_ID",
+          "type": "INT",
+          "description": "Eşleştirme satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SERVIS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Faturalanan servis kaydı.",
+          "fk": "TBLSERVIS.SERVIS_NO",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FATIRS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Kesilen fatura numarası; henüz faturalanmamışsa boş.",
+          "fk": "TBLFATUIRS.FATIRS_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Fatura kesilen cari.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Fatura tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Bu servis kaydına düşen fatura tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLGARANTI",
+      "description": "Cihazların garanti kayıtları; seri numarası ile garanti başlangıç ve bitiş tarihleri. Garanti değerlendirmesi servis kaydının tarihine göre yapılır, servis kaydında garanti bilgisi yoktur.",
+      "module": "Servis",
+      "kind": "distractor",
+      "keywords": [
+        "garanti",
+        "seri no",
+        "garanti süresi"
+      ],
+      "columns": [
+        {
+          "name": "GARANTI_NO",
+          "type": "VARCHAR(20)",
+          "description": "Garanti kayıt numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KOD",
+          "type": "VARCHAR(20)",
+          "description": "Cihazın ilk sahibi cari; boş olabilir.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Garantisi olan ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SERI_NO",
+          "type": "VARCHAR(30)",
+          "description": "Cihazın seri numarası.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "BASLANGIC_TARIHI",
+          "type": "DATE",
+          "description": "Garantinin başladığı tarih.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BITIS_TARIHI",
+          "type": "DATE",
+          "description": "Garantinin bittiği tarih.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSERVISRANDEVU",
+      "description": "Servis randevuları; müşteri gelmeden önce alınan kayıtlar. Randevu ile gerçek servis kaydı aynı şey değildir, gelinmeyen randevuların satırı burada kalır.",
+      "module": "Servis",
+      "kind": "distractor",
+      "keywords": [
+        "randevu",
+        "servis randevusu"
+      ],
+      "columns": [
+        {
+          "name": "RANDEVU_ID",
+          "type": "INT",
+          "description": "Randevu satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Randevu alan cari.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Randevu tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SAAT",
+          "type": "VARCHAR(8)",
+          "description": "Randevu saati (ör. 14:30).",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "PLASIYER_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Randevuyu alan kişi; boş olabilir.",
+          "fk": "TBLPLASIYER.PLASIYER_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Randevunun durumu.",
+          "fk": null,
+          "values": {
+            "A": "alındı",
+            "G": "geldi",
+            "I": "iptal"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Randevu notu.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLITHALAT",
+      "description": "İthalat dosyalarının üst satırı; yurt dışı satıcı, döviz cinsi ve mal bedeli. Dosya toplamı TL'ye çevrilmiş kesin maliyet değildir, masraf ve gümrük ayrı tablolardadır.",
+      "module": "İthalat",
+      "kind": "distractor",
+      "keywords": [
+        "ithalat",
+        "ithalat dosyası",
+        "yurt dışı alım"
+      ],
+      "columns": [
+        {
+          "name": "DOSYA_NO",
+          "type": "VARCHAR(20)",
+          "description": "İthalat dosya numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Yurt dışındaki satıcı cari.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Dosya tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DOVIZ_KODU",
+          "type": "VARCHAR(3)",
+          "description": "Dosyanın dövizi.",
+          "fk": null,
+          "values": {
+            "USD": "ABD doları",
+            "EUR": "euro"
+          },
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Mal bedeli (dosya dövizi).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TL_TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Kur uygulanmış TL karşılığı; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Dosyanın durumu.",
+          "fk": null,
+          "values": {
+            "A": "açık",
+            "G": "gümrükte",
+            "K": "kapanmış"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Dosya açıklaması.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLITHKALEM",
+      "description": "İthalat dosyasının ürün satırları; bir dosya birden çok kalem taşır. Dosyayla join edilirse dosya toplamı her kalemde tekrarlanır.",
+      "module": "İthalat",
+      "kind": "distractor",
+      "keywords": [
+        "ithalat kalemi",
+        "gtip",
+        "ithal edilen ürün"
+      ],
+      "columns": [
+        {
+          "name": "ITHKALEM_ID",
+          "type": "INT",
+          "description": "Kalem satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DOSYA_NO",
+          "type": "VARCHAR(20)",
+          "description": "Kalemin ait olduğu dosya.",
+          "fk": "TBLITHALAT.DOSYA_NO",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "İthal edilen ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MIKTAR",
+          "type": "DECIMAL(18,3)",
+          "description": "İthal edilen miktar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Kalem mal bedeli (dosya dövizi).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "GTIP_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Gümrük tarife istatistik pozisyonu.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Kalem açıklaması.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLKONSIMATO",
+      "description": "İthalat dosyalarının konşimento kayıtları; gemi, konteyner ve varış tarihi. Bir dosyanın birden çok konşimentosı olabilir; yükün tamamı varmadan dosya kapanmaz.",
+      "module": "İthalat",
+      "kind": "distractor",
+      "keywords": [
+        "konşimento",
+        "konteyner",
+        "gemi",
+        "varış"
+      ],
+      "columns": [
+        {
+          "name": "KONSIMATO_NO",
+          "type": "VARCHAR(20)",
+          "description": "Konşimento numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DOSYA_NO",
+          "type": "VARCHAR(20)",
+          "description": "Konşimentonun ait olduğu dosya.",
+          "fk": "TBLITHALAT.DOSYA_NO",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "GEMI_ADI",
+          "type": "NVARCHAR(60)",
+          "description": "Yüku taşıyan geminin adı.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "KONTEYNER_NO",
+          "type": "VARCHAR(20)",
+          "description": "Konteyner numarası.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Varış tarihi; henüz varmamışsa boş kalır.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Konşimento notu.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLGUMRUKBEYAN",
+      "description": "Gümrük beyannameleri; dosyanın vergi ve KDV rakamları. Gümrükte ödenen KDV satış KDV'siyle aynı şey değildir ve ciro hesabına girmez.",
+      "module": "İthalat",
+      "kind": "distractor",
+      "keywords": [
+        "gümrük beyannamesi",
+        "gümrük vergisi",
+        "ithalat kdv"
+      ],
+      "columns": [
+        {
+          "name": "GUMRUK_NO",
+          "type": "VARCHAR(20)",
+          "description": "Beyanname numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DOSYA_NO",
+          "type": "VARCHAR(20)",
+          "description": "Beyannamenin dosyası.",
+          "fk": "TBLITHALAT.DOSYA_NO",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Beyanname tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "VERGI_TUTARI",
+          "type": "DECIMAL(18,2)",
+          "description": "Gümrük vergisi ve diğer vergiler (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "KDV_TUTARI",
+          "type": "DECIMAL(18,2)",
+          "description": "Gümrükte ödenen KDV (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Beyannamenin durumu.",
+          "fk": null,
+          "values": {
+            "A": "açık",
+            "T": "tescil edilmiş"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLITHMASRAF",
+      "description": "İthalat dosyasının navlun, sigorta ve acente masrafları. Bu masraflar maliyete dağıtılır; mal bedeline eklenince elde edilen toplam, kesilmiş fatura veya kasa çıkışı değildir.",
+      "module": "İthalat",
+      "kind": "distractor",
+      "keywords": [
+        "ithalat masrafı",
+        "navlun",
+        "sigorta",
+        "acente"
+      ],
+      "columns": [
+        {
+          "name": "ITHMASRAF_ID",
+          "type": "INT",
+          "description": "Masraf satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DOSYA_NO",
+          "type": "VARCHAR(20)",
+          "description": "Masrafın ait olduğu dosya.",
+          "fk": "TBLITHALAT.DOSYA_NO",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MASRAF_TURU",
+          "type": "NVARCHAR(60)",
+          "description": "Masrafın türü (ör. navlun).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Masraf tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Masraf tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Masraf açıklaması.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLITHODEME",
+      "description": "İthalat dosyaları için yurt dışına yapılan döviz ödemeleri. Ödeme tarihi ile dosya ve fatura tarihleri farklıdır; aynı faturanın iki ödemesi iki ayrı satırdır.",
+      "module": "İthalat",
+      "kind": "distractor",
+      "keywords": [
+        "ithalat ödemesi",
+        "döviz transferi",
+        "akreditif"
+      ],
+      "columns": [
+        {
+          "name": "ITHODEME_ID",
+          "type": "INT",
+          "description": "Ödeme satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DOSYA_NO",
+          "type": "VARCHAR(20)",
+          "description": "Ödemenin ilgili olduğu dosya; boş olabilir.",
+          "fk": "TBLITHALAT.DOSYA_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "FATIRS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Ödemeye dayanak alış faturası; boş olabilir.",
+          "fk": "TBLFATUIRS.FATIRS_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Ödeme yapılan cari.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Ödeme tarihi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Ödenen tutar (TL karşılığı).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Kasa veya banka fişi numarası; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Ödeme açıklaması.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSBKYMET",
+      "description": "Sabit kıymet (demirbaş) kartları; makine, tesis, demirbaş ve taşıtlar burada tutulur. Alış tarihi ve maliyet bedeli burada durur, ancak bir stok hareketi veya fatura değildir.",
+      "module": "Sabit Kıymet",
+      "kind": "distractor",
+      "keywords": [
+        "sabit kıymet",
+        "demirbaş",
+        "makine",
+        "tesis",
+        "envanter"
+      ],
+      "columns": [
+        {
+          "name": "SKY_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Sabit kıymet kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SKY_ADI",
+          "type": "NVARCHAR(120)",
+          "description": "Sabit kıymetin adı (ör. Forklift).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPO_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Kıymetin bulunduğu depo veya yer; boş olabilir.",
+          "fk": "TBLDEPO.DEPO_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Kıymetin satın alındığı satıcı cari; boş olabilir.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Kıymetin envantere giriş tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Kıymetin maliyet bedeli (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Kıymet açıklaması; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSBKYHAR",
+      "description": "Sabit kıymet alım, satım, hurda ve yer değişikliği hareketleri. Bir kıymetin el değiştirmesi stok hareketi değildir; ürün miktarı TBLSTHAR'da izlenir.",
+      "module": "Sabit Kıymet",
+      "kind": "distractor",
+      "keywords": [
+        "sabit kıymet hareketi",
+        "demirbaş alımı",
+        "hurda",
+        "yer değişikliği"
+      ],
+      "columns": [
+        {
+          "name": "SKYHAR_ID",
+          "type": "INT",
+          "description": "Hareket numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SKY_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Harekete konu sabit kıymet.",
+          "fk": "TBLSBKYMET.SKY_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "HAREKET_TIPI",
+          "type": "VARCHAR(1)",
+          "description": "Hareketin türü kodu.",
+          "fk": null,
+          "values": {
+            "A": "alım",
+            "S": "satım",
+            "H": "hurdaya ayırma",
+            "Y": "yer değişikliği"
+          },
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Hareket tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Hareketin tutarı (TL); yer değişikliğinde 0,00.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Harekete dayanak fiş veya fatura numarası; boş olabilir.",
+          "fk": "TBLFATUIRS.FATIRS_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Hareket açıklaması; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSBKYAMRT",
+      "description": "Sabit kıymetlerin dönemler itibarıyla ayrılan amortisman satırları; bir kıymetin her dönemi ayrı bir satırdır. Amortisman gideridir, tahsilat veya ödeme değildir.",
+      "module": "Sabit Kıymet",
+      "kind": "distractor",
+      "keywords": [
+        "amortisman",
+        "itfa",
+        "sabit kıymet gideri",
+        "dönem sonu"
+      ],
+      "columns": [
+        {
+          "name": "AMRT_ID",
+          "type": "INT",
+          "description": "Amortisman satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SKY_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Amortismanı ayrılan sabit kıymet.",
+          "fk": "TBLSBKYMET.SKY_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Amortisman döneminin son tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Dönemde ayrılan amortisman tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BIRIKMIS",
+          "type": "DECIMAL(18,2)",
+          "description": "Dönem sonu itibarıyla birikmiş amortisman (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Amortisman satırı açıklaması; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSBKYBAKIM",
+      "description": "Sabit kıymetlerin periyodik bakım ve onarım kayıtları. Bakım bedeli kıymetin maliyetine eklenmez; onarım gideri olarak ayrıca izlenir.",
+      "module": "Sabit Kıymet",
+      "kind": "distractor",
+      "keywords": [
+        "bakım",
+        "onarım",
+        "periyodik bakım",
+        "servis gideri"
+      ],
+      "columns": [
+        {
+          "name": "BAKIM_ID",
+          "type": "INT",
+          "description": "Bakım kaydının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SKY_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Bakımı yapılan sabit kıymet.",
+          "fk": "TBLSBKYMET.SKY_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Bakımı yapan servis cari.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Bakım tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Bakım/onarım tutarı (TL).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Bakım için alınan fatura numarası; boş olabilir.",
+          "fk": "TBLFATUIRS.FATIRS_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Yapılan işin açıklaması; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLKLTMUAYENE",
+      "description": "Gelen mal ve üretim kalite muayene kayıtları; uygun/uygun değil kararı burada verilir. Uygun bulunmayan miktar stok hareketine girmiş olabilir, bu yüzden muayene kaydı stok miktarı değildir.",
+      "module": "Kalite",
+      "kind": "distractor",
+      "keywords": [
+        "kalite muayenesi",
+        "gelen mal kontrolü",
+        "uygun",
+        "rapor"
+      ],
+      "columns": [
+        {
+          "name": "MUAYENE_ID",
+          "type": "INT",
+          "description": "Muayene kaydının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Muayenesi yapılan ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Malı gönderen satıcı cari; boş olabilir.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Muayene tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MIKTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Muayeneye gelen miktar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "UYGUN_MI",
+          "type": "VARCHAR(1)",
+          "description": "Muayene sonucu kodu; uygun olmayanlar için ayrıca uygunsuzluk kaydı açılır.",
+          "fk": null,
+          "values": {
+            "E": "uygun",
+            "H": "uygun değil"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Muayene açıklaması; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLKLTKAYIT",
+      "description": "Uygunsuzluk ve düzeltici faaliyet kayıtları; müşteri şikâyetleri ile iç denetim bulguları aynı tabloda durur. Kapatılan kayıt silinmez ve ürün iadesi anlamına gelmez.",
+      "module": "Kalite",
+      "kind": "distractor",
+      "keywords": [
+        "uygunsuzluk",
+        "müşteri şikâyeti",
+        "düzeltici faaliyet",
+        "denetim bulgusu"
+      ],
+      "columns": [
+        {
+          "name": "KAYIT_ID",
+          "type": "INT",
+          "description": "Uygunsuzluk kaydının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "KAYIT_NO",
+          "type": "VARCHAR(20)",
+          "description": "Kaydın evrak numarası.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Uygunsuzluğa konu ürün; ürün dışı bulgularda NULL.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Şikâyeti yapan veya malı gönderen cari; boş olabilir.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Kaydın açıldığı tarih (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Kaydın şu anki durumu.",
+          "fk": null,
+          "values": {
+            "A": "açık",
+            "K": "kapatıldı"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Uygunsuzluğun tanımı; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLKLTOLCU",
+      "description": "Ürün ölçüm kayıtları; ölçülen değer ile alt ve üst sınır satır satır tutulur. Sınır dışı ölçüm stok miktarını değiştirmez, yalnız uygunsuzluk doğurur.",
+      "module": "Kalite",
+      "kind": "distractor",
+      "keywords": [
+        "ölçüm",
+        "kontrol talimatı",
+        "tolerans",
+        "sınır dışı"
+      ],
+      "columns": [
+        {
+          "name": "OLCUM_ID",
+          "type": "INT",
+          "description": "Ölçüm satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Ölçümü yapılan ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Ölçüm tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OLCUM_DEGERI",
+          "type": "DECIMAL(18,3)",
+          "description": "Ölçülen değer.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ALT_SINIR",
+          "type": "DECIMAL(18,3)",
+          "description": "Kabul edilen alt sınır.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "UST_SINIR",
+          "type": "DECIMAL(18,3)",
+          "description": "Kabul edilen üst sınır.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLLSARAC",
+      "description": "Teslimatta kullanılan araçların kartları; plaka, tip ve kapasite burada durur. Aracın giderleri ve sürücüsü buradan izlenir, ürün taşımaları stok hareketi değildir.",
+      "module": "Lojistik",
+      "kind": "distractor",
+      "keywords": [
+        "araç",
+        "plaka",
+        "kamyon",
+        "filo",
+        "kapasite"
+      ],
+      "columns": [
+        {
+          "name": "ARAC_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Araç kodu; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PLAKA",
+          "type": "VARCHAR(20)",
+          "description": "Araç plakası.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ARAC_TIPI",
+          "type": "NVARCHAR(30)",
+          "description": "Aracın tipi (kamyonet, tır, panelvan).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "KAPASITE",
+          "type": "DECIMAL(18,2)",
+          "description": "Yük kapasitesi (kg).",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "PERSONEL_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Aracı kullanan personel; atanmamışsa NULL.",
+          "fk": "TBLPERSONEL.PERSONEL_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "AKTIF",
+          "type": "VARCHAR(1)",
+          "description": "Aracın filoda aktif olup olmadığı.",
+          "fk": null,
+          "values": {
+            "E": "aktif araç",
+            "H": "pasif araç"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLLSSEVK",
+      "description": "Sevkıyat ve irsaliye kayıtları; malın hangi araçla ve hangi tarihte yola çıktığını tutar. İrsaliye fatura değildir ve tutar taşımaz, fatura sayısı için TBLFATUIRS kullanılır.",
+      "module": "Lojistik",
+      "kind": "distractor",
+      "keywords": [
+        "sevkıyat",
+        "irsaliye",
+        "teslimat",
+        "araç",
+        "yol"
+      ],
+      "columns": [
+        {
+          "name": "SEVK_ID",
+          "type": "INT",
+          "description": "Sevkıyat kaydının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SEVK_NO",
+          "type": "VARCHAR(20)",
+          "description": "İrsaliye numarası.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Malın gönderildiği alıcı cari.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ARAC_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Yükü taşıyan araç; müşteri kendi aldıysa NULL.",
+          "fk": "TBLLSARAC.ARAC_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Sevkıyat tarihi (YYYY-MM-DD); fatura tarihinden farklı olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Sevkıyata dayanak fatura numarası; boş olabilir.",
+          "fk": "TBLFATUIRS.FATIRS_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Sevkıyat açıklaması; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLLSTAKIP",
+      "description": "Kargo takip hareketleri; bir gönderinin her durumu (çıkış, şube, teslim) ayrı satırdır. Aynı gönderi birden çok satır taşıdığı için satır sayısı gönderi sayısı değildir.",
+      "module": "Lojistik",
+      "kind": "distractor",
+      "keywords": [
+        "kargo",
+        "kargo takibi",
+        "teslim edildi",
+        "kargo bedeli"
+      ],
+      "columns": [
+        {
+          "name": "TAKIP_ID",
+          "type": "INT",
+          "description": "Takip satırının numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TAKIP_KODU",
+          "type": "VARCHAR(30)",
+          "description": "Kargo takip numarası; aynı gönderinin tüm satırlarında aynıdır.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SEVK_ID",
+          "type": "INT",
+          "description": "Takibin ait olduğu sevkıyat; kayıtsız gönderimlerde NULL.",
+          "fk": "TBLLSSEVK.SEVK_ID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "İşlemin tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Takip durumu kodu.",
+          "fk": null,
+          "values": {
+            "K": "kargoda",
+            "T": "teslim edildi",
+            "I": "iade"
+          },
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Kargo bedeli (TL); anlaşmalı gönderimlerde NULL.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Durum açıklaması; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSTHAR_LOG",
+      "description": "Stok hareketlerinin kayıt günlüğü; bir hareket eklendiğinde, düzenlendiğinde veya silindiğinde bir satır yazılır. Aynı hareket birden çok satırda geçtiği için miktar ve ciro toplamları TBLSTHAR ile tutmaz.",
+      "module": "Stok",
+      "kind": "distractor",
+      "keywords": [
+        "stok hareket günlüğü",
+        "log",
+        "düzenleme kaydı",
+        "silme kaydı"
+      ],
+      "columns": [
+        {
+          "name": "STHAR_ID",
+          "type": "INT",
+          "description": "Günlüğe yazılan hareket numarası; TBLSTHAR'daki satırın birincil anahtarı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Harekete konu ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DEPO_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Hareketin yapıldığı depo.",
+          "fk": "TBLDEPO.DEPO_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STHAR_GCKOD",
+          "type": "VARCHAR(1)",
+          "description": "Giriş/çıkış yönü kodu.",
+          "fk": null,
+          "values": {
+            "G": "giriş",
+            "C": "çıkış"
+          },
+          "nullable": false
+        },
+        {
+          "name": "STHAR_GCMIK",
+          "type": "DECIMAL(18,2)",
+          "description": "Log anındaki hareket miktarı; sonraki düzenlemelerde değişmiş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STHAR_NF",
+          "type": "DECIMAL(18,2)",
+          "description": "Log anındaki net birim fiyat; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "STHAR_TARIH",
+          "type": "DATE",
+          "description": "Hareket tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STHAR_HTUR",
+          "type": "VARCHAR(1)",
+          "description": "Hareket türü kodu.",
+          "fk": null,
+          "values": {
+            "S": "satış (çıkış)",
+            "A": "alış (giriş)",
+            "I": "satış iadesi (giriş)",
+            "T": "depo transferi (çıkış + giriş çifti)",
+            "D": "sayım/devir (giriş)"
+          },
+          "nullable": false
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Hareketin fatura numarası; faturasız hareketlerde NULL.",
+          "fk": "TBLFATUIRS.FATIRS_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Hareketin cari tarafı; faturasız hareketlerde NULL.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "LOG_TARIH",
+          "type": "DATE",
+          "description": "Log satırının yazıldığı tarih (YYYY-MM-DD); hareket tarihinden sonra olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ISLEM",
+          "type": "VARCHAR(1)",
+          "description": "Log satırının hangi işlemde yazıldığını gösteren kod.",
+          "fk": null,
+          "values": {
+            "E": "eklendi",
+            "D": "düzenlendi",
+            "S": "silindi"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLFATUIRS_TASLAK",
+      "description": "Onaylanmamış fatura taslakları; bir fatura yalnız onaylandığında TBLFATUIRS'e işlenir. Taslak tutarları kesinleşmemiştir, ciro veya alacak hesapına dahil edilmez.",
+      "module": "Fatura",
+      "kind": "distractor",
+      "keywords": [
+        "fatura taslağı",
+        "onay bekleyen fatura",
+        "ön fatura",
+        "taslak"
+      ],
+      "columns": [
+        {
+          "name": "FTIRSIP",
+          "type": "INT",
+          "description": "Fatura tipi kodu.",
+          "fk": null,
+          "values": {
+            "1": "satış faturası",
+            "2": "alış faturası",
+            "3": "satış iade faturası"
+          },
+          "nullable": false
+        },
+        {
+          "name": "FATIRS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Taslağın fatura numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Taslağın cari tarafı.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Taslağın oluşturulma tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "GENELTOPLAM",
+          "type": "DECIMAL(18,2)",
+          "description": "Taslağın genel toplamı (KDV dahil); onayda değişebilir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IPTAL",
+          "type": "VARCHAR(1)",
+          "description": "Taslağın iptal edilip edilmediği.",
+          "fk": null,
+          "values": {
+            "E": "iptal edilmiş",
+            "H": "geçerli"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ONAY_TARIHI",
+          "type": "DATE",
+          "description": "Taslağın onaylandığı tarih; hâlâ taslaksa NULL.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "KULLANICI",
+          "type": "VARCHAR(20)",
+          "description": "Taslağı oluşturan kullanıcı; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLCASABIT_YEDEK",
+      "description": "Cari kartlarının yedek/eski kayıtları; kart birleştirme ve düzeltme sonrası eski satırlar burada kalır. Aynı cari eski ünvan veya ille birden çok satırda durabildiği için cari sayısı ve il dağılımı TBLCASABIT ile tutmaz.",
+      "module": "Cari",
+      "kind": "distractor",
+      "keywords": [
+        "cari yedeği",
+        "eski cari",
+        "kart birleştirme",
+        "duplike cari"
+      ],
+      "columns": [
+        {
+          "name": "CARI_KOD",
+          "type": "VARCHAR(20)",
+          "description": "Cari kodu; TBLCASABIT'taki kartın birincil anahtarı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_ISIM",
+          "type": "NVARCHAR(120)",
+          "description": "Kartın eski ünvanı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_TIP",
+          "type": "VARCHAR(1)",
+          "description": "Kartın eski tipi.",
+          "fk": null,
+          "values": {
+            "A": "alıcı",
+            "S": "satıcı",
+            "H": "hem alıcı hem satıcı"
+          },
+          "nullable": false
+        },
+        {
+          "name": "IL",
+          "type": "NVARCHAR(40)",
+          "description": "Kayıttaki il; kartın güncel iliyle aynı olmak zorunda değildir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PLASIYER_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Eski plasiyer ataması; boş olabilir.",
+          "fk": "TBLPLASIYER.PLASIYER_KODU",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "KAYIT_TARIHI",
+          "type": "DATE",
+          "description": "Yedek satırın alındığı tarih (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Yedeğin neden alındığı; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSTSABIT_ESKI",
+      "description": "Stok kartlarının önceki sürümleri; adı, grubu, KDV oranı veya fiyatı değişen ürünün eski satırı burada kalır. Aynı ürün birden çok sürümde bulunduğundan ürün sayısı ve fiyatlar TBLSTSABIT ile tutmaz.",
+      "module": "Stok",
+      "kind": "distractor",
+      "keywords": [
+        "eski stok kartı",
+        "stok sürüm",
+        "ürün adı değişti",
+        "eski fiyat"
+      ],
+      "columns": [
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Ürün kodu; TBLSTSABIT'taki kartın birincil anahtarı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_ADI",
+          "type": "NVARCHAR(100)",
+          "description": "Kartın eski adı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "GRUP_KODU",
+          "type": "VARCHAR(12)",
+          "description": "Kartın eski stok grubu.",
+          "fk": "TBLSTGRUP.GRUP_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OLCU_BR1",
+          "type": "VARCHAR(8)",
+          "description": "Eski temel ölçü birimi.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "KDV_ORANI",
+          "type": "DECIMAL(18,2)",
+          "description": "Eski satış KDV oranı, yüzde olarak.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BIRIM_FIYAT",
+          "type": "DECIMAL(18,2)",
+          "description": "Kartın eski liste birim fiyatı; güncel fiyat değildir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "AKTIF",
+          "type": "VARCHAR(1)",
+          "description": "Eski sürümdeki kart durumu kodu.",
+          "fk": null,
+          "values": {
+            "E": "aktif kart",
+            "H": "pasif kart"
+          },
+          "nullable": false
+        },
+        {
+          "name": "KAYIT_TARIHI",
+          "type": "DATE",
+          "description": "Eski sürümün arşive alındığı tarih (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "VERSIYON",
+          "type": "INT",
+          "description": "Eski sürüm numarası; her değişiklikte artar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "TBLSIPATRA_TMP",
+      "description": "Sipariş satırlarının geçici (sepet) kayıtları; sipariş onaylanmadan önceki satırlar burada durur ve aynı ürün birkaç satırda tekrarlanabilir. Onaylanmamış satırlar sipariş veya satış sayılmaz.",
+      "module": "Sipariş",
+      "kind": "distractor",
+      "keywords": [
+        "sipariş taslağı satırı",
+        "sepet",
+        "geçici sipariş satırı"
+      ],
+      "columns": [
+        {
+          "name": "SIPATRA_ID",
+          "type": "INT",
+          "description": "Geçici satır numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SIPARIS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Satırın bağlandığı sipariş numarası; onaylanmamış siparişlerde de dolu olabilir.",
+          "fk": "TBLSIPAMAS.SIPARIS_NO",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "STOK_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Sepetteki ürün.",
+          "fk": "TBLSTSABIT.STOK_KODU",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MIKTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Sepetteki miktar; kullanıcı değiştikçe güncellenir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BIRIM_FIYAT",
+          "type": "DECIMAL(18,2)",
+          "description": "Sepetteki birim fiyat (KDV hariç).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Satır toplamı (miktar x birim fiyat).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TESLIM_TARIHI",
+          "type": "DATE",
+          "description": "Sepette istenen teslim tarihi; belirlenmemişse NULL.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DURUM",
+          "type": "VARCHAR(1)",
+          "description": "Geçici satırın durumu.",
+          "fk": null,
+          "values": {
+            "B": "bekleyen satır",
+            "O": "onay bekleyen satır",
+            "V": "vazgeçilen satır"
+          },
+          "nullable": false
+        },
+        {
+          "name": "EKLEYEN",
+          "type": "VARCHAR(20)",
+          "description": "Satırı ekleyen kullanıcı; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLSIPAMAS_TASLAK",
+      "description": "Onaylanmamış sipariş başlıkları; müşteri onayı bekleyen taslaklar burada durur. Taslak tutarları kesin sipariş değildir, TBLSIPAMAS veya fatura toplamlarına eklenmez.",
+      "module": "Sipariş",
+      "kind": "distractor",
+      "keywords": [
+        "sipariş taslağı",
+        "ön sipariş",
+        "onay bekleyen sipariş"
+      ],
+      "columns": [
+        {
+          "name": "SIPARIS_NO",
+          "type": "VARCHAR(20)",
+          "description": "Taslağın sipariş numarası; birincil anahtar.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Taslağı oluşturan cari.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Taslağın oluşturulma tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TOPLAM_TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Taslağın toplam tutarı (KDV dahil); onayda değişebilir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ONAY_TARIHI",
+          "type": "DATE",
+          "description": "Taslağın siparişe dönüştüğü tarih; hâlâ taslaksa NULL.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Taslak açıklaması; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "TBLCAHAR_LOG",
+      "description": "Cari hesap hareketlerinin kayıt günlüğü; her kayıt, düzenleme ve silme bir satırdır. Aynı hareket birden çok satırda geçtiği için borç/alacak toplamları TBLCAHAR ile tutmaz.",
+      "module": "Cari",
+      "kind": "distractor",
+      "keywords": [
+        "cari hareket günlüğü",
+        "cari log",
+        "borç alacak düzenleme"
+      ],
+      "columns": [
+        {
+          "name": "CAHAR_ID",
+          "type": "INT",
+          "description": "Günlüğe yazılan cari hesap hareket numarası; TBLCAHAR'daki satırın birincil anahtarı.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CARI_KODU",
+          "type": "VARCHAR(20)",
+          "description": "Hareketin cari hesabı.",
+          "fk": "TBLCASABIT.CARI_KOD",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TARIH",
+          "type": "DATE",
+          "description": "Hareket tarihi (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BA",
+          "type": "VARCHAR(1)",
+          "description": "Log anındaki borç/alacak yönü.",
+          "fk": null,
+          "values": {
+            "B": "borç",
+            "A": "alacak"
+          },
+          "nullable": false
+        },
+        {
+          "name": "TUTAR",
+          "type": "DECIMAL(18,2)",
+          "description": "Log anındaki hareket tutarı; sonraki düzenlemede değişmiş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FISNO",
+          "type": "VARCHAR(20)",
+          "description": "Kaynak fiş numarası; el ile girilen kayıtlarda NULL.",
+          "fk": "TBLFATUIRS.FATIRS_NO",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ACIKLAMA",
+          "type": "NVARCHAR(120)",
+          "description": "Hareket açıklaması; boş olabilir.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "LOG_TARIH",
+          "type": "DATE",
+          "description": "Log satırının yazıldığı tarih (YYYY-MM-DD).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ISLEM",
+          "type": "VARCHAR(1)",
+          "description": "Log satırının hangi işlemde yazıldığını gösteren kod.",
+          "fk": null,
+          "values": {
+            "E": "eklendi",
+            "D": "düzenlendi",
+            "S": "silindi"
+          },
+          "nullable": false
+        }
+      ]
+    }
+  ]
+}
