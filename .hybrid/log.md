@@ -503,3 +503,4 @@
 2026-10-24 16:54:24 | ORCH   | brain: cloud Claude (panel: cloud)
 2026-10-24 16:54:24 | BRAIN  | extending the plan from PROJECT_BRIEF_RUN5.md with opus
 2026-10-24 17:08:25 | BRAIN  | extend done: 42 new tasks
+2026-10-24 17:08:38 | HANDS  | T101 try 1: README Run 3 section (product title "Bilgin"; import-map/introspect/diff-map/merge-map/make-login-script/eval --schema/--mode auto/--repeat; the PII model and the two-layer defence - login script primary, sqlglot policy second; the R3-14 real-data checklist against a Netsis COPY: create the read-only login first, Windows auth (sysadmin) never used; nothing in tests touches a real server) + integration tests/test_integration_m9.py (new file, no hand-made fakes: the real executor on the real built DB masks every bypass case and rejects the filter side channels; login script DENY set == real schema; all golden questions green; README mentions every new subcommand); then fix whatever the whole suite shows red
