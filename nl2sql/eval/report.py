@@ -38,6 +38,7 @@ def write_report(
     config: dict | None = None,
     mode: str = "full",
     schema_info: dict | None = None,
+    dataset: str = config.DEFAULT_DATASET,
 ) -> Path:
     """Write ``<out_dir>/<timestamp>/report.json`` + ``report.md``, copy them to ``<out_dir>/latest``.
 
@@ -48,11 +49,13 @@ def write_report(
 
     ``schema_info`` (``schema_info()`` below) is what the run was measured against; a caller that
     does not name one leaves the field out rather than writing an empty schema nobody loaded.
+    ``dataset`` names the world the run measured (PLAN R4-4), so two datasets' reports never read
+    as each other's continuation.
     """
     stamp = datetime.now()
     out = Path(out_dir)
     previous = _load(out / "latest" / REPORT_FILES[0])
-    report = _report(results, model, config, stamp, previous, mode, schema_info)
+    report = _report(results, model, config, stamp, previous, mode, schema_info, dataset)
     run_dir = out / stamp.strftime(STAMP)
     _write(run_dir, report)
     _write(out / "latest", report)
@@ -68,12 +71,15 @@ def fingerprint(
     rules: list[dict],
     index_hash: str,
     max_tool_calls: int,
+    dataset: str | None = None,
 ) -> dict:
     """Bir koşunun neyi ölçtüğünün imzası: iki koşun farkı ancak imzaları eşitse kıyaslanabilir.
 
     ``golden`` sorunun kimliği, metni, SQL'i ve sıralı bayrağıyla girer; inceleme notu gibi ölçümü
     değiştirmeyen bir alanın iki koşuyu kıyaslanamaz kılması yanlış olurdu. ``index_hash`` rag'e
-    aittir, diğer modlar boş verir.
+    aittir, diğer modlar boş verir. ``dataset`` yalnız varsayılanın adı değilse yazılır (R4-4):
+    iki kümenin imzaları birbirine karışmasın, ama varsayılanla ölçmüş Run 3 koşuları kendi
+    imzalarını korusun, yoksa diskteki ``latest``leri bir daha hiç yeniden kullanılamazdı.
     """
     lines = list(golden)
     return {
@@ -96,6 +102,7 @@ def fingerprint(
         "rules_hash": _digest(rules),
         "index_hash": index_hash,
         "max_tool_calls": max_tool_calls,
+        **({"dataset": dataset} if dataset and dataset != config.DEFAULT_DATASET else {}),
     }
 
 
@@ -131,6 +138,7 @@ def _report(
     previous: dict | None = None,
     mode: str = "full",
     schema_info: dict | None = None,
+    dataset: str = config.DEFAULT_DATASET,
 ) -> dict:
     passed = sum(1 for result in results if result.outcome == "pass")
     peaks = [result.max_prompt_tokens for result in results]
@@ -138,6 +146,7 @@ def _report(
         "timestamp": stamp.isoformat(sep=" ", timespec="seconds"),
         "model": model,
         "mode": mode,
+        "dataset": dataset,
         **({"schema": schema_info} if schema_info else {}),
         "config": dict(settings or {}),
         "score": {"passed": passed, "total": len(results)},

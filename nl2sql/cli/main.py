@@ -156,6 +156,9 @@ MERGED_WRITTEN = "Birleşik şema yazıldı: {path} ({tables} tablo, {columns} k
 # R4-14: ``--dataset`` verildiği anda ekran hangi dünyanın ölçüldüğünü ilk satırda söyler; iki
 # kümenin tablo adları birbirine benzemediği için hangi klasörle çalışıldığı baştan okunmalı.
 DATASET_LINE = "Veri kümesi: {display_name} ({name})"
+# ``--schema``nın argparse varsayılanı: tek başına tam şemanın adı, ``--dataset`` ile birlikte
+# "şema söylenmedi" demek, yani kümenin kendi şemasının önüne geçmez (R4-4).
+FULL_SCHEMA = "full"
 
 
 def build_database(
@@ -305,10 +308,11 @@ def ask(
     question: str,
     llm,
     mode: str = "full",
-    db_path: str = config.DB_PATH,
+    db_path: str | Path | None = None,
     audit_path: str = config.AUDIT_LOG,
-    index_dir: str = config.INDEX_DIR,
+    index_dir: str | Path | None = None,
     estimate: int | None = None,
+    dataset: str | None = None,
 ) -> int:
     """Bir soru: modunu söyle, adımları işaretle ve gecikmesiyle dök, gönderilen SQL'i ve tabloyu göster.
 
@@ -320,17 +324,31 @@ def ask(
     Tablo için gönderilen SQL bir kez daha yürütülür, çünkü döngü yanıtı metin olarak görür, satırları
     ekrana basacak biçimde elinde tutmaz. Tablo şemanın pii işaretlerinden gelen maskeyle görünür ve
     maskelenen kolonların adı altta söylenir (R3-6).
+
+    ``dataset`` verildiğinde şema, kurallar, join profili, veritabanı, indeks ve referans tarihi o
+    kümenin tanımıdır (R4-4); açıkça verilen yol ya da mod onun önüne geçer.
     """
     _utf8_stdout()
+    ds, code = _dataset(dataset)
+    if code:
+        return code
+    _dataset_line(ds)
+    db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
+    index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
     if _db_missing(db_path):
         return _no_db(db_path)
-    schema = doc.load_schema()
-    rules = load_rules()
+    schema = ds.schema() if ds else doc.load_schema()
+    rules = ds.rules() if ds else load_rules()
     if mode == "auto":
-        mode, estimate = resolve_auto(schema, rules, index_dir)
-    executor = LocalExecutor(db_path=db_path, audit_path=audit_path, pii_schema=schema)
+        mode, estimate = resolve_auto(schema, rules, index_dir, ds.as_of if ds else config.AS_OF)
+    executor = LocalExecutor(
+        db_path=db_path,
+        allowlist=doc.allowlist(schema),
+        audit_path=audit_path,
+        pii_schema=schema,
+    )
     try:
-        context = _context(mode, executor, schema, rules, index_dir)
+        context = _context(mode, executor, schema, rules, index_dir, ds)
     except (MissingIndexError, StaleIndexError) as exc:
         return _index_failed(str(exc))
     run = run_agent(question, llm, executor, schema, AUDIT_SOURCE, mode=mode, context=context)
@@ -370,11 +388,12 @@ def evaluate(
     only: list[str] | None = None,
     tags: list[str] | None = None,
     mode: str = config.DEFAULT_EVAL_MODE,
-    db_path: str = config.DB_PATH,
+    db_path: str | Path | None = None,
     audit_path: str = config.AUDIT_LOG,
-    out_dir: str = config.EVAL_OUT,
-    index_dir: str = config.INDEX_DIR,
-    schema_path: str | Path = config.SCHEMA_PATH,
+    out_dir: str | Path | None = None,
+    index_dir: str | Path | None = None,
+    schema_path: str | Path | None = None,
+    dataset: str | None = None,
 ) -> int:
     """Altın soruları bir modda koşar, her soru biter bitmez tek satır dökerek (Delight 4)
     ilerler, raporu ``out_dir`` altına yazar (CLI ona ``eval_out/<mode>`` verir, R2-12), skoru söyler; koşu tamamlandıysa kod 0'dır.
@@ -387,16 +406,27 @@ def evaluate(
     ``schema_path`` de koşunun kendisini tanımlar (R3-5): allowlist, modelin gördüğü şema metni,
     join graphı, indeks imzası ve pii işaretleri (R3-6; ölçüm maskelenmiş satırla yapılır) hepsi
     okunan dosyadan gelir; yolu ve imzasının başı ekrana, yolu ve imzası rapora yazılır, böylece
-    iki koşu ancak aynı şemayı ölçtüyse birbirinin devamı sayılır.
+    iki koşu ancak aynı şemayı ölçtüyse birbirinin devamı sayılır. ``--schema`` verildiğinde
+    kümenin şemasının önüne geçer (R4-4).
+
+    ``dataset`` verildiğinde altın sorular, kurallar, profil, veritabanı, indeks, rapor klasörü ve
+    referans tarihi o kümenin tanımıdır (R4-4); açıkça verilen her yol onun önüne geçer.
     """
     _utf8_stdout()
+    ds, code = _dataset(dataset)
+    if code:
+        return code
+    _dataset_line(ds)
+    db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
+    index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
+    out_dir = _or(out_dir, ds.eval_out if ds else None, config.EVAL_OUT)
     if _db_missing(db_path):
         return _no_db(db_path)
-    schema_file = _schema_file(schema_path)
+    schema_file = _schema_file(_or(schema_path, ds.schema_path if ds else None, FULL_SCHEMA))
     schema = _load_schema(schema_file)
     if schema is None:
         return EXIT_BAD_INPUT
-    lines = runner.load_golden()
+    lines = ds.golden() if ds else runner.load_golden()
     absent = _absent_tags(lines, tags)
     if absent:
         for tag in absent:
@@ -406,12 +436,12 @@ def evaluate(
     info = report.schema_info(schema_file, schema)
     print(f"Mod: {mode}")
     print(SCHEMA_LINE.format(path=info["path"], hash8=info["hash"][:8]) + "\n")
-    rules = load_rules()
+    rules = ds.rules() if ds else load_rules()
     executor = LocalExecutor(
         db_path=db_path, allowlist=doc.allowlist(schema), audit_path=audit_path, pii_schema=schema
     )
     try:
-        context = _context(mode, executor, schema, rules, index_dir)
+        context = _context(mode, executor, schema, rules, index_dir, ds)
     except (MissingIndexError, StaleIndexError) as exc:
         return _index_failed(str(exc))
 
@@ -432,6 +462,7 @@ def evaluate(
     passed = sum(1 for result in results if result.outcome == "pass")
     kind = "fake" if isinstance(llm, fake.FakeLLM) else "openai"
     model = "fake" if kind == "fake" else config.llm_settings().model
+    name = ds.name if ds else config.DEFAULT_DATASET
     run_dir = report.write_report(
         results,
         out_dir,
@@ -440,10 +471,11 @@ def evaluate(
             "backend": config.backend(),
             "llm": model,
             "embedder": _embedder_id(mode, index_dir),
-            "fingerprint": _fingerprint(mode, kind, model, lines, results, schema, rules),
+            "fingerprint": _fingerprint(mode, kind, model, lines, results, schema, rules, name),
         },
         mode=mode,
         schema_info=info,
+        dataset=name,
     )
     print(f"Skor: {passed}/{len(results)}")
     print(f"Rapor: {run_dir / 'report.md'}")
@@ -453,12 +485,13 @@ def evaluate(
 def compare_modes(
     llm_factory,
     fresh: bool = False,
-    db_path: str = config.DB_PATH,
+    db_path: str | Path | None = None,
     audit_path: str = config.AUDIT_LOG,
-    out_dir: str = config.EVAL_OUT,
-    index_dir: str = config.INDEX_DIR,
-    schema_path: str | Path = config.SCHEMA_PATH,
+    out_dir: str | Path | None = None,
+    index_dir: str | Path | None = None,
+    schema_path: str | Path | None = None,
     repeat: int = 1,
+    dataset: str | None = None,
 ) -> int:
     """Üç modu aynı sorularda koşar, tek karşılaştırma raporu yazar, mod başına tek satır söyler.
 
@@ -475,25 +508,37 @@ def compare_modes(
 
     ``repeat`` her modun kaç kez koşulacağıdır (R3-11): aynı imzada tekrarlandıkça yayılım
     ölçülür, karar ortalamalarla kurulur ve satır gürültüyü de söyler.
+
+    ``dataset`` ``evaluate``ınkiyle aynı anlamı taşır (R4-4): üç mod da o kümenin sorularını,
+    şemasını, kurallarını, veritabanını, indeksini ve rapor klasörünü kullanır.
     """
     _utf8_stdout()
+    ds, code = _dataset(dataset)
+    if code:
+        return code
+    _dataset_line(ds)
+    db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
+    index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
+    out_dir = _or(out_dir, ds.eval_out if ds else None, config.EVAL_OUT)
     if _db_missing(db_path):
         return _no_db(db_path)
-    schema_file = _schema_file(schema_path)
+    schema_file = _schema_file(_or(schema_path, ds.schema_path if ds else None, FULL_SCHEMA))
     schema = _load_schema(schema_file)
     if schema is None:
         return EXIT_BAD_INPUT
-    lines = runner.load_golden()
+    lines = ds.golden() if ds else runner.load_golden()
     info = report.schema_info(schema_file, schema)
     print(SCHEMA_LINE.format(path=info["path"], hash8=info["hash"][:8]) + "\n")
-    rules = load_rules()
+    rules = ds.rules() if ds else load_rules()
+    name = ds.name if ds else config.DEFAULT_DATASET
     executor = LocalExecutor(
         db_path=db_path, allowlist=doc.allowlist(schema), audit_path=audit_path, pii_schema=schema
     )
     clients = {mode: llm_factory(mode) for mode in config.MODES}
     kind, model = _client_kind(clients[config.MODES[0]])
     fingerprints = {
-        mode: _mode_fingerprint(mode, kind, model, lines, schema, rules) for mode in config.MODES
+        mode: _mode_fingerprint(mode, kind, model, lines, schema, rules, name)
+        for mode in config.MODES
     }
     spaces = {mode: _embedder_id(mode, index_dir) for mode in config.MODES}
     stored = {mode: _mode_report(out_dir, mode) for mode in config.MODES}
@@ -509,7 +554,7 @@ def compare_modes(
     if "rag" not in reused:
         # rag koşacaksa indeksi baştan denetle; iki mod boşuna koşulduktan sonra red edilmesin.
         try:
-            _context("rag", executor, schema, rules, index_dir)
+            _context("rag", executor, schema, rules, index_dir, ds)
         except (MissingIndexError, StaleIndexError) as exc:
             return _index_failed(str(exc))
     if repeat > 1:
@@ -519,7 +564,7 @@ def compare_modes(
     for mode in config.MODES:
         if mode in reports:
             continue
-        context = _context(mode, executor, schema, rules, index_dir)
+        context = _context(mode, executor, schema, rules, index_dir, ds)
         runs = []
         for attempt in range(1, repeat + 1):
             print(
@@ -550,6 +595,7 @@ def compare_modes(
                 },
                 mode=mode,
                 schema_info=info,
+                dataset=name,
             )
             runs.append(_mode_report(out_dir, mode))
         reports[mode] = runs
@@ -878,6 +924,19 @@ def _dataset_line(ds: datasets.Dataset | None) -> None:
         print(DATASET_LINE.format(display_name=ds.display_name, name=ds.name))
 
 
+def _auto_inputs(ds: datasets.Dataset | None) -> tuple:
+    """``--mode auto``nun girdileri: küme verildiyse şema, kural, indeks ve tarih onun tanımıdır (R4-4)."""
+    if ds:
+        return ds.schema(), ds.rules(), ds.index_dir, ds.as_of
+    return doc.load_schema(), load_rules(), config.INDEX_DIR, config.AS_OF
+
+
+def _eval_out(ds: datasets.Dataset | None, mode: str | None = None) -> Path:
+    """Koşunun rapor klasörü: kümenin ``eval_out``u, R2-12 gereği modun kendi alt klasörüyle (R4-4)."""
+    base = Path(ds.eval_out if ds else config.EVAL_OUT)
+    return base / mode if mode else base
+
+
 def _or(value, *fallbacks):
     """İlk verilen değer kazanır: açık parametre > kümenin varsayılanı > config."""
     for candidate in (value, *fallbacks):
@@ -1004,6 +1063,7 @@ def main(argv: list[str] | None = None) -> int:
         default="auto",
         help="bağlam modu (varsayılan %(default)s)",
     )
+    _add_dataset_option(ask_cmd)
 
     eval_cmd = commands.add_parser("eval", help="altın soruları koşar ve raporu yazar")
     eval_cmd.add_argument(
@@ -1041,10 +1101,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     eval_cmd.add_argument(
         "--schema",
-        default="full",
+        default=FULL_SCHEMA,
         metavar="DOSYA|full|skeleton",
         help="ölçümün şeması: tam ad ya da yol (varsayılan %(default)s)",
     )
+    _add_dataset_option(eval_cmd)
 
     args = parser.parse_args(argv)
     if args.command == "build-db":
@@ -1076,35 +1137,47 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "make-login-script":
         return make_login_script(login=args.login, **_given(dataset=args.dataset))
     if args.command == "ask":
+        ds, code = _dataset(args.dataset)
+        if code:
+            return code
         # ASSUMPTION: "ask'ın varsayılanı auto" komutun varsayılanıdır (argparse default); buradaki
         # çözümleme istemciye de çözülmüş modu vermek için — sahte kayıt rag ile diğerlerinde farklı
         # oynar. ask() fonksiyonunun kendi varsayılanı "full" kalır, doğrudan çağıranı etkilemesin.
         mode, estimate = args.mode, None
         if mode == "auto":
-            mode, estimate = resolve_auto(doc.load_schema(), load_rules(), config.INDEX_DIR)
+            mode, estimate = resolve_auto(*_auto_inputs(ds))
         return ask(
-            question=args.question, llm=make_client(args.llm, mode), mode=mode, estimate=estimate
+            question=args.question,
+            llm=make_client(args.llm, mode, ds),
+            mode=mode,
+            estimate=estimate,
+            **_given(dataset=args.dataset),
         )
     if args.mode == "auto":
         print(EVAL_NO_AUTO)
         return EXIT_BAD_INPUT
+    ds, code = _dataset(args.dataset)
+    if code:
+        return code
+    # ``--schema`` söylenmediyse küme kendi şemasını ölçer; ``full`` onun önüne geçmez (R4-4).
+    schema = None if args.dataset and args.schema == FULL_SCHEMA else args.schema
     if args.compare:
         if args.repeat < 1:
             print(BAD_REPEAT)
             return EXIT_BAD_INPUT
         return compare_modes(
-            lambda mode: make_client(args.llm, mode),
+            lambda mode: make_client(args.llm, mode, ds),
             fresh=args.fresh,
-            schema_path=args.schema,
             repeat=args.repeat,
+            **_given(schema_path=schema, dataset=args.dataset),
         )
     return evaluate(
-        llm=make_client(args.llm, args.mode),
+        llm=make_client(args.llm, args.mode, ds),
         only=args.only,
         tags=args.tag,
         mode=args.mode,
-        out_dir=Path(config.EVAL_OUT) / args.mode,
-        schema_path=args.schema,
+        out_dir=_eval_out(ds, args.mode),
+        **_given(schema_path=schema, dataset=args.dataset),
     )
 
 
@@ -1220,7 +1293,7 @@ def _schema_file(value: str | Path) -> Path:
 
     Yollar çağrı anında alınır; bir test ``config.SKELETON_PATH``ı kendi tmp kopyasına çevirebilir.
     """
-    aliases = {"full": config.SCHEMA_PATH, "skeleton": config.SKELETON_PATH}
+    aliases = {FULL_SCHEMA: config.SCHEMA_PATH, "skeleton": config.SKELETON_PATH}
     return Path(aliases.get(str(value), value))
 
 
@@ -1244,18 +1317,35 @@ def _write_json(path: str | Path, payload: dict) -> None:
     target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def _context(mode: str, executor, schema: dict, rules: list[dict], index_dir: str | Path):
+def _context(
+    mode: str,
+    executor,
+    schema: dict,
+    rules: list[dict],
+    index_dir: str | Path,
+    ds: datasets.Dataset | None = None,
+):
     """Modun bağlamı: üçü de kuralları taşır, rag bir de diskteki indeksi ve join graphını ister.
 
     İndeks yoksa ya da bayatsa yükleyici yükseltir; R2-9 onun sessizce yeniden kurulmasını
     yasaklıyor, çünkü bayat vektörler bulunamayan tabloyu modelin hatası gibi gösterir.
+
+    ``ds`` verildiğinde indeks o kümenin adıyla denetlenir (R4-8: başka bir dünyanın vektörleriyle
+    aramak uydurma bir tabloyu modelin hatası gibi gösterirdi), join profili ve referans tarihi de
+    kümenin tanımıdır (R4-4).
     """
     search = graph = None
     if mode == "rag":
-        search = load_search(index_dir, schema, rules)
-        graph = build_graph(schema, load_profile())
+        search = load_search(index_dir, schema, rules, dataset=ds.name if ds else None)
+        graph = build_graph(schema, load_profile(ds.profile_path if ds else config.PROFILE_PATH))
     return ToolContext(
-        executor=executor, schema=schema, rules=rules, search=search, graph=graph, mode=mode
+        executor=executor,
+        schema=schema,
+        rules=rules,
+        search=search,
+        graph=graph,
+        mode=mode,
+        as_of=ds.as_of if ds else config.AS_OF,
     )
 
 
@@ -1298,7 +1388,9 @@ def resolve_auto(
     return "rag", estimate
 
 
-def _fingerprint(mode: str, kind: str, model: str, lines: list[dict], results, schema, rules) -> dict:
+def _fingerprint(
+    mode: str, kind: str, model: str, lines: list[dict], results, schema, rules, dataset=None
+) -> dict:
     """Koşunun neyi ölçtüğünün imzası (R2-12); iki koşu ancak eşitse birbirinin devamı sayılır.
 
     İmza yalnız koşan soruları taşır; ``--only`` ile kısalan bir koşu hepsini ölçmüş gibi aynı
@@ -1306,12 +1398,18 @@ def _fingerprint(mode: str, kind: str, model: str, lines: list[dict], results, s
     """
     ran = {result.id for result in results}
     return _mode_fingerprint(
-        mode, kind, model, [line for line in lines if line["id"] in ran], schema, rules
+        mode, kind, model, [line for line in lines if line["id"] in ran], schema, rules, dataset
     )
 
 
 def _mode_fingerprint(
-    mode: str, kind: str, model: str, lines: list[dict], schema: dict, rules: list[dict]
+    mode: str,
+    kind: str,
+    model: str,
+    lines: list[dict],
+    schema: dict,
+    rules: list[dict],
+    dataset: str | None = None,
 ) -> dict:
     """İmza koşu öncesi de kurulabilir: compare bir modun ``latest``ini ancak bu imza eşitse yeniden koşar."""
     return report.fingerprint(
@@ -1323,6 +1421,7 @@ def _mode_fingerprint(
         rules=rules,
         index_hash=content_hash(schema, rules) if mode == "rag" else "",
         max_tool_calls=get_mode(mode).max_tool_calls,
+        dataset=dataset,
     )
 
 
