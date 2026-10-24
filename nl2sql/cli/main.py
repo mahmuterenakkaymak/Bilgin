@@ -23,7 +23,7 @@ from pathlib import Path
 
 from openpyxl.utils.exceptions import InvalidFileException
 
-from nl2sql import config
+from nl2sql import config, datasets
 from nl2sql.agent import fake, prompt
 from nl2sql.agent.llm import ChatResponse, OpenAIClient
 from nl2sql.agent.loop import AgentRun, Step, run_agent
@@ -153,25 +153,39 @@ MASKED = "Maskelendi: {cols}"
 SCHEMA_LINE = "Şema: {path} ({hash8})"
 MERGED_WRITTEN = "Birleşik şema yazıldı: {path} ({tables} tablo, {columns} kolon)"
 
+# R4-14: ``--dataset`` verildiği anda ekran hangi dünyanın ölçüldüğünü ilk satırda söyler; iki
+# kümenin tablo adları birbirine benzemediği için hangi klasörle çalışıldığı baştan okunmalı.
+DATASET_LINE = "Veri kümesi: {display_name} ({name})"
+
 
 def build_database(
-    seed: int = config.SEED,
-    db_path: str = config.DB_PATH,
-    sql_path: str = config.MSSQL_SCRIPT,
+    seed: int | None = None,
+    db_path: str | Path | None = None,
+    sql_path: str | Path | None = None,
+    dataset: str | None = None,
 ) -> int:
     """Sentetik veriyle SQLite dosyasını ve T-SQL kurulum betiğini üretir.
 
     Ekran ölçümün iki girdisini de söyler (R2-14): kaç tabloda gerçekten satır olduğu (distractor
     tabloların bir kısmı şemada öylece durur) ve ``full`` modun şema metninin bağlam maliyeti.
+    ``dataset`` verildiğinde tohum, iki hedef yol ve şema metnine kadar her şey o kümenin
+    tanımıdır (R4-14); açıkça verilen yol ya da tohum onun önüne geçer.
     """
     _utf8_stdout()
-    digest = build.build_db(seed, db_path, sql_path)
+    ds, code = _dataset(dataset)
+    if code:
+        return code
+    _dataset_line(ds)
+    seed = _or(seed, ds.seed if ds else None, config.SEED)
+    db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
+    sql_path = _or(sql_path, ds.mssql_script if ds else None, config.MSSQL_SCRIPT)
+    digest = ds.build_db(seed, db_path, sql_path) if ds else build.build_db(seed, db_path, sql_path)
     print(f"Tohum: {seed}")
     print(f"Veritabanı: {db_path}")
     print(f"T-SQL betiği: {sql_path}")
     toplam, dolu = _table_counts(db_path)
     print(f"Tablolar: {toplam} (veri {dolu}, şema-yalnız {toplam - dolu})")
-    schema_text = doc.full_text(doc.load_schema())
+    schema_text = doc.full_text(ds.schema() if ds else doc.load_schema())
     print(f"Şema metni (full mod): {len(schema_text)} karakter ≈ {doc.estimate_tokens(schema_text)} token")
     print(f"Sağlama (sha256): {digest[:12]}")
     return 0
@@ -179,10 +193,11 @@ def build_database(
 
 def build_index(
     embed: str = DEFAULT_EMBED,
-    index_dir: str = config.INDEX_DIR,
-    schema_path: str = config.SCHEMA_PATH,
-    rules_path: str = config.RULES_PATH,
-    dataset_name: str = config.DEFAULT_DATASET,
+    index_dir: str | Path | None = None,
+    schema_path: str | Path | None = None,
+    rules_path: str | Path | None = None,
+    dataset: str | None = None,
+    dataset_name: str | None = None,
 ) -> int:
     """Şema ile kurallardan arama indeksini kurar: dokümanlar, vektörler, imza (R2-14).
 
@@ -190,8 +205,19 @@ def build_index(
     kaç genişlikte olduğu, içeriğin imzasının başı ve ne kadar sürdü. İmza, ``ask`` tarafının bayat
     indeksi reddetmesinin kendisi olduğu için burada ekrana da çıkıyor. İmzanın yanına bir de hangi
     veri kümesinin indeksi olduğu yazılır (R4-8), çünkü iki kümenin şemaları birbiriyle karışabilir.
+    ``dataset`` o kümenin adını, şemasını, kurallarını ve indeks klasörünü de verir (R4-14).
+
+    ``dataset_name`` aynı satırın T131'deki adı: ikisi de ``meta.dataset``a yazılır, ikisi birden
+    verilirse ``dataset`` kazanır.
     """
     _utf8_stdout()
+    ds, code = _dataset(dataset)
+    if code:
+        return code
+    _dataset_line(ds)
+    schema_path = _or(schema_path, ds.schema_path if ds else None, config.SCHEMA_PATH)
+    rules_path = _or(rules_path, ds.rules_path if ds else None, config.RULES_PATH)
+    index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
     started = time.perf_counter()
     schema = doc.load_schema(schema_path)
     rules = load_rules(rules_path)
@@ -210,7 +236,7 @@ def build_index(
             "content_hash": digest,
             "embedder": embedder.id,
             "dim": embedder.dim,
-            "dataset": dataset_name,
+            "dataset": _or(dataset, dataset_name, config.DEFAULT_DATASET),
         },
     )
     print(f"Şema: {schema_path} ({len(schema['tables'])} tablo)")
@@ -233,9 +259,11 @@ def eval_retrieval(
     embed: str = DEFAULT_EMBED,
     k: int = config.SEARCH_K,
     out_dir: str | Path = retrieval.RETRIEVAL_OUT,
-    schema_path: str = config.SCHEMA_PATH,
-    rules_path: str = config.RULES_PATH,
-    golden_path: str = config.GOLDEN_PATH,
+    schema_path: str | Path | None = None,
+    rules_path: str | Path | None = None,
+    golden_path: str | Path | None = None,
+    profile_path: str | Path | None = None,
+    dataset: str | None = None,
 ) -> int:
     """Aramanın geri çağırmasını altın sorular üzerinde ölçer ve raporu yazar (R2-14).
 
@@ -243,8 +271,18 @@ def eval_retrieval(
     koşumda da çalışır. Ekran soru başına bir satır, metod ve etiket ortalamalarıdır; sayıların
     kendisi ``eval_out/retrieval`` altındaki raporda da durur. R3-9'un üç varyantı (taban,
     +komşu, +eşanlam) aynı sorular üzerinde koşar, o yüzden join graphı da burada kurulur.
+    ``dataset`` ölçümün dört girdisini de o kümenin klasöründen getirir (R4-14): şema, kurallar,
+    profil ve altın sorular; açıkça verilen yol yine önüne geçer.
     """
     _utf8_stdout()
+    ds, code = _dataset(dataset)
+    if code:
+        return code
+    _dataset_line(ds)
+    schema_path = _or(schema_path, ds.schema_path if ds else None, config.SCHEMA_PATH)
+    rules_path = _or(rules_path, ds.rules_path if ds else None, config.RULES_PATH)
+    golden_path = _or(golden_path, ds.golden_path if ds else None, config.GOLDEN_PATH)
+    profile_path = _or(profile_path, ds.profile_path if ds else None, config.PROFILE_PATH)
     started = time.perf_counter()
     schema = doc.load_schema(schema_path)
     rules = load_rules(rules_path)
@@ -252,7 +290,7 @@ def eval_retrieval(
         search = build_search(schema, rules, make_embedder(embed))
     except EmbedError as exc:
         return _embed_failed(str(exc))
-    graph = build_graph(schema, load_profile())
+    graph = build_graph(schema, load_profile(profile_path))
     result = retrieval.run_variants(search, runner.load_golden(golden_path), k, graph, schema)
     print()
     for line in retrieval.console_lines(result):
@@ -720,16 +758,23 @@ def merge_map(
 
 def make_login_script(
     login: str = login_script.DEFAULT_LOGIN,
-    schema_path: str | Path = config.SCHEMA_PATH,
+    schema_path: str | Path | None = None,
     out: str | Path = config.LOGIN_SCRIPT_PATH,
+    dataset: str | None = None,
 ) -> int:
     """Salt okunur MSSQL giriş betiğini üretir ve ``out``a yazar (R3-8).
 
     Allowlist ve PII kolonları okunan şemadan gelir; betiğin kendisi ``readonly_login_sql``de
     kurulur. Ekran kaç tablonun allowlist'te, kaç PII kolonunun reddedildiğini ve nereye
     yazıldığını söyler — parolanın yer tutucusu olduğu için dosya repoda durabilir.
+    ``dataset`` sınırın hangi kümenin şemasından kurulacağını söyler (R4-14).
     """
     _utf8_stdout()
+    ds, code = _dataset(dataset)
+    if code:
+        return code
+    _dataset_line(ds)
+    schema_path = _or(schema_path, ds.schema_path if ds else None, config.SCHEMA_PATH)
     schema = doc.load_schema(schema_path)
     target = Path(out)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -770,6 +815,15 @@ def make_map_client(kind: str, preview: dict):
     return make_client(kind)
 
 
+def _add_dataset_option(command: argparse.ArgumentParser) -> None:
+    """``--dataset``: komutun hiçbir varsayılanı config'de kalmaz, hepsi o kümenin tanımıdır (R4-14)."""
+    command.add_argument(
+        "--dataset",
+        metavar="AD",
+        help=f"veri kümesi adı (varsayılan: {config.DEFAULT_DATASET})",
+    )
+
+
 def _add_embed_options(command: argparse.ArgumentParser) -> None:
     """``build-index`` ile ``eval-retrieval``ın ortak embedder bayrakları (R3-9).
 
@@ -801,6 +855,42 @@ def _embed_arg(args) -> str | None:
     return value
 
 
+def _dataset(name: str | None) -> tuple[datasets.Dataset | None, int]:
+    """``--dataset`` adı yüklenir; ad verilmediyse ``(None, 0)``, yani komut config'in sabitleriyle yürür.
+
+    Ad verilmeyen hal küme klasörünü okumaz: ``synthetic_erp``nin tohumu ve yolları config'dekiyle
+    aynı değerler, o yüzden küme tanımı olmayan bir kurulum da çalışmaya devam eder (R4-14).
+    Bilinmeyen ad kullanıcının kendi düzelteceği bir eksikliktir (Delight 3) — cümleyi ``datasets``
+    kurar, bilinenleri de sayar.
+    """
+    if not name:
+        return None, 0
+    try:
+        return datasets.load_dataset(name), 0
+    except datasets.DatasetError as exc:
+        print(exc)
+        return None, EXIT_BAD_INPUT
+
+
+def _dataset_line(ds: datasets.Dataset | None) -> None:
+    """Kümeyi kendisi seçen komut hangi dünyayla çalıştığını ilk satırda söyler (R4-14)."""
+    if ds:
+        print(DATASET_LINE.format(display_name=ds.display_name, name=ds.name))
+
+
+def _or(value, *fallbacks):
+    """İlk verilen değer kazanır: açık parametre > kümenin varsayılanı > config."""
+    for candidate in (value, *fallbacks):
+        if candidate is not None:
+            return candidate
+    return None
+
+
+def _given(**values) -> dict:
+    """argparse yalnız verildiğini geçirir; verilmeyen, kümenin kendi varsayılanına bırakılır."""
+    return {key: value for key, value in values.items() if value is not None}
+
+
 def main(argv: list[str] | None = None) -> int:
     """argparse: ``build-db`` | ``ask`` | ``eval``; seçilen komutun işlevini çağırır."""
     parser = argparse.ArgumentParser(prog="python -m nl2sql", description="NL -> T-SQL ölçüm aracı.")
@@ -808,16 +898,21 @@ def main(argv: list[str] | None = None) -> int:
 
     build_cmd = commands.add_parser("build-db", help="sentetik veritabanını ve T-SQL betiğini kurar")
     build_cmd.add_argument(
-        "--seed", type=int, default=config.SEED, help="üretici tohumu (varsayılan %(default)s)"
+        "--seed",
+        type=int,
+        help=f"üretici tohumu (varsayılan: veri kümesinin tohumu, {config.SEED})",
     )
+    _add_dataset_option(build_cmd)
 
     index_cmd = commands.add_parser("build-index", help="şema ve kurallardan arama indeksini kurar")
     _add_embed_options(index_cmd)
+    _add_dataset_option(index_cmd)
 
     retrieval_cmd = commands.add_parser(
         "eval-retrieval", help="altın sorularında aramanın geri çağırmasını ölçer"
     )
     _add_embed_options(retrieval_cmd)
+    _add_dataset_option(retrieval_cmd)
     retrieval_cmd.add_argument(
         "--k", type=int, default=config.SEARCH_K, help="kaç tablo (varsayılan %(default)s)"
     )
@@ -896,6 +991,7 @@ def main(argv: list[str] | None = None) -> int:
         default=login_script.DEFAULT_LOGIN,
         help="giriş ve kullanıcı adı (varsayılan %(default)s)",
     )
+    _add_dataset_option(login_cmd)
 
     ask_cmd = commands.add_parser("ask", help="tek bir soruyu modelden geçirip cevabı gösterir")
     ask_cmd.add_argument("question", help='Türkçe soru, örn. "Geçen ayın cirosu ne kadar?"')
@@ -952,13 +1048,17 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     if args.command == "build-db":
-        return build_database(seed=args.seed)
+        return build_database(**_given(seed=args.seed, dataset=args.dataset))
     if args.command == "build-index":
         embed = _embed_arg(args)
-        return build_index(embed=embed) if embed else EXIT_BAD_INPUT
+        return build_index(embed=embed, **_given(dataset=args.dataset)) if embed else EXIT_BAD_INPUT
     if args.command == "eval-retrieval":
         embed = _embed_arg(args)
-        return eval_retrieval(embed=embed, k=args.k) if embed else EXIT_BAD_INPUT
+        return (
+            eval_retrieval(embed=embed, k=args.k, **_given(dataset=args.dataset))
+            if embed
+            else EXIT_BAD_INPUT
+        )
     if args.command == "import-map":
         return import_map(
             args.file,
@@ -974,7 +1074,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "merge-map":
         return merge_map(args.excel, db_schema=args.db_schema, out=args.out)
     if args.command == "make-login-script":
-        return make_login_script(login=args.login)
+        return make_login_script(login=args.login, **_given(dataset=args.dataset))
     if args.command == "ask":
         # ASSUMPTION: "ask'ın varsayılanı auto" komutun varsayılanıdır (argparse default); buradaki
         # çözümleme istemciye de çözülmüş modu vermek için — sahte kayıt rag ile diğerlerinde farklı
