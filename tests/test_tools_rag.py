@@ -39,15 +39,20 @@ def rag(name: str, args: dict, mode: str = "rag") -> str:
 def test_search_schema_answers_with_the_columns_of_every_hit():
     answer = rag("search_schema", {"query": "stok hareketleri satış iade"})
     lines = answer.splitlines()
-    assert len(lines) == config.SEARCH_K
+    # R3-9: cevabın ilk SEARCH_K satırı vuruşların kendisi, arkası "(komşu)" işaretli komşular.
+    hits, neighbours = lines[: config.SEARCH_K], lines[config.SEARCH_K :]
+    assert len(hits) == config.SEARCH_K
     assert "TBLSTHAR" in answer
-    for line in lines:
+    for line in hits:
+        assert " (komşu)" not in line
         name, _, tail = line.partition(" — ")
         header, _, columns = tail.rpartition(": ")
         table = TABLES[name]
         assert header.startswith(table["description"])
         assert header.endswith(f" [{table['module']}]")
         assert columns.split(", ") == [column["name"] for column in table["columns"]]
+    for line in neighbours:
+        assert line.endswith(" (komşu)")
 
 
 def test_search_schema_says_when_nothing_matches():
