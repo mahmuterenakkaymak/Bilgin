@@ -387,3 +387,146 @@ how many questions flipped between repeats of the *same* mode. The verdict compa
 `fark gürültü içinde` when two mode means differ by less than the spread of either — a one-run difference on
 a local model is not a result, and Run 2's rag-vs-full_rules tie is exactly the kind of number this
 measures.
+
+---
+
+# Run 4 — A public dataset, and what a 27B in a 16K window can still answer
+
+Run 4 makes the thing being measured swappable. Until now one dataset — the synthetic Netsis-like
+world — and one endpoint were wired through every command, so "does a 27B dense model in a 16–24K
+context still answer?" could not be asked cleanly, and no number could be reproduced off this machine.
+Two things change: a **dataset** is now a folder selected by `--dataset`, and a **model** is a profile
+selected by `--model`, carrying its own context budget the agent never exceeds. The deliverable is
+`eval --compare --models` — one table, model × mode, on a public database anyone can restore and on the
+private set.
+
+## Datasets: `--dataset` on every command
+
+```bash
+python -m nl2sql build-db          --dataset synthetic_erp|wwi [--seed 42]
+python -m nl2sql build-index       --dataset ... [--embed openai|fake[:dim]]
+python -m nl2sql eval-retrieval    --dataset ... [--embed ...] [--k 5]
+python -m nl2sql ask "..."         --dataset ... [--model PROFILE] [--mode ...]
+python -m nl2sql eval              --dataset ... [--model PROFILE] [--mode ...] [--compare ...]
+python -m nl2sql make-login-script --dataset wwi [--login nl2sql_ro]
+```
+
+A dataset is a folder `datasets/<name>/` with a `dataset.json` (display name, dialect, connection kind,
+default schema, the file names, the builder and reference entry points, and where its outputs land)
+beside `schema.json`, `rules.json`, `profile.json`, `golden.jsonl`, `traps.jsonl`, `builder.py` and
+`reference.py`. Two ship:
+
+| `--dataset` | What it is | Outputs |
+| --- | --- | --- |
+| `synthetic_erp` (default) | the private Netsis-like development set — Run 1–3 content, moved by path only | `data/test.db`, `index/`, `eval_out/` |
+| `wwi` | WideWorldImporters, Microsoft's public sample (sales, purchasing, stock, invoices) | `data/wwi.db`, `index/wwi/`, `eval_out/wwi/` |
+
+`--dataset` is optional everywhere and defaults to `synthetic_erp`, so every Run 1–3 command runs
+unchanged. When it *is* given, nothing about that run comes from a config constant: the database, the
+index, the eval output folder and the schema all come from the dataset's own `dataset.json`, and the
+index refuses to serve a schema it was not built from.
+
+## WideWorldImporters, the public set
+
+The point of a public dataset is a number someone else can reproduce. The tests never touch a real
+server — `--dataset wwi` runs end to end against a small seeded SQLite fixture that copies WWI's table
+and column **names** (`Sales.Orders`, `Warehouse.StockItems`, `Application.People`) and its traps
+(orders that were never invoiced, credit notes, back-orders, NULL delivery dates), never its rows. To
+measure against the real database, restore it by hand:
+
+1. Download `WideWorldImporters-Full.bak` from Microsoft's **`sql-server-samples`** GitHub release and
+   restore it on the local SQL Server Express. The sample is published under the **MIT** licence — but
+   re-check the licence on the release page before publishing anything derived from it.
+2. Create the read-only login **first**, from the WWI schema's allowlist:
+   `python -m nl2sql make-login-script --dataset wwi` → `db/mssql/readonly_login.sql`, with the
+   `__DEGISTIR__` password placeholder replaced and run in the WWI database context. Windows auth on
+   this machine is sysadmin and is **never** used — a login that can do anything makes every guardrail
+   decorative.
+3. Point the tool at it: `NL2SQL_BACKEND=mssql` and `NL2SQL_MSSQL_CONN` carrying that login and
+   `ApplicationIntent=ReadOnly`.
+4. The schema here is written from Microsoft's public documentation, so the real restore may differ.
+   `introspect --sample` then `diff-map` against the live database is the check, run by hand; fix the
+   names there before trusting a score.
+
+## Model profiles: `--model` and `config/models.json`
+
+`config/models.json` maps a profile name to an endpoint, a model id, the **environment variable** that
+holds its API key (never the key itself), a context budget in tokens and a max-output cap. Three ship:
+
+| Profile | Endpoint | Key env | Budget |
+| --- | --- | --- | --- |
+| `strata` | `http://127.0.0.1:8080/v1` | — | 262144 (the whole 256K window) |
+| `qwen27b-24k` | `http://127.0.0.1:8888/v1` | `UNSLOTH_API_KEY` | 24576 |
+| `qwen27b-16k` | `http://127.0.0.1:8888/v1` | `UNSLOTH_API_KEY` | 16384 |
+
+`--model PROFILE` on `ask` and `eval` picks one: the client comes from the profile's endpoint, the key
+is read from its named variable, and its budget becomes the per-turn prompt cap. With no `--model` the
+Run 3 endpoint and constants are used, unchanged. An unknown profile, or a profile whose key variable
+is unset, is one clear line and exit 2 — never a silent fallback.
+
+## The context budget: trim, then stop
+
+Before **every** LLM call the agent estimates the prompt with the same token counter `--mode auto`
+uses. Over budget it first trims old tool results — the latest stays, older long answers are cut and
+marked — and only if that is still not enough does it stop with `context_overflow` instead of sending.
+It never relies on the server to truncate silently. `context_overflow` is a **result**, not a crash: it
+appears in the per-question outcome, in `report.json` and in the compare table, alongside the peak
+prompt tokens actually sent and how many answers were trimmed. `--mode auto` reads the threshold from
+the profile's budget, so the same schema is "small enough" for Strata and "too big" for a 16K 27B —
+which is exactly the thing being measured.
+
+## Comparing models: `eval --compare --models`
+
+```bash
+python -m nl2sql eval --compare --models strata,qwen27b-16k --modes full_rules,rag --dataset wwi --repeat 3
+python -m nl2sql eval --compare --models fakeA,fakeB --modes full_rules,rag --dataset wwi --llm fake
+```
+
+Every model × mode (× repeat) combination runs over the same questions and lands in one report —
+accuracy (mean/min/max over repeats), answered %, peak tokens against that model's budget, overflow
+count, seconds per question, and per-tag scores. `--modes` defaults to `full_rules,rag`; `--repeat N`
+turns each cell into a spread so a one-run difference on a local model is not mistaken for a result.
+`--models` without `--compare` is the Run 2/3 mode comparison, untouched.
+
+The GPU holds one heavy model at a time, so before each model's block the endpoint is pinged: a model
+that is not up is **skipped** with a `⚠` line naming the URL, not failed — run Strata and the 27B one
+after another and each fills its own row. `--llm fake` skips the ping and replays the golden SQL under
+each profile's budget, so even a fake comparison shows which mode fits which window before any GPU is
+touched. If every model is skipped, no report is written and the exit code is 3.
+
+The report is `compare_<dataset>_<timestamp>.md` (and the matching `.json`) in the dataset's own eval
+folder — `eval_out/wwi/compare_wwi_20261024-153000.md` for `--dataset wwi` — and its path is printed at
+the end of the run.
+
+---
+
+# The 27B test (running it)
+
+The question this whole run exists to answer: **does Qwen3.8-27B, in a 16K or 24K window, still write
+correct T-SQL — and does `rag` save it where `full_rules` overflows?** One heavy model on the 32 GB
+card at a time, so the two halves are run one after another by hand.
+
+**Half 1 — the 27B (creative GPU mode).** Switch the GPU to **creative** mode (the AI Modes panel, or
+`scripts\switch-mode.ps1` in `local-agent-stack`), which frees the card from Strata and starts Unsloth
+Studio. Serve Qwen3.8-27B on `127.0.0.1:8888` with the context that matches the profile you are
+measuring — `--context-length 16384` for `qwen27b-16k`, `--context-length 24576` for `qwen27b-24k` —
+and `-np 1` (one slot: the budget is per sequence, and a second slot halves the window each request
+gets). Then run the comparisons:
+
+```bash
+set UNSLOTH_API_KEY=...            # the key config/models.json names for the qwen27b profiles
+python -m nl2sql eval --compare --models qwen27b-16k --modes full_rules,rag --dataset wwi --repeat 3
+python -m nl2sql eval --compare --models qwen27b-16k --modes full_rules,rag --dataset synthetic_erp --repeat 3
+```
+
+**Half 2 — Strata (agent GPU mode).** Switch back to **agent** mode so Strata has the card again, then
+run its block on the same two datasets:
+
+```bash
+python -m nl2sql eval --compare --models strata --modes full_rules,rag --dataset wwi --repeat 3
+python -m nl2sql eval --compare --models strata --modes full_rules,rag --dataset synthetic_erp --repeat 3
+```
+
+Read the `compare_wwi_*.md` and `compare_synthetic_erp_*.md` reports side by side. A 27B that only
+survives in `rag` — `full_rules` overflowing at 16K while `rag` answers — is a **result to report, not
+a failure to hide**: it is the number that says what the customer-box model can carry.
