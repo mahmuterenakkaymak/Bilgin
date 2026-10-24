@@ -404,6 +404,12 @@ main {
   cursor: default;
 }
 
+/* İndirme bir <a>: sekme yer değiştirmediği için "dosya istendi" bilgisini düğmenin kendisi verir. */
+.btn-downloaded {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
 .examples {
   display: flex;
   flex-wrap: wrap;
@@ -483,8 +489,24 @@ main {
   }
 }
 
+/* Cevap geldiği an anlaşılsın: kart soluklaşarak ve birkaç piksel yükselerek belirir; grafik de
+   kartın içinde (R5-18), o yüzden ikisi birlikte gelir. Bitiş durumu temelin kendisi - hareket
+   kapanınca kart olduğu yerde durur, ekransız kalmaz. Kural reduced-motion bloğundan ÖNCE
+   durmak zorunda: eşit özgüllükte sıra kazanır, sonra gelseydi `animation: none` onu yenmezdi. */
+@keyframes answer-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.answer-card {
+  animation: answer-enter 180ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .skeleton span {
+  .skeleton span,
+  .answer-card {
     animation: none;
   }
 }

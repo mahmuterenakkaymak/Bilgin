@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as api from "../lib/api.js";
 import { formatSeconds } from "../lib/format.js";
 import ChartView from "./ChartView.jsx";
@@ -6,12 +6,18 @@ import Evidence from "./Evidence.jsx";
 import ResultTable from "./ResultTable.jsx";
 import Warnings from "./Warnings.jsx";
 
+const EXPORTS = [
+  ["csv", "CSV"],
+  ["xlsx", "Excel"],
+];
+
 // Cevap kartı: aynı AskPayload'ın her parçası burada durur — durum satırı, cümle, uyarılar,
 // tablo, grafiği, indirme ve kayıt düğmeleri, kanıt (R5-18). Kart hiçbir sayıyı yeniden hesaplamaz.
 // Grafik cevabın parçasıdır: kartın içinde, tablonun altında; `chart` yoksa ChartView kutu açmaz.
 export default function AnswerCard({ payload, onSave }) {
   const [phase, setPhase] = useState("idle"); // idle | saving | saved | error
   const [note, setNote] = useState("");
+  const [downloaded, setDownloaded] = useState(""); // "" | csv | xlsx
 
   const answer = typeof payload?.answer_text === "string" ? payload.answer_text : "";
   const mode = typeof payload?.mode === "string" ? payload.mode : "";
@@ -21,6 +27,14 @@ export default function AnswerCard({ payload, onSave }) {
   const auditId = typeof payload?.audit_id === "string" ? payload.audit_id : "";
   const save = onSave ?? api.savedAdd;
   const status = ["✓ Cevaplandı", mode, elapsed].filter(Boolean).join(" · ");
+
+  // İndirme bir <a>: sekme yer değiştirmediği için tek geri bildirim düğmenin kendisi. Ad 2 sn
+  // "İndirildi" kalır, sonra eski adına döner; kart kapanırsa bekleyen sayaç bırakılır.
+  useEffect(() => {
+    if (!downloaded) return undefined;
+    const timer = setTimeout(() => setDownloaded(""), 2000);
+    return () => clearTimeout(timer);
+  }, [downloaded]);
 
   const saveQuestion = async () => {
     setPhase("saving");
@@ -50,12 +64,17 @@ export default function AnswerCard({ payload, onSave }) {
         {auditId && (
           <>
             <span className="answer-actions-label">Tamamını indir:</span>
-            <a className="btn" id="export-csv" href={api.exportUrl(auditId, "csv")}>
-              CSV
-            </a>
-            <a className="btn" id="export-xlsx" href={api.exportUrl(auditId, "xlsx")}>
-              Excel
-            </a>
+            {EXPORTS.map(([kind, label]) => (
+              <a
+                key={kind}
+                className={downloaded === kind ? "btn btn-downloaded" : "btn"}
+                id={`export-${kind}`}
+                href={api.exportUrl(auditId, kind)}
+                onClick={() => setDownloaded(kind)}
+              >
+                {downloaded === kind ? "İndirildi" : label}
+              </a>
+            ))}
           </>
         )}
         <button
