@@ -1,6 +1,8 @@
 import { useEffect, useReducer, useState } from "react";
 import AnswerCard from "./components/AnswerCard.jsx";
 import AskBox from "./components/AskBox.jsx";
+import ChartView from "./components/ChartView.jsx";
+import ClarificationCard from "./components/ClarificationCard.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import ErrorCard from "./components/ErrorCard.jsx";
 import LoadingSteps from "./components/LoadingSteps.jsx";
@@ -31,8 +33,8 @@ function chipText(health) {
   return [health.dataset?.display_name, health.llm?.model].filter(Boolean).join(" · ");
 }
 
-// Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Netleştirme kartı sonraki
-// görevin; burada boş, bekleyen, cevap ve hata yuvaları durur.
+// Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Boş, bekleyen, cevap,
+// netleştirme ve hata yuvaları ile cevabın grafiği burada durur.
 function AskScreen() {
   const [state, dispatch] = useReducer(askReducer, initialState);
   const [text, setText] = useState("");
@@ -73,6 +75,12 @@ function AskScreen() {
     send(question);
   };
 
+  // Seçenek, sorunun hangi anlamla koşulacağını sabitler: aynı soru choice ile yeniden koşar (R5-11).
+  const choose = (option) => send(state.question, option);
+
+  // "Soruyu değiştir" kartı kapatmaz: imleç kutuya döner, kullanıcı yazıp yeniden sorar.
+  const changeQuestion = () => document.getElementById("question")?.focus();
+
   const loading = state.status === "loading";
   const failed = state.status === "failed" || state.status === "network_error";
 
@@ -87,7 +95,16 @@ function AskScreen() {
       />
       {state.status === "idle" && <EmptyState examples={examples} onSelect={ask} />}
       {loading && <LoadingSteps />}
-      {state.status === "answered" && <AnswerCard payload={state.payload} />}
+      {state.status === "answered" && (
+        <>
+          <AnswerCard payload={state.payload} />
+          {/* ASSUMPTION: AnswerCard grafik yuvasını açmıyor (kendi notu), o yüzden #chart kartın altında. */}
+          <ChartView chart={state.payload?.chart} />
+        </>
+      )}
+      {state.status === "clarifying" && (
+        <ClarificationCard payload={state.payload} onChoose={choose} onChange={changeQuestion} />
+      )}
       {failed && <ErrorCard kind={state.error?.kind} message={state.error?.message} onRebuild={api.rebuild} />}
     </section>
   );

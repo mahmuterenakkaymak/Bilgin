@@ -667,7 +667,72 @@ main {
   font-size: 13px;
 }
 
+/* --- grafik ------------------------------------------------------------------- */
+
+/* ECharts yüksekliği kutudan okur; telefon 260px ister (R5-18), geniş ekranda grafik büyür. */
+.chart {
+  height: 260px;
+}
+
+/* --- netleştirme kartı ---------------------------------------------------------- */
+
+.clarification-card {
+  border-color: var(--accent);
+}
+
+.clarification-title {
+  margin: 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.clarification-question {
+  margin: var(--space) 0 0;
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+.clarification-options {
+  display: grid;
+  gap: var(--space);
+  margin-top: calc(var(--space) * 2);
+}
+
+/* Seçenek cevabın yerini alır: düğme satır gibi durur, ok işareti tıklanabilir olduğunu söyler. */
+.clarification-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space);
+  padding: calc(var(--space) * 1.25) calc(var(--space) * 1.5);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-weight: 500;
+  text-align: left;
+}
+
+.clarification-option::after {
+  margin-left: auto;
+  color: var(--muted);
+  content: "→";
+}
+
+.clarification-option:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.clarification-actions {
+  margin-top: calc(var(--space) * 2);
+}
+
 @media (min-width: 720px) {
+  .chart {
+    height: 320px;
+  }
+
   .sidebar-toggle {
     display: none;
   }

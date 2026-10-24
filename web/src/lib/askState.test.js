@@ -51,6 +51,20 @@ describe("askState indirgeyicisi", () => {
     );
   });
 
+  it("seçenekle yeniden sorma: seçim yüklenmeye ve cevaba taşınır", () => {
+    const clarifying = run({ type: "ask", question: CLARIFY.question }, { type: "receive", payload: CLARIFY });
+    const loading = askReducer(clarifying, { type: "ask", question: CLARIFY.question, choice: "Net satış" });
+    expect(loading.status).toBe("loading");
+    expect(loading.question).toBe(CLARIFY.question);
+    expect(loading.choice).toBe("Net satış");
+    expect(loading.payload).toBeNull();
+    const answered = askReducer(loading, { type: "receive", payload: ANSWERED });
+    expect(answered.status).toBe("answered");
+    // payload seçimi boş bıraksa da soru aynı choice ile koşmuştur; seçim ekranda kalmalı.
+    expect(answered.choice).toBe("Net satış");
+    expect(answered.payload).toBe(ANSWERED);
+  });
+
   it("başarısız payload hatanın adını ve cümlesini taşır", () => {
     const state = run({ type: "ask", question: failedLlm.question }, { type: "receive", payload: failedLlm });
     expect(state.status).toBe("failed");
