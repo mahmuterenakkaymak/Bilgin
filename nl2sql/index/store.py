@@ -25,6 +25,12 @@ META_FILE = "meta.json"
 
 MISSING = "İndeks bulunamadı: {path}. Önce `python -m nl2sql build-index` çalıştırın."
 STALE = "İndeks eski: `python -m nl2sql build-index` çalıştırın."
+# R4-8: indeks hangi veri kümesinin şemasını vektörlediğini meta'da taşır. Uyuşmazlık bayatlıktan daha
+# spesifik bir arıza, ama çözümü aynı komutun bir hali; o yüzden mesajı kendi, sınıfı StaleIndexError.
+FOREIGN = (
+    "İndeks başka veri kümesine ait: {stored} (istenen {wanted}); "
+    "`python -m nl2sql build-index --dataset {wanted}` çalıştırın."
+)
 # ASSUMPTION: sayı uyuşmazlığı bozuk değil bayat bir indeks işaretidir; çözümü aynı komut olduğu
 # için ayrı bir hata sınıfı yerine StaleIndexError'ın kendi mesajıyla yükseltiliyor.
 COUNTS = (
@@ -39,6 +45,10 @@ class MissingIndexError(RuntimeError):
 
 class StaleIndexError(RuntimeError):
     """İndeks içindekilerden (veya vektör sırasından) eski; yeniden kurulmalı."""
+
+
+class ForeignIndexError(StaleIndexError):
+    """İndeks başka bir veri kümesi için kurulmuş; kendi kümesinin yerine yüklenmemeli."""
 
 
 @dataclass
@@ -98,9 +108,19 @@ class FileStore:
         _check_counts(docs, vectors)
         return StoredIndex(docs=docs, vectors=vectors, meta=meta)
 
-    def load_checked(self, expected_hash: str) -> StoredIndex:
-        """Yükle ve imzayı doğrula: şema veya kurallar değişmişse yüklenmiş sayılmaz (R2-9)."""
+    def load_checked(self, expected_hash: str, dataset: str | None = None) -> StoredIndex:
+        """Yükle ve imzayı doğrula: şema veya kurallar değişmişse yüklenmiş sayılmaz (R2-9).
+
+        `dataset` verildiğinde aidiyet de doğrulanır (R4-8): başka bir kümenin şemasıyla vektörlenmiş
+        indeks, imzası uyuşsa bile yanlış tablolarla aramak demektir. Anahtarsız eski meta tek küme
+        devrinin ürünüdür, yani `synthetic_erp`.
+        """
+        # ASSUMPTION: dataset=None aidiyetin sorgulanmadığı anlamına gelir; --dataset'i henüz
+        # taşımayan çağrılar eski davranışla devam etsin diye.
         index = self.load()
+        stored = index.meta.get("dataset") or config.DEFAULT_DATASET
+        if dataset is not None and stored != dataset:
+            raise ForeignIndexError(FOREIGN.format(stored=stored, wanted=dataset))
         found = index.meta.get("content_hash", "")
         if found != expected_hash:
             raise StaleIndexError(STALE)

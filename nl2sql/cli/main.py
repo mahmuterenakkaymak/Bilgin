@@ -182,12 +182,14 @@ def build_index(
     index_dir: str = config.INDEX_DIR,
     schema_path: str = config.SCHEMA_PATH,
     rules_path: str = config.RULES_PATH,
+    dataset_name: str = config.DEFAULT_DATASET,
 ) -> int:
     """Şema ile kurallardan arama indeksini kurar: dokümanlar, vektörler, imza (R2-14).
 
     Ekran dört şeyi söyler: kaç doküman yazıldığı (koleksiyon koleksiyon), vektörlerin kimin ve
     kaç genişlikte olduğu, içeriğin imzasının başı ve ne kadar sürdü. İmza, ``ask`` tarafının bayat
-    indeksi reddetmesinin kendisi olduğu için burada ekrana da çıkıyor.
+    indeksi reddetmesinin kendisi olduğu için burada ekrana da çıkıyor. İmzanın yanına bir de hangi
+    veri kümesinin indeksi olduğu yazılır (R4-8), çünkü iki kümenin şemaları birbiriyle karışabilir.
     """
     _utf8_stdout()
     started = time.perf_counter()
@@ -204,7 +206,12 @@ def build_index(
     FileStore(index_dir).save(
         docs,
         vectors,
-        {"content_hash": digest, "embedder": embedder.id, "dim": embedder.dim},
+        {
+            "content_hash": digest,
+            "embedder": embedder.id,
+            "dim": embedder.dim,
+            "dataset": dataset_name,
+        },
     )
     print(f"Şema: {schema_path} ({len(schema['tables'])} tablo)")
     print(f"Kurallar: {rules_path} ({len(rules)} kural)")

@@ -217,10 +217,14 @@ def build_search(schema: dict, rules: list[dict], embedder: Embedder) -> HybridS
 
 
 def load_search(
-    index_dir: str | Path, schema: dict, rules: list[dict]
+    index_dir: str | Path, schema: dict, rules: list[dict], dataset: str | None = None
 ) -> HybridSearch:
-    """Diskteki indeksi yükler; bayat sahte değil gerçek bir hata. Sorgu embedder'ı meta'dan."""
-    index = FileStore(index_dir).load_checked(content_hash(schema, rules))
+    """Diskteki indeksi yükler; bayat sahte değil gerçek bir hata. Sorgu embedder'ı meta'dan.
+
+    `dataset` verilirse indeks o kümenin değilse yüklenmez (R4-8) - mesajı hangi komutun
+    doğru indeksi kuracağını söylüyor.
+    """
+    index = FileStore(index_dir).load_checked(content_hash(schema, rules), dataset)
     return HybridSearch(
         index.docs, index.vectors, make_embedder(index.meta.get("embedder", "")), rules
     )
