@@ -1756,6 +1756,7 @@ def _context(
     rules: list[dict],
     index_dir: str | Path,
     ds: datasets.Dataset | None = None,
+    clarify: bool = False,
 ):
     """Modun bağlamı: üçü de kuralları taşır, rag bir de diskteki indeksi ve join graphını ister.
 
@@ -1764,7 +1765,8 @@ def _context(
 
     ``ds`` verildiğinde indeks o kümenin adıyla denetlenir (R4-8: başka bir dünyanın vektörleriyle
     aramak uydurma bir tabloyu modelin hatası gibi gösterirdi), join profili ve referans tarihi de
-    kümenin tanımıdır (R4-4).
+    kümenin tanımıdır (R4-4). ``clarify`` ilk soruya açık bir çalışmadır (R5-10); devamındaki bir
+    tur onu istemez, yani açıklama döngüsü kurulmaz.
     """
     search = graph = None
     if mode == "rag":
@@ -1778,6 +1780,7 @@ def _context(
         graph=graph,
         mode=mode,
         as_of=ds.as_of if ds else config.AS_OF,
+        clarify=clarify,
     )
 
 

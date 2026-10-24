@@ -27,6 +27,9 @@ class ToolContext:
     mode: str = "full"
     # R4-4: referans tarih verinin parçasıdır; bir kümenin "geçen ay"ı kendi as_of'una göredir.
     as_of: str = config.AS_OF
+    # R5-10: ask_clarification yalnız açıkken görünen bir araçtır; kapalıyken araç listesi de sistem
+    # istemi de Run 1-4 ile bayt aynıdır, yani eski parmak izleri ve ölçümler değişmez.
+    clarify: bool = False
 
 
 @dataclass(frozen=True)
@@ -88,3 +91,21 @@ def get_mode(name: str) -> Mode:
     if mode is None:
         raise ValueError(f"Bilinmeyen mod: {name}. Modlar: {', '.join(MODES)}.")
     return mode
+
+
+def mode_tools(ctx: ToolContext) -> list[dict]:
+    """Modele gösterilen araçlar: modun kendi araçları, clarify açıksa bir de açıklama sorusu.
+
+    Döngü bunu hem istem tahminine hem çağrıya veriyor, dispatch de aynı yerden kabul ediyor; liste
+    ile kabul ayrı iki yerde ayrılmaz, yoksa modelin gördüğü bir aracı çalıştıramazsın.
+    """
+    declared = get_mode(ctx.mode).tools
+    if not ctx.clarify:
+        return declared
+    return [*declared, tools.ASK_CLARIFICATION]
+
+
+def system_prompt(ctx: ToolContext) -> str:
+    """Modun sistem istemi; clarify açıksa açıklama sorusunun kuralları da sonda (R5-10)."""
+    text = get_mode(ctx.mode).system_prompt(ctx)
+    return f"{text}{prompt.CLARIFY_RULES}" if ctx.clarify else text

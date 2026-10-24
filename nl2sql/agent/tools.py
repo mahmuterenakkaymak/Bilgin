@@ -201,6 +201,37 @@ SAMPLE_VALUES = {
 TOOLS = [GET_SCHEMA, RUN_SQL, SUBMIT_SQL]
 TOOL_NAMES = [tool["function"]["name"] for tool in TOOLS]
 
+# R5-10: açıklama aracı hiçbir modun aracı değildir; yalnız ToolContext.clarify açıksa gördüğü
+# listeye eklenir, böylece Run 1-4'ün araç listesi, istemi ve parmak izi değişmeden kalır.
+ASK_CLARIFICATION = {
+    "type": "function",
+    "function": {
+        "name": "ask_clarification",
+        "description": (
+            "Sorunun hangi anlama geldiğini kullanıcıya sorar; kuralların tanımlamadığı bir iş "
+            "teriminde iki okunuş farklı sayı veriyorsa çağır, tek bir okunuş varsa çağırma. Cevap "
+            "olarak kabul edilmez; çalışma soruyla durur ve devamı kullanıcının seçimine kalır."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "question": {
+                    "type": "string",
+                    "description": 'Kullanıcıya sorulacak tek cümle, örn. "Satış derken brüt mü net mi kastediliyor?".',
+                },
+                "options": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        f"Birbirini dışlayan kısa seçenekler; en az iki, en fazla {config.CLARIFY_MAX_OPTIONS}."
+                    ),
+                },
+            },
+            "required": ["question", "options"],
+        },
+    },
+}
+
 
 def dispatch(name: str, args: dict, ctx_or_executor, schema: dict | None = None) -> str:
     """Run one tool call and return the model-readable answer; never raises for a bad call."""
@@ -211,7 +242,7 @@ def dispatch(name: str, args: dict, ctx_or_executor, schema: dict | None = None)
     ctx = ctx_or_executor
     if not isinstance(ctx, modes.ToolContext):
         ctx = modes.ToolContext(executor=ctx, schema=schema or {})  # Run 1 biçimi: (executor, schema)
-    known = [tool["function"]["name"] for tool in modes.get_mode(ctx.mode).tools]
+    known = [tool["function"]["name"] for tool in modes.mode_tools(ctx)]
     if name not in known:
         return _unknown(name, known)
     if name == "get_schema":
@@ -220,6 +251,8 @@ def dispatch(name: str, args: dict, ctx_or_executor, schema: dict | None = None)
         return _get_schema(ctx.schema, args.get("tables"))
     if name in ("run_sql", "submit_sql"):
         answer = _run(name, str(args.get("sql") or ""), ctx.executor)
+    elif name == "ask_clarification":
+        answer = _ask_clarification(args)
     elif name == "search_schema":
         answer = _search_schema(ctx, str(args.get("query") or ""))
     elif name == "get_table_details":
@@ -242,8 +275,44 @@ def cap_text(text: str, limit: int) -> str:
     return f"{text[:limit]}… (kırpıldı: {len(text) - limit} karakter)"
 
 
+def clarify_request(args: dict) -> tuple[str, list[str]] | str:
+    """ask_clarification argümanları: geçerliyse (soru, seçenekler), değilse red cümlesi (R5-10).
+
+    Döngü ``AgentRun.clarification``ı aynı ikiliden dolduruyor, yani modele görünen cevapla
+    kullanıcıya giden soru birbiriyle çelişemez; iki okunuşu ayırt etmenin yolu da seçenekler.
+    """
+    question = str(args.get("question") or "").strip()
+    if not question:
+        return f"{ERROR_PREFIX}: Açıklama sorusu boş."
+    raw = args.get("options")
+    if not isinstance(raw, list):
+        return f"{ERROR_PREFIX}: options bir metin dizisi olmalı."
+    if not all(isinstance(option, str) for option in raw):
+        return f"{ERROR_PREFIX}: options yalnız metin içermeli."
+    options = [option.strip() for option in raw]
+    if len(options) < 2:
+        return f"{ERROR_PREFIX}: En az iki seçenek gerekiyor ({len(options)} verildi)."
+    if len(options) > config.CLARIFY_MAX_OPTIONS:
+        return f"{ERROR_PREFIX}: En fazla {config.CLARIFY_MAX_OPTIONS} seçenek ({len(options)} verildi)."
+    if any(not option for option in options):
+        return f"{ERROR_PREFIX}: Seçeneklerde boş metin var."
+    repeated = [option for n, option in enumerate(options) if option in options[:n]]
+    if repeated:
+        return f"{ERROR_PREFIX}: Yinelenen seçenek: {', '.join(repeated)}."
+    return question, options
+
+
 def _unknown(name: str, known: list[str]) -> str:
     return f"{UNKNOWN_TOOL_PREFIX}: {name}. Kullanabileceklerin: {', '.join(known)}."
+
+
+def _ask_clarification(args: dict) -> str:
+    """Geçerli bir soru kullanıcıya iletilecek metin olarak döner; geçersiz nedenini söyler."""
+    request = clarify_request(args)
+    if isinstance(request, str):
+        return request
+    question, options = request
+    return f"Açıklama istendi: {question}\nSeçenekler:\n" + "\n".join(f"- {option}" for option in options)
 
 
 def _search_schema(ctx, query: str) -> str:

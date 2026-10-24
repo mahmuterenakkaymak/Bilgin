@@ -13,8 +13,10 @@ transcript is trimmed with ``budget.trim_tool_answers`` (permanently, tool answe
 still does not fit, the run ends as ``context_overflow`` without ever reaching the model.
 
 The mode (PLAN R2-5) decides the rest of the run: the system prompt, the tools the model is shown
-and the tool-call limit all come from ``modes.get_mode``, so the three arms of the A/B differ in
-nothing but the context and the tools they hand the model.
+and the tool-call limit all come from ``modes``, so the three arms of the A/B differ in nothing but
+the context and the tools they hand the model. A context with ``clarify`` adds one tool to that list
+(R5-10) and ends the run as ``needs_clarification`` instead of submitting, with the question and its
+options on the run for the caller to ask.
 """
 
 from __future__ import annotations
@@ -27,7 +29,7 @@ from nl2sql import config
 from nl2sql.agent import modes
 from nl2sql.agent.budget import estimate_prompt, trim_tool_answers
 from nl2sql.agent.llm import LLMError
-from nl2sql.agent.tools import answer_is_ok, dispatch
+from nl2sql.agent.tools import answer_is_ok, clarify_request, dispatch
 
 # Sözleşmede adı geçen dördüncü bir sınır yok; bu yalnızca hiç araç çağırmayıp metin üreten bir
 # modelin sonsuz dönmemesi için bir emniyet.
@@ -64,8 +66,10 @@ class AgentRun:
     mode: str = "full"
     steps: list[Step] = field(default_factory=list)
     submitted_sql: str | None = None
-    status: str = "no_submission"  # submitted | no_submission | timeout | llm_error | context_overflow
+    # submitted | no_submission | timeout | llm_error | context_overflow | needs_clarification
+    status: str = "no_submission"
     stop_reason: str = ""
+    clarification: dict | None = None  # {"question", "options"}; yalnız needs_clarification'da dolu
     max_prompt_tokens: int = 0
     total_prompt_tokens: int = 0
     total_completion_tokens: int = 0
@@ -97,8 +101,9 @@ def run_agent(
     run = AgentRun(question=question, mode=mode)
     audited = _Audited(executor, source)
     ctx = _context(context, audited, schema, mode)
+    sent_tools = modes.mode_tools(ctx)
     messages = [
-        {"role": "system", "content": mode_def.system_prompt(ctx)},
+        {"role": "system", "content": modes.system_prompt(ctx)},
         {"role": "user", "content": question},
     ]
     tool_calls = failed_runs = 0
@@ -119,9 +124,9 @@ def run_agent(
 
         # Her çağrı öncesi tahmin: bütçe varsa aşan sohbet kalıcı olarak kırpılır, kırpma da
         # yetmezse modele hiç gidilmez (R4-11). Bütçe yoksa yalnız tepe tahmini izlenir.
-        estimate = estimate_prompt(messages, mode_def.tools)
+        estimate = estimate_prompt(messages, sent_tools)
         if budget is not None and estimate > budget:
-            messages, cuts, estimate = trim_tool_answers(messages, budget, mode_def.tools)
+            messages, cuts, estimate = trim_tool_answers(messages, budget, sent_tools)
             run.trimmed += cuts
             if estimate > budget:
                 run.overflows = 1
@@ -133,7 +138,7 @@ def run_agent(
         peak = max(peak, estimate)
 
         try:
-            response = llm.chat(messages, mode_def.tools)
+            response = llm.chat(messages, sent_tools)
         except LLMError as exc:
             return finish("llm_error", str(exc))
 
@@ -166,6 +171,12 @@ def run_agent(
                 if call.name == "submit_sql" and ok:
                     run.submitted_sql = str(call.arguments.get("sql") or "")
                     return finish("submitted")
+                if call.name == "ask_clarification" and ok:
+                    # Geçersiz çağrı yukarıdaki red satırından okunur ve çalışma burada durmaz;
+                    # duran tek şey kabul edilmiş bir soru, devamı kullanıcının seçimine kalır.
+                    asked, options = clarify_request(call.arguments)
+                    run.clarification = {"question": asked, "options": options}
+                    return finish("needs_clarification")
                 if call.name in ("run_sql", "submit_sql") and not ok:
                     failed_runs += 1
                     if failed_runs >= config.MAX_FAILED_RUNS:

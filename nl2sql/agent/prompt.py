@@ -11,6 +11,7 @@ over (PLAN R2-5) - and that difference is exactly what the A/B measures.
 
 from __future__ import annotations
 
+from nl2sql import config
 from nl2sql.schema_map import doc
 from nl2sql.schema_map.rules import rules_text
 
@@ -45,6 +46,20 @@ search_rules (iş kuralları) ve sample_values (kolondaki değerler) araçların
 
 7. 3 veya daha fazla tabloyu birleştirmeden ÖNCE find_join_path çağır; join koşullarını uydurma, \
 yolun verdiği birleştirmeyi kullan.
+"""
+
+
+# R5-10: açıklama sormak serbest bir davranış değil, iki koşula bağlı. Kuralı olan bir terimde
+# soru sorulursa ölçümün kendisi boşa gider, o yüzden önce kural mı var diye bakmak gerekiyor.
+# Seçeneklerin sayısı config.CLARIFY_MAX_OPTIONS'tan gelir; red de o sınara göre yazılır.
+CLARIFY_RULES = f"""
+AÇIKLAMA SORMA (ask_clarification)
+- Bir iş teriminin ne anlama geldiği yukarıda tanımlıysa SORMA, tanımı kullan.
+- Tanımsız bir terimde iki okunuş FARKLI sayı veriyorsa (örn. "satış" brüt mü net mi, iptaller dahil
+  mi) tahmin etme ve ask_clarification çağır; iki okunuş aynı sayıya çıkıyorsa sormaya değmez.
+- Arama araçların varsa sormadan önce search_rules çağır; terimin kuralı gerçekten yoksa sor.
+- En fazla {config.CLARIFY_MAX_OPTIONS} kısa ve birbirini dışlayan seçenek yaz; hiçbirini sen seçme,
+  cevabı kullanıcıya bırak.
 """
 
 

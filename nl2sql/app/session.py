@@ -71,12 +71,12 @@ class Session:
         return self.agent_llm("full")
 
     def context(self, mode: str, clarify: bool = False):
-        """Modun bağlamı (ToolContext)."""
-        # ASSUMPTION: clarify T184 ToolContext'a alan ekleyene dek yok sayılır.
+        """Modun bağlamı (ToolContext); clarify açıkken ajan ask_clarification da görebilir (R5-10)."""
         from nl2sql.cli import main as cli
 
         return cli._context(
-            mode, self.executor, self.schema, self.rules, self.index_dir, self.dataset
+            mode, self.executor, self.schema, self.rules, self.index_dir, self.dataset,
+            clarify=clarify,
         )
 
     def resolve_mode(self, mode: str, notes: list) -> tuple[str, int | None]:
