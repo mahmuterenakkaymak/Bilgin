@@ -214,15 +214,25 @@ class LocalExecutor:
         # Kapalı kolon maskelenmez, hiç okunmaz (R4-7): o yüzden harita değil, küme politika'ya gider.
         self._deny = pii.deny_set(pii_schema) if pii_schema is not None else set()
 
-    def execute(self, sql: str, budget: Budget | None = None, source: str = "") -> Result:
-        """The only public entry: policy -> transpile (sqlite backend) -> backend -> mask -> audit."""
-        result = self._run(sql, budget or Budget())
+    def execute(
+        self,
+        sql: str,
+        budget: Budget | None = None,
+        source: str = "",
+        top_n: int = config.TOP_N,
+    ) -> Result:
+        """The only public entry: policy -> transpile (sqlite backend) -> backend -> mask -> audit.
+
+        `top_n` is the TOP the policy injects: the interactive cap by default, a wider ceiling for a
+        caller that re-runs the same SQL under a bigger budget (R5-16).
+        """
+        result = self._run(sql, budget or Budget(), top_n)
         audit.record(sql, source, result, self._audit_path)
         return result
 
-    def _run(self, sql: str, budget: Budget) -> Result:
+    def _run(self, sql: str, budget: Budget, top_n: int = config.TOP_N) -> Result:
         # Filtre kuralı aynı haritayı izler: maskelenen bir kolon sorguda filtre de olamaz (R3-6).
-        verdict = policy.check(sql, self._allowlist, config.TOP_N, pii=self._pii_map, deny=self._deny)
+        verdict = policy.check(sql, self._allowlist, top_n, pii=self._pii_map, deny=self._deny)
         if not verdict.ok:
             return _error("policy", verdict.reason)
         if self._backend != "sqlite":

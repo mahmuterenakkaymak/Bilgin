@@ -205,8 +205,13 @@ def _export(session, dataset: str, audit_id: str, ext: str) -> Response:
     # adsız ``serve`` kendi indirmesini reddetmez.
     if record.get("dataset") not in (None, dataset):
         raise HTTPException(status_code=409, detail=OTHER_DATASET)
+    # Tavan da dışa aktarım bütçesidir: TOP_N'de kalan bir TOP, bütçe geniş olsa bile 1000 satır
+    # döndürür ve `truncated` False kalırdı - dosya eksik, uyarısız (R5-16).
     result = session.executor.execute(
-        record.get("sql") or "", Budget(max_rows=config.EXPORT_MAX_ROWS), f"export:{audit_id}"
+        record.get("sql") or "",
+        Budget(max_rows=config.EXPORT_MAX_ROWS),
+        f"export:{audit_id}",
+        top_n=config.EXPORT_MAX_ROWS,
     )
     if result.error is not None:
         # ASSUMPTION: yeniden koşumun reddi bir çelişkidir; sebebi ekran okusun diye ayrıntıdadır.
