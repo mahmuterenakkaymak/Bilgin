@@ -96,7 +96,9 @@ def test_a_golden_question_is_answered_with_the_golden_rows(project, capsys):
     # mode=None auto demektir: payload'a çözülmüş hali yazılır, "auto" asla düşmez.
     assert payload["mode"] in config.MODES
     assert payload["dataset"] == "mini" and payload["model"] == "fake"
-    assert payload["error"] is None and payload["answer_text"] == ""
+    # Since T180 an answered payload carries the narrated sentence (PLAN R5-9/R5-14); this line pinned the pre-narration
+    # empty text. Updated 2026-10-24 with Eren's approval.
+    assert payload["error"] is None and payload["answer_text"] and payload["narration_source"] == "llm"
     assert payload["audit_id"] and payload["timings"]["agent_s"] > 0
     assert sorted(payload) == sorted(PAYLOAD_KEYS)
 
