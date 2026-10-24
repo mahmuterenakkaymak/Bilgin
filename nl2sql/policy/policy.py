@@ -14,6 +14,7 @@ from sqlglot import exp, parse
 from sqlglot.errors import SqlglotError
 
 from nl2sql import config
+from nl2sql.schema_map import doc
 
 PROTECTED_PREFIXES = ("XP_", "SP_")
 SYSTEM_SCHEMAS = frozenset({"sys", "information_schema"})
@@ -139,16 +140,39 @@ def _check_table(table, visible, allowed, tables):
             "Tablo işlevi ve satır kümesi işlevleri (OPENROWSET, OPENQUERY, OPENDATASOURCE, "
             "OPENJSON, fn(...)) yasak; yalnız izinli tablolar okunabilir."
         )
-    if table.catalog or table.db:
+    if table.catalog:
         return f"Tablo adı {name} başka veritabanı ya da sunucu taşıyamaz."
-    if name in visible:
+    if not table.db and name in visible:
         return None
     if name.startswith(PROTECTED_PREFIXES):
         return "Sistem yordamları (xp_, sp_) çağrılamaz."
-    if name not in allowed:
+    full = _full_name(table).upper()
+    if full in allowed:
+        tables.add(full)
+        return None
+    if table.db:
+        return f"İzin verilmeyen tablo: {full} — başka şema, veritabanı ya da sunucu okunamaz."
+    found = doc.resolve_table(table.name, sorted(allowed))
+    if isinstance(found, list):
+        return f"Belirsiz tablo adı: {name} ({', '.join(found)}); şemasıyla yazın."
+    if found is None:
         return f"İzin verilmeyen tablo: {name}."
-    tables.add(name)
+    # ASSUMPTION: allowlist tam adları büyük harfli taşıdığı için yeniden yazılan şema parçası da
+    # büyük harflidir (`SALES.Orders`); orijinal büyük/küçük harf bilgisi politika elinde değil.
+    _qualify(table, found)
+    tables.add(found.upper())
     return None
+
+
+def _full_name(table) -> str:
+    """Tablo düğümünün adı: şema parçası varsa `Sales.Orders`, yoksa çıplak `TBLSTHAR`."""
+    return f"{table.db}.{table.name}" if table.db else table.name
+
+
+def _qualify(table, full: str) -> None:
+    """Çıplak adı allowlistte çözülen tabloya şema parçasını yazar; TOP için yeniden kurulan SQL de onu taşır."""
+    schema, _ = doc.split_name(full)
+    table.set("db", exp.to_identifier(schema))
 
 
 def _system_part(table) -> str:
@@ -185,16 +209,17 @@ def _filter_nodes(tree):
 
 
 def _aliases(tree, tables) -> dict[str, str]:
-    """Takma ad -> gerçek tablo. CTE adı gerçek tablo olmadığı için haritaya girmez."""
+    """Takma ad -> gerçek tablonun tam adı. CTE adı gerçek tablo olmadığı için haritaya girmez."""
     return {
-        (table.alias or table.name).upper(): table.name.upper()
+        (table.alias or table.name).upper(): _full_name(table).upper()
         for table in tree.find_all(exp.Table)
-        if table.name.upper() in tables
+        if _full_name(table).upper() in tables
     }
 
 
 def _filter_target(column, aliases, marks, tables) -> str:
-    """Kolonun ait olduğu TABLO.KOLON; adı çözülemeyen önek (CTE) sorgunun gerçek tablolarında aranır."""
+    """Kolonun ait olduğu TABLO.KOLON (şemalı tabloda ŞEMA.TABLO.KOLON); adı çözülemeyen önek (CTE)
+    sorgunun gerçek tablolarında aranır."""
     name = column.name.upper()
     if column.table:
         table = aliases.get(column.table.upper())
