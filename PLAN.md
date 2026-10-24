@@ -686,3 +686,297 @@ R4-15. **Test rule kept** (brief §0, R3-12): tests over golden sets, datasets o
   and auto per profile, ping + compare report, CLI compare, README Run 4 + "27B test", smoke. Integration: real
   profiles file + real loop + FakeLLM + real executor through the model compare on wwi and synthetic_erp, a tiny
   budget profile shows overflows in the table.
+
+---
+
+# PLAN - NL2SQL Run 5 (Bilgin web UI: evidence, charts, written answer, clarification)
+
+Source: `PROJECT_BRIEF_RUN5.md`. Everything above stays valid unless a numbered "Run 5 decision" says it changes.
+Stack: Run 4 + **fastapi 0.162.0, uvicorn 0.54.0** (dependencies) and **httpx 0.28.1** (dev, TestClient) in `.venv`;
+`web/` with **react 19.3.1, react-dom 19.3.1, echarts 6.1.0** and dev **vite 8.3.5, vitest 5.0.5** (all pinned exact,
+installed before the run). Nothing else: no TypeScript, no @vitejs/plugin-react, no jsdom/testing-library, no router,
+no CSS framework, no CDN (the built UI loads only its own files - nothing leaves the machine).
+**Changes Decision 14:** the product now has screens, so `.hybrid/visual.json` exists (R5-17).
+
+## Run 5 architecture
+
+```
+Browser (web/ React, built into nl2sql/web/static) --fetch /api/*--> nl2sql/web/app.py (FastAPI, 127.0.0.1 only)
+                                                                          |
+CLI `ask --json` -------------------------------------------------------> nl2sql/app/ask.py ask_payload(session, ...)
+                                                                          |  (ONE code path for CLI and API)
+nl2sql/app/session.py open_session(dataset, model, llm, paths) -> Session |
+   reuses cli.main: resolve_auto, _context, make_client, build_index      v
+                         agent loop (run_agent, + ask_clarification tool when ctx.clarify)
+                           |                                   |
+                needs_clarification                     submitted SQL
+                           |                                   v
+                           |        LocalExecutor.execute(Budget(UI_MAX_ROWS)) -> Result (+ tables, masked)
+                           |                                   v
+                           |        engine/checks.post_checks -> warnings (code only, nothing "fixed")
+                           |        report/chart.chart_spec  -> ECharts option (code only) | None
+                           |        report/facts.compute_facts -> facts (code only)
+                           |        report/narrate.narrate(LLM) -> report/guard.check_text -> retry 1x -> template
+                           v                                   v
+                      AskPayload  --> app/asklog.record_ask -> logs/asks.jsonl (no rows)
+export: asks.jsonl[audit_id].sql -> executor again (Budget(EXPORT_MAX_ROWS)) -> report/export csv|xlsx
+rules:  /api/rules -> schema_map/rules_edit (validate, atomic save) -> content_hash changes -> index stale (R2-9)
+eval --ambiguous: golden + ambiguous.jsonl through run_eval(clarify=True) -> eval/metrics -> report.json "metrics"
+index: index/summaries.table_summaries -> collection "summaries"; search_tables(summaries=on|off); eval-retrieval
+```
+
+## Run 5 file layout additions
+
+```
+nl2sql/app/      __init__.py session.py (Session, open_session, SessionError) ask.py (ask_payload)
+                 asklog.py (new_audit_id, record_ask, history, find_ask)
+nl2sql/web/      __init__.py app.py (create_app, routes) saved.py (SavedStore, SQLite) static/ (built, ignored)
+nl2sql/report/   __init__.py fmt.py shape.py chart.py facts.py guard.py narrate.py export.py
+nl2sql/engine/checks.py          post-execution warnings
+nl2sql/schema_map/rules_edit.py  validate_rule, save_rules
+nl2sql/eval/metrics.py           answered/wrong/clarification metrics
+nl2sql/index/summaries.py        deterministic table summary documents
+datasets/synthetic_erp/ambiguous.jsonl   >= 6 ambiguous questions (dataset.json files.ambiguous)
+scripts/smoke_serve.py           starts `serve --llm fake`, calls the API, stops it (smoke)
+web/  package.json (pinned) vite.config.js index.html src/{main.jsx App.jsx styles.css}
+      src/lib/{route,format,api,steps,askState,chartFormat,rulesForm}.js  src/components/*.jsx  src/**/*.test.js(x)
+data/bilgin.db (saved questions, ignored by data/*.db)   logs/asks.jsonl (ignored by logs/)
+```
+
+## Run 5 decisions
+
+R5-1. **One code path.** `nl2sql/app/session.py` builds what a run needs once: `open_session(dataset=None, model=None,
+      llm="openai", models_file=None, db_path=None, index_dir=None, audit_path=config.AUDIT_LOG,
+      ask_log=config.ASK_LOG)` -> `Session` (dataset, schema, rules, executor with `pii_schema`, profile, budget,
+      llm kind, index dir, `agent_llm(mode)`, `narrator()`, `context(mode)`, `reload_rules()`, `ping()`). It reuses
+      `cli.main.resolve_auto`, `_context`, `make_client`, `build_index` (no copies). Import rule: `cli/main.py` imports
+      `nl2sql.app` / `nl2sql.web` only inside the functions that need them, so there is no import cycle. Setup
+      failures (unknown dataset/profile, missing key, missing DB) raise `SessionError(message, exit_code)` carrying
+      the existing CLI sentences (NO_DB with `--dataset`, R4-10/R4-14 texts). `ask_payload(session, question,
+      mode=None, choice=None)` is the only function that turns a question into an AskPayload; `ask --json` and
+      `POST /api/ask` call it and nothing else. The human `ask` output (Run 1-4) stays as it is, plus the lines in
+      R5-14. `resolve_auto` gains `notify=print`; the app passes a collector so its NO_INDEX_NOTE lands in
+      `payload.notes` instead of stdout (`--json` prints JSON only).
+R5-2. **Status mapping.** AgentRun `submitted` + final execution ok -> `answered`; `needs_clarification` ->
+      `needs_clarification`; everything else (llm_error, no_submission, timeout, context_overflow, final SQL error,
+      stale/missing index for rag) -> `failed` with `error {kind, message}` (kind = AgentRun status, `exec:<kind>`,
+      or `index`) and `answer_text` = the Turkish message. The final SQL runs once more under
+      `Budget(max_rows=config.UI_MAX_ROWS)` (200) with source `web:<audit_id>` / `cli:<audit_id>`.
+      `tables_used` = `Result.tables` (new, R5-3); `rules_used` = ids of rules with >= 1 marker whose markers all
+      match the SQL whitespace-collapsed and case-insensitive (`rules.matching_rules`, the R2-11 test rule, now in
+      code) - a rule without markers is never claimed.
+R5-3. **`Result.tables`** (sorted upper full names, from `PolicyResult.tables`) is filled by the executor on every
+      backend for every successful run; error results keep `[]`. Display only - nothing decides on it.
+R5-4. **Ask log, not rows.** Every `ask_payload` call appends one line to `logs/asks.jsonl` (config.ASK_LOG, same
+      ignore and no-rows rule as the audit log): audit_id (`uuid4().hex[:12]`), ts, source `web|cli`, dataset,
+      mode, question, choice, status, sql, row_count, error kind. `/api/history` = last `config.HISTORY_N` (50)
+      lines newest first (malformed lines skipped); export finds its SQL here. The executor audit lines of that
+      ask carry `source = "<web|cli>:<audit_id>"`, so both logs join on the id. Brief "from the audit log" =
+      this ask log next to audit.jsonl; the audit.jsonl entry shape (Run 1/3 contract) is unchanged.
+R5-5. **Post-execution warnings** (`engine/checks.post_checks(sql, result, executor)` -> list[Warning], each
+      `{code, message, column}`; a check that itself fails adds nothing and never fails the answer):
+      `empty` (row_count 0), `all_null` (per column, over the returned rows, only when rows > 0), `top_limited`
+      (row_count == config.TOP_N: the policy cap cut it; a user's own `TOP 5` never warns), `masked` (one warning
+      listing masked columns), `fan_out`: outermost SELECT (no UNION/CTE) with >= 1 JOIN and an aggregate ->
+      `SELECT COUNT(*) FROM <from+joins> <where>` vs `SELECT COUNT(*) FROM <driving table> <alias> <where-conjuncts
+      that reference only the driving alias>`, both through the executor (policy + audit, source `checks`);
+      joined/driving > `config.FANOUT_FACTOR` (3.0) -> warning. Messages Turkish (Contracts). Never rewrite SQL.
+R5-6. **Chart chosen by code** (`report/shape.py` + `report/chart.py`). Column kinds: `date` (all non-null values
+      ISO `YYYY-MM-DD`/`YYYY-MM` strings, or folded name in AY/YIL/DONEM/TARIH/MONTH/YEAR/DATE with int values),
+      `number` (int/float, not bool, name not code-like), `code` (code-like name: ends with KOD/KODU/ID/NO,
+      `_ID`, `ID`), `category` (other text). Category pick: text columns minus code-like ones, then the first; if
+      only code columns, the first code column. Rules in order: <= 1 row -> none; exactly one date + 1-3 numbers
+      -> `line` (x ascending); one category + exactly one number + rows <= `CHART_BAR_MAX_ROWS` (20): share
+      question (folded question contains pay, oran, yüzde, dağılım, share, pasta) + rows <= `CHART_PIE_MAX_PARTS`
+      (6) + all values > 0 -> `pie`, else `bar` sorted descending; exactly two numbers, no date, scatter asked
+      (ilişki, korelasyon, saçılım, scatter) -> `scatter`; else none. Output `{"type", "option"}` where option is
+      plain ECharts JSON (tooltip, grid, xAxis/yAxis or none for pie, series with data from the result) plus
+      `"bilgin": {"value_format": "number"|"percent", "value_column", "label_column"}`; the frontend only attaches
+      tr-TR formatter functions named by `value_format` (JSON cannot carry functions). `validate_option(option)`
+      -> list of problems (the "schema check" of brief test 2; tests require []).
+R5-7. **Facts by code** (`report/facts.compute_facts(columns, rows)` -> list[Fact]): `row_count`; per number column
+      `total`, `max` + its row label, `min`, `mean` (2 dp); with a category column: `top_item` and `top_share`
+      (% of the column total, only when all values >= 0 and total > 0); with a date column and >= 2 periods:
+      `last_period`, `previous_period`, `change` and `change_pct` (last vs previous, sorted by the date value).
+      Each Fact has `display` in Turkish format (`report/fmt`). Masked or non-numeric cells are skipped.
+R5-8. **Number guard** (`report/guard.py`): `extract_numbers(text)` finds `1.234,56`, `1234`, `12,5`, `-3`, `%12`,
+      `%12,5`, `12,5 bin|milyon|milyar` (scale 1e3/1e6/1e9), ignores digits glued to letters (`STK001`, `Q3`) and
+      flags English forms (`1,234.56`, `12.5`, dot + 1-2 digits) as `format`. Allowed values = numeric result cells
+      (all returned rows), integers inside text cells and ISO dates (year, month, day), `row_count`, every Fact
+      value, numbers in the question. A number with d shown decimals at scale s matches v iff
+      `|n - v| <= config.NUMBER_TOLERANCE_UNITS * 10^-d * s` (0.5 = honest rounding of the last shown digit), a
+      percent matches percent facts. `check_text(text, allowed)` -> `GuardResult(ok, offending: [raw])`.
+R5-9. **Narration** (`report/narrate.narrate(question, columns, rows, facts, llm)` -> `Narration(text, source,
+      rejected)`): the LLM (same client kind as the agent, no tools) gets the question, column names, up to
+      `config.NARRATE_MAX_ROWS` (20) masked rows and the facts with their `display`, and must write 1-3 Turkish
+      sentences using only those numbers. Guard fails -> one retry naming the offending numbers ("Şu sayılar
+      sonuçta yok: ..."); fails again, or LLMError -> `template_sentence(question, facts)` (deterministic, always
+      passes the guard; tested). `source` = `llm` | `llm_retry` | `template`. Empty result -> template without an
+      LLM call. A failing text is never returned. Fake: `fake.narration_client()` writes a sentence from the first
+      facts' `display` (deterministic, passes); `fake.inventing_narrator()` / `rounding_narrator()` for tests.
+R5-10. **Clarification tool** `ask_clarification(question, options[])`: offered only when `ToolContext.clarify` is
+      True (default False, so every Run 1-4 caller, prompt and fingerprint is unchanged); the loop sends
+      `mode.tools + [ASK_CLARIFICATION]` and `dispatch` accepts it; the system prompt appends
+      `prompt.CLARIFY_RULES` (ask only when a business term is undefined by the rules AND two readings give
+      different numbers - "satış" brüt vs net, iptaller dahil mi; never when a rule defines the term; in rag call
+      search_rules first; 2-4 short mutually exclusive options; never guess). Valid args (non-empty question,
+      2..`config.CLARIFY_MAX_OPTIONS` (4) distinct non-empty options) -> run ends `needs_clarification` with
+      `AgentRun.clarification = {question, options}`; invalid -> ERROR_PREFIX answer, the run goes on. `ask`, `ask
+      --json` and the API set clarify=True; a follow-up never does (no clarification loop).
+R5-11. **Follow-up.** `clarify.follow_up_text(question, choice)` = `"{question}\n\nKullanıcının seçtiği anlam:
+      {choice}"`; `ask_payload(..., choice=...)` runs it as a normal question (clarify off) and the ask record keeps
+      `question` and `choice` separately. API body `{"question", "mode"?, "choice"?}`; CLI `ask "<q>" --choice
+      "<option>"`. Fake: `for_golden(..., ambiguous=lines)` answers an ambiguous question with ask_clarification
+      (options = reading labels) and its follow-up with that reading's SQL; golden questions replay as before.
+R5-12. **Ambiguous set + metrics.** `datasets/synthetic_erp/ambiguous.jsonl` (dataset.json `files.ambiguous`,
+      optional, default null): >= 6 lines `{"id":"A01","question","expect":"clarify","term","readings":[{"label",
+      "sql"}] (>= 2),"notes"}`; every pair of readings returns different results on the built DB (test); A01 is
+      exactly "Eylül 2026'da satışlarımız ne kadar?" (visual flow). No reading SQL text in the index (leak test).
+      `eval --ambiguous` = golden + ambiguous through `run_eval(..., clarify=True)`; runner outcomes gain
+      `needs_clarification` (OUTCOMES 9 -> 10, **changes** the pinned count in tests/test_eval_runner.py again);
+      ambiguous lines get `clarified` | `guessed` | a failure outcome (`AMBIGUOUS_OUTCOMES`). `eval/metrics.py`
+      per run (= per mode): accuracy = pass/golden; answered_pct = submitted/golden; accuracy_when_answered =
+      pass/answered (null when 0); wrong_answer_rate = (answered - pass)/golden; clarify_precision = clarified
+      ambiguous / all clarifications (null when none); clarify_recall = clarified/ambiguous. A clarification on a
+      golden question = not answered (brief rule). `eval --ambiguous` on a dataset without the file -> "Bu veri
+      kümesinin belirsiz soru seti yok." exit 2; with `--compare` -> "--ambiguous tek mod eval'i içindir." exit 2.
+      Fingerprint gains `"clarify": true` only when on (R4 rule: old fingerprints stay byte-equal).
+R5-13. **Narration measured** (brief §9): `eval --narrate` narrates every submitted golden answer and the report gains
+      `narration: {"llm", "llm_retry", "template", "template_pct"}`; README states the number from a real run is
+      measured by hand (tests use the fake narrator).
+R5-14. **CLI states.** `ask` (human) adds `Cevap: <answer_text>` after the table when narration ran, the warnings
+      as `⚠ ...` lines, and for a clarification prints `Netleştirme: <question>` + numbered options + `Seçmek için:
+      ask "<q>" --choice "<seçenek>"` (exit 0). `ask --json` prints only the payload (ensure_ascii False, indent
+      2); exit 0 answered/needs_clarification, 1 failed, setup errors keep their one line and exit 2. `serve`
+      prints `Bilgin: http://127.0.0.1:8777  (veri kümesi ..., model ..., llm fake|openai)`; a non-loopback
+      `--host` -> "Bilgin yalnız 127.0.0.1 üzerinde çalışır (tek kullanıcı, kimlik doğrulama yok)." exit 2.
+      `eval --ambiguous` prints the metrics block (Doğruluk, Cevaplanan %, Cevaplananlarda doğruluk, Yanlış cevap
+      oranı, Netleştirme kesinliği / duyarlılığı); report.md gets the same table.
+R5-15. **Web API** (FastAPI, `create_app(session, saved_path, static_dir)`; single user, no auth, CORS off, binds
+      127.0.0.1 - README says so). Routes: `POST /api/ask`, `GET /api/health`, `GET /api/examples` (first
+      `config.EXAMPLES_N` (4) golden questions + the first ambiguous one), `GET /api/tables`, `GET/POST
+      /api/saved`, `DELETE /api/saved/{id}`, `GET /api/history`, `GET /api/export/{audit_id}.csv|.xlsx`, `GET/POST
+      /api/rules`, `PUT/DELETE /api/rules/{id}`, `POST /api/index/rebuild`, `/` + `/assets/*` static. Errors:
+      empty question 400 `{"detail": "Soru boş."}`; unknown audit_id/saved/rule 404; export of a non-answered ask or
+      another dataset's ask 409; rule validation 422 `{"errors":[{"field","message"}]}`; duplicate rule id 409.
+      Agent outcomes are 200 with `status` in the body. Static missing -> `/` returns a small Turkish HTML page
+      "Arayüz derlenmemiş: `npm --prefix web run build` çalıştırın." (API works without node).
+R5-16. **Saved, export, rules.** Saved questions: SQLite `config.APP_DB_PATH` (`data/bilgin.db`, never the analysed
+      DB), table `saved(id, question, mode, sql, dataset, created_at)` - question text and SQL only. Export re-runs
+      the ask log SQL through the session executor (`Budget(config.EXPORT_MAX_ROWS)`, source `export:<id>`, PII
+      masked) and streams CSV (UTF-8 BOM, `;`, `\r\n`, decimal comma, no thousands separator, NULL empty) or XLSX
+      (openpyxl, numeric cells numeric, bold header, `bilgin_<audit_id>.<ext>`). Rules edits write the served
+      dataset's `rules.json` (atomic temp+replace, `{"rules": [...]}`, indent 2, UTF-8, order kept) after
+      `rules_edit.validate_rule` (id `^[a-z0-9_]+$` unique, term + definition non-empty, synonyms/tables/markers
+      lists of strings, tables exist in the schema, markers compile); the brief's `name` field is the existing
+      `term`. The changed content hash makes the index stale by R2-9 (no flag file); `GET /api/rules` and health
+      report `index.fresh`; `POST /api/index/rebuild` calls `build_index` with the embedder of the current meta
+      (none -> `fake` under `--llm fake`, else `openai`) and reloads the session's search. README: on the demo
+      datasets the rules screen edits committed files - restore with git.
+R5-17. **Frontend** (`web/`, plain JS + JSX, React 19, ECharts 6 imported from node_modules; Vite builds to
+      `../nl2sql/web/static` with `emptyOutDir`, dev proxy `/api` -> 127.0.0.1:8777; JSX automatic runtime via
+      Vite's built-in transform). Tests: vitest in node environment - pure modules in `src/lib` and components
+      rendered with `react-dom/server` `renderToStaticMarkup`. Hash routes: `#/` (Sor), `#/kurallar` (Kurallar).
+      Design, states, ids and the phone fallback: R5-18. `.hybrid/visual.json` flows: R5-19.
+R5-18. **What the user sees (web).** Tokens on `:root` (light) + `prefers-color-scheme: dark`: `--bg #F6F5F1`,
+      `--surface #FFFFFF`, `--text #1D1D1B`, `--muted #6A6963`, `--line #E3E1DA`, `--accent #1F5FAD`, `--warn-bg
+      #FEF3C7`, `--warn-line #F59E0B`, `--warn-text #8A3B05`, `--err-bg #FDECEC`, `--err-text #9B1C1C`, `--ok
+      #2F7D32`; system-ui font stack, numbers `tabular-nums`, answer text 20px/1.5, 8px spacing grid, radius 10px.
+      - Header: "Bilgin" wordmark, dataset + model chip (from health), nav `#nav-ask` / `#nav-rules`, health dot
+        (green ok, amber index stale, red model down) with a tooltip sentence.
+      - Layout >= 960px: sidebar 280px (`#saved-list`, `#history-list`) + main column max 880px. < 720px: one
+        column, sidebar collapses behind `#sidebar-toggle` ("Kayıtlılar ve geçmiş") above the question box, tables
+        scroll inside `.table-wrap` (no page-level horizontal scroll), chart height 260px. (Brief: a mobile app is
+        out; the layout must just not break at 375px.)
+      - Ask: `#question` textarea (Enter sends, Shift+Enter newline), `#ask-button`, `.example-chip` buttons.
+      - Empty state (no ask yet): "Verinize Türkçe soru sorun" + "Bilgin SQL'i yazar, sonucu ve nasıl hesapladığını
+        gösterir." + example chips.
+      - Loading: `#loading` skeleton card + step text from `lib/steps.js` ("Soru okunuyor", "Şema aranıyor", "SQL
+        çalıştırılıyor", "Cevap yazılıyor"), advancing every 1.2 s and stopping on the last (labelled progress,
+        not server events); the ask button disabled.
+      - Answer card `#answer-card`: status line (✓ Cevaplandı · mod · süre), `#answer-text`, `#warnings` (amber
+        band, ⚠ per warning), `#chart` (only when `chart`), `#result-table` (sticky header, numbers right-aligned in
+        tr-TR, NULL "–", first 200 rows, footer "İlk 200 satır gösteriliyor (toplam 1.234)"), `#export-csv`,
+        `#export-xlsx` ("Tamamını indir"), `#save-question`, `#evidence-toggle` -> `#evidence` "Nasıl hesapladım"
+        (SQL block + copy, tables, rules, mode, masked columns, facts, steps, audit id, timings, notes).
+        Empty result: the `empty` warning + "Bu soruya uyan kayıt yok." in place of the table.
+      - Clarification `#clarification-card`: "Netleştirelim", the question, options as `button[data-option-index]`,
+        secondary "Soruyu değiştir" (focuses `#question`).
+      - Error `#error-card` per kind: llm_error "Model yanıt vermiyor" + Strata hint; index "İndeks eski" + rebuild
+        button; failed run "Cevap üretilemedi" + the reason; network "Sunucuya ulaşılamadı".
+      - Sidebar: saved items (click = ask again, × delete), empty "Henüz kayıtlı soru yok."; history newest first
+        with ✓ / ? / ✗, empty "Geçmiş boş.".
+      - Rules screen `#rules-screen`: "İş kuralları", `#rule-add`, stale banner `#index-stale` "Kurallar değişti,
+        indeks eski." + `#index-rebuild` ("kuruluyor…", then "İndeks güncel."), table (Terim, Eş anlamlılar,
+        Tablolar, Düzenle / Sil with inline "Silinsin mi? Evet / Vazgeç"), form `#rule-form` (id - locked when
+        editing, term, synonyms comma-separated, definition, sql_hint, tables with a datalist from /api/tables),
+        `#rule-save`, field errors under each field and the summary `#rule-errors` from the 422 body; client-side
+        required-field checks in `lib/rulesForm.js` mirror the server messages.
+R5-19. **Visual flows** (`.hybrid/visual.json`, start builds the DB, the fake index and the UI, then `serve --llm
+      fake --port 8777`): landing (empty state), golden ask (Q02 -> answer + bar chart, then evidence open),
+      ambiguous ask (A01 -> clarification -> option 0 -> answer), export (answer then the CSV/Excel buttons),
+      history/saved (save, then sidebar), rules screen (list, add form, submit empty -> validation messages).
+R5-20. **Table summaries** (`index/summaries.table_summaries(schema, rules, graph)` -> one Doc per table, id
+      `summary:<TABLE>`, collection `summaries`, meta.table): description, key columns (fk columns + code-like
+      columns, max `config.SUMMARY_KEY_COLUMNS` (8), with descriptions, never deny columns), rule terms whose
+      `tables` include it, 1-hop join neighbours (data tables via the graph). Built deterministically, always
+      written by build-index (COLLECTIONS gains "summaries"; content_hash unchanged - same schema + rules);
+      leakage rule R2-16 applies. `HybridSearch.search_tables(query, k, summaries)` = `search(..., "tables")`
+      when off; on = RRF of the table ranking and the summary ranking mapped to `table:<name>`. `eval-retrieval
+      --summaries on|off` (default off) adds variant `summaries` to the report (recall@k with and without).
+      **Decision rule, fixed now:** `config.TABLE_SUMMARIES` = True iff hybrid recall@5 with summaries >= without
+      on BOTH datasets with FakeEmbedder (T192 measures, sets the constant, writes the numbers into
+      README); `search_schema` follows the constant. Never tune the eval or the summaries to flip it.
+R5-21. **PII group bypass:** `SELECT p.DEPARTMAN_KODU, AVG(m.NET_TUTAR) FROM TBLMAAS m JOIN TBLPERSONEL p ON
+      m.PERSONEL_KODU = p.PERSONEL_KODU GROUP BY p.DEPARTMAN_KODU` over a department with exactly one person stays
+      masked (AVG over salary is not whitelisted, R3-6); a test proves it on the built DB, fix if red.
+R5-22. **Test rules kept** (R3-12/R4-15): structure over counts, no real model, no real SQL Server, no network but
+      127.0.0.1 in the smoke script; API tests use TestClient with tmp DB/index/logs/saved paths and tmp copies of
+      the dataset folder whenever rules are edited (never the committed rules.json).
+
+## Contracts (Run 5 additions)
+
+| Shape | Producer -> Consumer | Fields (optional = default) |
+|---|---|---|
+| `Result` (ext.) | executor -> app.ask, checks, export | + `tables: list[str]`=[] (upper full names, sorted) |
+| `Warning` | checks.post_checks -> AskPayload, CLI, UI | `{"code": "empty"\|"all_null"\|"top_limited"\|"masked"\|"fan_out", "message": str (Turkish), "column": str\|null=null}`; messages: "Sonuç boş: bu koşullara uyan kayıt yok." / "'{col}' kolonunun tüm değerleri boş (NULL)." / "Sonuç {n} satırlık üst sınırda kesildi; tamamı daha fazla olabilir." / "Maskelendi: {cols} — kişisel veri gösterilmez." / "Join sonrası {joined} satır, sürücü tablo {table} {driving} satır ({ratio}x): toplamlar çoğalmış olabilir." |
+| `ChartSpec` | chart.chart_spec -> AskPayload, UI ChartView | `null` or `{"type": "line"\|"bar"\|"pie"\|"scatter", "option": ECharts option JSON + "bilgin": {"value_format": "number"\|"percent", "value_column": str, "label_column": str\|null}}` |
+| `Fact` | facts.compute_facts -> narrate, guard, AskPayload | `{"name": "row_count"\|"total"\|"max"\|"min"\|"mean"\|"top_item"\|"top_share"\|"last_period"\|"previous_period"\|"change"\|"change_pct", "label": str (Turkish), "column": str\|null=null, "value": number\|str, "display": str (tr format), "percent": bool=false}` |
+| `GuardResult` | guard.check_text -> narrate | `ok: bool`, `offending: list[str]` (raw tokens, text order), `numbers: list[NumberToken(raw, value, decimals, scale, percent, format_error)]` |
+| `Narration` | narrate -> AskPayload, eval | `text: str`, `source: "llm"\|"llm_retry"\|"template"`, `rejected: list[str]`=[] (offending tokens of failed attempts) |
+| `AgentRun` (ext.) | loop -> app.ask, runner | status + "needs_clarification"; + `clarification: {"question","options":[str]}\|None`=None |
+| `ToolContext` (ext.) | caller -> loop, dispatch | + `clarify: bool`=False |
+| ask_clarification args | model -> dispatch | `{"question": str, "options": [str] (2..CLARIFY_MAX_OPTIONS, distinct, non-empty)}` |
+| AskPayload | app.ask.ask_payload -> `ask --json`, `/api/ask`, UI | `{"status": "answered"\|"needs_clarification"\|"failed", "question", "choice"=null, "answer_text"="", "narration_source"=null, "chart"=null, "facts"=[], "columns"=[], "rows"=[] (<= UI_MAX_ROWS, JSON scalars, masked), "row_count"=0, "truncated"=false, "sql"="", "tables_used"=[], "rules_used"=[], "masked_columns"=[], "warnings"=[Warning], "notes"=[str], "mode", "dataset", "model" (profile name or "fake"/"openai"), "timings": {"agent_s","execute_ms","narrate_s","total_s"} (0 when not run), "audit_id", "clarification"=null {"question","options"}, "error"=null {"kind","message"}, "steps"=[{"tool","ok","summary" (<= 300 chars)}]}` - same keys in every status |
+| ask record | asklog.record_ask -> logs/asks.jsonl, history, export | `{"ts","audit_id","source":"web"\|"cli","dataset","mode","question","choice"=null,"status","sql"="","row_count"=0,"error"=null (kind)}` - never rows |
+| history item | `/api/history` -> UI | ask record minus `source`, newest first, <= HISTORY_N |
+| saved question | SavedStore -> `/api/saved`, UI | `{"id": int, "question", "mode"=null, "sql"=null, "dataset", "created_at"}`; POST body `{"question", "mode"?, "sql"?}` |
+| health | `/api/health` -> UI header | `{"status":"ok","dataset":{"name","display_name"},"llm":{"kind","model","url"=null,"reachable":bool,"reason"=null},"index":{"fresh":bool,"reason"=null,"embedder"=null},"schema_hash","rules_hash","mode":{"default":"auto","auto_full_max_tokens":int,"estimate":int},"budget"=null}` |
+| rules API | `/api/rules` -> UI | GET `{"rules":[rule],"index":{"fresh","reason"}}`; POST/PUT body = rule (rules doc shape); 200 -> same as GET; 422 `{"errors":[{"field","message"}]}` |
+| rebuild | `/api/index/rebuild` -> UI | `{"index":{"fresh":true,"reason":null,"embedder"},"counts":{collection:int},"seconds":float}` |
+| examples | `/api/examples` -> UI | `{"examples":[{"question","kind":"golden"\|"ambiguous"}]}` |
+| export file | report.export -> `/api/export` | CSV: BOM + `;` + `\r\n`, header = columns, decimal comma; XLSX: one sheet "Sonuç"; both masked as the executor returned them |
+| ambiguous line | `datasets/<ds>/ambiguous.jsonl` -> runner, fake, tests | `{"id":"A01","question","expect":"clarify","term","readings":[{"label","sql"}],"notes"=""}` |
+| dataset.json (ext.) | datasets.load_dataset | `files` + `"ambiguous"`=null; `Dataset` + `ambiguous_path: Path\|None`, `ambiguous() -> list[dict]` ([] when none) |
+| `QuestionResult` (ext.) | runner -> report, metrics | outcome + "needs_clarification" (golden), "clarified"\|"guessed" (ambiguous); + `kind: "golden"\|"ambiguous"`="golden", `clarification`=None, `narration_source`=None |
+| metrics | eval.metrics -> report.json/md, CLI | `{"accuracy","answered_pct","accuracy_when_answered"\|null,"wrong_answer_rate","clarify_precision"\|null,"clarify_recall"\|null,"golden":int,"ambiguous":int}` (fractions 0-1, 4 dp) |
+| report.json (ext.) | report -> report.md | + `"metrics"` (always; clarify fields null without --ambiguous), + `"narration"`=null `{"llm","llm_retry","template","template_pct"}`; fingerprint + `"clarify": true` only when on |
+| summary Doc | index.summaries -> store, search | `id "summary:<TABLE>"`, collection `"summaries"`, title = table, meta `{"table"}` |
+| retrieval report (ext.) | eval.retrieval -> CLI, report | + `"summaries": bool`; `variants` + `"summaries"` when `--summaries on` |
+
+## Run 5 milestones
+
+- **M14 - API + evidence** (T163-T174): config, Result.tables + warnings, fan-out, session, ask log, ask_payload,
+  `ask --json`, FastAPI app + health/ask + serve, saved/history, export, smoke script. Integration: real session ->
+  real FakeLLM -> real loop -> real executor -> real checks -> payload equal from `ask --json` and `/api/ask`;
+  export of that audit id re-runs and stays masked.
+- **M15 - Report** (T175-T183): fmt + shape, chart, facts, number guard, narrate + fake narrators, payload wiring,
+  rules validation + save, rules API + stale/rebuild. Integration: real executor result -> real chart/facts/
+  narrate/guard through `/api/ask`; a rules edit via the API makes the real index stale and rebuild clears it.
+- **M16 - Clarification + eval + retrieval** (T184-T194): tool + loop, fake ambiguous replay, payload/CLI follow-up,
+  ambiguous set, outcomes + metrics, eval --ambiguous/--narrate, summaries, search + eval-retrieval, the measured
+  decision, PII group test. Integration: real eval --ambiguous through the real loop; real ask -> clarification ->
+  follow-up answered through the API; eval-retrieval with/without summaries on both datasets.
+- **M17 - Frontend** (T195-T204): scaffold + tokens + router, format/api libs, ask + states, answer card, chart,
+  clarification, sidebar, rules screen, static serving + visual.json + README, smoke + integration (pytest +
+  vitest + build + served UI).

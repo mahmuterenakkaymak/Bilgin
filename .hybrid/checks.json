@@ -1,6 +1,7 @@
 {
   "suite": [
-    ".venv\\Scripts\\python -m pytest -q"
+    ".venv\\Scripts\\python -m pytest -q",
+    "npm --prefix web test"
   ],
   "smoke": [
     ".venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql eval --llm fake && .venv\\Scripts\\python -m nl2sql ask \"Eylül ayında en çok satan 5 ürün\" --llm fake",
@@ -12,6 +13,9 @@
     {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql build-index --embed fake && .venv\\Scripts\\python -m nl2sql eval-retrieval --embed fake && .venv\\Scripts\\python -m nl2sql eval --compare --repeat 2 --llm fake", "from": "M10"},
     {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --dataset synthetic_erp && .venv\\Scripts\\python -m nl2sql build-index --embed fake --dataset synthetic_erp && .venv\\Scripts\\python -m nl2sql eval --llm fake --dataset synthetic_erp --mode rag && .venv\\Scripts\\python -m nl2sql make-login-script --dataset synthetic_erp", "from": "M11"},
     {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --dataset wwi && .venv\\Scripts\\python -m nl2sql build-index --embed fake --dataset wwi && .venv\\Scripts\\python -m nl2sql eval-retrieval --embed fake --dataset wwi && .venv\\Scripts\\python -m nl2sql eval --llm fake --dataset wwi --mode full_rules && .venv\\Scripts\\python -m nl2sql eval --llm fake --dataset wwi --mode rag && .venv\\Scripts\\python -m nl2sql ask \"Kaç müşteri var?\" --llm fake --dataset wwi --mode rag", "from": "M12"},
-    {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --dataset wwi && .venv\\Scripts\\python -m nl2sql build-index --embed fake --dataset wwi && .venv\\Scripts\\python -m nl2sql eval --compare --models strata,qwen27b-16k --modes full_rules,rag --dataset wwi --llm fake && .venv\\Scripts\\python -m nl2sql build-db --dataset synthetic_erp && .venv\\Scripts\\python -m nl2sql build-index --embed fake --dataset synthetic_erp && .venv\\Scripts\\python -m nl2sql eval --compare --models strata,qwen27b-24k --modes full_rules,rag --dataset synthetic_erp --llm fake --repeat 2", "from": "M13"}
+    {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --dataset wwi && .venv\\Scripts\\python -m nl2sql build-index --embed fake --dataset wwi && .venv\\Scripts\\python -m nl2sql eval --compare --models strata,qwen27b-16k --modes full_rules,rag --dataset wwi --llm fake && .venv\\Scripts\\python -m nl2sql build-db --dataset synthetic_erp && .venv\\Scripts\\python -m nl2sql build-index --embed fake --dataset synthetic_erp && .venv\\Scripts\\python -m nl2sql eval --compare --models strata,qwen27b-24k --modes full_rules,rag --dataset synthetic_erp --llm fake --repeat 2", "from": "M13"},
+    {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql build-index --embed fake && .venv\\Scripts\\python -m nl2sql ask \"Eylül 2026'da en çok satan 5 ürün hangileri; kodu, adı ve toplam satış miktarı nedir?\" --llm fake --json && .venv\\Scripts\\python scripts\\smoke_serve.py --port 8778", "from": "M14"},
+    {"cmd": ".venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql build-index --embed fake && .venv\\Scripts\\python -m nl2sql eval --llm fake --mode full_rules --ambiguous --narrate && .venv\\Scripts\\python -m nl2sql eval-retrieval --embed fake --summaries on && .venv\\Scripts\\python -m nl2sql ask \"Eylül 2026'da satışlarımız ne kadar?\" --llm fake --json", "from": "M16"},
+    {"cmd": "npm --prefix web run build && .venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql build-index --embed fake && .venv\\Scripts\\python scripts\\smoke_serve.py --port 8778 --ui", "from": "M17"}
   ]
 }

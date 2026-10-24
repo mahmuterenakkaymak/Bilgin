@@ -1,0 +1,65 @@
+﻿Strata already running
+OpenClaw already uses strata/qwen3.8-flash-next-unsloth-ud-iq4_xs
+
+
+Strata   : running
+Unsloth  : stopped
+ComfyUI  : stopped
+VRAM     : 31538 MiB, 32607 MiB
+OpenClaw : strata/qwen3.8-flash-next-unsloth-ud-iq4_xs
+
+
+
+2026-10-24 16:05:10 | EVAL27B | nl2sql build-db --dataset wwi
+Veri kümesi: WideWorldImporters (Microsoft örnek veritabanı) (wwi)
+Tohum: 42
+Veritabanı: C:\Users\PC\Documents\GitHub\nl2sql\data\wwi.db
+T-SQL betiği: C:\Users\PC\Documents\GitHub\nl2sql\db\mssql\build_wwi.sql
+Tablolar: 20 (veri 20, şema-yalnız 0)
+Şema metni (full mod): 19651 karakter ≈ 4913 token
+Sağlama (sha256): 24da43ae18e6
+2026-10-24 16:05:11 | EVAL27B | nl2sql build-index --dataset wwi
+Veri kümesi: WideWorldImporters (Microsoft örnek veritabanı) (wwi)
+Şema: C:\Users\PC\Documents\GitHub\nl2sql\datasets\wwi\schema.json (20 tablo)
+Kurallar: C:\Users\PC\Documents\GitHub\nl2sql\datasets\wwi\rules.json (10 kural)
+Dokümanlar: tables 20, rules 10, examples 0 (toplam 30)
+Embedder: openai:embeddinggemma (dim 768)
+İmza: 932beea50020
+Süre: 2.5 sn
+İndeks: C:\Users\PC\Documents\GitHub\nl2sql\index\wwi
+2026-10-24 16:05:14 | EVAL27B | nl2sql eval --compare --models strata --modes full_rules,rag --dataset wwi
+Veri kümesi: WideWorldImporters (Microsoft örnek veritabanı) (wwi)
+
+strata | full_rules | 24/26 (ort.) | cevap %96 | tepe 7.3K/254.0K | taşma 0 | 6.4 sn/soru
+strata | rag | 26/26 (ort.) | cevap %100 | tepe 4.1K/254.0K | taşma 0 | 8.8 sn/soru
+
+Rapor: C:\Users\PC\Documents\GitHub\nl2sql\eval_out\wwi\compare_wwi_20261024-161150.md
+GPU is free.
+
+
+Strata   : stopped
+Unsloth  : stopped
+ComfyUI  : stopped
+VRAM     : 1193 MiB, 32607 MiB
+OpenClaw : strata/qwen3.8-flash-next-unsloth-ud-iq4_xs
+
+
+
+2026-10-24 16:12:08 | EVAL27B | starting unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_XL at 24576 context
+2026-10-24 16:32:13 | EVAL27B | 27B did not come up in 1200 s
+2026-10-24 16:32:24 | EVAL27B | starting unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_XL at 16384 context
+2026-10-24 16:52:29 | EVAL27B | 27B did not come up in 1200 s
+2026-10-24 16:52:38 | EVAL27B | switching back to Flash-Next (agent mode)
+Starting Strata (1-3 min; the PC can stutter while ~55 GB loads)...
+OpenClaw already uses strata/qwen3.8-flash-next-unsloth-ud-iq4_xs
+
+
+Strata   : running
+Unsloth  : stopped
+ComfyUI  : stopped
+VRAM     : 31344 MiB, 32607 MiB
+OpenClaw : strata/qwen3.8-flash-next-unsloth-ud-iq4_xs
+
+
+
+2026-10-24 16:54:13 | EVAL27B | reports: 

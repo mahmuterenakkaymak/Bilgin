@@ -16,3 +16,5 @@ __pycache__/
 /schema/diff.md
 /schema/merged.json
 db/mssql/readonly_login.sql
+web/node_modules/
+/nl2sql/web/static/

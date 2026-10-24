@@ -1,0 +1,21 @@
+{
+  "name": "bilgin-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Bilgin web UI (React + Vite + ECharts), built into nl2sql/web/static",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "echarts": "6.1.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}

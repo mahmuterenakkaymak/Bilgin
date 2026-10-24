@@ -1,0 +1,83 @@
+{
+  "start": "npm --prefix web run build && .venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql build-index --embed fake && .venv\\Scripts\\python -m nl2sql serve --llm fake --port 8777",
+  "base_url": "http://localhost:8777",
+  "ready_path": "/",
+  "pages": [
+    {
+      "name": "landing-empty-state",
+      "path": "/",
+      "steps": ["wait:2", "shot:empty-state"]
+    },
+    {
+      "name": "ask-golden-answer-chart",
+      "path": "/",
+      "steps": [
+        "wait:2",
+        {"fill": ["#question", "Eylül 2026'da en çok satan 5 ürün hangileri; kodu, adı ve toplam satış miktarı nedir?"]},
+        {"click": "#ask-button"},
+        "wait:0.5",
+        "shot:loading",
+        "wait:4",
+        "shot:answer-with-chart",
+        {"click": "#evidence-toggle"},
+        "wait:1",
+        "shot:evidence-open"
+      ]
+    },
+    {
+      "name": "ask-ambiguous-clarify-then-answer",
+      "path": "/",
+      "steps": [
+        "wait:2",
+        {"fill": ["#question", "Eylül 2026'da satışlarımız ne kadar?"]},
+        {"click": "#ask-button"},
+        "wait:4",
+        "shot:clarification-card",
+        {"click": "#clarification-card button[data-option-index='0']"},
+        "wait:4",
+        "shot:answer-after-choice"
+      ]
+    },
+    {
+      "name": "export-buttons",
+      "path": "/",
+      "steps": [
+        "wait:2",
+        {"click": ".example-chip"},
+        "wait:4",
+        {"click": "#export-csv"},
+        "wait:1",
+        {"click": "#export-xlsx"},
+        "wait:1",
+        "shot:after-export"
+      ]
+    },
+    {
+      "name": "saved-and-history-sidebar",
+      "path": "/",
+      "steps": [
+        "wait:2",
+        {"fill": ["#question", "Eylül 2026'da en çok satan 5 ürün hangileri; kodu, adı ve toplam satış miktarı nedir?"]},
+        {"click": "#ask-button"},
+        "wait:4",
+        {"click": "#save-question"},
+        "wait:1",
+        "shot:sidebar-saved-history"
+      ]
+    },
+    {
+      "name": "rules-screen-validation",
+      "path": "/#/kurallar",
+      "steps": [
+        "wait:2",
+        "shot:rules-list",
+        {"click": "#rule-add"},
+        "wait:1",
+        "shot:rule-form-empty",
+        {"click": "#rule-save"},
+        "wait:1",
+        "shot:rule-validation-errors"
+      ]
+    }
+  ]
+}
