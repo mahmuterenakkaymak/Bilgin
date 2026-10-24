@@ -1,0 +1,7 @@
+{"trap": "not_invoiced", "qid": "Q02", "naive_sql": "SELECT COUNT(*) AS SIPARIS FROM Sales.Orders o"}
+{"trap": "credit_note", "qid": "Q03", "naive_sql": "SELECT SUM(il.ExtendedPrice) AS CIRO FROM Sales.InvoiceLines il JOIN Sales.Invoices i ON i.InvoiceID = il.InvoiceID"}
+{"trap": "backorder", "qid": "Q04", "naive_sql": "SELECT COUNT(*) AS SIPARIS FROM Sales.Orders o"}
+{"trap": "multi_transaction", "qid": "Q05", "naive_sql": "SELECT si.StockItemName, h.QuantityOnHand FROM Warehouse.StockItemHoldings h JOIN Warehouse.StockItems si ON si.StockItemID = h.StockItemID JOIN Warehouse.StockItemTransactions t ON t.StockItemID = h.StockItemID ORDER BY si.StockItemName"}
+{"trap": "null_delivery", "qid": "Q06", "naive_sql": "SELECT COUNT(i.ConfirmedDeliveryTime) AS ONAYSIZ_FATURA FROM Sales.Invoices i WHERE i.ConfirmedDeliveryTime IS NULL"}
+{"trap": "two_buying_groups", "qid": "Q07", "naive_sql": "SELECT COUNT(DISTINCT c.CustomerName) AS MUSTERI_KARTI FROM Sales.Customers c"}
+{"trap": "late_receipt", "qid": "Q08", "naive_sql": "SELECT COUNT(*) AS ALINAN_SATIR FROM Purchasing.PurchaseOrderLines pol JOIN Purchasing.PurchaseOrders po ON po.PurchaseOrderID = pol.PurchaseOrderID WHERE pol.ReceivedDate IS NOT NULL"}
