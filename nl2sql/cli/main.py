@@ -724,9 +724,13 @@ def compare_models_cmd(
 
     ``modes`` söylenmediğinde ``config.COMPARE_MODEL_MODES``; ``dataset`` ``evaluate``ınkiyle aynı
     anlamı taşır (R4-4). Hiçbir model koşmadıysa rapor yazılmaz ve kod 3 döner; değilse hücre
-    satırları, atlananların ⚠ satırları ve rapor yolu basılır.
+    satırları, atlananların ⚠ satırları ve rapor yolu basılır. ``repeat`` R3-11 kuralına uyar: 1'den
+    küçükse hiçbir uç nokta yoklanmadan, hiçbir hücre koşmadan ve hiçbir dosya yazmadan kod 2 döner.
     """
     _utf8_stdout()
+    if repeat < 1:
+        print(BAD_REPEAT)
+        return EXIT_BAD_INPUT
     ds, code = _dataset(dataset)
     if code:
         return code
