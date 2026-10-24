@@ -1668,6 +1668,7 @@ def resolve_auto(
     as_of: str = config.AS_OF,
     dataset: str | None = None,
     max_tokens: int | None = None,
+    notify=print,
 ) -> tuple[str, int]:
     """``--mode auto``nun çözümü (R3-10): tam kurallı istem bütçeye sığıyorsa full_rules, sığmıyorsa rag.
 
@@ -1681,6 +1682,9 @@ def resolve_auto(
 
     ``max_tokens`` eşiğin kendisidir (R4-12): ``--model`` profilin penceresinden gelir. Verilmediğinde
     config'in sabiti çağrı anında okunur - bir testin onu oynatması da, Run 3'ün davranışı da budur.
+
+    ``notify`` düşüş notunu kime söyleyeceğini belirler (R5-1): CLI'de varsayılan ``print``,
+    web oturumunda ``notes.append``; varsayılan davranış byte-eşdeğerdir.
     """
     limit = config.AUTO_FULL_MAX_TOKENS if max_tokens is None else max_tokens
     estimate = doc.estimate_tokens(prompt.full_rules_prompt(as_of, schema, rules))
@@ -1691,7 +1695,7 @@ def resolve_auto(
     except ForeignIndexError:
         raise
     except (MissingIndexError, StaleIndexError):
-        print(NO_INDEX_NOTE)
+        notify(NO_INDEX_NOTE)
         return "full", estimate
     return "rag", estimate
 
