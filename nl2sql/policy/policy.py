@@ -45,8 +45,13 @@ class PolicyResult:
     tables: set[str] = field(default_factory=set)
 
 
-def check(sql: str, allowlist: set[str], top_n: int = config.TOP_N) -> PolicyResult:
-    """Single read-only T-SQL SELECT, real tables from the allowlist only, TOP n enforced."""
+def check(sql: str, allowlist: set[str], top_n: int = config.TOP_N, pii: dict | None = None) -> PolicyResult:
+    """Single read-only T-SQL SELECT, real tables from the allowlist only, TOP n enforced.
+
+    `pii` is the {(TABLE, COLUMN): class} map of the schema (R3-6). A column whose class is in
+    `config.PII_FILTER` may not be used as a filter: the mask hides a value, but WHERE/JOIN/GROUP
+    BY/ORDER BY over that same value lets a question be asked about it.
+    """
     if not sql or not sql.strip():
         return PolicyResult(ok=False, reason="Boş sorgu.")
     tree, reason = _single_select(sql)
@@ -54,6 +59,9 @@ def check(sql: str, allowlist: set[str], top_n: int = config.TOP_N) -> PolicyRes
         return PolicyResult(ok=False, reason=reason)
     tables: set[str] = set()
     reason = _scan(tree, frozenset(), {name.upper() for name in allowlist}, tables)
+    if reason:
+        return PolicyResult(ok=False, reason=reason)
+    reason = _check_filter(tree, pii or {}, tables)
     if reason:
         return PolicyResult(ok=False, reason=reason)
     return PolicyResult(ok=True, sql=_with_top(tree, top_n), tables=tables)
@@ -146,6 +154,56 @@ def _check_table(table, visible, allowed, tables):
 def _system_part(table) -> str:
     parts = (table.catalog, table.db, table.name)
     return next((part for part in parts if part.lower() in SYSTEM_SCHEMAS), "")
+
+
+# ----------------------------------------------------------------- filter side channels (R3-6)
+
+
+def _check_filter(tree, marks, tables):
+    """Bir pii kolonu filtre olarak kullanılamaz; sınıfı config.PII_FILTER'da olmayanlar serbest."""
+    filtered = {pair for pair, cls in marks.items() if cls in config.PII_FILTER}
+    if not filtered:
+        return None
+    names = {column for _, column in filtered}
+    aliases = _aliases(tree, tables)
+    for node in _filter_nodes(tree):
+        for column in node.find_all(exp.Column):
+            if column.name.upper() in names:
+                guilty = _filter_target(column, aliases, filtered, tables)
+                if guilty:
+                    return f"Filtrede PII kolon: {guilty}."
+    return None
+
+
+def _filter_nodes(tree):
+    """Filtre sayılan yerler: WHERE, JOIN ON, GROUP BY, ORDER BY."""
+    yield from tree.find_all(exp.Where, exp.Group, exp.Order)
+    for join in tree.find_all(exp.Join):
+        on = join.args.get("on")
+        if on is not None:
+            yield on
+
+
+def _aliases(tree, tables) -> dict[str, str]:
+    """Takma ad -> gerçek tablo. CTE adı gerçek tablo olmadığı için haritaya girmez."""
+    return {
+        (table.alias or table.name).upper(): table.name.upper()
+        for table in tree.find_all(exp.Table)
+        if table.name.upper() in tables
+    }
+
+
+def _filter_target(column, aliases, marks, tables) -> str:
+    """Kolonun ait olduğu TABLO.KOLON; adı çözülemeyen önek (CTE) sorgunun gerçek tablolarında aranır."""
+    name = column.name.upper()
+    if column.table:
+        table = aliases.get(column.table.upper())
+        # Takma adı çözülen bir kolonun kaynağı bilinir: orada pii yoksa arama daha ileri gitmez.
+        if table:
+            return f"{table}.{name}" if (table, name) in marks else ""
+    # ASSUMPTION: ad çözülür, iz sürülmez; adı çakışan kolon sorgunun dokunduğu tabloda pii ise
+    # hangisi olduğu bilinemediği için reddedilir (fail closed).
+    return next((f"{table}.{name}" for table in sorted(tables) if (table, name) in marks), "")
 
 
 # ----------------------------------------------------------------- row cap

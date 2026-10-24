@@ -185,7 +185,8 @@ class LocalExecutor:
         return result
 
     def _run(self, sql: str, budget: Budget) -> Result:
-        verdict = policy.check(sql, self._allowlist, config.TOP_N)
+        # Filtre kuralı aynı haritayı izler: maskelenen bir kolon sorguda filtre de olamaz (R3-6).
+        verdict = policy.check(sql, self._allowlist, config.TOP_N, pii=self._pii_map)
         if not verdict.ok:
             return _error("policy", verdict.reason)
         if self._backend != "sqlite":
