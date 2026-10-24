@@ -1,4 +1,4 @@
-"""``serve`` dumanı: API'yi gerçekten ayağa kaldırır, üç adımın üstünden HTTP ile geçer.
+"""``serve`` dumanı: API'yi gerçekten ayağa kaldırır, adımların üstünden HTTP ile geçer.
 
 Komut satırı araçları zaten test ediliyor; burada ölçülen şey sunucunun kendisi — ``python -m
 nl2sql serve`` bir alt süreç olarak açılır, portu dinlemeye başlayana kadar beklenir, sonra
@@ -7,8 +7,9 @@ altın sorusudur: sahte model onu birebir bildiği için cevap ``answered`` olma
 dumanın geçti "bir şey döndü" değil "uçtan uca cevap döndü" demektir.
 
 Sunucu her durumda kapatılır; biriktirdiği çıktı yalnız adım tökezlerse ekrana dökülür, böylece
-eksik veritabanı gibi bir açılış hatası kendi cümlesiyle görünür. ``--ui`` şimdilik kabul edilip
-yok sayılır (arayüzün kendisi T204'te sınanacak).
+eksik veritabanı gibi bir açılış hatası kendi cümlesiyle görünür. ``--ui`` ekranı da dener: ``/``
+yanıtı derlenmiş arayüzün kendisi olmalı -- yedek sayfa değil -- ve sayfanın yüklediği ilk
+``/assets`` dosyası inebilmeli, çünkü ikisi olmadan tarayıcıda boş bir perde vardır.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ import argparse
 import codecs
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -28,6 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))  # betik nereden çağrılırsa çağrılsın nl2sql görünsün
 
 from nl2sql import config, datasets  # noqa: E402
+from nl2sql.web.app import BUILD_COMMAND, NO_UI  # noqa: E402
 
 HOST = "127.0.0.1"
 DEFAULT_PORT = 8778
@@ -35,6 +38,7 @@ HEALTH_TIMEOUT_S = 30.0  # oturum açılışı + uvicorn; yavaş diskte de bitme
 POLL_S = 0.25
 HTTP_TIMEOUT_S = 60.0  # soru ajanı gerçekten koşuyor
 BOM = codecs.BOM_UTF8
+ASSET = re.compile(r"/assets/[^\s\"'<>]+")  # derlenmiş sayfanın yüklediği hashli dosyalar
 
 
 class SmokeError(Exception):
@@ -48,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
 
     server = _start_server(args.port, args.dataset)
     try:
-        code = _run_steps(args.port, question, server)
+        code = _run_steps(args.port, question, server, ui=args.ui)
     finally:
         log = _stop_server(server)
     if code and log:
@@ -60,19 +64,20 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="serve'in uçtan uca dumanı")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="sunucunun bağlanacağı port")
     parser.add_argument("--dataset", default=None, help="kurulu veri kümesi (varsayılan: config)")
-    # ASSUMPTION: --ui arayüzün kendi sınamasıdır (T204); burada henüz yalnız kabul ediliyor.
-    parser.add_argument("--ui", action="store_true", help="derlenmiş arayüzü de dener (T204)")
+    parser.add_argument("--ui", action="store_true", help="derlenmiş arayüzü de dener")
     return parser.parse_args(argv)
 
 
-def _run_steps(port: int, question: str, server: subprocess.Popen) -> int:
+def _run_steps(port: int, question: str, server: subprocess.Popen, ui: bool = False) -> int:
     """Adımlar sırayla; ilki tökezlerse durur, geçeni tek ✓ satırı olarak basar."""
     state: dict = {}
-    steps = (
+    steps = [
         ("sunucu hazır", lambda: _check_health(port, server)),
         ("soru cevaplandı", lambda: _check_ask(port, question, state)),
         ("dışa aktarım", lambda: _check_export(port, state)),
-    )
+    ]
+    if ui:
+        steps.insert(1, ("derlenmiş ekran", lambda: _check_ui(port)))  # boş perdenin önüne geç
     for name, step in steps:
         try:
             detail = step()
@@ -100,6 +105,22 @@ def _check_health(port: int, server: subprocess.Popen) -> str:
         if payload.get("status") != "ok":
             raise SmokeError(f"/api/health status='ok' değil: {payload}")
         return f"{payload['dataset']['name']} · {payload['llm']['kind']}"
+
+
+def _check_ui(port: int) -> str:
+    """Ekran: yedek sayfa değil derlenmiş sayfa, ve yüklediği dosya gerçekten iniyor."""
+    base = f"http://{HOST}:{port}"
+    page = _get(f"{base}/", raw=True).decode("utf-8")
+    if "Bilgin" not in page:
+        raise SmokeError(f"/ yanıtında 'Bilgin' okunmadı: {page[:120]!r}")
+    if NO_UI in page:
+        raise SmokeError(f"ekran derlenmemiş: {BUILD_COMMAND}")
+    assets = ASSET.findall(page)
+    if not assets:
+        raise SmokeError("/ yanıtında /assets altında bir dosya yok; ekran eksik derlenmiş")
+    if not _get(f"{base}{assets[0]}", raw=True):
+        raise SmokeError(f"{assets[0]} boş geldi")
+    return assets[0]
 
 
 def _check_ask(port: int, question: str, state: dict) -> str:
