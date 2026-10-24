@@ -133,7 +133,7 @@ def test_the_mixed_script_reaches_each_outcome(executor):
         qid: expected for qid, (expected, _) in MIXED.items()
     }
     assert all(result.outcome in runner.OUTCOMES for result in results)
-    assert len(runner.OUTCOMES) == 9
+    assert len(runner.OUTCOMES) == 10
 
 
 def test_every_outcome_explains_itself(executor):

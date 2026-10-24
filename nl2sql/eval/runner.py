@@ -2,7 +2,7 @@
 
 The runner is where a run becomes a number. It re-decides nothing about what the model meant: the
 submitted SQL goes to the same executor the model talked to, under the comparison budget so neither
-side loses rows, and the verdict comes from compare(). All nine outcomes are named here, which is
+side loses rows, and the verdict comes from compare(). All ten outcomes are named here, which is
 also why a run that never submitted is not automatically just ``no_submission`` - the query that
 killed it (a policy reject, a missing column) says far more in the report than the absence of a
 submit, so the model's last attempt is executed once more to name the blocker.
@@ -33,7 +33,16 @@ OUTCOMES = (
     "timeout",
     "llm_error",
     "context_overflow",
+    # Golden bir soruyu cevaplamak yerine netleştirme sorusu sormak (R5-12): brief kuralı, cevaplanmamış.
+    "needs_clarification",
 )
+
+# Belirsiz soru satırlarının outcome'ları (PLAN R5-12): sormak doğru davranış, tahmin etmek değil.
+# Bir belirsiz soru başarısız olduysa yukarıdaki hata outcome'lardan birini alır.
+AMBIGUOUS_OUTCOMES = ("clarified", "guessed")
+
+# Satırda ✓'yi hak edenler: doğru cevap ve belirsiz soruyu tahmin etmek yerine sormak.
+CHECKED_OUTCOMES = ("pass", "clarified")
 
 # Outcome sütunu bu genişliğe yazılır, yani canlı satırlar birbirinin üstünde hizalı durur.
 OUTCOME_WIDTH = max(len(name) for name in OUTCOMES)
@@ -74,6 +83,10 @@ class QuestionResult:
     trimmed: int = 0
     overflows: int = 0
     submitted: bool = False
+    # Run 5 alanları (PLAN R5-12, Contracts): satırın hangi soru setinden geldiği, sorulduysa netleştirme.
+    kind: str = "golden"
+    clarification: dict | None = None
+    narration_source: str | None = None
 
 
 # Run 2 alanları (PLAN R2 Contracts): bir golden satırı bunları hiç yazmadıysa boş liste anlaşılır.
@@ -104,6 +117,8 @@ def run_eval(
     context: ToolContext | None = None,
     on_progress: Callable[[QuestionResult], None] | None = None,
     budget: int | None = None,
+    clarify: bool = False,
+    ambiguous: Iterable[dict] | None = None,
 ) -> list[QuestionResult]:
     """Ask every golden question of a fresh client and judge the answer; ``only`` keeps a few ids.
 
@@ -112,6 +127,11 @@ def run_eval(
     handed each question the moment it is judged, so a caller can stream the run to a screen instead
     of waiting for the whole set. ``budget`` is the per-request prompt budget the loop enforces
     (R4-11); a question that cannot fit it ends as ``context_overflow``.
+
+    ``clarify`` opens the ask_clarification tool (R5-10) and ``ambiguous`` adds the ambiguous set
+    after the golden ones: those lines have no golden answer to compare to, so asking is
+    ``clarified``, submitting a guess is ``guessed``, anything else is its failure outcome.
+    ``only``/``tags`` select from the golden set; the ambiguous lines are run as given.
     """
     lines = load_golden() if golden is None else list(golden)
     if only:
@@ -131,9 +151,19 @@ def run_eval(
             if context is not None
             else ToolContext(executor=executor, schema=document, rules=rules, mode=mode)
         )
+    if clarify:
+        # R5-10: ask_clarification yalnız açık bağlamda görünen bir araç; kapalıyken araç listesi de
+        # sistem istemi de Run 1-4 ile bayt aynı, o yüzden bağlama yalnız açınca dokunuyoruz.
+        context = (
+            replace(context, clarify=True)
+            if context is not None
+            else ToolContext(executor=executor, schema=document, mode=mode, clarify=True)
+        )
     truths = [_truth(line, executor) for line in lines]
+    questions = [(line, "golden", truth) for line, truth in zip(lines, truths)]
+    questions += [(line, "ambiguous", None) for line in list(ambiguous or ())]
     results = []
-    for line, truth in zip(lines, truths):
+    for line, kind, truth in questions:
         qid = str(line.get("id") or "")
         run = run_agent(
             str(line.get("question") or ""),
@@ -145,7 +175,7 @@ def run_eval(
             context=context,
             budget=budget,
         )
-        result = _result(line, run, executor, truth, mode)
+        result = _result(line, run, executor, truth, mode, kind)
         results.append(result)
         if on_progress:
             on_progress(result)
@@ -155,9 +185,10 @@ def run_eval(
 def progress_line(result: QuestionResult) -> str:
     """The one live line a finished question earns (Delight 4): id, ✓/✗, outcome, tool calls, cost.
 
-    The outcome column is padded to its widest name so a run of these lines reads as columns.
+    The outcome column is padded to its widest name so a run of these lines reads as columns. A
+    clarified ambiguous question earns the check too: asking was the right thing to do (R5-12).
     """
-    mark = "✓" if result.outcome == "pass" else "✗"
+    mark = "✓" if result.outcome in CHECKED_OUTCOMES else "✗"
     return (
         f"{result.id} {mark} {result.outcome:<{OUTCOME_WIDTH}} {result.tool_calls} araç  "
         f"{result.seconds:.1f} sn  {_tokens(result.total_tokens)} token"
@@ -175,8 +206,8 @@ def _truth(line: dict, executor) -> Result:
     return result
 
 
-def _result(line: dict, run, executor, truth: Result, mode: str) -> QuestionResult:
-    outcome, reason, sql = _outcome(line, run, executor, truth)
+def _result(line: dict, run, executor, truth: Result | None, mode: str, kind: str) -> QuestionResult:
+    outcome, reason, sql = _outcome(line, run, executor, truth, kind)
     return QuestionResult(
         id=str(line.get("id") or ""),
         question=str(line.get("question") or ""),
@@ -195,15 +226,30 @@ def _result(line: dict, run, executor, truth: Result, mode: str) -> QuestionResu
         trimmed=run.trimmed,
         overflows=run.overflows,
         submitted=run.status == "submitted",
+        kind=kind,
+        clarification=run.clarification,
     )
 
 
-def _outcome(line: dict, run, executor, truth: Result) -> tuple[str, str, str]:
-    """AgentRun + the executed answer + compare -> one of the nine outcomes, with a reason."""
+def _outcome(line: dict, run, executor, truth: Result | None, kind: str) -> tuple[str, str, str]:
+    """AgentRun + the executed answer + compare -> one of the outcomes, with a reason.
+
+    A golden question is judged against its golden answer. An ambiguous line has no answer to
+    compare to - every reading is a different number - so its verdict is about behaviour: the run
+    that asked is ``clarified``, the one that committed to a reading is ``guessed`` (R5-12).
+    """
     qid = str(line.get("id") or "")
     if run.status in ("llm_error", "timeout", "context_overflow"):
         return run.status, run.stop_reason, ""
+    if run.status == "needs_clarification":
+        asked = str((run.clarification or {}).get("question") or "")
+        outcome = "clarified" if kind == "ambiguous" else "needs_clarification"
+        return outcome, f"Model cevap yerine netleştirme sordu: {asked}", ""
     if run.status == "submitted":
+        if kind == "ambiguous":
+            # ASSUMPTION: hangi okunuşun "doğru" olduğu ölçülmez; belirsiz bir soruyu sormadan
+            # cevaplamak brief'in guessed'ıdır, okunan sayıya bakılmaz (PLAN R5-12).
+            return "guessed", "Belirsiz soru netleştirilmeden cevaplandı.", str(run.submitted_sql or "")
         return _verdict(line, str(run.submitted_sql or ""), executor, truth, qid)
     # ASSUMPTION: submit etmemiş bir koşuda rapor için en işe yarar bilgi modelin üzerinde
     # kaldığı sorgudur; son deneme bir kez daha çalıştırılıp reddedilme sebebi outcome oluyor.
