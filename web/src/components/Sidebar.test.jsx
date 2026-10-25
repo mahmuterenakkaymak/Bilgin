@@ -115,6 +115,27 @@ describe("Sidebar", () => {
     expect(html.match(/id="history-list"/g)).toHaveLength(1);
   });
 
+  it("kayıtlı satır kendi created_at'ini taşır, zamansız kayıt zaman boşluğu kurmaz", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOON);
+    const html = render({
+      saved: [
+        { id: 1, question: "İki dakika önceki kayıt", created_at: new Date(NOON - 2 * MINUTE).toISOString() },
+        { id: 2, question: "Dünkü kayıt", created_at: "2026-10-24T06:00:00+00:00" },
+        { id: 3, question: "Zamansız kayıt" },
+        { id: 4, question: "Bozuk zamanlı kayıt", created_at: "2026-13-45" },
+      ],
+    });
+    vi.useRealTimers();
+    expect(html).toContain('<span class="side-time">2 dk önce</span>');
+    expect(html).toContain('<span class="side-time">dün</span>');
+    expect(html.match(/class="side-time"/g)).toHaveLength(2);
+    expect(html).toContain("Zamansız kayıt");
+    expect(html).not.toContain("undefined");
+    expect(html).not.toContain("Invalid");
+    expect(html.match(/aria-label="Kaydı sil"/g)).toHaveLength(4);
+  });
+
   it("geçmiş satırı kısa Türkçe zamanını taşır, ts yoksa zaman yazılmaz", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(NOON);

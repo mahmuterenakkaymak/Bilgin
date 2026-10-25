@@ -55,7 +55,11 @@ export default function Sidebar({ saved = [], history = [], onAsk, onRemoved }) 
 
   const savedRows = list(saved)
     .filter((item) => item?.id != null)
-    .map((item) => ({ id: item.id, question: text(item) }))
+    .map((item) => ({
+      id: item.id,
+      question: text(item),
+      created: typeof item?.created_at === "string" ? item.created_at : "",
+    }))
     .filter((row) => row.question);
   // Ardışık aynı soru + durum tek satıra toplanır: bir demo turu geçmişi yedi klon satırla doldurmasın.
   const historyRows = [];
@@ -97,22 +101,26 @@ export default function Sidebar({ saved = [], history = [], onAsk, onRemoved }) 
         {note && <p className="side-note">{note}</p>}
         <ul id="saved-list" className="side-list">
           {savedRows.length === 0 && <li className="side-empty">{EMPTY_SAVED}</li>}
-          {savedRows.map((row) => (
-            <li className="side-item" key={row.id}>
-              <button type="button" className="side-text" title={row.question} onClick={() => onAsk?.(row.question)}>
-                <span className="side-label">{row.question}</span>
-              </button>
-              <button
-                type="button"
-                className="side-remove"
-                aria-label="Kaydı sil"
-                title="Kaydı sil"
-                onClick={() => remove(row.id)}
-              >
-                ×
-              </button>
-            </li>
-          ))}
+          {savedRows.map((row) => {
+            const time = relativeTime(row.created, now);
+            return (
+              <li className="side-item" key={row.id}>
+                <button type="button" className="side-text" title={row.question} onClick={() => onAsk?.(row.question)}>
+                  {time && <span className="side-time">{time}</span>}
+                  <span className="side-label">{row.question}</span>
+                </button>
+                <button
+                  type="button"
+                  className="side-remove"
+                  aria-label="Kaydı sil"
+                  title="Kaydı sil"
+                  onClick={() => remove(row.id)}
+                >
+                  ×
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </section>
       <section className="side-block">
