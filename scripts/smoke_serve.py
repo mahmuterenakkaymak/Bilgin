@@ -17,6 +17,11 @@ Sunucu her durumda kapatılır; biriktirdiği çıktı yalnız adım tökezlerse
 eksik veritabanı gibi bir açılış hatası kendi cümlesiyle görünür. ``--ui`` ekranı da dener: ``/``
 yanıtı derlenmiş arayüzün kendisi olmalı -- yedek sayfa değil -- ve sayfanın yüklediği ilk
 ``/assets`` dosyası inebilmeli, çünkü ikisi olmadan tarayıcıda boş bir perde vardır.
+
+``--roles`` Run 6'nın rol kapılarını aynı sunucuda ve aynı yöneticinin üstünde koşar (PLAN R6-22):
+yönetici ``/api/users``tan bir hesap açar, o kullanıcı kendi çerez kavanozuyla girer, kural
+yazamaz (403), yöneticinin dışa aktarımını indiremez (404) ve yöneticinin sorusunu geçmişinde
+görmez. Kullanıcının parolası da bir kez üretilir; ne bir satıra ne bir hataya düşmez.
 """
 
 from __future__ import annotations
@@ -66,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
     password = secrets.token_urlsafe(16)  # bir kez üretilir; hiçbir satıra, günlüğe, hataya düşmez
     server = _start_server(args.port, args.dataset, app_db, password)
     try:
-        code = _run_steps(args.port, question, server, password, ui=args.ui)
+        code = _run_steps(args.port, question, server, password, ui=args.ui, roles=args.roles)
     finally:
         log = _stop_server(server)
         Path(app_db).unlink(missing_ok=True)
@@ -80,11 +85,17 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="sunucunun bağlanacağı port")
     parser.add_argument("--dataset", default=None, help="kurulu veri kümesi (varsayılan: config)")
     parser.add_argument("--ui", action="store_true", help="derlenmiş arayüzü de dener")
+    parser.add_argument("--roles", action="store_true", help="rol kapılarını da dener (R6-22)")
     return parser.parse_args(argv)
 
 
 def _run_steps(
-    port: int, question: str, server: subprocess.Popen, password: str, ui: bool = False
+    port: int,
+    question: str,
+    server: subprocess.Popen,
+    password: str,
+    ui: bool = False,
+    roles: bool = False,
 ) -> int:
     """Adımlar sırayla; ilki tökezlerse durur, geçeni tek ✓ satırı olarak basar."""
     state: dict = {}
@@ -98,6 +109,15 @@ def _run_steps(
     ]
     if ui:
         steps.insert(3, ("derlenmiş ekran", lambda: _check_ui(opener, port)))  # boş perdenin önüne
+    if roles:
+        # Yöneticinin sorusu ve onun dışa aktarımı ölçülünce adımlar onların üstüne kurulur.
+        steps += [
+            ("yönetici kullanıcısı", lambda: _check_user_added(opener, port, state)),
+            ("kullanıcı girişi", lambda: _check_user_login(port, state)),
+            ("kural yazımı 403", lambda: _check_rule_denied(port, state)),
+            ("yönetici çıktısı 404", lambda: _check_export_denied(port, state)),
+            ("geçmiş kişiye özel", lambda: _check_history_scoped(opener, port, question, state)),
+        ]
     for name, step in steps:
         try:
             detail = step()
@@ -138,13 +158,7 @@ def _check_anonymous(port: int, server: subprocess.Popen, question: str) -> str:
 
 def _check_login(opener, port: int, password: str) -> str:
     """Geliştirme yöneticisiyle oturum açar: çerez kavanoza girer, adımlar onu kullanır."""
-    request = urllib.request.Request(
-        f"http://{HOST}:{port}/api/auth/login",
-        data=json.dumps({"username": DEV_USERNAME, "password": password}).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    payload = _send(opener, request, "/api/auth/login")
+    payload = _send(opener, _login_request(port, DEV_USERNAME, password), "/api/auth/login")
     if payload.get("username") != DEV_USERNAME:
         raise SmokeError(f"giriş {payload} döndü; {DEV_USERNAME} bekleniyor")
     return f"{payload['username']} · {payload['role']}"
@@ -196,6 +210,68 @@ def _check_export(opener, port: int, state: dict) -> str:
     return f"{audit_id}.csv · {lines[0] if lines else 'boş'}"
 
 
+def _check_user_added(opener, port: int, state: dict) -> str:
+    """Yönetici ekranın kendi yolundan bir hesap açar: parolası burada doğar, burada kalır."""
+    state["username"] = f"duman{secrets.token_hex(3)}"
+    state["password"] = secrets.token_urlsafe(16)
+    request = urllib.request.Request(
+        f"http://{HOST}:{port}/api/users",
+        data=json.dumps(
+            {"username": state["username"], "password": state["password"], "role": "user"}
+        ).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    user = _send(opener, request, "/api/users").get("user") or {}
+    if user.get("username") != state["username"] or user.get("role") != "user":
+        raise SmokeError(f"/api/users {user} döndü; rolü user olan yeni hesap bekleniyor")
+    return state["username"]
+
+
+def _check_user_login(port: int, state: dict) -> str:
+    """Kullanıcının çerez kavanozu yöneticininkiyle aynı kapıdan geçer, ama ayrı durur."""
+    state["user_opener"] = _opener()
+    payload = _send(
+        state["user_opener"],
+        _login_request(port, state["username"], state["password"]),
+        "/api/auth/login",
+    )
+    if payload.get("role") != "user":
+        raise SmokeError(f"giriş {payload} döndü; rol user bekleniyor")
+    return f"{payload['username']} · {payload['role']}"
+
+
+def _check_rule_denied(port: int, state: dict) -> str:
+    """Rol kapısı: kullanıcı tanınıyor ama yetmiyor -- reddin adı 403, yokluk değil 403."""
+    request = urllib.request.Request(
+        f"http://{HOST}:{port}/api/rules",
+        data=json.dumps(
+            {"id": "duman_kurali", "term": "Duman terimi", "definition": "Dumanın kendi tarifi."}
+        ).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    return _expect(state["user_opener"], request, "/api/rules", 403)
+
+
+def _check_export_denied(port: int, state: dict) -> str:
+    """Yöneticinin sorusu kullanıcı için yoktur: indirme 404 verir, yani yokluk gibi konuşır."""
+    label = f"/api/export/{state['audit_id']}.csv"
+    request = urllib.request.Request(f"http://{HOST}:{port}{label}", method="GET")
+    return _expect(state["user_opener"], request, label, 404)
+
+
+def _check_history_scoped(opener, port: int, question: str, state: dict) -> str:
+    """Geçmiş kişiye özel: yöneticinin sorusu onun kendi listesinde, kullanıcınınkinde değil."""
+    mine = _questions(opener, port)
+    if question not in mine:
+        raise SmokeError("yöneticinin geçmişi kendi sorduğu soruyu göstermiyor")
+    theirs = _questions(state["user_opener"], port)
+    if question in theirs:
+        raise SmokeError("kullanıcı yöneticinin sorusunu kendi geçmişinde görüyor")
+    return f"yönetici {len(mine)} satır · kullanıcı {len(theirs)} satır"
+
+
 def _ask_request(url: str, question: str) -> urllib.request.Request:
     """Aynı istek gövdesi iki kez kurulmaz: oturumsuz denenenle cevaplanan soru birebir aynıdır."""
     return urllib.request.Request(
@@ -204,6 +280,22 @@ def _ask_request(url: str, question: str) -> urllib.request.Request:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
+
+
+def _login_request(port: int, username: str, password: str) -> urllib.request.Request:
+    """Giriş isteği: yönetici de yeni açılan kullanıcı da aynı gövdeyle kapıya dayanır."""
+    return urllib.request.Request(
+        f"http://{HOST}:{port}/api/auth/login",
+        data=json.dumps({"username": username, "password": password}).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+
+def _questions(opener, port: int) -> list[str]:
+    """Geçmişin soruları, en yeni önce: geçmişin kimin olduğu sorusunun okunur cevabı."""
+    payload = _get(opener, f"http://{HOST}:{port}/api/history")
+    return [item["question"] for item in payload.get("history", [])]
 
 
 def _opener():
@@ -227,6 +319,20 @@ def _send(opener, request, label: str, timeout: float = HTTP_TIMEOUT_S, raw: boo
             f"{label} -> {exc.code}: {exc.read().decode('utf-8', 'replace')[:300]}"
         ) from exc
     return content if raw else json.loads(content.decode("utf-8"))
+
+
+def _expect(opener, request, label: str, code: int) -> str:
+    """Reddi ölçen kapı: beklenen durum kodu dışında her şey SmokeError, kabul de öyle."""
+    try:
+        with opener.open(request, timeout=HTTP_TIMEOUT_S) as response:
+            response.read()
+    except urllib.error.HTTPError as exc:
+        if exc.code != code:
+            raise SmokeError(
+                f"{label} -> {exc.code}: {exc.read().decode('utf-8', 'replace')[:300]}"
+            ) from exc
+        return f"{code}"
+    raise SmokeError(f"{label} {code} yerine cevap verdi; kapı açık kalmış")
 
 
 def _start_server(
