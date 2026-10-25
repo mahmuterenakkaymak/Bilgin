@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import App from "./App.jsx";
+import App, { healthDot } from "./App.jsx";
 
 const html = renderToStaticMarkup(<App />);
 
@@ -23,5 +23,23 @@ describe("App kabuğu", () => {
     expect(html).toContain('id="sidebar-toggle"');
     expect(html).toContain("Kayıtlılar ve geçmiş");
     expect(html).toContain('id="main"');
+  });
+});
+
+describe("sağlık sözcüğü", () => {
+  // Dört halin adı tek yerde: ekranla ipucu aynı sözcüğü söylemeli.
+  it("her halin bir sözcüğü var", () => {
+    expect(healthDot(null).label).toBe("Bilinmiyor");
+    expect(healthDot({ llm: { reachable: false, reason: "timeout" } }).label).toBe("Kapalı");
+    expect(healthDot({ index: { fresh: false, reason: "kural değişti" } }).label).toBe("Bayat");
+    expect(healthDot({ llm: { reachable: true }, index: { fresh: true } }).label).toBe("Hazır");
+  });
+
+  it("sözcük noktanın yanında durur, nokta kendi adını taşır", () => {
+    expect(html).toContain('class="health"');
+    expect(html).toContain('id="health-label">Bilinmiyor</span>');
+    expect(html).toContain(
+      'class="dot dot-unknown" role="img" aria-label="Durum alınamadı: sunucu çalışmıyor olabilir."',
+    );
   });
 });

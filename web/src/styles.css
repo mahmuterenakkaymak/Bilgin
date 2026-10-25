@@ -170,6 +170,16 @@ body {
   background: var(--muted);
 }
 
+/* Durum kümesi: nokta + onun sözcüğü tek satırda kalır; sözcük statü satırının ölçüsünde. */
+.health {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space) * 0.5);
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 /* --- layout ------------------------------------------------------------- */
 
 .shell {
@@ -780,6 +790,49 @@ main {
      pay başlığın altına indirir. .rule-form ile derinleşiyor: özetin temeli bu bloğun altında. */
   .rule-form .rule-errors {
     scroll-margin-top: calc(var(--space) * 20);
+  }
+
+  /* Başlık telefonda iki satır: üstte ad + model çipi + tema + durum sözcüğü, altta gezinme +
+     kimlik + Çıkış. Kırımı gezinmenin önüne giren sıfır yükseklikli tam genişlikli öğe yapar;
+     `order` yalnız dar ekranda geçerlidir, DOM (ve sekme) sırası değişmez. */
+  .masthead {
+    gap: calc(var(--space) * 0.75) var(--space);
+  }
+
+  .masthead::after {
+    content: "";
+    flex: 0 0 100%;
+    order: 5;
+  }
+
+  .masthead-nav {
+    order: 6;
+    margin-left: 0;
+  }
+
+  #user-chip {
+    order: 7;
+    margin-left: auto;
+    max-width: 10rem;
+  }
+
+  #logout {
+    order: 8;
+  }
+
+  /* Sarma, küçültmeden önce gelir: çip kendi satırına da inebilir. O yüzden çipler burada
+     tavanla durdurulur (ölçüldü 390px: ad 53 + tema 80 + "Bilinmiyor" 80 + aralıklar 24 = 237,
+     satırda çipe 121 kalıyor) ve ellipsis çalışsın diye min-width sıfıra iner. */
+  .masthead .chip {
+    min-width: 0;
+  }
+
+  #model-chip {
+    max-width: 7rem;
+  }
+
+  .btn-theme {
+    margin-left: auto;
   }
 }
 

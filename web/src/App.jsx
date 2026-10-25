@@ -33,15 +33,22 @@ function currentHash() {
   return typeof window === "undefined" ? "" : window.location.hash;
 }
 
-function healthDot(health) {
-  if (!health) return { tone: "unknown", tip: "Durum alınamadı: sunucu çalışmıyor olabilir." };
+// Her halin bir de sözcüğü var: 10px'lik daire tek başına anlamını yalnız ipucunda taşıyordu.
+export function healthDot(health) {
+  if (!health) {
+    return { tone: "unknown", label: "Bilinmiyor", tip: "Durum alınamadı: sunucu çalışmıyor olabilir." };
+  }
   if (health.llm && health.llm.reachable === false) {
-    return { tone: "down", tip: `Model yanıt vermiyor${health.llm.reason ? `: ${health.llm.reason}` : "."}` };
+    return {
+      tone: "down",
+      label: "Kapalı",
+      tip: `Model yanıt vermiyor${health.llm.reason ? `: ${health.llm.reason}` : "."}`,
+    };
   }
   if (health.index && health.index.fresh === false) {
-    return { tone: "stale", tip: `İndeks eski${health.index.reason ? `: ${health.index.reason}` : "."}` };
+    return { tone: "stale", label: "Bayat", tip: `İndeks eski${health.index.reason ? `: ${health.index.reason}` : "."}` };
   }
-  return { tone: "ok", tip: "Hazır: model erişilebilir, indeks taze." };
+  return { tone: "ok", label: "Hazır", tip: "Hazır: model erişilebilir, indeks taze." };
 }
 
 function chipText(health) {
@@ -275,7 +282,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
           Bilgin
         </a>
         {chip && (
-          <span className="chip" title={health?.llm?.url || undefined}>
+          <span className="chip" id="model-chip" title={health?.llm?.url || undefined}>
             {chip}
           </span>
         )}
@@ -296,7 +303,11 @@ export default function App({ user = null, onLogout = null, note = "" }) {
         >
           {THEME_LABELS[theme]}
         </button>
-        <span className={`dot dot-${dot.tone}`} role="img" aria-label={dot.tip} title={dot.tip} />
+        {/* Sözcük noktanın yanında: ipucu kümenin tamamına, adlandırma noktaya ait kalır. */}
+        <span className="health" title={dot.tip}>
+          <span className={`dot dot-${dot.tone}`} role="img" aria-label={dot.tip} />
+          <span id="health-label">{dot.label}</span>
+        </span>
         {who && (
           <span className="chip" id="user-chip" title="Oturum sahibi">
             {who}
