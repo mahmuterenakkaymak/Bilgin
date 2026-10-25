@@ -1,15 +1,12 @@
 {
- "tasks": 39,
- "first_try": 37,
- "local_retries": 4,
- "rescues": 2,
- "failed": [
-  "T101",
-  "T109"
- ],
+ "tasks": 24,
+ "first_try": 24,
+ "local_retries": 0,
+ "rescues": 0,
+ "failed": [],
  "reviews": 3,
- "checks": "green",
- "minutes": 306.3,
- "brain_calls": 17,
- "brain": "cloud"
+ "checks": "red",
+ "minutes": 204.1,
+ "brain_calls": 29,
+ "brain": "local"
 }

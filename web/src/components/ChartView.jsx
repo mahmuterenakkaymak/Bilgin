@@ -11,10 +11,12 @@ export default function ChartView({ chart }) {
     if (!box.current) return undefined;
     const instance = echarts.init(box.current);
     instance.setOption(withFormatters(chart.option));
-    const onResize = () => instance.resize();
-    window.addEventListener("resize", onResize);
+    // ECharts kutuyu açıldığı piksel genişliğinde tutar; kutu pencereden bağımsız daralır
+    // (kenar çubuğu dolunca ana sütun kısalır), o yüzden gözlem pencerede değil kutuda.
+    const observer = new ResizeObserver(() => instance.resize());
+    observer.observe(box.current);
     return () => {
-      window.removeEventListener("resize", onResize);
+      observer.disconnect();
       instance.dispose();
     };
   }, [chart]);

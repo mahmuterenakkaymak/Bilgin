@@ -433,11 +433,14 @@ main {
   gap: var(--space);
 }
 
+/* Çip sorunun kendisi: kesik soru sorulamıyor. Telefon genişliğinde üç çip ellipsis'le yutuluyordu
+   (625px'lik metin 324px'te), o yüzden metin sarar; tavan yine kutunun genişliği. */
 .example-chip {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   padding: calc(var(--space) * 0.5) calc(var(--space) * 1.25);
   border: 1px dashed var(--line);
   border-radius: 999px;
@@ -636,6 +639,9 @@ main {
 }
 
 @media (max-width: 720px) {
+  /* ASSUMPTION: başlık 320/390'da flex-wrap ile zaten satırlara iniyor ve çip ellipsis'le kısalıyor
+     (ölçüldü: taşma yok) — M17'deki "üst üste biniyor" izlenimi sayfanın 660px'e taşmasından geliyordu. */
+
   /* Cevabın sayısı yan kaydırmanın ardında kalmasın: telefon genişliğinde hücreler sarar,
      böylece her sütun ekrana sığar. Geniş ekrandaki nowrap yukarıda duruyor. */
   .result-table th,
@@ -644,8 +650,11 @@ main {
     overflow-wrap: anywhere;
   }
 
+  /* Sarayan hücre kuralı sayıya işlemez: bölünen sayı kesilmiş sayıdır. Sığmayan sütun
+     tabloyu uzatır, .table-wrap onu yan kaydırır (overflow-x: auto yukarıda duruyor). */
   .result-table .num {
     min-width: 4.5rem;
+    white-space: nowrap;
   }
 
   /* Kural listesinin min-content genişliği de ekranı aşıyor (Terim 160px, düğmeler tek satır) ve
