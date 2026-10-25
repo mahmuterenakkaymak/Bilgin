@@ -1,0 +1,75 @@
+import { useState } from "react";
+
+// Giriş kartı: kararı (hangi ekran, hangi not) Root verir, ağ işini de oradan alır. Ekran
+// yalnız iki alanı, göndermeyi ve hatanın kendisini taşır; başarısız giriş formu kapatmaz.
+export default function LoginScreen({ note = "", onLogin }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (event) => {
+    event.preventDefault();
+    if (sending) return;
+    setError("");
+    setSending(true);
+    try {
+      // Başarılı girişte Root ekranı App'e çevirir, bu bileşen kapanır: hâlâ tutulan bir şey yok.
+      await onLogin({ username, password });
+    } catch (failure) {
+      setError(failure?.message || "Giriş yapılamadı.");
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="gate">
+      <form id="login-form" className="login-card" onSubmit={submit}>
+        <h1 className="login-title">Bilgin</h1>
+        <p className="login-lead">Sormaya devam etmek için oturum açın.</p>
+        {note && <p className="login-note" id="login-note">{note}</p>}
+        <div className="field">
+          <label className="field-label" htmlFor="login-username">
+            Kullanıcı adı
+          </label>
+          <input
+            id="login-username"
+            className="field-input"
+            type="text"
+            autoComplete="username"
+            autoFocus
+            required
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            disabled={sending}
+            aria-describedby={error ? "login-error" : undefined}
+          />
+        </div>
+        <div className="field">
+          <label className="field-label" htmlFor="login-password">
+            Parola
+          </label>
+          <input
+            id="login-password"
+            className="field-input"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            disabled={sending}
+            aria-describedby={error ? "login-error" : undefined}
+          />
+        </div>
+        {error && (
+          <p className="login-error" id="login-error" role="alert">
+            {error}
+          </p>
+        )}
+        <button type="submit" id="login-submit" className="btn btn-primary login-submit" disabled={sending}>
+          {sending ? "Giriş yapılıyor…" : "Giriş"}
+        </button>
+      </form>
+    </div>
+  );
+}

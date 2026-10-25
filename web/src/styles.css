@@ -735,6 +735,14 @@ main {
     color: var(--text);
     font-weight: 600;
   }
+
+  /* Giriş kartı telefonda sabit 360px'te taşıyordu: kenar boşluklarıyla birlikte ekrana iner.
+     Seçici .gate ile derinleşiyor - kartın temeli bu bloğun altında duruyor, sırayı değil
+     özgüllüğü kazanması gerekiyor. */
+  .gate > .login-card {
+    width: calc(100vw - 32px);
+    padding: calc(var(--space) * 2);
+  }
 }
 
 .table-note {
@@ -1242,4 +1250,68 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space);
+}
+
+/* --- oturum kapısı --------------------------------------------------------- */
+
+/* Açılışta ve girişte tek başına duran yuva: içeriği dikeyde de yatayda da ortalar. */
+.gate {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--space) * 2);
+}
+
+.login-card {
+  display: grid;
+  gap: calc(var(--space) * 1.5);
+  width: 360px;
+  max-width: 100%;
+  padding: calc(var(--space) * 3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.login-title {
+  margin: 0;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.login-lead {
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Not ile hata aynı kartta iki ayrı durumu söyler: biri uyarı, diğeri reddedilen giriş. */
+.login-note,
+.login-error,
+.route-note {
+  margin: 0;
+  padding: calc(var(--space) * 0.75) var(--space);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--warn-line);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  font-size: 13px;
+}
+
+.login-error {
+  border-left-color: var(--err-text);
+  background: var(--err-bg);
+  color: var(--err-text);
+}
+
+.route-note {
+  margin-bottom: calc(var(--space) * 2);
+  font-size: 14px;
+}
+
+.login-submit {
+  width: 100%;
 }

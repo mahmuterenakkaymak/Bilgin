@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App.jsx";
+import Root from "./Root.jsx";
 import { applyTheme, readStored } from "./lib/theme.js";
 import "./styles.css";
 
@@ -13,6 +13,6 @@ try {
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <App />
+    <Root />
   </StrictMode>,
 );

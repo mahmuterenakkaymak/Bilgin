@@ -9,6 +9,7 @@ import RulesScreen from "./components/RulesScreen.jsx";
 import Sidebar from "./components/Sidebar.jsx";
 import * as api from "./lib/api.js";
 import { askReducer, initialState } from "./lib/askState.js";
+import { ROLE_LABELS } from "./lib/auth.js";
 import { parseRoute } from "./lib/route.js";
 import { applyTheme, nextTheme, readStored, store } from "./lib/theme.js";
 
@@ -45,6 +46,11 @@ function healthDot(health) {
 function chipText(health) {
   if (!health) return "";
   return [health.dataset?.display_name, health.llm?.model].filter(Boolean).join(" · ");
+}
+
+// Rol adı hiç okunamazsa çip yalnız kullanıcı adını taşır: "undefined" bir kimlik değildir.
+function userLabel(user) {
+  return [user?.username, ROLE_LABELS[user?.role]].filter(Boolean).join(" · ");
 }
 
 // Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Boş, bekleyen, cevap,
@@ -184,7 +190,9 @@ function Screen({ route, pending, onRefresh, onChanged, onRebuild }) {
   return <AskScreen pending={pending} onRefresh={onRefresh} onRebuild={onRebuild} />;
 }
 
-export default function App() {
+// `user` ve `onLogout` oturum kapısı Root'tan gelir; ikisi de yoksa kabuk Run 5'teki gibi
+// tek kullanıcılıdır (oturum yok, çıkış yok). `note` kapının düşürdüğü ekranın cümlesidir.
+export default function App({ user = null, onLogout = null, note = "" }) {
   const [hash, setHash] = useState(currentHash);
   const [health, setHealth] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -249,8 +257,13 @@ export default function App() {
     if (route !== "ask") window.location.hash = "#/";
   };
 
+  // Çıkış önce sunucudaki oturumu kapatır; kök kapı App'i kaldırdığı için cevap, geçmiş ve kural
+  // durumları da ekrandan kalkar. Kapanış isteği başarısız olsa da kullanıcı içeride tutulmaz.
+  const logout = () => api.logout().catch(() => null).then(() => onLogout());
+
   const dot = healthDot(health);
   const chip = chipText(health);
+  const who = userLabel(user);
 
   return (
     <div className="app">
@@ -281,6 +294,16 @@ export default function App() {
           {THEME_LABELS[theme]}
         </button>
         <span className={`dot dot-${dot.tone}`} role="img" aria-label={dot.tip} title={dot.tip} />
+        {who && (
+          <span className="chip" id="user-chip" title="Oturum sahibi">
+            {who}
+          </span>
+        )}
+        {onLogout && (
+          <button type="button" id="logout" className="btn btn-ghost" onClick={logout}>
+            Çıkış
+          </button>
+        )}
       </header>
       <div className="shell">
         <button
@@ -297,6 +320,12 @@ export default function App() {
           <Sidebar saved={saved} history={history} onAsk={askFromSidebar} onRemoved={refresh} />
         </aside>
         <main id="main">
+          {/* Cümle düşülen ekranın üstünde durur; başka bir ekrana geçince kendiliğinden kalkar. */}
+          {note && route === "ask" && (
+            <p className="route-note" id="route-note">
+              {note}
+            </p>
+          )}
           <Screen
             route={route}
             pending={pending}
