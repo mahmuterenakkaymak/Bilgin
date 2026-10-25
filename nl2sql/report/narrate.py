@@ -10,6 +10,7 @@ kullanıcıya gitmez; şablonun arkasına saklandığı yer burasıdır.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from decimal import Decimal
 
@@ -25,11 +26,15 @@ KURALLAR
 toplam, fark, oran, yüzde veya ortalamayı kendin üretme; sayı gerektirmeyen bir şeyi sayıyla söyleme.
 3. Sayıyı gösterildiği biçimde aynen yaz: binlik ayıracı nokta, ondalık virgül, yüzde `%12,3`. \
 Basamak ekleme ya da atma; İngilizce yazım (`1,234.56`) bekçi tarafından reddedilir.
-4. Satır ve kolon adlarını olduğu gibi kullan, onların arasına sayı sıkıştırma.
-5. Cümle sorunun cevabı olsun: en önemli sayıyı en başa koy.
+4. KOLONLAR satırındaki teknik adları (StateProvinceName, ToplamCiro, CIRO gibi) cümlede ASLA yazma; \
+ne anlattıklarını sorunun dilinde Türkçe söyle ("eyalet", "toplam ciro", "tedarikçi"). Satırlardaki değerleri \
+(ürün, firma, şehir adları) olduğu gibi yaz.
+5. Cümle sorunun doğrudan cevabı olsun ve bir insanın konuşacağı gibi doğal Türkçe olsun; cümleye sayıyla \
+başlamak zorunda değilsin.
 """
 
 _RETRY = "Şu sayılar sonuçta yok: {tokens}. Yalnız verilen sayılarla yeniden yaz."
+_RETRY_NAMES = "Şu teknik kolon adlarını cümlede kullanma: {names}. Onları Türkçe söyleyerek yeniden yaz."
 
 # Şablon cümlenin anlattığı olgular; tuple sırası cümlenin akışını da verir (PLAN R5-9).
 _TEMPLATE_FACTS = ("row_count", "total", "top_item", "change")
@@ -62,15 +67,34 @@ def narrate(question, columns, rows, facts, llm, max_rows=config.NARRATE_MAX_ROW
         if not text:
             break
         result = guard.check_text(text, allowed)
-        if result.ok:
+        leaked = _leaked_names(text, columns)
+        if result.ok and not leaked:
             return Narration(text, source, rejected)
-        rejected += result.offending
+        rejected += result.offending + leaked
+        feedback = _RETRY.format(tokens=", ".join(result.offending)) if not result.ok else ""
+        if leaked:
+            feedback = (feedback + " " + _RETRY_NAMES.format(names=", ".join(leaked))).strip()
         messages = [
             *messages,
             {"role": "assistant", "content": text},
-            {"role": "user", "content": _RETRY.format(tokens=", ".join(result.offending))},
+            {"role": "user", "content": feedback},
         ]
     return Narration(template_sentence(question, facts), "template", rejected)
+
+
+_IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def _technical(name: str) -> bool:
+    """A column name a person would not say: snake_case, camelCase/PascalCase, or an all-caps code."""
+    return "_" in name or re.search(r"[a-z][A-Z]", name) is not None or (name.isupper() and len(name) >= 3)
+
+
+def _leaked_names(text: str, columns) -> list[str]:
+    """Technical column names that appear in the sentence as whole words, exactly as written (2026-10-25,
+    Eren: "StateProvinceName gibi kolon adları değil, doğal dil")."""
+    words = set(_IDENT.findall(text))
+    return [name for name in columns if _technical(str(name)) and str(name) in words]
 
 
 def template_sentence(question: str, facts) -> str:
