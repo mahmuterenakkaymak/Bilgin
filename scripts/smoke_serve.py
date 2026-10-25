@@ -2,9 +2,16 @@
 
 Komut satırı araçları zaten test ediliyor; burada ölçülen şey sunucunun kendisi — ``python -m
 nl2sql serve`` bir alt süreç olarak açılır, portu dinlemeye başlayana kadar beklenir, sonra
-``/api/health`` → ``POST /api/ask`` → ``GET /api/export/<id>.csv`` sırası koşar. Soru kümenin ilk
-altın sorusudur: sahte model onu birebir bildiği için cevap ``answered`` olmak zorundadır, yani
-dumanın geçti "bir şey döndü" değil "uçtan uca cevap döndü" demektir.
+çerezsiz ``POST /api/ask`` (401) → ``POST /api/auth/login`` → ``/api/health`` → ``POST /api/ask``
+→ ``GET /api/export/<id>.csv`` sırası koşar. Soru kümenin ilk altın sorusudur: sahte model onu
+birebir bildiği için cevap ``answered`` olmak zorundadır, yani dumanın geçti "bir şey döndü" değil
+"uçtan uca cevap döndü" demektir.
+
+R6-7'den beri ``serve`` oturumsuz hiçbir şey sunmadığı için dumanın da oturum açması gerekir:
+sunucu boş bir uygulama veritabanı üstünde açılır -- geçici bir ``NL2SQL_APP_DB`` ve koşu sırasında
+üretilen ``NL2SQL_DEV_ADMIN_PASSWORD`` --, giriş ondan sonra mümkün olur. Parolanın değeri hiçbir
+satıra düşmez, geçici dosya iş bitince silinir; böylece duman ne gerçek ``data/bilgin.db``ye ne
+gerçek bir kullanıcıya dokunur.
 
 Sunucu her durumda kapatılır; biriktirdiği çıktı yalnız adım tökezlerse ekrana dökülür, böylece
 eksik veritabanı gibi bir açılış hatası kendi cümlesiyle görünür. ``--ui`` ekranı da dener: ``/``
@@ -16,11 +23,14 @@ from __future__ import annotations
 
 import argparse
 import codecs
+import http.cookiejar
 import json
 import os
 import re
+import secrets
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -30,6 +40,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))  # betik nereden çağrılırsa çağrılsın nl2sql görünsün
 
 from nl2sql import config, datasets  # noqa: E402
+from nl2sql.auth.bootstrap import DEV_USERNAME  # noqa: E402
 from nl2sql.web.app import BUILD_COMMAND, NO_UI  # noqa: E402
 
 HOST = "127.0.0.1"
@@ -50,11 +61,15 @@ def main(argv: list[str] | None = None) -> int:
     dataset = args.dataset or config.DEFAULT_DATASET
     question = datasets.load_dataset(dataset).golden()[0]["question"]
 
-    server = _start_server(args.port, args.dataset)
+    fd, app_db = tempfile.mkstemp(suffix=".db")  # sunucunun boş kullanıcı dosyası, sonda silinir
+    os.close(fd)
+    password = secrets.token_urlsafe(16)  # bir kez üretilir; hiçbir satıra, günlüğe, hataya düşmez
+    server = _start_server(args.port, args.dataset, app_db, password)
     try:
-        code = _run_steps(args.port, question, server, ui=args.ui)
+        code = _run_steps(args.port, question, server, password, ui=args.ui)
     finally:
         log = _stop_server(server)
+        Path(app_db).unlink(missing_ok=True)
     if code and log:
         print(log, file=sys.stderr)
     return code
@@ -68,16 +83,21 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _run_steps(port: int, question: str, server: subprocess.Popen, ui: bool = False) -> int:
+def _run_steps(
+    port: int, question: str, server: subprocess.Popen, password: str, ui: bool = False
+) -> int:
     """Adımlar sırayla; ilki tökezlerse durur, geçeni tek ✓ satırı olarak basar."""
     state: dict = {}
+    opener = _opener()  # girişin açtığı oturum kavanozda durur, sonraki her adım onu taşır
     steps = [
-        ("sunucu hazır", lambda: _check_health(port, server)),
-        ("soru cevaplandı", lambda: _check_ask(port, question, state)),
-        ("dışa aktarım", lambda: _check_export(port, state)),
+        ("oturumsuz istek 401", lambda: _check_anonymous(port, server, question)),
+        ("giriş", lambda: _check_login(opener, port, password)),
+        ("sunucu hazır", lambda: _check_health(opener, port)),
+        ("soru cevaplandı", lambda: _check_ask(opener, port, question, state)),
+        ("dışa aktarım", lambda: _check_export(opener, port, state)),
     ]
     if ui:
-        steps.insert(1, ("derlenmiş ekran", lambda: _check_ui(port)))  # boş perdenin önüne geç
+        steps.insert(3, ("derlenmiş ekran", lambda: _check_ui(opener, port)))  # boş perdenin önüne
     for name, step in steps:
         try:
             detail = step()
@@ -88,29 +108,60 @@ def _run_steps(port: int, question: str, server: subprocess.Popen, ui: bool = Fa
     return 0
 
 
-def _check_health(port: int, server: subprocess.Popen) -> str:
-    """Port dinlenene kadar yoklar; açılışta ölen sunucu bekletilmez."""
-    base = f"http://{HOST}:{port}"
+def _check_anonymous(port: int, server: subprocess.Popen, question: str) -> str:
+    """Oturumsuz soru reddedilmeli; reddin kendisi portun dinlendiğinin de işaretidir.
+
+    İlk adım olduğu için hazır olma bekleyişini de o taşır: henüz dinmeyen port bekletilir,
+    açılışta ölen sunucu (eksik veritabanı gibi) bekletilmez.
+    """
+    request = _ask_request(f"http://{HOST}:{port}/api/ask", question)
     started = time.monotonic()
     while True:
         try:
-            payload = _get(f"{base}/api/health", timeout=2.0)
+            with urllib.request.urlopen(request, timeout=2.0) as response:  # çerez kavanozu yok
+                status = response.status
+            raise SmokeError(f"oturumsuz /api/ask {status} verdi; 401 bekleniyor")
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", "replace")[:300]
+            if exc.code != 401:
+                raise SmokeError(f"oturumsuz /api/ask {exc.code}: {body}") from None
+            return "401"
         except urllib.error.URLError as exc:
             if server.poll() is not None:
                 raise SmokeError(f"sunucu kapandı (kod {server.returncode}): {exc.reason}") from None
             if time.monotonic() - started >= HEALTH_TIMEOUT_S:
-                raise SmokeError(f"{HEALTH_TIMEOUT_S:.0f} sn içinde /api/health yanıt vermedi") from exc
+                raise SmokeError(
+                    f"{HEALTH_TIMEOUT_S:.0f} sn içinde sunucu /api/ask'a yanıt vermedi"
+                ) from exc
             time.sleep(POLL_S)
-            continue
-        if payload.get("status") != "ok":
-            raise SmokeError(f"/api/health status='ok' değil: {payload}")
-        return f"{payload['dataset']['name']} · {payload['llm']['kind']}"
 
 
-def _check_ui(port: int) -> str:
+def _check_login(opener, port: int, password: str) -> str:
+    """Geliştirme yöneticisiyle oturum açar: çerez kavanoza girer, adımlar onu kullanır."""
+    request = urllib.request.Request(
+        f"http://{HOST}:{port}/api/auth/login",
+        data=json.dumps({"username": DEV_USERNAME, "password": password}).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    payload = _send(opener, request, "/api/auth/login")
+    if payload.get("username") != DEV_USERNAME:
+        raise SmokeError(f"giriş {payload} döndü; {DEV_USERNAME} bekleniyor")
+    return f"{payload['username']} · {payload['role']}"
+
+
+def _check_health(opener, port: int) -> str:
+    """Oturumla sağlık: hazır olduğundan artık emin olduğumuz sunucunun gördüğü dünya."""
+    payload = _get(opener, f"http://{HOST}:{port}/api/health")
+    if payload.get("status") != "ok":
+        raise SmokeError(f"/api/health status='ok' değil: {payload}")
+    return f"{payload['dataset']['name']} · {payload['llm']['kind']}"
+
+
+def _check_ui(opener, port: int) -> str:
     """Ekran: yedek sayfa değil derlenmiş sayfa, ve yüklediği dosya gerçekten iniyor."""
     base = f"http://{HOST}:{port}"
-    page = _get(f"{base}/", raw=True).decode("utf-8")
+    page = _get(opener, f"{base}/", raw=True).decode("utf-8")
     if "Bilgin" not in page:
         raise SmokeError(f"/ yanıtında 'Bilgin' okunmadı: {page[:120]!r}")
     if NO_UI in page:
@@ -118,20 +169,14 @@ def _check_ui(port: int) -> str:
     assets = ASSET.findall(page)
     if not assets:
         raise SmokeError("/ yanıtında /assets altında bir dosya yok; ekran eksik derlenmiş")
-    if not _get(f"{base}{assets[0]}", raw=True):
+    if not _get(opener, f"{base}{assets[0]}", raw=True):
         raise SmokeError(f"{assets[0]} boş geldi")
     return assets[0]
 
 
-def _check_ask(port: int, question: str, state: dict) -> str:
+def _check_ask(opener, port: int, question: str, state: dict) -> str:
     base = f"http://{HOST}:{port}"
-    request = urllib.request.Request(
-        f"{base}/api/ask",
-        data=json.dumps({"question": question}).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    payload = _send(request, "/api/ask")
+    payload = _send(opener, _ask_request(f"{base}/api/ask", question), "/api/ask")
     if payload.get("status") != "answered":
         error = payload.get("error") or {}
         raise SmokeError(
@@ -142,23 +187,40 @@ def _check_ask(port: int, question: str, state: dict) -> str:
     return f"{payload['row_count']} satır · {payload['audit_id']}"
 
 
-def _check_export(port: int, state: dict) -> str:
+def _check_export(opener, port: int, state: dict) -> str:
     audit_id = state["audit_id"]
-    raw = _get(f"http://{HOST}:{port}/api/export/{audit_id}.csv", raw=True)
+    raw = _get(opener, f"http://{HOST}:{port}/api/export/{audit_id}.csv", raw=True)
     if not raw.startswith(BOM):
         raise SmokeError(f"CSV {BOM!r} ile başlamıyor: {raw[:16]!r}")
     lines = raw.decode("utf-8-sig").splitlines()
     return f"{audit_id}.csv · {lines[0] if lines else 'boş'}"
 
 
-def _get(url: str, timeout: float = HTTP_TIMEOUT_S, raw: bool = False):
-    return _send(urllib.request.Request(url, method="GET"), url, timeout=timeout, raw=raw)
+def _ask_request(url: str, question: str) -> urllib.request.Request:
+    """Aynı istek gövdesi iki kez kurulmaz: oturumsuz denenenle cevaplanan soru birebir aynıdır."""
+    return urllib.request.Request(
+        url,
+        data=json.dumps({"question": question}).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
 
 
-def _send(request, label: str, timeout: float = HTTP_TIMEOUT_S, raw: bool = False):
+def _opener():
+    """Çerez kavanozlu istemci: ``/api/auth/login``ın açtığı oturum tek satır kod gerektirmez."""
+    return urllib.request.build_opener(
+        urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+    )
+
+
+def _get(opener, url: str, timeout: float = HTTP_TIMEOUT_S, raw: bool = False):
+    return _send(opener, urllib.request.Request(url, method="GET"), url, timeout=timeout, raw=raw)
+
+
+def _send(opener, request, label: str, timeout: float = HTTP_TIMEOUT_S, raw: bool = False):
     """Tek HTTP kapısı: 4xx/5xx, gövdedeki ayrıntıyla birlikte SmokeError olur."""
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with opener.open(request, timeout=timeout) as response:
             content = response.read()
     except urllib.error.HTTPError as exc:
         raise SmokeError(
@@ -167,7 +229,9 @@ def _send(request, label: str, timeout: float = HTTP_TIMEOUT_S, raw: bool = Fals
     return content if raw else json.loads(content.decode("utf-8"))
 
 
-def _start_server(port: int, dataset: str | None) -> subprocess.Popen:
+def _start_server(
+    port: int, dataset: str | None, app_db: str, password: str
+) -> subprocess.Popen:
     argv = [sys.executable, "-m", "nl2sql", "serve", "--llm", "fake", "--port", str(port)]
     if dataset:
         argv += ["--dataset", dataset]
@@ -177,7 +241,13 @@ def _start_server(port: int, dataset: str | None) -> subprocess.Popen:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         encoding="utf-8",
-        env={**os.environ, "NL2SQL_BACKEND": "sqlite", "PYTHONIOENCODING": "utf-8"},
+        env={
+            **os.environ,
+            "NL2SQL_BACKEND": "sqlite",
+            "PYTHONIOENCODING": "utf-8",
+            "NL2SQL_APP_DB": app_db,  # boş dünya: dumanın kullanıcısı gerçek veriye dokunmaz
+            config.DEV_ADMIN_ENV: password,
+        },
     )
 
 
