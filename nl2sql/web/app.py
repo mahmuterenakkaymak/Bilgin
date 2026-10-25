@@ -29,6 +29,7 @@ from nl2sql.index.store import META_FILE, MissingIndexError, StaleIndexError, co
 from nl2sql.report.export import MEDIA_TYPES, to_csv_bytes, to_xlsx_bytes
 from nl2sql.schema_map import doc
 from nl2sql.schema_map.rules_edit import normalize_rule, save_rules, validate_rule
+from nl2sql.web.auth_api import create_router as create_auth_router
 from nl2sql.web.saved import SavedStore
 
 # R5-15: boş soru koşum açmaya değmez; cümle ekranın gösterdiği cümledir.
@@ -112,11 +113,21 @@ class RuleRejected(Exception):
         self.errors = errors
 
 
-def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir: str | Path = config.STATIC_DIR) -> FastAPI:
-    """Oturumun üstünde API: soru, sağlık, örnekler, tablolar, kayıtlar, dışa aktarım ve arayüz."""
+def create_app(
+    session,
+    saved_path: str | Path = config.APP_DB_PATH,
+    static_dir: str | Path = config.STATIC_DIR,
+    users=None,
+) -> FastAPI:
+    """Oturumun üstünde API: soru, sağlık, örnekler, tablolar, kayıtlar, dışa aktarım ve arayüz.
+
+    ``users`` bir ``UserStore`` ise kimlik doğrulama açıktır; ``None`` Run 5'in tek kullanıcısıdır
+    - hiçbir yol çevrilmez, oturumun kullanıcısı ``None``dır (R6-5).
+    """
     app = FastAPI(title="Bilgin")
     app.state.session = session
     app.state.saved_path = Path(saved_path)
+    app.state.users = users
     saved = SavedStore(saved_path)
     # Kayıtlar küme başına: ekran başlığın söylediği kümenin dışına çıkmaz (R5-16).
     dataset = _dataset_block(session)["name"]
@@ -126,6 +137,8 @@ def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir:
     async def rule_rejected(request, exc: RuleRejected):
         """Alan hataları 422 olarak üst düzey ``errors`` anahtarıyla döner (R5-15)."""
         return JSONResponse(status_code=422, content={"errors": exc.errors})
+
+    app.include_router(create_auth_router())
 
     @app.post("/api/ask")
     def ask(body: AskBody) -> dict:
