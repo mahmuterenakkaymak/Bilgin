@@ -78,6 +78,19 @@
         "wait:1",
         "shot:rule-validation-errors"
       ]
+    },
+    {
+      "name": "dark-mode-answer",
+      "path": "/",
+      "steps": [
+        "wait:2",
+        {"click": "#theme-toggle"},
+        "wait:0.5",
+        {"fill": ["#question", "Eylül 2026'da en çok satan 5 ürün hangileri; kodu, adı ve toplam satış miktarı nedir?"]},
+        {"click": "#ask-button"},
+        "wait:4",
+        "shot:dark-answer"
+      ]
     }
   ]
 }

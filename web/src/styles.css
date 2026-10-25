@@ -5,6 +5,7 @@
   --muted: #6a6963;
   --line: #e3e1da;
   --accent: #1f5fad;
+  --on-accent: #ffffff;
   --warn-bg: #fef3c7;
   --warn-line: #f59e0b;
   --warn-text: #8a3b05;
@@ -20,14 +21,37 @@
   color-scheme: light;
 }
 
+/* Koyu tokenlar iki yerde durur (T222): başlıktaki düğme "Koyu"yu seçtiğinde kök nitelikten,
+   sistem koyuya ayarlıyken (düğme "Sistem"deyken) media sorgusundan gelir. Tek kuralda
+   birleşemezler: `data-theme="light"` sistemin koyusunu ezmeli, o yüzden media sorgusunun
+   içindeki seçici `:not([data-theme="light"])` olmak zorunda. */
+:root[data-theme="dark"] {
+  --bg: #1a1a18;
+  --surface: #232320;
+  --text: #f2f1ec;
+  --muted: #a5a399;
+  --line: #37362f;
+  --accent: #6fa8e8;
+  --on-accent: #10233b;
+  --warn-bg: #3a2e10;
+  --warn-line: #d19414;
+  --warn-text: #fbd9a5;
+  --err-bg: #3a1c1c;
+  --err-text: #f2b4b4;
+  --ok: #6dbb70;
+
+  color-scheme: dark;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #1a1a18;
     --surface: #232320;
     --text: #f2f1ec;
     --muted: #a5a399;
     --line: #37362f;
     --accent: #6fa8e8;
+    --on-accent: #10233b;
     --warn-bg: #3a2e10;
     --warn-line: #d19414;
     --warn-text: #fbd9a5;
@@ -413,7 +437,7 @@ main {
 .btn-primary {
   border-color: var(--accent);
   background: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .btn:disabled {
@@ -425,6 +449,14 @@ main {
 .btn-downloaded {
   border-color: var(--ok);
   color: var(--ok);
+}
+
+/* Tema düğmesi başlıkta durur ve üç ad arasında (Sistem/Koyu/Açık) genişliği değişmez:
+   başlık her tıkta yeniden akmasın, sıradaki düğme yerinden oynamasın. */
+.btn-theme {
+  min-width: 5rem;
+  padding-inline: calc(var(--space) * 1.5);
+  font-size: 14px;
 }
 
 .examples {

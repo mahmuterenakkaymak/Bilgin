@@ -10,8 +10,23 @@ import Sidebar from "./components/Sidebar.jsx";
 import * as api from "./lib/api.js";
 import { askReducer, initialState } from "./lib/askState.js";
 import { parseRoute } from "./lib/route.js";
+import { applyTheme, nextTheme, readStored, store } from "./lib/theme.js";
 
 const HEALTH_URL = "/api/health";
+
+// Düğmenin gördüğü ad, sıradaki temayı değil seçili olanı söyler: "Koyu" yazan bir düğmeye
+// basınca ne olacağı belirsiz kalmasın.
+const THEME_LABELS = { system: "Sistem", dark: "Koyu", light: "Açık" };
+
+// Testler App'i Node'da renderToStaticMarkup ile kuruyor: orada localStorage yoktur, tema da
+// okunacak bir yer bulamayınca "system"de kalır.
+function themeStorage() {
+  try {
+    return localStorage ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // Testler renderToStaticMarkup ile node'da çalıştırıyor: orada window yok, kök varsayılan rotada açılır.
 function currentHash() {
@@ -173,7 +188,18 @@ export default function App() {
   const [saved, setSaved] = useState([]);
   const [history, setHistory] = useState([]);
   const [pending, setPending] = useState(null); // {question, n}: kenar çubuğundan gelen soru
+  const [theme, setTheme] = useState(() => readStored(themeStorage()));
   const route = parseRoute(hash);
+
+  // Kök nitelik seçili temayı taşısın: açılışta bir kez, her değişimde yeniden. main.jsx ilk
+  // boyamadan önce aynı işi yaptığı için koyu teması olan açılışta açık bir kare görmez.
+  useEffect(() => applyTheme(document, theme), [theme]);
+
+  const cycleTheme = () => {
+    const next = nextTheme(theme);
+    setTheme(next);
+    store(themeStorage(), next);
+  };
 
   useEffect(() => {
     const onHashChange = () => setHash(window.location.hash);
@@ -241,6 +267,15 @@ export default function App() {
             Kurallar
           </a>
         </nav>
+        <button
+          type="button"
+          id="theme-toggle"
+          className="btn btn-theme"
+          aria-label={`Tema: ${THEME_LABELS[theme]}. Değiştirmek için etkinleştir.`}
+          onClick={cycleTheme}
+        >
+          {THEME_LABELS[theme]}
+        </button>
         <span className={`dot dot-${dot.tone}`} role="img" aria-label={dot.tip} title={dot.tip} />
       </header>
       <div className="shell">
