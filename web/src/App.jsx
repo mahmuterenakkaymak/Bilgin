@@ -36,7 +36,7 @@ function chipText(health) {
 
 // Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Boş, bekleyen, cevap,
 // netleştirme ve hata yuvaları burada durur; cevabın grafiği kartın içindedir.
-function AskScreen({ pending = null, onRefresh }) {
+function AskScreen({ pending = null, onRefresh, onRebuild }) {
   const [state, dispatch] = useReducer(askReducer, initialState);
   const [text, setText] = useState("");
   const [examples, setExamples] = useState([]);
@@ -115,14 +115,14 @@ function AskScreen({ pending = null, onRefresh }) {
       {state.status === "clarifying" && (
         <ClarificationCard payload={state.payload} onChoose={choose} onChange={changeQuestion} />
       )}
-      {failed && <ErrorCard kind={state.error?.kind} message={state.error?.message} onRebuild={api.rebuild} />}
+      {failed && <ErrorCard kind={state.error?.kind} message={state.error?.message} onRebuild={onRebuild} />}
     </section>
   );
 }
 
 // Kural ekranı: liste ile indeksin tazeliği aynı iki istekten gelir; kayıt, silme ve yeniden
 // kurma sonrası ekran bunları baştan okur (R5-16).
-function RulesFlow() {
+function RulesFlow({ onChanged }) {
   const [data, setData] = useState(null); // {rules, index} | null: henüz okunmadı
   const [tables, setTables] = useState([]);
   const [error, setError] = useState("");
@@ -143,6 +143,8 @@ function RulesFlow() {
       .catch(() => {
         // tablo adları yalnızca datalist'i doldurur; boş listeyle de yazılabilir
       });
+    // Bantla başlıktaki nokta aynı `index.fresh`i gösterir: bant tazelendiği an nokta da tazelenir.
+    onChanged?.();
   };
 
   useEffect(refresh, []);
@@ -159,9 +161,9 @@ function RulesFlow() {
   );
 }
 
-function Screen({ route, pending, onRefresh }) {
-  if (route === "rules") return <RulesFlow />;
-  return <AskScreen pending={pending} onRefresh={onRefresh} />;
+function Screen({ route, pending, onRefresh, onChanged, onRebuild }) {
+  if (route === "rules") return <RulesFlow onChanged={onChanged} />;
+  return <AskScreen pending={pending} onRefresh={onRefresh} onRebuild={onRebuild} />;
 }
 
 export default function App() {
@@ -179,16 +181,17 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
-  useEffect(() => {
-    let mounted = true;
+  // Sağlık başlığı bir kez değil, aynı `index.fresh` alanını gösteren yer değiştikçe okunur:
+  // kural ekranının bandı tazelenirken noktanın eski kalması arayüzün aynı gerçeği iki yerden
+  // birini yalan söylemesi olurdu (R5-18).
+  const refreshHealth = () => {
     fetch(HEALTH_URL)
       .then((response) => (response.ok ? response.json() : null))
-      .then((data) => mounted && setHealth(data))
-      .catch(() => mounted && setHealth(null));
-    return () => {
-      mounted = false;
-    };
-  }, []);
+      .then((data) => setHealth(data))
+      .catch(() => setHealth(null));
+  };
+
+  useEffect(() => refreshHealth(), []);
 
   // Kenar çubuğunun iki listesi her soru, kayıt ve silme sonrası baştan okunur; düşerse
   // ekranın kendi verisi olduğu için burada dururlar.
@@ -255,7 +258,13 @@ export default function App() {
           <Sidebar saved={saved} history={history} onAsk={askFromSidebar} onRemoved={refresh} />
         </aside>
         <main id="main">
-          <Screen route={route} pending={pending} onRefresh={refresh} />
+          <Screen
+            route={route}
+            pending={pending}
+            onRefresh={refresh}
+            onChanged={refreshHealth}
+            onRebuild={() => api.rebuild().then(refreshHealth)}
+          />
         </main>
       </div>
     </div>
