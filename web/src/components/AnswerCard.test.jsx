@@ -81,6 +81,23 @@ describe("AnswerCard", () => {
     expect(html).toContain("Eylül 2026'da en çok satan ürün 2.480 adetle Siyah Çay 500 g oldu");
   });
 
+  it("seçilen anlam durum satırının altında kendi satırında okunur", () => {
+    const html = render(<AnswerCard payload={answered} choice="Net satış (KDV hariç)" onSave={noop} />);
+    expect(html).toContain('id="answer-choice"');
+    expect(html).toContain("Anlam: Net satış (KDV hariç)");
+    expect(html.indexOf('class="answer-status"')).toBeLessThan(html.indexOf('id="answer-choice"'));
+    expect(html.indexOf('id="answer-choice"')).toBeLessThan(html.indexOf('id="answer-text"'));
+  });
+
+  it("seçimsiz cevapta #answer-choice hiç kurulmaz", () => {
+    for (const choice of [null, "", undefined]) {
+      const html = render(<AnswerCard payload={answered} choice={choice} onSave={noop} />);
+      expect(html).not.toContain('id="answer-choice"');
+      expect(html).not.toContain("Anlam:");
+      expect(html).toContain('id="answer-text"');
+    }
+  });
+
   it("ölçülür süre yoksa durum satırı süreyi yazmaz", () => {
     for (const total of [0, 0.04, null]) {
       const html = card({ ...answered, timings: { ...answered.timings, total_s: total } });

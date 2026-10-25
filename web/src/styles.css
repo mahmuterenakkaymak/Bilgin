@@ -603,6 +603,19 @@ main {
   font-weight: 600;
 }
 
+/* Seçilen anlam durum satırının altında kendi rozetinde: aynı sorunun öteki okumalarından
+   ayırt edilsin, ama cevap cümlesinin önüne geçmesin. */
+.answer-choice {
+  display: inline-block;
+  margin: calc(var(--space) * 0.75) 0 0;
+  padding: calc(var(--space) * 0.25) var(--space);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .answer-text {
   margin: var(--space) 0 0;
   font-size: 20px;

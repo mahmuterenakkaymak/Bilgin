@@ -11,10 +11,11 @@ const EXPORTS = [
   ["xlsx", "Excel"],
 ];
 
-// Cevap kartı: aynı AskPayload'ın her parçası burada durur — durum satırı, cümle, uyarılar,
-// tablo, grafiği, indirme ve kayıt düğmeleri, kanıt (R5-18). Kart hiçbir sayıyı yeniden hesaplamaz.
+// Cevap kartı: aynı AskPayload'ın her parçası burada durur — durum satırı, seçilen anlam, cümle,
+// uyarılar, tablo, grafiği, indirme ve kayıt düğmeleri, kanıt (R5-18). Kart hiçbir sayıyı yeniden
+// hesaplamaz.
 // Grafik cevabın parçasıdır: kartın içinde, tablonun altında; `chart` yoksa ChartView kutu açmaz.
-export default function AnswerCard({ payload, onSave }) {
+export default function AnswerCard({ payload, onSave, choice }) {
   const [phase, setPhase] = useState("idle"); // idle | saving | saved | error
   const [note, setNote] = useState("");
   const [downloaded, setDownloaded] = useState(""); // "" | csv | xlsx
@@ -27,6 +28,8 @@ export default function AnswerCard({ payload, onSave }) {
   const auditId = typeof payload?.audit_id === "string" ? payload.audit_id : "";
   const save = onSave ?? api.savedAdd;
   const status = ["✓ Cevaplandı", mode, elapsed].filter(Boolean).join(" · ");
+  // Seçilen anlam: sorunun birden çok okuması varsa hangisiyle koşulduğu cevapta da okunur.
+  const chosen = typeof choice === "string" ? choice.trim() : "";
 
   // İndirme bir <a>: sekme yer değiştirmediği için tek geri bildirim düğmenin kendisi. Ad 2 sn
   // "İndirildi" kalır, sonra eski adına döner; kart kapanırsa bekleyen sayaç bırakılır.
@@ -51,6 +54,11 @@ export default function AnswerCard({ payload, onSave }) {
   return (
     <section id="answer-card" className="card answer-card">
       <p className="answer-status">{status}</p>
+      {chosen && (
+        <p id="answer-choice" className="answer-choice">
+          Anlam: {chosen}
+        </p>
+      )}
       {answer && <p id="answer-text" className="answer-text">{answer}</p>}
       <Warnings warnings={payload?.warnings} />
       <ResultTable

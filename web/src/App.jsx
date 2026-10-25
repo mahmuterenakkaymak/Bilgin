@@ -136,7 +136,9 @@ function AskScreen({ pending = null, onRefresh, onRebuild }) {
       />
       {state.status === "idle" && <EmptyState examples={examples} onSelect={ask} />}
       {loading && <LoadingSteps />}
-      {state.status === "answered" && <AnswerCard payload={state.payload} onSave={save} />}
+      {state.status === "answered" && (
+        <AnswerCard payload={state.payload} choice={state.choice} onSave={save} />
+      )}
       {state.status === "clarifying" && (
         <ClarificationCard payload={state.payload} onChoose={choose} onChange={changeQuestion} />
       )}
