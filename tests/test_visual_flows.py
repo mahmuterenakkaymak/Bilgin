@@ -25,6 +25,11 @@ ID_PART = re.compile(r"#([\w-]+)")
 CLASS_PART = re.compile(r"\.([\w-]+)")
 ATTR_PART = re.compile(r"\[\s*([\w-]+)")
 
+# ``id={`export-${kind}`}`` DOM'da ``id="export-csv"`` üretir: düz id arayan koruyucu böyle bir
+# bileşeni "id silinmiş" sayardı. Şablonun kendisi kaynakta okunur, adı ondan türetiyoruz.
+TEMPLATE_ID = re.compile(r"id=\{\s*`([^`]*)`\s*\}")
+INTERP = re.compile(r"\$\{[^{}]*\}")
+
 
 def visual() -> dict:
     return json.loads(VISUAL_PATH.read_text(encoding="utf-8"))
@@ -61,14 +66,34 @@ def source_text() -> str:
     return "\n".join(path.read_text(encoding="utf-8") for path in files)
 
 
-def parts(selector: str):
+def yields_id(body: str, name: str) -> bool:
+    """``${...}`` şablonlu bir id gövdesi ``name`` adını üretebilir mi?
+
+    ``${...}`` en az bir karakter üreten bir boşluktur. Şablonun en az bir düz karakter
+    taşıması da koşul: ``id={`${kind}`}`` her adı "üretebilir" ve koruyucu boş bir eşleşmeye
+    döner - adın kaynakta okunur bir parçası kalmalı.
+    """
+    segments = INTERP.split(body)
+    if not any(segments):
+        return False
+    return re.fullmatch(".+?".join(re.escape(segment) for segment in segments), name) is not None
+
+
+def id_pattern(name: str, text: str) -> re.Pattern:
+    """İki yazım da DOM'da aynı id'yi verir: ``id="export-csv"`` ve ``id={`export-${kind}`}``."""
+    found = [rf'id="{re.escape(name)}"']
+    found += [re.escape(match.group(0)) for match in TEMPLATE_ID.finditer(text) if yields_id(match.group(1), name)]
+    return re.compile("|".join(found))
+
+
+def parts(selector: str, text: str):
     """Seçicinin kaynakta aranacak parçaları: id'ler, sınıflar ve özellik adları.
 
     Birleştiriciler ve etiketler denetlenmez - ``button``ın düğme olduğu bir id kadar kırılgan
     değil, oysa ``#save-question`` ekranın kaybolduğu ilk anda sessizce ölü bir adıma döner.
     """
     for name in ID_PART.findall(selector):
-        yield "id", name, re.compile(rf'id="{re.escape(name)}"')
+        yield "id", name, id_pattern(name, text)
     for name in CLASS_PART.findall(selector):
         yield "sınıf", name, re.compile(rf'className="[^"]*\b{re.escape(name)}\b[^"]*"')
     for name in ATTR_PART.findall(selector):
@@ -112,13 +137,23 @@ def test_the_flow_opens_the_address_its_own_command_starts():
 def test_every_step_selector_still_exists_in_the_ui_source(page_name, selector):
     text = source_text()
 
-    missing = [f"{kind} {name}" for kind, name, pattern in parts(selector) if not pattern.search(text)]
+    missing = [f"{kind} {name}" for kind, name, pattern in parts(selector, text) if not pattern.search(text)]
     assert not missing, f"{page_name} akışındaki {selector!r} artık kaynakta yok: {missing}"
 
 
 def test_the_flow_actually_uses_selectors():
     """İd testi boş listede de geçerdi: akışta denenecek seçici olduğunun güvencesi."""
     assert SELECTORS
+
+
+def test_the_id_guard_reads_a_template_id_but_not_a_renamed_or_hidden_one():
+    """Şablonlu id kabul; adın kaynağı değiştiyse/okunur parça kaldırılsa yine kırmızı."""
+    assert id_pattern("save-question", 'id="save-question"').search('id="save-question"')
+    assert id_pattern("export-csv", 'id={`export-${kind}`}').search('id={`export-${kind}`}')
+
+    assert not id_pattern("export-csv", 'id={`download-${kind}`}').search('id={`download-${kind}`}')
+    assert not id_pattern("export-csv", "id={`${kind}`}").search("id={`${kind}`}")
+    assert not id_pattern("export-csv", "<a href='#' />").search("<a href='#' />")
 
 
 # ------------------------------------------------------------------ kareler
