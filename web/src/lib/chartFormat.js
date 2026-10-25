@@ -24,16 +24,13 @@ export function withFormatters(option) {
   return withNames(next, measure);
 }
 
-// Çizilen şey option'dan okunmalı: başlık ve sayısal eksenin adı ölçü kolonunun adından gelir,
-// ölçüde hiçbir şey yeniden hesaplanmaz. Olan bir başlığa dokunulmaz.
+// Çizilen şey option'dan okunmalı: başlık ölçü kolonunun adından gelir, ölçüde hiçbir şey yeniden
+// hesaplanmaz. Olan bir başlığa dokunulmaz. Sayısal eksen adlandırılmaz: aynı ad başlığın 40 px
+// altında ikinci bir ölçü gibi dururdu; ölçü option'da bir kez görünür.
 function withNames(option, measure) {
   if (!measure) return option;
   const next = { ...option };
   if (!next.title?.text) next.title = { ...next.title, text: measure, textStyle: TITLE };
-  const axis = next.yAxis;
-  if (axis && !Array.isArray(axis) && axis.type === "value" && !axis.name) {
-    next.yAxis = { ...axis, name: measure, nameGap: 12 };
-  }
   return next;
 }
 

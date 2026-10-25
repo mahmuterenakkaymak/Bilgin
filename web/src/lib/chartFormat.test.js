@@ -78,10 +78,10 @@ describe("withFormatters eksen ve etiket", () => {
 });
 
 describe("withFormatters başlık ve eksen adı", () => {
-  it("ölçünün adı başlık ve sayısal eksenin adı olur", () => {
+  it("ölçünün adı option'da bir kez durur: başlıkta, eksen adı uydurulmaz", () => {
     const next = withFormatters(barOption());
     expect(next.title.text).toBe("Tutar");
-    expect(next.yAxis.name).toBe("Tutar");
+    expect(next.yAxis.name).toBeUndefined();
     expect(next.xAxis.name).toBeUndefined();
   });
 
@@ -90,7 +90,7 @@ describe("withFormatters başlık ve eksen adı", () => {
     option.bilgin.value_column = "SATIS_ADEDI";
     const next = withFormatters(option);
     expect(next.title.text).toBe("Satis adedi");
-    expect(next.yAxis.name).toBe("Satis adedi");
+    expect(next.yAxis.name).toBeUndefined();
   });
 
   it("başlığı ve eksen adı hazır seçeneğe dokunulmaz, biçimleyiciler yine eklenir", () => {
