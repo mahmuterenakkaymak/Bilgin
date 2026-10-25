@@ -20,6 +20,8 @@ AUTH_OFF = "Kimlik doğrulama kapalı."
 # adlarıyla. Bir yol buradaysa kapı ondan haberdardır; yeni yol eklerken satırı da eklenir.
 ROUTE_ROLES: dict[tuple[str, str], str] = {
     ("GET", "/"): "public",
+    # Mount'ın yazıldığı ön ek: derlenmiş dosyalar oturum sormaz (brief "/assets/* public").
+    ("GET", "/assets"): "public",
     ("POST", "/api/auth/login"): "public",
     ("POST", "/api/auth/logout"): "public",
     ("GET", "/api/auth/me"): "user",
@@ -39,6 +41,8 @@ ROUTE_ROLES: dict[tuple[str, str], str] = {
     ("PUT", "/api/rules/{rule_id}"): "admin",
     ("DELETE", "/api/rules/{rule_id}"): "admin",
     ("POST", "/api/index/rebuild"): "admin",
+    # ASSUMPTION: brief'in ``/api/users*``, ``/api/schema-map/*``, ``/api/datasets*`` satırları henüz
+    # ``create_app``te yol değil - satır, yolun doğduğu görevle birlikte buraya yazılır (R6-5).
 }
 
 

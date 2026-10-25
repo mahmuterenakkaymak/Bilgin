@@ -142,13 +142,14 @@ def create_app(
     app.include_router(create_auth_router())
 
     def guarded(method: str, path: str, **kwargs):
-        """Yolun kapısını ``ROUTE_ROLES``tan okuyan süsleyici (R6-6).
+        """Yolun kapısını ``ROUTE_ROLES``tan okuyan süsleyici (R6-5, R6-6).
 
         Matriste public yazmayan her yol oturum ister; matriste hiç olmayan bir yol da ister,
-        yani yeni bir yol unutulursa açık değil kapalı doğar. Seviye ne olursa olsun kapı bugün
-        ``user`` - admin bölünmesi M19'un (PLAN R6-5).
+        yani yeni bir yol unutulursa açık değil kapalı doğar. Seviye de matristen okunur: admin
+        satırı yönetici ister, kullanıcı satırı oturum - kapının bildiği üçüncü bir seviye yok.
         """
-        deps = [] if ROUTE_ROLES.get((method, path)) == "public" else [Depends(require("user"))]
+        level = ROUTE_ROLES.get((method, path), "user")
+        deps = [] if level == "public" else [Depends(require(level))]
         return getattr(app, method.lower())(path, dependencies=deps, **kwargs)
 
     @guarded("POST", "/api/ask")
@@ -309,7 +310,7 @@ def create_app(
             return FileResponse(built, media_type="text/html", headers={"Cache-Control": "no-cache"})
         return HTMLResponse(NO_UI_PAGE)
 
-    @app.get("/", response_class=HTMLResponse)
+    @guarded("GET", "/", response_class=HTMLResponse)
     def index() -> Response:
         return page()
 
