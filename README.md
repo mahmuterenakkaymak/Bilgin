@@ -627,15 +627,15 @@ stays masked in both, because the mask is computed inside the executor before th
 
 ## Saved questions and history
 
-Saved questions and the ask history live in a **local SQLite file, `data/bilgin.db`** — never in the
-analysed database — and every ask is appended to **`logs/asks.jsonl`**. Both hold the **question text
-and the SQL only, never result rows**: history is a list of what was asked, not a copy of the data.
-The sidebar re-asks a saved question or a history entry with one click.
+Saved questions live in a **local SQLite file, `data/bilgin.db`** — never in the analysed database —
+while the sidebar history is read from **`logs/asks.jsonl`**, the file every ask is appended to. Both
+hold the **question text and the SQL only, never result rows**: history is a list of what was asked,
+not a copy of the data. The sidebar re-asks a saved question or a history entry with one click.
 
 ## Rules screen
 
 The rules screen lists, adds, edits and deletes the business rules, and a valid edit writes straight
-to the dataset's own **`datasets/<name>/rules.json`** (validated: id, name, synonyms, definition,
+to the dataset's own **`datasets/<name>/rules.json`** (validated: id, term, synonyms, definition,
 `sql_hint`, tables; an invalid rule is rejected with a per-field message). Because these are demo
 files under git, **restore them with `git checkout -- datasets/<name>/rules.json`** after editing.
 
