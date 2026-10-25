@@ -10,6 +10,7 @@ only and refuses writes even if a query somehow gets through.
 
 from __future__ import annotations
 
+import math
 import os
 import time
 
@@ -38,7 +39,7 @@ def run(sql: str, budget: Budget, conn_str: str | None = None) -> Result:
     conn = None
     try:
         conn = pyodbc.connect(_read_only(dsn))
-        conn.timeout = budget.timeout_s
+        conn.timeout = max(1, math.ceil(budget.timeout_s))  # pyodbc wants whole seconds (first real run, 2026-10-25)
         cursor = conn.cursor()
         cursor.execute(f"SET LOCK_TIMEOUT {int(budget.timeout_s * 1000)}")
         cursor.execute(sql)

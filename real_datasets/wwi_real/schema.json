@@ -1,0 +1,2605 @@
+{
+  "tables": [
+    {
+      "name": "Application.Countries",
+      "description": "Countries that contain the states or provinces (including geographic boundaries)",
+      "module": "Application",
+      "keywords": [
+        "ülke",
+        "kıta",
+        "iso kodu",
+        "ülke adı"
+      ],
+      "columns": [
+        {
+          "name": "CountryID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a country within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CountryName",
+          "type": "NVARCHAR(60)",
+          "description": "Name of the country",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FormalName",
+          "type": "NVARCHAR(60)",
+          "description": "Full formal name of the country as agreed by United Nations",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IsoAlpha3Code",
+          "type": "NVARCHAR(3)",
+          "description": "3 letter alphabetic code assigned to the country by ISO",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "IsoNumericCode",
+          "type": "INT",
+          "description": "Numeric code assigned to the country by ISO",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CountryType",
+          "type": "NVARCHAR(20)",
+          "description": "Type of country or administrative region",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "LatestRecordedPopulation",
+          "type": "BIGINT",
+          "description": "Latest available population for the country",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "Continent",
+          "type": "NVARCHAR(30)",
+          "description": "Name of the continent",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Region",
+          "type": "NVARCHAR(30)",
+          "description": "Name of the region",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Subregion",
+          "type": "NVARCHAR(30)",
+          "description": "Name of the subregion",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Border",
+          "type": "GEOGRAPHY",
+          "description": "Geographic border of the country as described by the United Nations",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidFrom",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidTo",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Application.StateProvinces",
+      "description": "States or provinces that contain cities (including geographic location)",
+      "module": "Application",
+      "keywords": [
+        "eyalet",
+        "bölge",
+        "il",
+        "eyalet kodu"
+      ],
+      "columns": [
+        {
+          "name": "StateProvinceID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a state or province within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StateProvinceCode",
+          "type": "NVARCHAR(5)",
+          "description": "Common code for this state or province (such as WA - Washington for the USA)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StateProvinceName",
+          "type": "NVARCHAR(50)",
+          "description": "Formal name of the state or province",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CountryID",
+          "type": "INT",
+          "description": "Country for this StateProvince",
+          "fk": "Application.Countries.CountryID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SalesTerritory",
+          "type": "NVARCHAR(50)",
+          "description": "Sales territory for this StateProvince",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Border",
+          "type": "GEOGRAPHY",
+          "description": "Geographic boundary of the state or province",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "LatestRecordedPopulation",
+          "type": "BIGINT",
+          "description": "Latest available population for the StateProvince",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidFrom",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidTo",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Application.Cities",
+      "description": "Cities that are part of any address (including geographic location)",
+      "module": "Application",
+      "keywords": [
+        "şehir",
+        "il",
+        "eyalet",
+        "şehir adı",
+        "şehre göre"
+      ],
+      "columns": [
+        {
+          "name": "CityID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a city within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CityName",
+          "type": "NVARCHAR(50)",
+          "description": "Formal name of the city",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StateProvinceID",
+          "type": "INT",
+          "description": "State or province for this city",
+          "fk": "Application.StateProvinces.StateProvinceID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Location",
+          "type": "GEOGRAPHY",
+          "description": "Geographic location of the city",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "LatestRecordedPopulation",
+          "type": "BIGINT",
+          "description": "Latest available population for the City",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidFrom",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidTo",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Application.DeliveryMethods",
+      "description": "Ways that stock items can be delivered (ie: truck/van, post, pickup, courier, etc.",
+      "module": "Application",
+      "keywords": [
+        "teslimat yöntemi",
+        "kargo",
+        "dağıtım şekli",
+        "teslimat süresi"
+      ],
+      "columns": [
+        {
+          "name": "DeliveryMethodID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a delivery method within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryMethodName",
+          "type": "NVARCHAR(50)",
+          "description": "Full name of methods that can be used for delivery of customer orders",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidFrom",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidTo",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Application.People",
+      "description": "People known to the application (staff, customer contacts, supplier contacts)",
+      "module": "Application",
+      "keywords": [
+        "kişi",
+        "çalışan",
+        "satış temsilcisi",
+        "müşteri temsilcisi",
+        "telefon",
+        "e-posta",
+        "ad soyad"
+      ],
+      "columns": [
+        {
+          "name": "PersonID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a person within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FullName",
+          "type": "NVARCHAR(50)",
+          "description": "Full name for this person",
+          "fk": null,
+          "values": {},
+          "nullable": false,
+          "pii": "person_name"
+        },
+        {
+          "name": "PreferredName",
+          "type": "NVARCHAR(50)",
+          "description": "Name that this person prefers to be called",
+          "fk": null,
+          "values": {},
+          "nullable": false,
+          "pii": "person_name"
+        },
+        {
+          "name": "SearchName",
+          "type": "NVARCHAR(101)",
+          "description": "Name to build full text search on (computed column)",
+          "fk": null,
+          "values": {},
+          "nullable": false,
+          "pii": "person_name"
+        },
+        {
+          "name": "IsPermittedToLogon",
+          "type": "BIT",
+          "description": "Is this person permitted to log on?",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LogonName",
+          "type": "NVARCHAR(50)",
+          "description": "Person's system logon name",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "pii": "email"
+        },
+        {
+          "name": "IsExternalLogonProvider",
+          "type": "BIT",
+          "description": "Is logon token provided by an external system?",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "HashedPassword",
+          "type": "VARBINARY(MAX)",
+          "description": "Hash of password for users without external logon tokens",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "IsSystemUser",
+          "type": "BIT",
+          "description": "Is the currently permitted to make online access?",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IsEmployee",
+          "type": "BIT",
+          "description": "Is this person an employee?",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IsSalesperson",
+          "type": "BIT",
+          "description": "Is this person a staff salesperson?",
+          "fk": null,
+          "values": {
+            "0": "not a sales person",
+            "1": "sales person"
+          },
+          "nullable": false
+        },
+        {
+          "name": "UserPreferences",
+          "type": "NVARCHAR(MAX)",
+          "description": "User preferences related to the website (holds JSON data)",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "PhoneNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Phone number",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "pii": "phone"
+        },
+        {
+          "name": "FaxNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Fax number  ",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "pii": "phone"
+        },
+        {
+          "name": "EmailAddress",
+          "type": "NVARCHAR(256)",
+          "description": "Email address for this person",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "pii": "email"
+        },
+        {
+          "name": "Photo",
+          "type": "VARBINARY(MAX)",
+          "description": "Photo of this person",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "CustomFields",
+          "type": "NVARCHAR(MAX)",
+          "description": "Custom fields for employees and salespeople",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "OtherLanguages",
+          "type": "NVARCHAR(MAX)",
+          "description": "Other languages spoken (computed column from custom fields)",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidFrom",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidTo",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Sales.BuyingGroups",
+      "description": "Customer organizations can be part of groups that exert greater buying power",
+      "module": "Sales",
+      "keywords": [
+        "satın alma grubu",
+        "alıcı grubu",
+        "müşteri grubu"
+      ],
+      "columns": [
+        {
+          "name": "BuyingGroupID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a buying group within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BuyingGroupName",
+          "type": "NVARCHAR(50)",
+          "description": "Full name of a buying group that customers can be members of",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidFrom",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidTo",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Sales.Customers",
+      "description": "Main entity tables for customers (organizations or individuals)",
+      "module": "Sales",
+      "keywords": [
+        "müşteri",
+        "cari",
+        "müşteri adı",
+        "kredi limiti",
+        "hesap açılış tarihi",
+        "adres",
+        "telefon",
+        "müşteri kategorisi"
+      ],
+      "columns": [
+        {
+          "name": "CustomerID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a customer within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerName",
+          "type": "NVARCHAR(100)",
+          "description": "Customer's full name (usually a trading name)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BillToCustomerID",
+          "type": "INT",
+          "description": "Customer that this is billed to (usually the same customer but can be another parent company)",
+          "fk": "Sales.Customers.CustomerID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerCategoryID",
+          "type": "INT",
+          "description": "Customer's category",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BuyingGroupID",
+          "type": "INT",
+          "description": "Customer's buying group (optional)",
+          "fk": "Sales.BuyingGroups.BuyingGroupID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "PrimaryContactPersonID",
+          "type": "INT",
+          "description": "Primary contact",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "AlternateContactPersonID",
+          "type": "INT",
+          "description": "Alternate contact",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DeliveryMethodID",
+          "type": "INT",
+          "description": "Standard delivery method for stock items sent to this customer",
+          "fk": "Application.DeliveryMethods.DeliveryMethodID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryCityID",
+          "type": "INT",
+          "description": "ID of the delivery city for this address",
+          "fk": "Application.Cities.CityID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PostalCityID",
+          "type": "INT",
+          "description": "ID of the postal city for this address",
+          "fk": "Application.Cities.CityID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CreditLimit",
+          "type": "DECIMAL(18,2)",
+          "description": "Credit limit for this customer (NULL if unlimited)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "AccountOpenedDate",
+          "type": "DATE",
+          "description": "Date this customer account was opened",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StandardDiscountPercentage",
+          "type": "DECIMAL(18,3)",
+          "description": "Standard discount offered to this customer",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IsStatementSent",
+          "type": "BIT",
+          "description": "Is a statement sent to this customer? (Or do they just pay on each invoice?)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IsOnCreditHold",
+          "type": "BIT",
+          "description": "Is this customer on credit hold? (Prevents further deliveries to this customer)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PaymentDays",
+          "type": "INT",
+          "description": "Number of days for payment of an invoice (ie payment terms)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PhoneNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Phone number",
+          "fk": null,
+          "values": {},
+          "nullable": false,
+          "pii": "phone"
+        },
+        {
+          "name": "FaxNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Fax number  ",
+          "fk": null,
+          "values": {},
+          "nullable": false,
+          "pii": "phone"
+        },
+        {
+          "name": "DeliveryRun",
+          "type": "NVARCHAR(5)",
+          "description": "Normal delivery run for this customer",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "RunPosition",
+          "type": "NVARCHAR(5)",
+          "description": "Normal position in the delivery run for this customer",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "WebsiteURL",
+          "type": "NVARCHAR(256)",
+          "description": "URL for the website for this customer",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryAddressLine1",
+          "type": "NVARCHAR(60)",
+          "description": "First delivery address line for the customer",
+          "fk": null,
+          "values": {},
+          "nullable": false,
+          "pii": "address"
+        },
+        {
+          "name": "DeliveryAddressLine2",
+          "type": "NVARCHAR(60)",
+          "description": "Second delivery address line for the customer",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "pii": "address"
+        },
+        {
+          "name": "DeliveryPostalCode",
+          "type": "NVARCHAR(10)",
+          "description": "Delivery postal code for the customer",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryLocation",
+          "type": "GEOGRAPHY",
+          "description": "Geographic location for the customer's office/warehouse",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "PostalAddressLine1",
+          "type": "NVARCHAR(60)",
+          "description": "First postal address line for the customer",
+          "fk": null,
+          "values": {},
+          "nullable": false,
+          "pii": "address"
+        },
+        {
+          "name": "PostalAddressLine2",
+          "type": "NVARCHAR(60)",
+          "description": "Second postal address line for the customer",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "pii": "address"
+        },
+        {
+          "name": "PostalPostalCode",
+          "type": "NVARCHAR(10)",
+          "description": "Postal code for the customer when sending by mail",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidFrom",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidTo",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Sales.Orders",
+      "description": "Detail of customer orders",
+      "module": "Sales",
+      "keywords": [
+        "sipariş",
+        "sipariş tarihi",
+        "sipariş sayısı",
+        "faturalanmamış sipariş",
+        "geri sipariş",
+        "beklenen teslimat tarihi"
+      ],
+      "columns": [
+        {
+          "name": "OrderID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to an order within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerID",
+          "type": "INT",
+          "description": "Customer for this order",
+          "fk": "Sales.Customers.CustomerID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SalespersonPersonID",
+          "type": "INT",
+          "description": "Salesperson for this order",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PickedByPersonID",
+          "type": "INT",
+          "description": "Person who picked this shipment",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ContactPersonID",
+          "type": "INT",
+          "description": "Customer contact for this order",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BackorderOrderID",
+          "type": "INT",
+          "description": "If this order is a backorder, this column holds the original order number",
+          "fk": "Sales.Orders.OrderID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "OrderDate",
+          "type": "DATE",
+          "description": "Date that this order was raised",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ExpectedDeliveryDate",
+          "type": "DATE",
+          "description": "Expected delivery date",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerPurchaseOrderNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Purchase Order Number received from customer",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "IsUndersupplyBackordered",
+          "type": "BIT",
+          "description": "If items cannot be supplied are they backordered?",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Comments",
+          "type": "NVARCHAR(MAX)",
+          "description": "Any comments related to this order (sent to customer)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DeliveryInstructions",
+          "type": "NVARCHAR(MAX)",
+          "description": "Any comments related to order delivery (sent to customer)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "InternalComments",
+          "type": "NVARCHAR(MAX)",
+          "description": "Any internal comments related to this order (not sent to the customer)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "PickingCompletedWhen",
+          "type": "DATETIME2",
+          "description": "When was picking of the entire order completed?",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedWhen",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Sales.OrderLines",
+      "description": "Detail lines from customer orders",
+      "module": "Sales",
+      "keywords": [
+        "sipariş satırı",
+        "sipariş edilen miktar",
+        "birim fiyat",
+        "toplanan miktar",
+        "hediye satırı"
+      ],
+      "columns": [
+        {
+          "name": "OrderLineID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a line on an Order within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OrderID",
+          "type": "INT",
+          "description": "Order that this line is associated with",
+          "fk": "Sales.Orders.OrderID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Stock item for this order line (FK not indexed as separate index exists)",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Description",
+          "type": "NVARCHAR(100)",
+          "description": "Description of the item supplied (Usually the stock item name but can be overridden)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PackageTypeID",
+          "type": "INT",
+          "description": "Type of package to be supplied",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Quantity",
+          "type": "INT",
+          "description": "Quantity to be supplied",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "UnitPrice",
+          "type": "DECIMAL(18,2)",
+          "description": "Unit price to be charged",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TaxRate",
+          "type": "DECIMAL(18,3)",
+          "description": "Tax rate to be applied",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PickedQuantity",
+          "type": "INT",
+          "description": "Quantity picked from stock",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PickingCompletedWhen",
+          "type": "DATETIME2",
+          "description": "When was picking of this line completed?",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedWhen",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Sales.Invoices",
+      "description": "Details of customer invoices",
+      "module": "Sales",
+      "keywords": [
+        "fatura",
+        "fatura tarihi",
+        "kredi notu",
+        "iade faturası",
+        "teslimat onayı",
+        "fatura sayısı"
+      ],
+      "columns": [
+        {
+          "name": "InvoiceID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to an invoice within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerID",
+          "type": "INT",
+          "description": "Customer for this invoice",
+          "fk": "Sales.Customers.CustomerID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BillToCustomerID",
+          "type": "INT",
+          "description": "Bill to customer for this invoice (invoices might be billed to a head office)",
+          "fk": "Sales.Customers.CustomerID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OrderID",
+          "type": "INT",
+          "description": "Sales order (if any) for this invoice",
+          "fk": "Sales.Orders.OrderID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DeliveryMethodID",
+          "type": "INT",
+          "description": "How these stock items are beign delivered",
+          "fk": "Application.DeliveryMethods.DeliveryMethodID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ContactPersonID",
+          "type": "INT",
+          "description": "Customer contact for this invoice",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "AccountsPersonID",
+          "type": "INT",
+          "description": "Customer accounts contact for this invoice",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SalespersonPersonID",
+          "type": "INT",
+          "description": "Salesperson for this invoice",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PackedByPersonID",
+          "type": "INT",
+          "description": "Person who packed this shipment (or checked the packing)",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "InvoiceDate",
+          "type": "DATE",
+          "description": "Date that this invoice was raised",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerPurchaseOrderNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Purchase Order Number received from customer",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "IsCreditNote",
+          "type": "BIT",
+          "description": "Is this a credit note (rather than an invoice)",
+          "fk": null,
+          "values": {
+            "0": "sales invoice",
+            "1": "credit note (return)"
+          },
+          "nullable": false
+        },
+        {
+          "name": "CreditNoteReason",
+          "type": "NVARCHAR(MAX)",
+          "description": "Reason that this credit note needed to be generated (if applicable)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "Comments",
+          "type": "NVARCHAR(MAX)",
+          "description": "Any comments related to this invoice (sent to customer)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DeliveryInstructions",
+          "type": "NVARCHAR(MAX)",
+          "description": "Any comments related to delivery (sent to customer)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "InternalComments",
+          "type": "NVARCHAR(MAX)",
+          "description": "Any internal comments related to this invoice (not sent to the customer)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TotalDryItems",
+          "type": "INT",
+          "description": "Total number of dry packages (information for the delivery driver)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TotalChillerItems",
+          "type": "INT",
+          "description": "Total number of chiller packages (information for the delivery driver)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryRun",
+          "type": "NVARCHAR(5)",
+          "description": "Delivery run for this shipment",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "RunPosition",
+          "type": "NVARCHAR(5)",
+          "description": "Position in the delivery run for this shipment",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ReturnedDeliveryData",
+          "type": "NVARCHAR(MAX)",
+          "description": "JSON-structured data returned from delivery devices for deliveries made directly by the organization",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ConfirmedDeliveryTime",
+          "type": "DATETIME2",
+          "description": "Confirmed delivery date and time promoted from JSON delivery data",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ConfirmedReceivedBy",
+          "type": "NVARCHAR(4000)",
+          "description": "Confirmed receiver promoted from JSON delivery data",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedWhen",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Sales.InvoiceLines",
+      "description": "Detail lines from customer invoices",
+      "module": "Sales",
+      "keywords": [
+        "fatura satırı",
+        "ciro",
+        "satılan miktar",
+        "birim fiyat",
+        "vergi tutarı",
+        "kâr",
+        "net satış"
+      ],
+      "columns": [
+        {
+          "name": "InvoiceLineID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a line on an invoice within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "InvoiceID",
+          "type": "INT",
+          "description": "Invoice that this line is associated with",
+          "fk": "Sales.Invoices.InvoiceID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Stock item for this invoice line",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Description",
+          "type": "NVARCHAR(100)",
+          "description": "Description of the item supplied (Usually the stock item name but can be overridden)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PackageTypeID",
+          "type": "INT",
+          "description": "Type of package supplied",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Quantity",
+          "type": "INT",
+          "description": "Quantity supplied",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "UnitPrice",
+          "type": "DECIMAL(18,2)",
+          "description": "Unit price charged",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TaxRate",
+          "type": "DECIMAL(18,3)",
+          "description": "Tax rate to be applied",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TaxAmount",
+          "type": "DECIMAL(18,2)",
+          "description": "Tax amount calculated",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LineProfit",
+          "type": "DECIMAL(18,2)",
+          "description": "Profit made on this line item at current cost price",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ExtendedPrice",
+          "type": "DECIMAL(18,2)",
+          "description": "Extended line price charged",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedWhen",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Sales.CustomerTransactions",
+      "description": "All financial transactions that are customer-related",
+      "module": "Sales",
+      "keywords": [
+        "müşteri hareketi",
+        "ödeme",
+        "borç",
+        "alacak",
+        "işlem türü",
+        "bakiye",
+        "hesap ekstresi"
+      ],
+      "columns": [
+        {
+          "name": "CustomerTransactionID",
+          "type": "INT",
+          "description": "Numeric ID used to refer to a customer transaction within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerID",
+          "type": "INT",
+          "description": "Customer for this transaction",
+          "fk": "Sales.Customers.CustomerID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TransactionTypeID",
+          "type": "INT",
+          "description": "Type of transaction",
+          "fk": null,
+          "values": {
+            "1": "sales invoice",
+            "2": "customer payment",
+            "10": "customer credit note"
+          },
+          "nullable": false
+        },
+        {
+          "name": "InvoiceID",
+          "type": "INT",
+          "description": "ID of an invoice (for transactions associated with an invoice)",
+          "fk": "Sales.Invoices.InvoiceID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "PaymentMethodID",
+          "type": "INT",
+          "description": "ID of a payment method (for transactions involving payments)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TransactionDate",
+          "type": "DATE",
+          "description": "Date for the transaction",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "AmountExcludingTax",
+          "type": "DECIMAL(18,2)",
+          "description": "Transaction amount (excluding tax)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TaxAmount",
+          "type": "DECIMAL(18,2)",
+          "description": "Tax amount calculated",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TransactionAmount",
+          "type": "DECIMAL(18,2)",
+          "description": "Transaction amount (including tax)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OutstandingBalance",
+          "type": "DECIMAL(18,2)",
+          "description": "Amount still outstanding for this transaction",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FinalizationDate",
+          "type": "DATE",
+          "description": "Date that this transaction was finalized (if it has been)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "IsFinalized",
+          "type": "BIT",
+          "description": "Is this transaction finalized (invoices, credits and payments have been matched)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedWhen",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Warehouse.StockGroups",
+      "description": "Groups for categorizing stock items (ie: novelties, toys, edible novelties, etc.)",
+      "module": "Warehouse",
+      "keywords": [
+        "stok grubu",
+        "ürün kategorisi",
+        "grup adı"
+      ],
+      "columns": [
+        {
+          "name": "StockGroupID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a stock group within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockGroupName",
+          "type": "NVARCHAR(50)",
+          "description": "Full name of groups used to categorize stock items",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidFrom",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidTo",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Warehouse.StockItems",
+      "description": "Main entity table for stock items",
+      "module": "Warehouse",
+      "keywords": [
+        "ürün",
+        "stok kalemi",
+        "ürün adı",
+        "marka",
+        "alış fiyatı",
+        "tedarikçi",
+        "birim fiyat"
+      ],
+      "columns": [
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a stock item within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemName",
+          "type": "NVARCHAR(100)",
+          "description": "Full name of a stock item (but not a full description)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SupplierID",
+          "type": "INT",
+          "description": "Usual supplier for this stock item",
+          "fk": "Purchasing.Suppliers.SupplierID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ColorID",
+          "type": "INT",
+          "description": "Color (optional) for this stock item",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "UnitPackageID",
+          "type": "INT",
+          "description": "Usual package for selling units of this stock item",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OuterPackageID",
+          "type": "INT",
+          "description": "Usual package for selling outers of this stock item (ie cartons, boxes, etc.)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Brand",
+          "type": "NVARCHAR(50)",
+          "description": "Brand for the stock item (if the item is branded)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "Size",
+          "type": "NVARCHAR(20)",
+          "description": "Size of this item (eg: 100mm)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "LeadTimeDays",
+          "type": "INT",
+          "description": "Number of days typically taken from order to receipt of this stock item",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "QuantityPerOuter",
+          "type": "INT",
+          "description": "Quantity of the stock item in an outer package",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IsChillerStock",
+          "type": "BIT",
+          "description": "Does this stock item need to be in a chiller?",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Barcode",
+          "type": "NVARCHAR(50)",
+          "description": "Barcode for this stock item",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TaxRate",
+          "type": "DECIMAL(18,3)",
+          "description": "Tax rate to be applied",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "UnitPrice",
+          "type": "DECIMAL(18,2)",
+          "description": "Selling price (ex-tax) for one unit of this product",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "RecommendedRetailPrice",
+          "type": "DECIMAL(18,2)",
+          "description": "Recommended retail price for this stock item",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TypicalWeightPerUnit",
+          "type": "DECIMAL(18,3)",
+          "description": "Typical weight for one unit of this product (packaged)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MarketingComments",
+          "type": "NVARCHAR(MAX)",
+          "description": "Marketing comments for this stock item (shared outside the organization)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "InternalComments",
+          "type": "NVARCHAR(MAX)",
+          "description": "Internal comments (not exposed outside organization)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "Photo",
+          "type": "VARBINARY(MAX)",
+          "description": "Photo of the product",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "CustomFields",
+          "type": "NVARCHAR(MAX)",
+          "description": "Custom fields added by system users",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "Tags",
+          "type": "NVARCHAR(MAX)",
+          "description": "Advertising tags associated with this stock item (JSON array retrieved from CustomFields)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "SearchDetails",
+          "type": "NVARCHAR(MAX)",
+          "description": "Combination of columns used by full text search",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidFrom",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidTo",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Warehouse.StockItemStockGroups",
+      "description": "Which stock items are in which stock groups",
+      "module": "Warehouse",
+      "keywords": [
+        "stok grubu",
+        "ürün grubu",
+        "grup üyeliği",
+        "kategori eşleşmesi"
+      ],
+      "columns": [
+        {
+          "name": "StockItemStockGroupID",
+          "type": "INT",
+          "description": "Internal reference for this linking row",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Stock item assigned to this stock group (FK indexed via unique constraint)",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockGroupID",
+          "type": "INT",
+          "description": "StockGroup assigned to this stock item (FK indexed via unique constraint)",
+          "fk": "Warehouse.StockGroups.StockGroupID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedWhen",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Warehouse.StockItemTransactions",
+      "description": "Transactions covering all movements of all stock items",
+      "module": "Warehouse",
+      "keywords": [
+        "stok hareketi",
+        "stok giriş",
+        "stok çıkış",
+        "transfer",
+        "sayım",
+        "işlem türü",
+        "miktar"
+      ],
+      "columns": [
+        {
+          "name": "StockItemTransactionID",
+          "type": "INT",
+          "description": "Numeric ID used to refer to a stock item transaction within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "StockItem for this transaction",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TransactionTypeID",
+          "type": "INT",
+          "description": "Type of transaction",
+          "fk": null,
+          "values": {
+            "1": "sold on an invoice",
+            "3": "bought on a purchase order",
+            "7": "stock issue",
+            "8": "stock transfer",
+            "9": "stock adjustment",
+            "10": "customer credit note"
+          },
+          "nullable": false
+        },
+        {
+          "name": "CustomerID",
+          "type": "INT",
+          "description": "Customer for this transaction (if applicable)",
+          "fk": "Sales.Customers.CustomerID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "InvoiceID",
+          "type": "INT",
+          "description": "ID of an invoice (for transactions associated with an invoice)",
+          "fk": "Sales.Invoices.InvoiceID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "SupplierID",
+          "type": "INT",
+          "description": "Supplier for this stock transaction (if applicable)",
+          "fk": "Purchasing.Suppliers.SupplierID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "PurchaseOrderID",
+          "type": "INT",
+          "description": "ID of an purchase order (for transactions associated with a purchase order)",
+          "fk": "Purchasing.PurchaseOrders.PurchaseOrderID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TransactionOccurredWhen",
+          "type": "DATETIME2",
+          "description": "Date and time when the transaction occurred",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Quantity",
+          "type": "DECIMAL(18,3)",
+          "description": "Quantity of stock movement (positive is incoming stock, negative is outgoing)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedWhen",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Warehouse.StockItemHoldings",
+      "description": "Non-temporal attributes for stock items",
+      "module": "Warehouse",
+      "keywords": [
+        "eldeki stok",
+        "stok miktarı",
+        "siparişlere ayrılan",
+        "geri sipariş miktarı",
+        "yeniden sipariş seviyesi",
+        "stok maliyeti"
+      ],
+      "columns": [
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "ID of the stock item that this holding relates to (this table holds non-temporal columns for stock)",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "QuantityOnHand",
+          "type": "INT",
+          "description": "Quantity currently on hand (if tracked)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BinLocation",
+          "type": "NVARCHAR(20)",
+          "description": "Bin location (ie location of this stock item within the depot)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastStocktakeQuantity",
+          "type": "INT",
+          "description": "Quantity at last stocktake (if tracked)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastCostPrice",
+          "type": "DECIMAL(18,2)",
+          "description": "Unit cost price the last time this stock item was purchased",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ReorderLevel",
+          "type": "INT",
+          "description": "Quantity below which reordering should take place",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TargetStockLevel",
+          "type": "INT",
+          "description": "Typical quantity ordered",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedWhen",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Purchasing.Suppliers",
+      "description": "Main entity table for suppliers (organizations)",
+      "module": "Purchasing",
+      "keywords": [
+        "tedarikçi",
+        "firma",
+        "tedarikçi adı",
+        "tedarikçi kategorisi",
+        "telefon",
+        "adres",
+        "alış"
+      ],
+      "columns": [
+        {
+          "name": "SupplierID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a supplier within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SupplierName",
+          "type": "NVARCHAR(100)",
+          "description": "Supplier's full name (usually a trading name)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SupplierCategoryID",
+          "type": "INT",
+          "description": "Supplier's category",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PrimaryContactPersonID",
+          "type": "INT",
+          "description": "Primary contact",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "AlternateContactPersonID",
+          "type": "INT",
+          "description": "Alternate contact",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryMethodID",
+          "type": "INT",
+          "description": "Standard delivery method for stock items received from this supplier",
+          "fk": "Application.DeliveryMethods.DeliveryMethodID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DeliveryCityID",
+          "type": "INT",
+          "description": "ID of the delivery city for this address",
+          "fk": "Application.Cities.CityID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PostalCityID",
+          "type": "INT",
+          "description": "ID of the mailing city for this address",
+          "fk": "Application.Cities.CityID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SupplierReference",
+          "type": "NVARCHAR(20)",
+          "description": "Supplier reference for our organization (might be our account number at the supplier)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "BankAccountName",
+          "type": "NVARCHAR(50)",
+          "description": "Supplier's bank account name (ie name on the account)",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "BankAccountBranch",
+          "type": "NVARCHAR(50)",
+          "description": "Supplier's bank branch",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "BankAccountCode",
+          "type": "NVARCHAR(20)",
+          "description": "Supplier's bank account code (usually a numeric reference for the bank branch)",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "BankAccountNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Supplier's bank account number",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "BankInternationalCode",
+          "type": "NVARCHAR(20)",
+          "description": "Supplier's bank's international code (such as a SWIFT code)",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "PaymentDays",
+          "type": "INT",
+          "description": "Number of days for payment of an invoice (ie payment terms)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "InternalComments",
+          "type": "NVARCHAR(MAX)",
+          "description": "Internal comments (not exposed outside organization)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "PhoneNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Phone number",
+          "fk": null,
+          "values": {},
+          "nullable": false,
+          "pii": "phone"
+        },
+        {
+          "name": "FaxNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Fax number  ",
+          "fk": null,
+          "values": {},
+          "nullable": false,
+          "pii": "phone"
+        },
+        {
+          "name": "WebsiteURL",
+          "type": "NVARCHAR(256)",
+          "description": "URL for the website for this supplier",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryAddressLine1",
+          "type": "NVARCHAR(60)",
+          "description": "First delivery address line for the supplier",
+          "fk": null,
+          "values": {},
+          "nullable": false,
+          "pii": "address"
+        },
+        {
+          "name": "DeliveryAddressLine2",
+          "type": "NVARCHAR(60)",
+          "description": "Second delivery address line for the supplier",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "pii": "address"
+        },
+        {
+          "name": "DeliveryPostalCode",
+          "type": "NVARCHAR(10)",
+          "description": "Delivery postal code for the supplier",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryLocation",
+          "type": "GEOGRAPHY",
+          "description": "Geographic location for the supplier's office/warehouse",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "deny": true
+        },
+        {
+          "name": "PostalAddressLine1",
+          "type": "NVARCHAR(60)",
+          "description": "First postal address line for the supplier",
+          "fk": null,
+          "values": {},
+          "nullable": false,
+          "pii": "address"
+        },
+        {
+          "name": "PostalAddressLine2",
+          "type": "NVARCHAR(60)",
+          "description": "Second postal address line for the supplier",
+          "fk": null,
+          "values": {},
+          "nullable": true,
+          "pii": "address"
+        },
+        {
+          "name": "PostalPostalCode",
+          "type": "NVARCHAR(10)",
+          "description": "Postal code for the supplier when sending by mail",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidFrom",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ValidTo",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Purchasing.PurchaseOrders",
+      "description": "Details of supplier purchase orders",
+      "module": "Purchasing",
+      "keywords": [
+        "satın alma siparişi",
+        "tedarikçi siparişi",
+        "sipariş tarihi",
+        "beklenen teslimat",
+        "kapalı sipariş",
+        "gecikmiş teslimat"
+      ],
+      "columns": [
+        {
+          "name": "PurchaseOrderID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a purchase order within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SupplierID",
+          "type": "INT",
+          "description": "Supplier for this purchase order",
+          "fk": "Purchasing.Suppliers.SupplierID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OrderDate",
+          "type": "DATE",
+          "description": "Date that this purchase order was raised",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryMethodID",
+          "type": "INT",
+          "description": "How this purchase order should be delivered",
+          "fk": "Application.DeliveryMethods.DeliveryMethodID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ContactPersonID",
+          "type": "INT",
+          "description": "The person who is the primary contact for this purchase order",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ExpectedDeliveryDate",
+          "type": "DATE",
+          "description": "Expected delivery date for this purchase order",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "SupplierReference",
+          "type": "NVARCHAR(20)",
+          "description": "Supplier reference for our organization (might be our account number at the supplier)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "IsOrderFinalized",
+          "type": "BIT",
+          "description": "Is this purchase order now considered finalized?",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Comments",
+          "type": "NVARCHAR(MAX)",
+          "description": "Any comments related this purchase order (comments sent to the supplier)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "InternalComments",
+          "type": "NVARCHAR(MAX)",
+          "description": "Any internal comments related this purchase order (comments for internal reference only and not sent to the supplier)",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedWhen",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Purchasing.PurchaseOrderLines",
+      "description": "Detail lines from supplier purchase orders",
+      "module": "Purchasing",
+      "keywords": [
+        "satın alma satırı",
+        "sipariş edilen miktar",
+        "alış fiyatı",
+        "teslim alma tarihi",
+        "satır durumu",
+        "geç kalan sipariş"
+      ],
+      "columns": [
+        {
+          "name": "PurchaseOrderLineID",
+          "type": "INT",
+          "description": "Numeric ID used for reference to a line on a purchase order within the database",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PurchaseOrderID",
+          "type": "INT",
+          "description": "Purchase order that this line is associated with",
+          "fk": "Purchasing.PurchaseOrders.PurchaseOrderID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Stock item for this purchase order line",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OrderedOuters",
+          "type": "INT",
+          "description": "Quantity of the stock item that is ordered",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Description",
+          "type": "NVARCHAR(100)",
+          "description": "Description of the item to be supplied (Often the stock item name but could be supplier description)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ReceivedOuters",
+          "type": "INT",
+          "description": "Total quantity of the stock item that has been received so far",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PackageTypeID",
+          "type": "INT",
+          "description": "Type of package received",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ExpectedUnitPricePerOuter",
+          "type": "DECIMAL(18,2)",
+          "description": "The unit price that we expect to be charged",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "LastReceiptDate",
+          "type": "DATE",
+          "description": "The last date on which this stock item was received for this purchase order",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "IsOrderLineFinalized",
+          "type": "BIT",
+          "description": "Is this purchase order line now considered finalized? (Receipted quantities and weights are often not precise)",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastEditedWhen",
+          "type": "DATETIME2",
+          "description": "Audit/temporal column (system maintained).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    }
+  ]
+}
