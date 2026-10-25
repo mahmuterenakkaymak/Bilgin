@@ -45,7 +45,24 @@ rule and summary embeddings) and its read-only login script by itself, and the a
   değişkeninden; canlı kurulumda bu değişkeni tanımlamayın."). The minimum password length does not apply to this
   bootstrap only. No password value appears anywhere in code, config, tests, docs or the repo; tests set the variable
   with `monkeypatch`. It never runs when at least one user exists, so it cannot reset a real admin.
-- The UI opens on a login screen; after login the header shows the user and role and a "Çıkış" button.
+- **No page without a session, whatever the entry point** (Eren): whichever address is opened - `/`, any hash route
+  (`#/kurallar`, `#/harita`, `#/kullanicilar`, ...), any other path typed into the address bar, a bookmark, a link from
+  an export, the browser's back button after logout - without an open session the login screen is shown and nothing
+  of the app (no sidebar, no history, no dataset name, no data) is rendered or fetched before it. After a successful
+  login the user lands on the address they asked for (if their role may see it; otherwise the ask screen with a
+  one-line note). Mechanics:
+  - Server: every non-`/api`, non-`/assets` GET path returns `index.html` (SPA fallback, `Cache-Control: no-cache`),
+    so a typed deep link never 404s and the app can decide; `/api/*` without a session is always JSON 401.
+  - UI: on start the app calls `GET /api/auth/me` before rendering anything else; 401 -> login screen with the
+    requested route remembered. **Any** API call that returns 401 later (session expired, logged out in another tab,
+    server restarted) drops the app back to the login screen with "Oturumunuz sona erdi, lütfen yeniden giriş
+    yapın." and returns to the same route after login. Logout clears in-memory state (answers, history, rules) so the
+    back button shows nothing of the previous user.
+  - Tests: a table of entry addresses (root, each hash route, an unknown path, a deep link with a query) each shows
+    the login form and makes no data request except `/api/auth/me`; a 401 in the middle of a session (simulated)
+    returns to login and back to the same route; after logout the previous user's answer is not in the DOM. Add a
+    visual flow that opens `#/kurallar` without a session and lands on login.
+- After login the header shows the user and role and a "Çıkış" button.
 - A `user` can ask, see and reopen *their own* history, save and export. A `user` sees the rules screen read-only and
   never sees the schema map or user screens. An `admin` can do everything, including users, rules, index rebuild and
   onboarding a new database from the template and switching the active dataset. Every forbidden call returns 403 from the server whatever the UI shows.
