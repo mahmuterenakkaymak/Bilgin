@@ -794,3 +794,31 @@
 2026-10-26 00:17:43 | HANDS  | T236 try 2: M18 integration (no hand-made fakes): add tests/test_integration_m18.py (new file: CLI `user add` (getpass monkeypatched) writes a real admin into a tmp NL2SQL_APP_DB -> real UserStore -> real create_app over a real open_session on a tmp built mini dataset with a fake index -> TestClient login with that password -> me -> POST /api/ask answered and its ask log line carries no password -> saved add/list -> logout -> me 401 and /api/history 401 -> five wrong logins lock the account (injected clock on the same store) -> the app DB file holds no plain password and no raw token); then fix whatever the whole suite shows red
 2026-10-26 00:19:12 | ORCH   | hands: changed memory note nl2sql-preexisting-red-tests.md - STILL RED at HEAD after T236 (4401 passed, 1 failed) — test_web_health_refresh's stale HEALTH_URL pin is unfixable by a hands agent; source-scanning web tests are the drift-prone kind. Check the owning task before touching a red.
 2026-10-26 00:23:56 | BRAIN  | T236: rescue with sonnet
+2026-10-26 00:33:19 | ORCH   | T236: PASSED (brain)
+2026-10-26 00:33:19 | ORCH   | M18: whole-project checks
+2026-10-26 00:39:16 | ORCH   | M18: whole-project checks green (15 command(s))
+2026-10-26 00:39:16 | ORCH   | M18: screenshots for the visual review
+2026-10-26 00:42:13 | ORCH   | M18: page problem: landing-empty-state-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: ask-golden-answer-chart-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: ask-ambiguous-clarify-then-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: export-buttons-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: saved-and-history-sidebar-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: rules-screen-validation-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: dark-mode-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: logout-clears-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: landing-empty-state-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: ask-golden-answer-chart-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: ask-ambiguous-clarify-then-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: export-buttons-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: saved-and-history-sidebar-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: rules-screen-validation-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: dark-mode-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:42:13 | ORCH   | M18: page problem: logout-clears-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 00:44:55 | BRAIN  | M18: visual review with local Strata (52 screenshots)
+2026-10-26 00:51:20 | BRAIN  | M18: visual review done - 7 fix task(s) added
+2026-10-26 00:51:29 | BRAIN  | M18: review with sonnet in the background - hands keep building
+2026-10-26 00:51:38 | HANDS  | T258 try 1: chart labels (M18 review 1): nl2sql/report/chart.py `_cartesian` must make every drawn category keep its name - ECharts' default `axisLabel.interval: "auto"` silently drops overlapping labels, so the golden bar chart shows only 2 of 5 products at 390 and 3 of 5 at 1366 while the table above it names all five. Set `xAxis.axisLabel` to interval 0 with hideOverlap false, rotate 30 and width + overflow truncate so the rotated labels cannot collide or run past the card, and grow `grid.bottom` to fit them; tooltip, series and the numbers themselves stay untouched. Extend tests/test_chart.py so every cartesian option chart_spec returns - bar and line both - carries xAxis.axisLabel.interval == 0 and a rotate

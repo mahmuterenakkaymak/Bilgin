@@ -119,6 +119,27 @@ def test_the_bilgin_block_names_the_columns_and_the_number_format():
     }
 
 
+# ------------------------------------------------------------------ kategori adlarının tamamı
+
+
+def test_every_cartesian_chart_draws_every_category_name():
+    """T258: ECharts'ın interval "auto"su çakışan adları sessizce düşürür — hiçbiri düşmemeli."""
+    specs = [
+        chart.chart_spec(BAR_COLUMNS, BAR_ROWS, "Ürüne göre satış miktarı ne?"),
+        chart.chart_spec(DATE_COLUMNS, DATE_ROWS, "Günlük ciro ne kadar?"),
+    ]
+
+    for spec in specs:
+        option = spec["option"]
+        label = option["xAxis"]["axisLabel"]
+        assert label["interval"] == 0, "adlar çakışma uğruna silinmez"
+        assert label["rotate"], "dönen ad yanındakine değmez"
+        assert label["hideOverlap"] is False
+        assert label["overflow"] == "truncate" and label["width"] > 0, "uzun ad kartı taşmaz"
+        assert option["grid"]["bottom"] > 30, "dönen ad eski alt boşluğa sığmaz"
+        assert chart.validate_option(option) == []
+
+
 # ------------------------------------------------------------------ grafik çıkmayan haller
 
 

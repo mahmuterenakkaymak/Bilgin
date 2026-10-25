@@ -28,6 +28,10 @@ _SCATTER_WORDS = ("iliski", "korelasyon", "sacilim", "scatter")
 _PERCENT_WORDS = ("oran", "yuzde", "percent", "ratio")
 
 _GRID = {"left": 40, "right": 20, "top": 40, "bottom": 30, "containLabel": True}
+# ECharts'ın interval "auto"su çakışan adları sessizce düşürür: hepsi çizilir, 30° döner, uzunu kesilir.
+_CATEGORY_LABEL = {"interval": 0, "rotate": 30, "hideOverlap": False, "width": 90, "overflow": "truncate"}
+# Dönen adlar alt boşluğa sığmalı; pasta ve saçılımın düz ekseni bu büyümeyi almaz.
+_CATEGORY_BOTTOM = 60
 
 
 def chart_spec(columns: list[str], rows: list[tuple], question: str) -> dict | None:
@@ -147,8 +151,8 @@ def _scatter(columns, rows, numbers, question):
 def _cartesian(trigger, labels, series):
     return {
         "tooltip": {"trigger": trigger},
-        "grid": dict(_GRID),
-        "xAxis": {"type": "category", "data": labels},
+        "grid": dict(_GRID, bottom=_CATEGORY_BOTTOM),
+        "xAxis": {"type": "category", "data": labels, "axisLabel": dict(_CATEGORY_LABEL)},
         "yAxis": {"type": "value"},
         "series": series,
     }
