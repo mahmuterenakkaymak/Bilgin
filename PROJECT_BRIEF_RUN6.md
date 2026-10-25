@@ -48,7 +48,7 @@ rule and summary embeddings) and its read-only login script by itself, and the a
 - The UI opens on a login screen; after login the header shows the user and role and a "Çıkış" button.
 - A `user` can ask, see and reopen *their own* history, save and export. A `user` sees the rules screen read-only and
   never sees the schema map or user screens. An `admin` can do everything, including users, rules, index rebuild and
-  the schema map round trip. Every forbidden call returns 403 from the server whatever the UI shows.
+  onboarding a new database from the template and switching the active dataset. Every forbidden call returns 403 from the server whatever the UI shows.
 - From the UI an admin downloads `bilgin-veritabani-sablonu.xlsx`, fills it for a database Bilgin has never seen,
   uploads it, reviews the check report and applies it; a new dataset folder appears under `real_datasets/<name>/`
   with schema, rules, profile and an empty golden set, its index is built automatically (progress shown in the UI),
