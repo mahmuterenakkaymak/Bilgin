@@ -1,6 +1,10 @@
 # Bilgin: Teknik Doküman
 
-*ERP verisine Türkçe soru soran, yerel çalışan yapay zekâ veri analisti · 25 Ekim 2026 · hazırlayan: Claude (Eren'in projesi için)*
+*ERP verisine Türkçe soru soran, yerel çalışan yapay zekâ veri analisti · sürüm 2 · 25 Ekim 2026 (gece) · hazırlayan: Claude (Eren'in projesi için)*
+
+> Sürüm 2'de eklenenler: teknoloji yığını (dil, framework ve kütüphane sürümleri, modeller, altyapı) ve planlanan
+> üç geliştirme turu (Run 6: kullanıcılar ve yeni veritabanı şablonu, Run 7: konuşma, başlangıç ekranı ve bağlantı
+> yönetimi, Run 8: İngilizce ve Windows servisi). Run 6 bu doküman yazılırken geliştiriliyordu.
 
 ---
 
@@ -60,6 +64,70 @@ Gerçek veritabanı testinde bu kendiliğinden bir kez devreye girdi (bkz. 7).
 **Arayüz.** React + ECharts, tamamen yerel (dış URL yok). Soru kutusu, cevap kartı (cümle, uyarılar, tablo, grafik,
 CSV/Excel indirme, "nasıl hesapladım" bölümü), kayıtlı sorular ve geçmiş, iş kuralı düzenleme ekranı, telefon
 düzeni ve karanlık mod.
+
+### 3.1 Teknoloji yığını
+
+**Dil ve çalışma ortamı**
+
+| Katman | Teknoloji | Sürüm | Not |
+|---|---|---|---|
+| Arka uç dili | Python | 3.11.9 (`requires-python >= 3.11`) | Paket adı `nl2sql`, komut satırı `python -m nl2sql` |
+| Ön uç dili | JavaScript (JSX) | Node.js 24.21 ile derlenir | Çalışma anında Node gerekmez; derlenmiş dosyalar Python sunucusundan servis edilir |
+| İşletim sistemi | Windows 11 (geliştirme), WSL2 Ubuntu 24.04 (model sunumunun bir kısmı) | | Run 8 ile Windows servisi |
+
+**Arka uç kütüphaneleri** (sürümler `pyproject.toml`'da sabitlenmiş)
+
+| Kütüphane | Sürüm | Ne için |
+|---|---|---|
+| sqlglot | 30.24.0 | SQL'i ağaç olarak çözümleme: politika (tek SELECT, izin listesi, TOP, kişisel veri filtresi), T-SQL → SQLite çevirisi, kolon izi (maskeleme) |
+| FastAPI | 0.162.0 | Web API (`/api/ask`, `/api/replay`, kurallar, dışa aktarma, sağlık) |
+| Uvicorn | 0.54.0 | API sunucusu (yalnız 127.0.0.1) |
+| openai (Python SDK) | 3.37.0 | Yerel modellerin OpenAI uyumlu uç noktalarına istemci (bulut değil: Strata, Unsloth Studio, llama.cpp) |
+| pyodbc | 5.3.0 | SQL Server bağlantısı (ODBC Driver 17/18) |
+| openpyxl | 3.1.5 | Excel: şema haritası içe aktarma, şablon üretimi (Run 6), Excel dışa aktarma |
+| Standart kütüphane | | `sqlite3` (3.45.1) uygulama veritabanı ve test veritabanları; `hashlib.scrypt` parola hash'i (Run 6); `ctypes` + DPAPI parola şifreleme (Run 7) |
+| pytest / httpx | 9.1.1 / 0.28.1 | Testler ve API testleri (FastAPI TestClient) |
+
+Bilinçli olarak **eklenmeyenler**: ORM, vektör veritabanı (LanceDB vb.), LangChain türü çerçeveler, `python-multipart`.
+Vektör araması birkaç yüz belgede saf Python ile yapılıyor; `VectorStore` arayüzü ileride değiştirilebilsin diye var.
+
+**Ön uç kütüphaneleri** (`web/package.json`)
+
+| Kütüphane | Sürüm | Ne için |
+|---|---|---|
+| React / React DOM | 19.3.1 | Arayüz bileşenleri |
+| ECharts | 6.1.0 | Grafikler (grafik türünü ve verisini Python tarafı seçer, ECharts yalnız çizer) |
+| Vite | 8.3.5 | Derleme; çıktı `nl2sql/web/static` |
+| Vitest | 5.0.5 | Ön uç birim testleri |
+
+Arayüz dış URL kullanmaz (yazı tipi, CDN, analitik yok); bir test bunu derlenmiş dosyada kontrol eder.
+
+**Modeller** (hepsi yerel)
+
+| Rol | Model | Sunum | Bağlam |
+|---|---|---|---|
+| Geliştirme / ana model | Qwen3.8-Flash-Next, UD-IQ4_XS | Strata (llama.cpp tabanlı, OpenAI + Anthropic uyumlu API, `127.0.0.1:8080`) | 256K |
+| Müşteri kutusu adayı | Qwen3.8-27B, UD-Q4_K_XL (~17,6 GB) | Unsloth Studio (WSL2, `:8888`) | 16K / 24K denendi |
+| Gömme (RAG) | EmbeddingGemma-300M, Q8_0 | llama.cpp `llama-server --embedding` (CPU, `:8891`) | — |
+
+Gömme tarafında ürün hedefi MIT lisanslı bir model (bge-m3); EmbeddingGemma Gemma kullanım koşullarına tabidir.
+Testlerde gerçek model hiç çağrılmaz: sahte model (`--llm fake`) altın SQL'i oynatır, sahte gömücü deterministiktir.
+
+**Veritabanları**
+
+| Veritabanı | Kullanım |
+|---|---|
+| Microsoft SQL Server 2022 Express | Gerçek WideWorldImporters; müşteri ERP'leri bu sınıfta. Bağlantı ODBC Driver 18, `ApplicationIntent=ReadOnly`, salt-okunur giriş |
+| SQLite | Sentetik ERP ve WWI kopyası (testler ve demo), uygulamanın kendi verisi (kullanıcılar, oturumlar, kayıtlı sorular, konuşmalar, bağlantılar) |
+
+**Geliştirme ve doğrulama araçları**
+
+| Araç | Ne için |
+|---|---|
+| Hibrit orkestratör (Python, `local-agent-stack/hybrid`) | Plan → görev → kabul komutu → review döngüsü; test bekçisi, proje geneli kontroller, run zinciri |
+| Claude Code CLI | Görevleri yazan yerel modelin çalıştığı araç ortamı; bulut Claude plan ve review'da |
+| Playwright 1.64 + Microsoft Edge (headless) | Görsel kontrol: ekran görüntüleri, kullanıcı akışları, PDF üretimi |
+| WinSW (MIT) | Run 8: Windows servis sarmalayıcısı, sürüm ve SHA-256 sabit |
 
 ## 4. Güvenlik katmanları
 
@@ -174,14 +242,72 @@ smoke kontrolleri, ekran görüntüsüyle görsel inceleme.
 | 3 | Excel eşleme, canlı şema okuma ve fark raporu, kişisel veri maskesi, salt-okunur giriş betiği, `auto` mod | 44 görev, 38'i ilk denemede |
 | 4 | Veri kümesi yapısı, WWI, model profilleri, bağlam bütçesi, model karşılaştırma | 39 görev, 37'si ilk denemede |
 | 5 | Soru-cevap oturumu, rapor katmanı, netleştirme, tablo özetleri, web arayüzü, kural ekranı | T163-T222 |
+| 6 | Kullanıcılar ve roller, login, yeni veritabanı şablonu | 35 görev planlandı (T223-T257), geliştiriliyor |
+| 7 | Konuşma, başlangıç ekranı, bağlantı yönetimi | planlandı |
+| 8 | İngilizce, Windows servisi | planlandı |
 
-Toplam 222 görev kapandı; test sayısı **4210**, hepsi yeşil. Gerçek veritabanı bağlantısı ve sonrasındaki düzeltmeler
-elle yapıldı.
+Run 1-5'te 222 görev kapandı; test sayısı **4215**, hepsi yeşil. Gerçek veritabanı bağlantısı ve sonrasındaki
+düzeltmeler (COUNT(*), ondalık JSON, cevapta kolon adı, geçmişten açma) elle yapıldı.
 
-## 10. Açık işler
+## 10. Planlanan geliştirmeler (Run 6-8)
+
+Üç tur zincir halinde, sırayla geliştiriliyor. Her turun ayrıntılı tanımı repodaki `PROJECT_BRIEF_RUN6.md`,
+`PROJECT_BRIEF_RUN7.md`, `PROJECT_BRIEF_RUN8.md` dosyalarında.
+
+### 10.1 Run 6 - Kullanıcılar, roller ve yeni veritabanı şablonu
+
+- **Giriş ve oturum:** kullanıcılar uygulamanın kendi SQLite dosyasında; parolalar standart kütüphanenin scrypt'iyle
+  hash'lenir (yeni bağımlılık yok). Oturum çerezi HttpOnly ve SameSite=Strict; 5 hatalı denemede 15 dakika kilit;
+  "kullanıcı yok" ve "parola yanlış" aynı mesajı verir. İlk yönetici komut satırından, parola gizli yazılarak açılır;
+  test için bir ortam değişkeniyle geliştirme yöneticisi kendiliğinden açılabilir (parola kodda ve repoda yok).
+- **Her adres login'e gider:** hangi adresten girilirse girilsin oturum yoksa login ekranı açılır, uygulamanın hiçbir
+  parçası görünmez; giriş sonrası istenen sayfaya dönülür; oturum yarıda düşerse login'e dönüş ve aynı sayfaya geri.
+- **Roller:** `user` soru sorar, kendi geçmişini görür, kaydeder, dışa aktarır, iş kurallarını salt-okunur görür.
+  `admin` ayrıca iş kurallarını ve kullanıcıları yönetir, yeni veritabanı tanıtır. Kontrol sunucuda yapılır; tablo
+  halindeki bir test her API yolunu üç durumla dener.
+- **Yeni veritabanını Excel şablonuyla tanıtmak:** admin boş şablonu indirir (Nasıl doldurulur, Veri kümesi, Tablolar,
+  Kolonlar, İş kuralları ve tek tablonun doldurulmuş hali olan **Örnek** sayfası) ya da bağlantı varsa yapısı
+  veritabanından doldurulmuş şablonu. Doldurup yükler; önce hiçbir şey yazmadan bir kontrol raporu gelir; "Oluştur"
+  ile yeni veri kümesi, salt-okunur login betiği ve RAG indeksi kendiliğinden kurulur; admin aktif veri kümesini ona
+  geçirir. Var olan veri kümelerine hiçbir yükleme dokunmaz.
+
+### 10.2 Run 7 - Konuşma, başlangıç ekranı ve bağlantı yönetimi
+
+- **Ardışık soru-cevap:** "Son satışın tutarı ne?" → "Bu müşteriye başka ne sattık?" → "Bunlardan hangisi en çok
+  ciro yaptı?"; raporu düzenleme: "Sadece Texas", "Geçen yılla karşılaştır", "Grafiği çubuk yap". Model son üç turun
+  sorusunu, SQL'ini ve maskelenmiş en fazla 5 satırını görür; tam sonuç saklanmaz. Devam cevabının kanıtında nasıl
+  okunduğu yazar ("Önceki cevaptan: müşteri 832"). Önceki turun bir sayısı yeni cevaba kopyalanamaz. Grafik türü
+  değişikliği modele gitmez. Ölçüm: gerçek WWI'de 2-3 soruluk konuşma zincirleri.
+- **İş rolüne göre başlangıç ekranı:** kullanıcının iş rolü (Satış, Satın alma, Muhasebe, Yönetim, Genel) yetki
+  rolünden ayrıdır ve admin tarafından atanır. Girişte o role ait hazır soru kartları gelir: sayı, küçük grafik ya da
+  tablo. Kartlar modele gitmez, admin'in onayladığı sabit SQL'i salt-okunur çalıştırır; sonuçlar 5 dakika önbellekte
+  tutulur. Karta tıklayınca konuşma oradan devam eder. Yeni bir veritabanında Bilgin her rol için soru önerir;
+  onaylanmayan hiçbir öneri çalışmaz. BI panosu değildir: her kart Bilgin'in cevaplayıp sürdürebileceği bir sorudur.
+- **Bağlantılar admin panelinden:** her veri kümesinin kendi bağlantısı; veri kümesi değişince bağlantı da değişir.
+  Parola DPAPI ile şifreli saklanır, hiçbir API geri döndürmez, loglara girmez. Kaydetmeden önce yetki kilidi:
+  sysadmin, db_owner ya da yazma yetkili bir login reddedilir. Ortam değişkeni varsa önceliklidir.
+- **Bağlantı durumu herkese:** header'da yeşil / kırmızı / gri "Veritabanı" göstergesi; arka planda dakikada bir
+  kontrol; bağlantı yokken soru modeli beklemeden hemen "şu an cevap üretilemiyor" der.
+
+### 10.3 Run 8 - İngilizce ve Windows servisi
+
+- **Programın İngilizcesi:** arayüz, API mesajları, cevap cümlesi, netleştirme, uyarılar, grafik etiketleri, komut
+  satırı ve README. Kullanıcı dili seçer (TR | EN); cevabın dili sorunun dilini izler. Sayı biçimi dile göre değişir
+  (`1.234,56` / `1,234.56`) ve sayı kontrolü iki biçimi de tanır. Veri çevrilmez: tablo değerleri ve şema açıklamaları
+  yazıldığı gibi kalır. Gerçek WWI için İngilizce altın soru seti eklenir.
+- **Şablon programın dilinde:** İngilizce kullanıcıya İngilizce şablon (sayfa adları, başlıklar, Y/N listeleri,
+  örnek); iki şablon da hangi dilde olursa olsun içeri alınır ve aynı şemayı üretir.
+- **Windows servisi:** tek script'le kurulum (yönetici olarak), Windows'la birlikte açılır, çökerse yeniden başlar,
+  sanal hesapla (`NT SERVICE\Bilgin`) çalışır, verisi `C:\ProgramData\Bilgin` altında, logları boyuta göre döner.
+  Sarmalayıcı WinSW (MIT, sürüm ve SHA-256 sabit). Güncelleme ve kaldırma script'leri; her adımı değiştirmeden
+  gösteren `-WhatIf`. Servis yine yalnız yerel makineden erişilir.
+
+## 11. Açık işler (Run 6-8 dışında)
 
 1. **Q01 ve Q25'i netleştirmek.** Soru metni tek okumaya indirilecek; gerçek veride hedef 26/26.
-2. **Kendi ERP verisinde deneme.** Demo verisiyle dolu bir ERP veritabanı, salt-okunur giriş, canlı şema okuma,
-   Excel açıklamaları ve 20-30 gerçek kullanıcı sorusu.
+2. **Kendi ERP verisinde deneme.** Demo verisiyle dolu bir ERP veritabanı, Run 6 şablonuyla tanıtma, salt-okunur
+   giriş, iş kuralları ve 20-30 gerçek kullanıcı sorusundan bir altın set.
 3. **Ölçüm tekrarı.** 27B için daha fazla tekrar ve 16 GB VRAM'e sığan daha düşük bit seçeneğinin ölçümü.
-4. **Lisans kontrolü.** Ticari dağıtımdan önce model ve gömme modelinin lisansları.
+4. **Lisans kontrolü.** Ticari dağıtımdan önce model ve gömme modelinin lisansları; gömme için MIT lisanslı modele geçiş.
+5. **Ağa açma.** Bilgin şimdilik yalnız yerel makineden erişiliyor; birden çok bilgisayardan kullanım TLS ve ağ
+   güvenliği ayrıca ele alınınca.
