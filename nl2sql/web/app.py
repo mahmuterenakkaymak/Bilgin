@@ -155,7 +155,15 @@ def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir:
         lines = runner.load_golden(
             session.dataset.golden_path if session.dataset else config.GOLDEN_PATH
         )
-        return {"examples": [{"question": line["question"], "kind": "golden"} for line in lines[: config.EXAMPLES_N]]}
+        examples = [
+            {"question": line["question"], "kind": "golden"} for line in lines[: config.EXAMPLES_N]
+        ]
+        # R5-15: belirsiz sorunun tek çipi netleştirme demosunu çiplerden erişilebilir kılar;
+        # kümenin böyle bir dosyası yoksa çip de yoktur.
+        ambiguous = session.dataset.ambiguous() if session.dataset else []
+        if ambiguous:
+            examples.append({"question": ambiguous[0]["question"], "kind": "ambiguous"})
+        return {"examples": examples}
 
     @app.get("/api/tables")
     def tables() -> dict:
