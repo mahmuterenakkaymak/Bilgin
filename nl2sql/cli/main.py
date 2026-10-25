@@ -16,6 +16,7 @@ import argparse
 import getpass
 import json
 import math
+import os
 from decimal import Decimal
 import re
 import sqlite3
@@ -41,6 +42,7 @@ from nl2sql.agent.llm import (
 )
 from nl2sql.agent.loop import AgentRun, Step, run_agent
 from nl2sql.agent.modes import MODES, ToolContext, get_mode
+from nl2sql.auth.bootstrap import dev_admin
 from nl2sql.auth.store import NOT_FOUND_MESSAGE, UserError, UserStore
 from nl2sql.cli.table import format_table
 from nl2sql.engine import checks, login_script
@@ -97,10 +99,11 @@ AUDIT_SOURCE = "ask"
 # bağlanır, çıkış kodu ise durumun adıdır — anlatı gelen cevaplar da başarılıdır.
 JSON_SOURCE = "cli"
 JSON_OK = ("answered", "needs_clarification")
-# R5-14/R5-15: ``serve`` tek kullanıcı ve kimlik doğrulaması yok, o yüzden adresin seçimi kullanıcıya
-# bırakılmaz: kendi makinesinin dışına çıkmaz, çıkarsa hiçbir şey dinlemeye başlamaz.
+# R5-14/R5-15: adresin seçimi kullanıcıya bırakılmaz: kendi makinesinin dışına çıkmaz, çıkarsa
+# hiçbir şey dinlemeye başlamaz. R6-7: kimlik doğrulama artık her zaman açık, yani cümlenin
+# gerekçesi tek kullanıcı değil, TLS ve ağ erişiminin kapsam dışı kalması.
 LOOPBACK_HOSTS = (config.SERVE_HOST, "localhost")
-LOOPBACK_ONLY = "Bilgin yalnız 127.0.0.1 üzerinde çalışır (tek kullanıcı, kimlik doğrulama yok)."
+LOOPBACK_ONLY = "Bilgin yalnız 127.0.0.1 üzerinde çalışır (TLS ve ağ erişimi kapsam dışı)."
 SERVE_LINE = "Bilgin: {url}  (veri kümesi {dataset}, model {model}, llm {llm})"
 PROSE = "yanıt"
 SQL_TOOLS = ("run_sql", "submit_sql")
@@ -1846,6 +1849,10 @@ def serve(
     Küme söylenmediğinde sunulan dünya adıyla da söylenir (`--ambiguous`ın yaptığı gibi): çipin
     adı başka sunulan başka olmasın - belirsiz sorular, altın kayıt, ``as_of`` ve indeks kümden
     gelir, yani küme tanınmadan sahte istemci R5-11'in kartını hiç açmaz.
+
+    R6-7: sunulan uygulama her zaman bir kullanıcı deposunun üstünde durur, yani oturum ister.
+    Kullanıcı yoksa dinlemeye başlamaz: ya geliştirme yöneticisi açılır ya da ``user add`` cümlesi
+    söylenir - ikisi de olmazsa hiçbir adres dinlenmemiş olur.
     """
     # R5-1: web ve app içe yalnız burada girilir; cli'yi çağıran katmanlar döngü kurmasın.
     from nl2sql.app.session import SessionError, open_session
@@ -1867,6 +1874,11 @@ def serve(
     if host not in LOOPBACK_HOSTS:
         print(LOOPBACK_ONLY)
         return EXIT_BAD_INPUT
+    # R6-7: oturumun sorulacağı bir depo olmadan dinlenmez; boş tabloda sıra bootstrapte.
+    users = UserStore(config.app_db_path())
+    if not users.count_users() and not dev_admin(users, os.environ):
+        print(NO_USERS)
+        return EXIT_BAD_INPUT
     ds = session.dataset
     print(
         SERVE_LINE.format(
@@ -1876,7 +1888,7 @@ def serve(
             llm=session.llm_kind,
         )
     )
-    run_server(create_app(session), host, port)
+    run_server(create_app(session, users=users), host, port)
     return 0
 
 

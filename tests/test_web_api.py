@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from nl2sql import config
 from nl2sql.app.session import open_session
+from nl2sql.auth.store import UserStore
 from nl2sql.cli import main as cli
 from nl2sql.web.app import create_app
 
@@ -170,6 +171,9 @@ def test_serve_refuses_a_host_outside_the_machine(project, capsys, monkeypatch):
 def test_serve_binds_loopback_and_names_what_it_serves(project, capsys, monkeypatch):
     seen = {}
     capsys.readouterr()
+    # R6-7: sunulan uygulama oturum ister, yani koşum ancak bir yönetici varsa dinlemeye başlar.
+    monkeypatch.setenv("NL2SQL_APP_DB", str(project / "app.db"))
+    UserStore(project / "app.db").add_user("admin", "Bilgin2026!erp", "admin")
     monkeypatch.setattr(cli, "run_server", lambda app, host, port: seen.update(host=host, port=port))
 
     assert cli.serve(llm_kind="fake", dataset="mini") == 0

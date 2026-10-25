@@ -15,11 +15,13 @@ from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
 from nl2sql import config, datasets
+from nl2sql.auth.store import UserStore
 from nl2sql.cli import main as cli
 from nl2sql.web import app as web_app
 
 DATASET = "synthetic_erp"
 ROOT = Path(__file__).resolve().parent.parent
+PAROLA = "Bilgin2026!erp"
 
 
 @pytest.fixture(scope="module")
@@ -42,14 +44,19 @@ def serve_app(folder, dataset):
     """Gerçek ``serve``ın kurduğu oturum ve kapı; günlükler ve kayıtlar tmp'de, sunucu kapalı."""
     mp = MonkeyPatch()
     mp.setenv("NL2SQL_DATASETS_DIR", str(folder / "datasets"))
+    mp.setenv("NL2SQL_APP_DB", str(folder / "bilgin.db"))
     mp.setattr(config, "AUDIT_LOG", folder / "audit.jsonl")
     mp.setattr(config, "ASK_LOG", folder / "asks.jsonl")
+    # R6-7: serve kullanıcı deposu olmadan dinlemeye başlamaz; dünyanın bir yöneticisi var.
+    users = UserStore(folder / "bilgin.db")
+    if not users.count_users():
+        users.add_user("admin", PAROLA, "admin")
     create_app = web_app.create_app
     mp.setattr(
         web_app,
         "create_app",
-        lambda session: create_app(
-            session, saved_path=folder / "bilgin.db", static_dir=folder / "static"
+        lambda session, **kwargs: create_app(
+            session, saved_path=folder / "bilgin.db", static_dir=folder / "static", **kwargs
         ),
     )
     seen: dict = {}
@@ -58,7 +65,11 @@ def serve_app(folder, dataset):
         assert cli.serve(llm_kind="fake", dataset=dataset) == 0
     finally:
         mp.undo()
-    return seen["app"].state.session, TestClient(seen["app"])
+    client = TestClient(seen["app"])
+    # R6-7: sunulan kapı oturum ister, o yüzden soruyu soran ekran gibi önce giriş yapılır.
+    login = client.post("/api/auth/login", json={"username": "admin", "password": PAROLA})
+    assert login.status_code == 200, login.text
+    return seen["app"].state.session, client
 
 
 def test_serve_without_a_dataset_serves_the_world_the_chip_names(world):
