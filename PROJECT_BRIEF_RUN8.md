@@ -104,17 +104,21 @@
     --host 127.0.0.1 --port <port> --dataset <name>` (parameters of the install script, defaults 8777 and the active
     dataset). Logs rolled by size under `C:\ProgramData\Bilgin\logs`.
   - Environment of the service: `NL2SQL_HOME`, `NL2SQL_LANG`, `NL2SQL_BACKEND`, `NL2SQL_DATASETS_DIR` in the WinSW XML;
-    the connection string (`NL2SQL_MSSQL_CONN`) and model keys are **not** in the XML: the install script asks for
-    them with `Read-Host -AsSecureString` and stores them DPAPI-protected (`ConvertFrom-SecureString`, machine scope)
-    in `C:\ProgramData\Bilgin\secrets\`, a folder whose ACL allows only Administrators and `NT SERVICE\Bilgin`; at
-    startup `serve` reads that folder when `NL2SQL_HOME` points at it. `NL2SQL_DEV_ADMIN_PASSWORD` is never passed
+    database connections are **not** asked by the install script and are **not** in the XML: since Run 7 they are
+    entered in the admin panel (`Veritabanı bağlantıları`) and stored per dataset, password DPAPI-encrypted at machine
+    scope, in the app DB under `NL2SQL_HOME` - so they keep working when the service (virtual account) reads them.
+    Only model keys, if a profile needs one, are asked with `Read-Host -AsSecureString` and stored DPAPI-protected
+    (machine scope) in `C:\ProgramData\Bilgin\secrets\`, a folder whose ACL allows only Administrators and
+    `NT SERVICE\Bilgin`; at startup `serve` reads that folder when `NL2SQL_HOME` points at it. The install script
+    offers to copy the existing app DB (users, connections, ready questions) from the development folder into
+    `NL2SQL_HOME`, so nothing has to be entered twice. `NL2SQL_DEV_ADMIN_PASSWORD` is never passed
     to the service; the install script refuses to continue while the variable is set at machine level, and creates
     the first admin interactively instead (`user add` with `getpass`).
   - ACLs: `C:\ProgramData\Bilgin` writable by the service account, readable by Administrators; the repo folder
     read-only for the service account.
   - `install-service.ps1` checks: running as administrator, Windows PowerShell 5.1 or 7, the venv exists, the port
-    is free, the model endpoint answers (warning only), the database connection works with the read-only login
-    (warning only); then installs, starts, waits for `/api/health`, prints the URL. `-WhatIf` prints every step and
+    is free, the model endpoint answers (warning only), the active dataset's stored connection passes the Run 7
+    read-only guard (warning only, with a pointer to the admin panel); then installs, starts, waits for `/api/health`, prints the URL. `-WhatIf` prints every step and
     the generated XML without changing anything. `update-service.ps1`: stop, `git pull` is **not** done by the script
     (the operator updates the code), rebuild the UI if `web/` changed, start, health check. `uninstall-service.ps1`:
     stop, remove; data in `C:\ProgramData\Bilgin` is kept unless `-RemoveData` is given (and then it asks).
