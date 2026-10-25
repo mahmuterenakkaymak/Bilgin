@@ -12,7 +12,7 @@ import json
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -30,6 +30,7 @@ from nl2sql.report.export import MEDIA_TYPES, to_csv_bytes, to_xlsx_bytes
 from nl2sql.schema_map import doc
 from nl2sql.schema_map.rules_edit import normalize_rule, save_rules, validate_rule
 from nl2sql.web.auth_api import create_router as create_auth_router
+from nl2sql.web.authz import NO_SESSION, ROUTE_ROLES, current_user, require
 from nl2sql.web.saved import SavedStore
 
 # R5-15: boş soru koşum açmaya değmez; cümle ekranın gösterdiği cümledir.
@@ -140,7 +141,17 @@ def create_app(
 
     app.include_router(create_auth_router())
 
-    @app.post("/api/ask")
+    def guarded(method: str, path: str, **kwargs):
+        """Yolun kapısını ``ROUTE_ROLES``tan okuyan süsleyici (R6-6).
+
+        Matriste public yazmayan her yol oturum ister; matriste hiç olmayan bir yol da ister,
+        yani yeni bir yol unutulursa açık değil kapalı doğar. Seviye ne olursa olsun kapı bugün
+        ``user`` - admin bölünmesi M19'un (PLAN R6-5).
+        """
+        deps = [] if ROUTE_ROLES.get((method, path)) == "public" else [Depends(require("user"))]
+        return getattr(app, method.lower())(path, dependencies=deps, **kwargs)
+
+    @guarded("POST", "/api/ask")
     def ask(body: AskBody) -> dict:
         """Sorunun cevabı: CLI ile birebir aynı payload, kaynağı ``web`` (R5-1)."""
         question = body.question.strip()
@@ -148,12 +159,12 @@ def create_app(
             raise HTTPException(status_code=400, detail=BLANK_QUESTION)
         return ask_payload(session, question, mode=body.mode, choice=body.choice, source="web")
 
-    @app.post("/api/replay/{audit_id}")
+    @guarded("POST", "/api/replay/{audit_id}")
     def replay(audit_id: str) -> dict:
         """Geçmişteki bir soru: kayıtlı SQL modelsiz yeniden çalışır, payload /api/ask ile aynı biçimde."""
         return replay_payload(session, audit_id, source="web")
 
-    @app.get("/api/health")
+    @guarded("GET", "/api/health")
     def health() -> dict:
         """Başlığın çipleri: hangi küme, model sağ mı, indeks taze mi, auto eşiği ne."""
         return {
@@ -167,7 +178,7 @@ def create_app(
             "budget": session.budget,
         }
 
-    @app.get("/api/examples")
+    @guarded("GET", "/api/examples")
     def examples() -> dict:
         """Boş ekrandaki çipler: altın soruların ilki, yani gerçekten cevaplanabilenler."""
         lines = runner.load_golden(
@@ -183,17 +194,17 @@ def create_app(
             examples.append({"question": ambiguous[0]["question"], "kind": "ambiguous"})
         return {"examples": examples}
 
-    @app.get("/api/tables")
+    @guarded("GET", "/api/tables")
     def tables() -> dict:
         """Kural formunun tablo listesi: ölçülen şemanın adları, sırasıyla."""
         return {"tables": [table["name"] for table in session.schema["tables"]]}
 
-    @app.get("/api/rules")
+    @guarded("GET", "/api/rules")
     def rules_list() -> dict:
         """Kural ekranı: kümenin kuralları ve indeksin tazeliği (R5-16)."""
         return {"rules": session.rules, "index": _index_block(session)}
 
-    @app.post("/api/rules")
+    @guarded("POST", "/api/rules")
     def rules_add(rule: dict) -> dict:
         """Yeni kural: çakışan kimlik 409, doğrulama hatası 422, sonra disk ve oturum tazelenir."""
         rid = str(rule.get("id", "")).strip()
@@ -204,7 +215,7 @@ def create_app(
         _check_rule(session, rule)
         return _write_rules(session, session.rules + [normalize_rule(rule)])
 
-    @app.put("/api/rules/{rule_id}")
+    @guarded("PUT", "/api/rules/{rule_id}")
     def rules_update(rule_id: str, rule: dict) -> dict:
         """Kimliğiyle bulunan kuralı gövdeyle değiştirir; olmayan kimlik 404 (R5-16)."""
         _find_rule(session, rule_id)
@@ -215,13 +226,13 @@ def create_app(
             for existing in session.rules
         ])
 
-    @app.delete("/api/rules/{rule_id}")
+    @guarded("DELETE", "/api/rules/{rule_id}")
     def rules_delete(rule_id: str) -> dict:
         """Kuralı hem diskten hem oturumdan çıkarır; olmayan kimlik 404 (R5-16)."""
         _find_rule(session, rule_id)
         return _write_rules(session, [r for r in session.rules if r.get("id") != rule_id])
 
-    @app.post("/api/index/rebuild")
+    @guarded("POST", "/api/index/rebuild")
     def index_rebuild() -> dict:
         """İndeksi mevcut kurallarla yeniden kurar; bayatlık ancak böyle kalkar (R5-16).
 
@@ -248,12 +259,12 @@ def create_app(
             "seconds": round(time.perf_counter() - started, 1),
         }
 
-    @app.get("/api/saved")
+    @guarded("GET", "/api/saved")
     def saved_list() -> dict:
         """Kenar çubuğu: bu kümenin kayıtlı soruları, en yeni önce (R5-16)."""
         return {"saved": saved.list(dataset)}
 
-    @app.post("/api/saved")
+    @guarded("POST", "/api/saved")
     def saved_add(body: SavedBody) -> dict:
         """Soruyu kenar çubuğuna eklemek: saklanan cevabı değil, sorunun metni ve SQL'i."""
         question = body.question.strip()
@@ -262,25 +273,25 @@ def create_app(
         # ASSUMPTION: POST tek kaydın kendisini döndürür; ekran istersen listeyi yeniden çeker.
         return {"saved": saved.add(question, mode=body.mode, sql=body.sql, dataset=dataset)}
 
-    @app.delete("/api/saved/{id}")
+    @guarded("DELETE", "/api/saved/{id}")
     def saved_delete(id: int) -> dict:
         """Kaydı kenar çubuğundan çıkarır; olmayan kaydın silinecek bir şeyi yok (404)."""
         if not saved.delete(id):
             raise HTTPException(status_code=404, detail=NO_SAVED)
         return {"deleted": id}
 
-    @app.get("/api/history")
+    @guarded("GET", "/api/history")
     def history() -> dict:
         """Son sorular: soru günlüğünün satırları, en yeni önce; veri satırları asla (R5-4)."""
         name = getattr(getattr(session, "dataset", None), "name", None)
         return {"history": asklog.history(session.ask_log, dataset=name)}
 
-    @app.get("/api/export/{audit_id}.csv")
+    @guarded("GET", "/api/export/{audit_id}.csv")
     def export_csv(audit_id: str) -> Response:
         """Cevabın tamamı CSV: ``bilgin_<id>.csv`` adı ile iner (R5-16)."""
         return _export(session, dataset, audit_id, "csv")
 
-    @app.get("/api/export/{audit_id}.xlsx")
+    @guarded("GET", "/api/export/{audit_id}.xlsx")
     def export_xlsx(audit_id: str) -> Response:
         """Cevabın tamamı Excel: sayı hücreleri sayı olarak kalır (R5-16)."""
         return _export(session, dataset, audit_id, "xlsx")
@@ -289,15 +300,36 @@ def create_app(
     if assets.is_dir():
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
-    @app.get("/", response_class=HTMLResponse)
-    def index():
+    def page() -> Response:
         """Derlenmiş arayüz varsa o, yoksa neyin eksik olduğunu söyleyen sayfa (200)."""
-        page = static / "index.html"
-        if page.is_file():
+        built = static / "index.html"
+        if built.is_file():
             # The page names the hashed bundle; a cached copy keeps loading the old one after a rebuild
             # (2026-10-25). The hashed /assets files themselves can stay cached.
-            return FileResponse(page, media_type="text/html", headers={"Cache-Control": "no-cache"})
+            return FileResponse(built, media_type="text/html", headers={"Cache-Control": "no-cache"})
         return HTMLResponse(NO_UI_PAGE)
+
+    @app.get("/", response_class=HTMLResponse)
+    def index() -> Response:
+        return page()
+
+    # ASSUMPTION: fallback tek bir yol değil, ROUTE_ROLES'ta satırı yok - sayfa publictir, kapı
+    # yalnız /api altında kendiliğinden kurulur (M19 matris testi bu yolu public saymalı).
+    @app.get("/{path:path}", include_in_schema=False)
+    def spa(path: str, request: Request) -> Response:
+        """R6-6: adres çubuğuna yazılan derin bağlantı 404 olmaz, kararı arayüz verir.
+
+        Sayfa publictir; ``api`` ve ``assets`` altı sayfa değildir - bilinmeyen bir API yolu JSON
+        olarak reddedilir (depo varken oturum yoksa 401, varsa 404), bir asset ise uydurulmaz.
+        """
+        head = path.partition("/")[0]
+        if head == "api":
+            if request.app.state.users is not None and current_user(request) is None:
+                raise HTTPException(status_code=401, detail=NO_SESSION)
+            raise HTTPException(status_code=404)
+        if head == "assets":
+            raise HTTPException(status_code=404)
+        return page()
 
     return app
 
