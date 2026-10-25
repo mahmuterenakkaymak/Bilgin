@@ -22,6 +22,34 @@ function marker(status) {
   return { glyph: "✗", tone: "err" };
 }
 
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
+function startOfDay(ms) {
+  const day = new Date(ms);
+  day.setHours(0, 0, 0, 0);
+  return day.getTime();
+}
+
+// Kısa Türkçe zaman: "4 dk önce" / "dün". "Dün" takvimsel bir fark, o yüzden gün sayısına
+// yerel gecenin başından iniliyor. ASSUMPTION: ts boş ya da okunamazsa boş dize - satır zamansız kalır.
+function relativeTime(value, now) {
+  if (typeof value !== "string" || !value) return "";
+  const then = Date.parse(value);
+  if (!Number.isFinite(then)) return "";
+  const diff = now - then;
+  if (diff < MINUTE) return "şimdi";
+  if (diff < HOUR) return `${Math.floor(diff / MINUTE)} dk önce`;
+  if (diff < DAY) return `${Math.floor(diff / HOUR)} sa önce`;
+  const days = Math.round((startOfDay(now) - startOfDay(then)) / DAY);
+  if (days <= 1) return "dün";
+  if (days < 7) return `${days} gün önce`;
+  if (days < 30) return `${Math.floor(days / 7)} hafta önce`;
+  if (days < 365) return `${Math.floor(days / 30)} ay önce`;
+  return `${Math.floor(days / 365)} yıl önce`;
+}
+
 export default function Sidebar({ saved = [], history = [], onAsk, onRemoved }) {
   const [note, setNote] = useState("");
 
@@ -29,13 +57,26 @@ export default function Sidebar({ saved = [], history = [], onAsk, onRemoved }) 
     .filter((item) => item?.id != null)
     .map((item) => ({ id: item.id, question: text(item) }))
     .filter((row) => row.question);
-  const historyRows = list(history)
-    .map((item, index) => ({
+  // Ardışık aynı soru + durum tek satıra toplanır: bir demo turu geçmişi yedi klon satırla doldurmasın.
+  const historyRows = [];
+  for (const [index, item] of list(history).entries()) {
+    const question = text(item);
+    if (!question) continue;
+    const status = item?.status;
+    const previous = historyRows[historyRows.length - 1];
+    if (previous && previous.question === question && previous.status === status) {
+      previous.count += 1;
+      continue;
+    }
+    historyRows.push({
       key: typeof item?.audit_id === "string" && item.audit_id ? item.audit_id : `h${index}`,
-      question: text(item),
-      status: item?.status,
-    }))
-    .filter((row) => row.question);
+      question,
+      status,
+      ts: typeof item?.ts === "string" ? item.ts : "",
+      count: 1,
+    });
+  }
+  const now = Date.now();
 
   const remove = async (id) => {
     try {
@@ -78,13 +119,16 @@ export default function Sidebar({ saved = [], history = [], onAsk, onRemoved }) 
           {historyRows.length === 0 && <li className="side-empty">{EMPTY_HISTORY}</li>}
           {historyRows.map((row) => {
             const { glyph, tone } = marker(row.status);
+            const time = relativeTime(row.ts, now);
             return (
               <li className="side-item" key={row.key}>
                 <button type="button" className="side-text" title={row.question} onClick={() => onAsk?.(row.question)}>
                   <span className={`side-marker marker-${tone}`} aria-hidden="true">
                     {glyph}
                   </span>
+                  {time && <span className="side-time">{time}</span>}
                   <span className="side-label">{row.question}</span>
+                  {row.count > 1 && <span className="side-count">×{row.count}</span>}
                 </button>
               </li>
             );

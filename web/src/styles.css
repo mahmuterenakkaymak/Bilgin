@@ -269,6 +269,23 @@ body {
   color: var(--err-text);
 }
 
+/* Zaman ve tekrar sayısı ikincil bilgi: soluk ve küçük. Genişlik payı "12 sa önce"ye göre,
+   böylece soru metinleri satırın başında hizalı kalır ve liste günlüğe benzer. */
+.side-time {
+  flex: none;
+  min-width: 3.5rem;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.side-count {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
 .side-remove {
   flex: none;
   padding: 0 var(--space);
