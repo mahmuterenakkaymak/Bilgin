@@ -670,6 +670,25 @@ main {
   text-align: right;
 }
 
+/* Tek kolon tek satır: sayı tablo değil, kendi bloğunda. Kutu içeriğe göre genişler (justify-content),
+   böylece sayı kartla aynı hizada kalır; .result-table gibi 100% genişliğe yayılıp uca yaslanmaz. */
+.result-single {
+  display: grid;
+  gap: calc(var(--space) * 0.25);
+  justify-content: start;
+}
+
+.result-single-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.result-single-value {
+  font-size: 20px;
+  line-height: 1.5;
+}
+
 @media (max-width: 720px) {
   /* ASSUMPTION: başlık 320/390'da flex-wrap ile zaten satırlara iniyor ve çip ellipsis'le kısalıyor
      (ölçüldü: taşma yok) — M17'deki "üst üste biniyor" izlenimi sayfanın 660px'e taşmasından geliyordu. */

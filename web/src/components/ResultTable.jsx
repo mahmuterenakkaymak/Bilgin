@@ -10,8 +10,29 @@ export default function ResultTable({ columns = [], rows = [], rowCount = 0, tru
   if (!list.length) return <p className="table-empty">Bu soruya uyan kayıt yok.</p>;
 
   const shown = list.slice(0, VISIBLE_ROWS);
-  const numeric = names.map((_, index) => isNumericColumn(shown, index));
   const total = Number.isFinite(rowCount) && rowCount > 0 ? rowCount : list.length;
+  const note = truncated && (
+    <p className="table-note">
+      İlk {formatNumber(shown.length)} satır gösteriliyor (toplam {formatNumber(total)}).
+    </p>
+  );
+
+  // Tek kolon ve tek satır bir sayıdır, tablo değil: .result-table width:100% olduğu için tek
+  // hücre boş kutunun ucuna yaslanıyordu. Başka her biçim (tek kolon iki satır, tek satır iki
+  // kolon) tablo olarak kalır.
+  if (names.length === 1 && list.length === 1) {
+    return (
+      <div className="result-block">
+        <div id="result-single" className="result-single">
+          <span className="result-single-label">{names[0]}</span>
+          <span className="result-single-value">{formatCell(list[0]?.[0])}</span>
+        </div>
+        {note}
+      </div>
+    );
+  }
+
+  const numeric = names.map((_, index) => isNumericColumn(shown, index));
 
   return (
     <div className="result-block">
@@ -39,11 +60,7 @@ export default function ResultTable({ columns = [], rows = [], rowCount = 0, tru
           </tbody>
         </table>
       </div>
-      {truncated && (
-        <p className="table-note">
-          İlk {formatNumber(shown.length)} satır gösteriliyor (toplam {formatNumber(total)}).
-        </p>
-      )}
+      {note}
     </div>
   );
 }
