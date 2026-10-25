@@ -1,0 +1,24 @@
+{
+  "name": "wwi",
+  "display_name": "WideWorldImporters (Microsoft örnek veritabanı)",
+  "connection": "sqlite",
+  "default_schema": null,
+  "as_of": "2016-05-31",
+  "seed": 42,
+  "files": {
+    "schema": "schema.json",
+    "rules": "rules.json",
+    "profile": "profile.json",
+    "golden": "golden.jsonl",
+    "traps": "traps.jsonl"
+  },
+  "builder": "builder.py:build_db",
+  "generator": "builder.py:generate",
+  "references": "reference.py:REFERENCES",
+  "outputs": {
+    "db": "data/wwi.db",
+    "mssql_script": "db/mssql/build_wwi.sql",
+    "index_dir": "index/wwi",
+    "eval_out": "eval_out/wwi"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "status": "answered",
+  "question": "Satış departmanındaki personelin adı, telefonu ve IBAN bilgisi nedir?",
+  "choice": null,
+  "answer_text": "Satır sayısı 3. Soru: Satış departmanındaki personelin adı, telefonu ve IBAN bilgisi nedir?",
+  "narration_source": "template",
+  "chart": null,
+  "facts": [
+    {
+      "name": "row_count",
+      "label": "Satır sayısı",
+      "column": null,
+      "value": 3,
+      "display": "3",
+      "percent": false
+    }
+  ],
+  "columns": ["AD_SOYAD", "TELEFON", "IBAN"],
+  "rows": [
+    ["A.Y.", "*** ** 456", "TR** **** **** **** 9876"],
+    ["M.K.", "*** ** 118", "TR** **** **** **** 4412"],
+    ["S.D.", "*** ** 902", "TR** **** **** **** 7350"]
+  ],
+  "row_count": 3,
+  "truncated": false,
+  "sql": "SELECT AD_SOYAD, TELEFON, IBAN FROM PERSONEL WHERE DEPARTMAN_KODU = 'SAT' AND AKTIF = 'E'",
+  "tables_used": ["PERSONEL"],
+  "rules_used": [],
+  "masked_columns": ["AD_SOYAD", "TELEFON", "IBAN"],
+  "warnings": [
+    {
+      "code": "masked",
+      "message": "Maskelendi: AD_SOYAD, TELEFON, IBAN — kişisel veri gösterilmez.",
+      "column": null
+    }
+  ],
+  "notes": ["İndeks yok/eski; full modda çalışılıyor."],
+  "mode": "full",
+  "dataset": "wwi",
+  "model": "strata",
+  "timings": { "agent_s": 5.221, "execute_ms": 3.9, "narrate_s": 0.003, "total_s": 5.23 },
+  "audit_id": "e8a4117b6f03",
+  "clarification": null,
+  "error": null,
+  "steps": [
+    { "tool": "get_schema", "ok": true, "summary": "PERSONEL: kolonlar ve kişisel veri işaretleri okundu." },
+    {
+      "tool": "run_sql",
+      "ok": false,
+      "summary": "Hata: Invalid column name 'UNVAN'. Doğru ad GOREV_UNVANI."
+    },
+    { "tool": "run_sql", "ok": true, "summary": "Kolonlar: AD_SOYAD, TELEFON, IBAN. 3 satır." },
+    { "tool": "submit_sql", "ok": true, "summary": "Sorgu kabul edildi." }
+  ]
+}

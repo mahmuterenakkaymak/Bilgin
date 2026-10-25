@@ -1,0 +1,1245 @@
+:root {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --text: #1d1d1b;
+  --muted: #6a6963;
+  --line: #e3e1da;
+  --accent: #1f5fad;
+  --on-accent: #ffffff;
+  --warn-bg: #fef3c7;
+  --warn-line: #f59e0b;
+  --warn-text: #8a3b05;
+  --err-bg: #fdecec;
+  --err-text: #9b1c1c;
+  --ok: #2f7d32;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --space: 8px;
+  --radius: 10px;
+  --sidebar-width: 280px;
+  --main-max: 880px;
+  color-scheme: light;
+}
+
+/* Koyu tokenlar iki yerde durur (T222): başlıktaki düğme "Koyu"yu seçtiğinde kök nitelikten,
+   sistem koyuya ayarlıyken (düğme "Sistem"deyken) media sorgusundan gelir. Tek kuralda
+   birleşemezler: `data-theme="light"` sistemin koyusunu ezmeli, o yüzden media sorgusunun
+   içindeki seçici `:not([data-theme="light"])` olmak zorunda. */
+:root[data-theme="dark"] {
+  --bg: #1a1a18;
+  --surface: #232320;
+  --text: #f2f1ec;
+  --muted: #a5a399;
+  --line: #37362f;
+  --accent: #6fa8e8;
+  --on-accent: #10233b;
+  --warn-bg: #3a2e10;
+  --warn-line: #d19414;
+  --warn-text: #fbd9a5;
+  --err-bg: #3a1c1c;
+  --err-text: #f2b4b4;
+  --ok: #6dbb70;
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1a1a18;
+    --surface: #232320;
+    --text: #f2f1ec;
+    --muted: #a5a399;
+    --line: #37362f;
+    --accent: #6fa8e8;
+    --on-accent: #10233b;
+    --warn-bg: #3a2e10;
+    --warn-line: #d19414;
+    --warn-text: #fbd9a5;
+    --err-bg: #3a1c1c;
+    --err-text: #f2b4b4;
+    --ok: #6dbb70;
+
+    color-scheme: dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- header ------------------------------------------------------------- */
+
+.masthead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space) calc(var(--space) * 2);
+  padding: calc(var(--space) * 1.5) calc(var(--space) * 2);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.wordmark {
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px calc(var(--space) * 1.25);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.masthead-nav {
+  display: flex;
+  gap: var(--space);
+  margin-left: auto;
+}
+
+.nav-link {
+  padding: calc(var(--space) * 0.5) var(--space);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  color: var(--text);
+}
+
+.nav-link[aria-current="page"] {
+  background: var(--bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot-ok {
+  background: var(--ok);
+}
+
+.dot-stale {
+  background: var(--warn-line);
+}
+
+.dot-down {
+  background: var(--err-text);
+}
+
+.dot-unknown {
+  background: var(--muted);
+}
+
+/* --- layout ------------------------------------------------------------- */
+
+.shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--space) * 3);
+  padding: calc(var(--space) * 3) calc(var(--space) * 2) calc(var(--space) * 6);
+}
+
+/* Telefon: yan panel #sidebar-toggle arkasına gizlenir (720px altında tek sütun). */
+.sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space);
+  justify-self: start;
+  padding: calc(var(--space) * 0.75) calc(var(--space) * 1.5);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.sidebar {
+  display: none;
+  min-width: 0;
+  /* elli geçmiş satırı tek başına sayfayı uzatmasın: liste kendi içinde kayar. */
+  max-height: calc(100vh - var(--space) * 14);
+  overflow-y: auto;
+}
+
+.sidebar.is-open {
+  display: block;
+}
+
+.side-block + .side-block {
+  margin-top: calc(var(--space) * 3);
+}
+
+.side-title {
+  margin: 0 var(--space) var(--space) 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.side-note {
+  margin: 0 0 var(--space);
+  color: var(--err-text);
+  font-size: 13px;
+}
+
+.side-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Uzun soru metni satırı genişletmesin: küçülme payı sıfır, × sağda kalsın. */
+.side-item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+  border-radius: var(--radius);
+}
+
+.side-item:hover {
+  background: var(--surface);
+}
+
+.side-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: baseline;
+  gap: calc(var(--space) * 0.5);
+  padding: calc(var(--space) * 0.5) var(--space);
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.side-text:hover {
+  color: var(--accent);
+}
+
+.side-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.side-marker {
+  flex: none;
+  font-weight: 700;
+}
+
+.marker-ok {
+  color: var(--ok);
+}
+
+.marker-warn {
+  color: var(--warn-line);
+}
+
+.marker-err {
+  color: var(--err-text);
+}
+
+/* Zaman ve tekrar sayısı ikincil bilgi: soluk ve küçük. Genişlik payı "12 sa önce"ye göre,
+   böylece soru metinleri satırın başında hizalı kalır ve liste günlüğe benzer. */
+.side-time {
+  flex: none;
+  min-width: 3.5rem;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.side-count {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.side-remove {
+  flex: none;
+  padding: 0 var(--space);
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.side-remove:hover {
+  color: var(--err-text);
+}
+
+.side-empty {
+  padding: calc(var(--space) * 0.5) var(--space);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+main {
+  min-width: 0;
+  max-width: var(--main-max);
+}
+
+.screen-title {
+  margin: 0 0 var(--space);
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.screen-lead {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--muted);
+}
+
+.table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+/* --- soru akışı ----------------------------------------------------------- */
+
+.ask-flow > * + * {
+  margin-top: calc(var(--space) * 2);
+}
+
+.card {
+  padding: calc(var(--space) * 2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.ask-box {
+  display: grid;
+  gap: var(--space);
+  padding: calc(var(--space) * 2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+/* Çocuğun min-width:auto'su nowrap örnek çipin metnini taban yapıp kutuyu 390px'te taşıyordu. */
+.ask-box > * {
+  min-width: 0;
+}
+
+.question {
+  width: 100%;
+  min-height: 76px;
+  padding: calc(var(--space) * 1.25);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.question::placeholder {
+  color: var(--muted);
+}
+
+.question:focus {
+  border-color: var(--accent);
+}
+
+.ask-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space) calc(var(--space) * 1.5);
+}
+
+.ask-hint {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.btn {
+  padding: calc(var(--space) * 0.75) calc(var(--space) * 2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.btn-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* İndirme bir <a>: sekme yer değiştirmediği için "dosya istendi" bilgisini düğmenin kendisi verir. */
+.btn-downloaded {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+/* Tema düğmesi başlıkta durur ve üç ad arasında (Sistem/Koyu/Açık) genişliği değişmez:
+   başlık her tıkta yeniden akmasın, sıradaki düğme yerinden oynamasın. */
+.btn-theme {
+  min-width: 5rem;
+  padding-inline: calc(var(--space) * 1.5);
+  font-size: 14px;
+}
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space);
+}
+
+/* Çip sorunun kendisi: kesik soru sorulamıyor. Telefon genişliğinde üç çip ellipsis'le yutuluyordu
+   (625px'lik metin 324px'te), o yüzden metin sarar; tavan yine kutunun genişliği. */
+.example-chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding: calc(var(--space) * 0.5) calc(var(--space) * 1.25);
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.example-chip:hover:not(:disabled) {
+  border-color: var(--accent);
+  border-style: solid;
+  color: var(--accent);
+}
+
+.example-chip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.empty-state .examples {
+  margin-top: calc(var(--space) * 2);
+}
+
+.loading-step {
+  margin: calc(var(--space) * 1.5) 0 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.loading-count {
+  margin-left: var(--space);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.skeleton span {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--line);
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
+}
+
+.skeleton span + span {
+  margin-top: var(--space);
+}
+
+.skeleton span:nth-child(2) {
+  width: 72%;
+}
+
+.skeleton span:nth-child(3) {
+  width: 46%;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Cevap geldiği an anlaşılsın: kart soluklaşarak ve birkaç piksel yükselerek belirir; grafik de
+   kartın içinde (R5-18), o yüzden ikisi birlikte gelir. Bitiş durumu temelin kendisi - hareket
+   kapanınca kart olduğu yerde durur, ekransız kalmaz. Kural reduced-motion bloğundan ÖNCE
+   durmak zorunda: eşit özgüllükte sıra kazanır, sonra gelseydi `animation: none` onu yenmezdi. */
+@keyframes answer-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.answer-card {
+  animation: answer-enter 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton span,
+  .answer-card {
+    animation: none;
+  }
+}
+
+.error-card {
+  border-color: var(--err-text);
+  background: var(--err-bg);
+}
+
+.error-title {
+  margin: 0;
+  color: var(--err-text);
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.error-hint,
+.error-reason {
+  margin: var(--space) 0 0;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.error-hint {
+  color: var(--muted);
+}
+
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space) calc(var(--space) * 1.5);
+  margin-top: calc(var(--space) * 1.5);
+}
+
+/* --- cevap kartı ----------------------------------------------------------- */
+
+.answer-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.answer-text {
+  margin: var(--space) 0 0;
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+.warnings {
+  display: grid;
+  gap: calc(var(--space) * 0.5);
+  margin-top: calc(var(--space) * 2);
+  padding: calc(var(--space) * 1.25) calc(var(--space) * 1.5);
+  border: 1px solid var(--warn-line);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.warning {
+  display: flex;
+  gap: var(--space);
+  margin: 0;
+  font-size: 14px;
+}
+
+.warning-mark {
+  flex: none;
+}
+
+.result-block {
+  margin-top: calc(var(--space) * 2);
+}
+
+/* Yapışkan başlığın işi olması için tablo kendi dikey kaydırmasını taşır. */
+.result-block .table-wrap {
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.result-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+
+.result-table th,
+.result-table td {
+  padding: calc(var(--space) * 0.75) var(--space);
+  text-align: left;
+  white-space: nowrap;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+.result-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.result-table .num {
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  /* ASSUMPTION: başlık 320/390'da flex-wrap ile zaten satırlara iniyor ve çip ellipsis'le kısalıyor
+     (ölçüldü: taşma yok) — M17'deki "üst üste biniyor" izlenimi sayfanın 660px'e taşmasından geliyordu. */
+
+  /* Cevabın sayısı yan kaydırmanın ardında kalmasın: telefon genişliğinde hücreler sarar,
+     böylece her sütun ekrana sığar. Geniş ekrandaki nowrap yukarıda duruyor. */
+  .result-table th,
+  .result-table td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* Sarayan hücre kuralı sayıya işlemez: bölünen sayı kesilmiş sayıdır. Sığmayan sütun
+     tabloyu uzatır, .table-wrap onu yan kaydırır (overflow-x: auto yukarıda duruyor). */
+  .result-table .num {
+    min-width: 4.5rem;
+    white-space: nowrap;
+  }
+
+  /* Kural listesinin min-content genişliği de ekranı aşıyor (Terim 160px, düğmeler tek satır) ve
+     .table-wrap onu kırpıyor: İşlem sütunu hiç görünmüyor, kural ne düzenleniyor ne siliniyor.
+     Tablo bloğa döner - hücreler tablo bağlamında kaldıkça anonim hücreler aynı tavanı korur -
+     ve her satır kendi bloğuna iner: terim + kimlik, eş anlamlılar, tablolar, düğmeler.
+     Seçiciler tbody/alt-sınıf ile temelden derinleşiyor: kural ekranının temelleri aşağıda
+     duruyor, o yüzden burada sırayı değil özgüllüğü kazanmak gerekiyor. */
+  .rules-table,
+  .rules-table tbody,
+  .rules-table tr,
+  .rules-table th,
+  .rules-table td {
+    display: block;
+  }
+
+  /* Başlık satırı blokların üstünde asılı kalmasın: etiketi hücrenin kendisi taşır. */
+  .rules-table thead {
+    display: none;
+  }
+
+  .rules-table tbody tr {
+    padding: var(--space) 0;
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+
+  /* Ayraç artık satırın kendisinden gelir; hücre çizgisi kalsaydı her satır dört çizgi görürdü. */
+  .rules-table tbody th,
+  .rules-table tbody td {
+    overflow-wrap: anywhere;
+    box-shadow: none;
+  }
+
+  .rules-table .rules-list {
+    max-width: none;
+  }
+
+  .rules-table .rules-list:nth-of-type(1)::before {
+    content: "Eş anlamlılar: ";
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .rules-table .rules-list:nth-of-type(2)::before {
+    content: "Tablolar: ";
+    color: var(--text);
+    font-weight: 600;
+  }
+}
+
+.table-note {
+  margin: var(--space) 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.table-empty {
+  margin: 0;
+  padding: calc(var(--space) * 2) 0 0;
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.answer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space) calc(var(--space) * 1.5);
+  margin-top: calc(var(--space) * 2);
+}
+
+.answer-actions-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.answer-note {
+  color: var(--err-text);
+  font-size: 13px;
+}
+
+.evidence {
+  margin-top: calc(var(--space) * 2);
+  padding-top: calc(var(--space) * 2);
+  border-top: 1px solid var(--line);
+}
+
+.evidence-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.evidence-caret {
+  font-size: 12px;
+}
+
+.evidence-body {
+  display: grid;
+  gap: calc(var(--space) * 2);
+  margin-top: calc(var(--space) * 2);
+}
+
+.evidence-body[hidden] {
+  display: none;
+}
+
+.evidence-sql {
+  display: grid;
+  gap: var(--space);
+  justify-items: start;
+}
+
+.sql-block {
+  max-width: 100%;
+  margin: 0;
+  padding: calc(var(--space) * 1.25);
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.btn-ghost {
+  padding-inline: calc(var(--space) * 1.5);
+  font-size: 13px;
+}
+
+.evidence-meta {
+  display: grid;
+  gap: var(--space) calc(var(--space) * 3);
+  margin: 0;
+}
+
+.evidence-meta > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space);
+}
+
+.evidence-meta dt {
+  min-width: 120px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.evidence-meta dd {
+  margin: 0;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.audit-id {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.facts li {
+  display: flex;
+  gap: var(--space);
+  padding: calc(var(--space) * 0.5) calc(var(--space) * 1.25);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 13px;
+}
+
+.fact-label {
+  color: var(--muted);
+}
+
+.fact-value {
+  font-weight: 600;
+}
+
+.steps,
+.notes {
+  display: grid;
+  gap: calc(var(--space) * 0.5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.step {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space);
+}
+
+.step-mark {
+  color: var(--ok);
+}
+
+.step-failed .step-mark {
+  color: var(--err-text);
+}
+
+.step-tool {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.step-summary {
+  flex: 1 1 240px;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.notes {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* --- grafik ------------------------------------------------------------------- */
+
+/* ECharts yüksekliği kutudan okur; telefon 260px ister (R5-18), geniş ekranda grafik büyür. */
+.chart {
+  height: 260px;
+}
+
+/* Grafik kartın içinde, tablonun altında: aralık yalnız grafik varsa doğar, boş kutu kalmaz. */
+.answer-card .chart {
+  margin-top: calc(var(--space) * 2);
+}
+
+/* --- netleştirme kartı ---------------------------------------------------------- */
+
+.clarification-card {
+  border-color: var(--accent);
+}
+
+.clarification-title {
+  margin: 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.clarification-question {
+  margin: var(--space) 0 0;
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+.clarification-options {
+  display: grid;
+  gap: var(--space);
+  margin-top: calc(var(--space) * 2);
+}
+
+/* Seçenek cevabın yerini alır: düğme satır gibi durur, ok işareti tıklanabilir olduğunu söyler. */
+.clarification-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space);
+  padding: calc(var(--space) * 1.25) calc(var(--space) * 1.5);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-weight: 500;
+  text-align: left;
+}
+
+.clarification-option::after {
+  margin-left: auto;
+  color: var(--muted);
+  content: "→";
+}
+
+.clarification-option:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.clarification-actions {
+  margin-top: calc(var(--space) * 2);
+}
+
+@media (min-width: 720px) {
+  .chart {
+    height: 320px;
+  }
+
+  .sidebar-toggle {
+    display: none;
+  }
+
+  .sidebar {
+    display: block;
+  }
+}
+
+@media (min-width: 960px) {
+  .shell {
+    grid-template-columns: var(--sidebar-width) minmax(0, var(--main-max));
+    justify-content: center;
+    gap: calc(var(--space) * 5);
+    padding-inline: calc(var(--space) * 4);
+  }
+
+  .sidebar {
+    /* Uzun cevapta okuma yerinde kalsın: yan panel başlığın altında kalır. */
+    position: sticky;
+    top: calc(var(--space) * 11);
+  }
+
+  /* Boş yan panel 280px'lik çukur bırakmasın: dolunca (kayıtlılar/geçmiş) kendiliğinden iki sütuna döner. */
+  .shell:not(:has(.sidebar > *)) {
+    grid-template-columns: minmax(0, var(--main-max));
+  }
+}
+
+/* --- kural ekranı ------------------------------------------------------------- */
+
+.rules-screen > * + * {
+  margin-top: calc(var(--space) * 2);
+}
+
+.rules-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space) calc(var(--space) * 2);
+}
+
+.rules-head > div {
+  flex: 1 1 260px;
+}
+
+/* Kehribar bant: cevaptaki uyarıyla aynı dil (R5-18), ama içinde düğme de taşır. */
+.rules-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space) calc(var(--space) * 2);
+  padding: calc(var(--space) * 1.25) calc(var(--space) * 1.5);
+  border: 1px solid var(--warn-line);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.rules-banner-text {
+  flex: 1 1 260px;
+  margin: 0;
+  font-size: 15px;
+}
+
+.rules-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.rules-note.is-error {
+  color: var(--err-text);
+}
+
+.rules-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.rules-table th,
+.rules-table td {
+  padding: calc(var(--space) * 0.75) var(--space);
+  text-align: left;
+  vertical-align: top;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+.rules-table thead th {
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rules-term {
+  min-width: 160px;
+  font-weight: 600;
+}
+
+.rules-id {
+  display: block;
+  color: var(--muted);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.rules-list {
+  max-width: 240px;
+  color: var(--muted);
+}
+
+.rules-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.rules-confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--space) * 0.5);
+  color: var(--muted);
+}
+
+.rules-empty {
+  padding: calc(var(--space) * 3) var(--space);
+  color: var(--muted);
+  text-align: center;
+}
+
+/* --- kural formu -------------------------------------------------------------- */
+
+.rule-form {
+  display: grid;
+  gap: calc(var(--space) * 2);
+}
+
+.rule-form-head,
+.rule-errors {
+  display: grid;
+  gap: calc(var(--space) * 0.5);
+}
+
+.rule-form-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.rule-form-sub,
+.field-hint,
+.field-error {
+  margin: 0;
+  font-size: 13px;
+}
+
+.rule-form-sub,
+.field-hint {
+  color: var(--muted);
+}
+
+.rule-errors {
+  padding: calc(var(--space) * 1.25) calc(var(--space) * 1.5);
+  border: 1px solid var(--err-text);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: var(--err-bg);
+  color: var(--err-text);
+}
+
+.rule-errors-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.rule-errors-list {
+  margin: 0;
+  padding-left: calc(var(--space) * 2);
+  font-size: 14px;
+}
+
+.rule-fields {
+  display: grid;
+  gap: calc(var(--space) * 2) calc(var(--space) * 3);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.field {
+  display: grid;
+  align-content: start;
+  gap: calc(var(--space) * 0.25);
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.field-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.field-input {
+  width: 100%;
+  padding: calc(var(--space) * 0.75) var(--space);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  resize: vertical;
+}
+
+.field-input:focus {
+  border-color: var(--accent);
+}
+
+.field-input.is-mono {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 13px;
+}
+
+.field-input[aria-invalid="true"] {
+  border-color: var(--err-text);
+}
+
+.field-input:disabled {
+  color: var(--muted);
+  background: var(--surface);
+  cursor: not-allowed;
+}
+
+.field-error {
+  color: var(--err-text);
+}
+
+.rule-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space);
+}

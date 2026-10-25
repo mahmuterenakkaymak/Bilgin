@@ -1,0 +1,28 @@
+{
+  "profiles": {
+    "strata": {
+      "base_url": "http://127.0.0.1:8080/v1",
+      "model": "strata",
+      "api_key_env": null,
+      "context_budget": 262144,
+      "max_output_tokens": 8192,
+      "description": "Large local model with a 256K context window (llama.cpp server)."
+    },
+    "qwen27b-24k": {
+      "base_url": "http://127.0.0.1:8888/v1",
+      "model": "unsloth/Qwen3.8-27B-GGUF",
+      "api_key_env": "UNSLOTH_API_KEY",
+      "context_budget": 24576,
+      "max_output_tokens": 4096,
+      "description": "Qwen3.8-27B in Unsloth Studio, served with --context-length 24576."
+    },
+    "qwen27b-16k": {
+      "base_url": "http://127.0.0.1:8888/v1",
+      "model": "unsloth/Qwen3.8-27B-GGUF",
+      "api_key_env": "UNSLOTH_API_KEY",
+      "context_budget": 16384,
+      "max_output_tokens": 4096,
+      "description": "The same 27B served with --context-length 16384: the tight window the budget is tested on."
+    }
+  }
+}

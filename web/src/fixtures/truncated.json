@@ -1,0 +1,116 @@
+{
+  "status": "answered",
+  "question": "Geçen ayki her stok hareketinin fiş numarası ve bağlı faturanın genel toplamı nedir?",
+  "choice": null,
+  "answer_text": "Geçen ay 1234 stok hareketi listelendi; ekrandaki ilk satırlarda en yüksek fatura genel toplamı 8.920.",
+  "narration_source": "llm",
+  "chart": null,
+  "facts": [
+    {
+      "name": "row_count",
+      "label": "Satır sayısı",
+      "column": null,
+      "value": 8,
+      "display": "8",
+      "percent": false
+    },
+    {
+      "name": "total",
+      "label": "Toplam",
+      "column": "GENEL_TOPLAM",
+      "value": 19712.0,
+      "display": "19.712",
+      "percent": false
+    },
+    {
+      "name": "max",
+      "label": "En yüksek (FTH2026000413)",
+      "column": "GENEL_TOPLAM",
+      "value": 8920.0,
+      "display": "8.920",
+      "percent": false
+    },
+    {
+      "name": "min",
+      "label": "En düşük",
+      "column": "GENEL_TOPLAM",
+      "value": 315.75,
+      "display": "315,75",
+      "percent": false
+    },
+    {
+      "name": "mean",
+      "label": "Ortalama",
+      "column": "GENEL_TOPLAM",
+      "value": 4928.0,
+      "display": "4.928,00",
+      "percent": false
+    },
+    {
+      "name": "top_item",
+      "label": "Öne çıkan",
+      "column": "GENEL_TOPLAM",
+      "value": "FTH2026000413",
+      "display": "FTH2026000413",
+      "percent": false
+    },
+    {
+      "name": "top_share",
+      "label": "En yüksek pay",
+      "column": "GENEL_TOPLAM",
+      "value": 45.3,
+      "display": "%45,3",
+      "percent": true
+    }
+  ],
+  "columns": ["BELGE_NO", "GENEL_TOPLAM"],
+  "rows": [
+    ["FTH2026000412", 1240.5],
+    [null, null],
+    ["FTH2026000413", 8920.0],
+    ["FTH2026000413", 8920.0],
+    [null, null],
+    ["FTH2026000414", 315.75],
+    ["FTH2026000414", 315.75],
+    [null, null]
+  ],
+  "row_count": 1234,
+  "truncated": true,
+  "sql": "SELECT s.BELGE_NO, f.GENEL_TOPLAM FROM STOK_HAREKET s LEFT JOIN FATURA f ON f.FATURA_NO = s.BELGE_NO WHERE s.HAREKET_TARIHI >= '2026-08-01' AND s.HAREKET_TARIHI < '2026-09-01'",
+  "tables_used": ["FATURA", "STOK_HAREKET"],
+  "rules_used": ["gecen_ay"],
+  "masked_columns": [],
+  "warnings": [
+    {
+      "code": "fan_out",
+      "message": "Join sonrası 1234 satır, sürücü tablo STOK_HAREKET 412 satır (3,0x): toplamlar çoğalmış olabilir.",
+      "column": null
+    }
+  ],
+  "notes": [],
+  "mode": "rag",
+  "dataset": "wwi",
+  "model": "strata",
+  "timings": { "agent_s": 11.204, "execute_ms": 84.3, "narrate_s": 2.117, "total_s": 13.43 },
+  "audit_id": "b7e2f0148acd",
+  "clarification": null,
+  "error": null,
+  "steps": [
+    {
+      "tool": "search_schema",
+      "ok": true,
+      "summary": "STOK_HAREKET, FATURA ve STOK_KART adayları bulundu."
+    },
+    {
+      "tool": "run_sql",
+      "ok": false,
+      "summary": "Hata: Invalid column name 'FATURA_NO'. Doğru ad FATURA_NO."
+    },
+    {
+      "tool": "run_sql",
+      "ok": true,
+      "summary": "Kolonlar: BELGE_NO, GENEL_TOPLAM. İlk 200 satır gösteriliyor (toplam 1234)."
+    },
+    { "tool": "submit_sql", "ok": true, "summary": "Sorgu kabul edildi." }
+  ]
+}

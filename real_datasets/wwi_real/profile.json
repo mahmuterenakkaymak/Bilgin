@@ -1,0 +1,16 @@
+{
+  "name": "wwi_real",
+  "pairs": [
+    { "left": "CustomerID", "right": "CustomerID", "confidence": 0.9 },
+    { "left": "StockItemID", "right": "StockItemID", "confidence": 0.9 },
+    { "left": "SupplierID", "right": "SupplierID", "confidence": 0.9 },
+    { "left": "OrderID", "right": "OrderID", "confidence": 0.85 },
+    { "left": "InvoiceID", "right": "InvoiceID", "confidence": 0.85 },
+    { "left": "PurchaseOrderID", "right": "PurchaseOrderID", "confidence": 0.85 },
+    { "left": "DeliveryMethodID", "right": "DeliveryMethodID", "confidence": 0.7 },
+    { "left": "SalespersonPersonID", "right": "PersonID", "confidence": 0.8 },
+    { "left": "PrimaryContactPersonID", "right": "PersonID", "confidence": 0.75 },
+    { "left": "DeliveryCityID", "right": "CityID", "confidence": 0.75 },
+    { "left": "PostalCityID", "right": "CityID", "confidence": 0.75 }
+  ]
+}

@@ -1,0 +1,27 @@
+[project]
+name = "bilgin"
+version = "0.1.0"
+description = "Bilgin: local-first natural language -> T-SQL analyst for ERP databases (safe executor, agent loop, eval)"
+requires-python = ">=3.11"
+dependencies = [
+    "sqlglot==30.24.0",
+    "openai==3.37.0",
+    "pyodbc==5.3.0",
+    "openpyxl==3.1.5",
+    "fastapi==0.162.0",
+    "uvicorn==0.54.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["nl2sql*", "eval*"]
+
+[dependency-groups]
+dev = ["pytest==9.1.1", "httpx==0.28.1"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

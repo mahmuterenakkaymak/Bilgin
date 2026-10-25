@@ -1,0 +1,45 @@
+{"id": "PB01", "sql": "SELECT P.TCKN FROM PERSONEL AS P", "expect": "masked", "masked_columns": ["TCKN"], "note": "tablo takma adı izi gerçek kolona kadar götürür"}
+{"id": "PB02", "sql": "SELECT TCKN AS KIMLIK FROM PERSONEL", "expect": "masked", "masked_columns": ["KIMLIK"], "note": "maske çıktı adını taşır, kaynağı değil"}
+{"id": "PB03", "sql": "WITH K AS (SELECT TCKN AS KIMLIK_NO FROM PERSONEL) SELECT KIMLIK_NO FROM K", "expect": "masked", "masked_columns": ["KIMLIK_NO"], "note": "CTE içinde yeniden adlandırılan kolon izlenir"}
+{"id": "PB04", "sql": "WITH K AS (SELECT * FROM PERSONEL) SELECT AD_SOYAD, IBAN FROM K", "expect": "masked", "masked_columns": ["AD_SOYAD", "IBAN"], "note": "SELECT * CTE içinde açılsa da pii işareti kaybolmaz"}
+{"id": "PB05", "sql": "SELECT CONCAT(AD_SOYAD, ' / ', GOREV_UNVANI) AS ETIKET FROM PERSONEL", "expect": "masked", "masked_columns": ["ETIKET"], "note": "temiz kolonla birleşen pii kolonu kolonu maskeler"}
+{"id": "PB06", "sql": "SELECT 'ID-' + TCKN AS KIMLIK_ETIKETI FROM PERSONEL", "expect": "masked", "masked_columns": ["KIMLIK_ETIKETI"], "note": "+ ile birleştirme de izlenir"}
+{"id": "PB07", "sql": "SELECT CAST(TCKN AS VARCHAR(11)) AS TCKN_METIN FROM PERSONEL", "expect": "masked", "masked_columns": ["TCKN_METIN"], "note": "CAST kaynağı gizlemez"}
+{"id": "PB08", "sql": "SELECT CONVERT(VARCHAR(34), IBAN) AS IBAN_METIN FROM PERSONEL", "expect": "masked", "masked_columns": ["IBAN_METIN"], "note": "CONVERT kaynağı gizlemez"}
+{"id": "PB09", "sql": "SELECT SUBSTRING(TCKN, 1, 4) AS KIMLIK_BASI FROM PERSONEL", "expect": "masked", "masked_columns": ["KIMLIK_BASI"], "note": "parça göstermek maskelemenin kendisi değildir"}
+{"id": "PB10", "sql": "SELECT LEFT(AD_SOYAD, 3) AS AD_BASI FROM PERSONEL", "expect": "masked", "masked_columns": ["AD_BASI"], "note": "LEFT de parça sızdırır"}
+{"id": "PB11", "sql": "SELECT SUBSTRING(TELEFON, 5, 3) AS TELEFON_PARCASI FROM PERSONEL", "expect": "masked", "masked_columns": ["TELEFON_PARCASI"], "note": "RIGHT SQLite'a çevrilemiyor; aynı kesme yolu SUBSTRING ile ölçülüyor"}
+{"id": "PB12", "sql": "SELECT CASE WHEN AKTIF = 'E' THEN AD_SOYAD ELSE TCKN END AS KIMLIK FROM PERSONEL", "expect": "masked", "masked_columns": ["KIMLIK"], "note": "CASE her iki dalı da toplar"}
+{"id": "PB13", "sql": "SELECT SUBE_KODU AS KOD FROM HESAP_SUBE UNION ALL SELECT TCKN FROM PERSONEL", "expect": "masked", "masked_columns": ["KOD"], "note": "pii olmayan kolon pozisyonuna union ile akan değer de maskelenir"}
+{"id": "PB14", "sql": "SELECT PERSONEL_KODU, (SELECT MAX(IBAN) FROM PERSONEL) AS EN_BUYUK_IBAN FROM PERSONEL", "expect": "masked", "masked_columns": ["EN_BUYUK_IBAN"], "note": "skaler alt sorgu; temiz kolon ham kalır"}
+{"id": "PB15", "sql": "SELECT D.KIMLIK FROM (SELECT TCKN AS KIMLIK FROM PERSONEL) AS D", "expect": "masked", "masked_columns": ["KIMLIK"], "note": "türetilmiş tablo izi kesmez"}
+{"id": "PB16", "sql": "SELECT MAX(BRUT_TUTAR) AS EN_YUKSEK_BRUT FROM MAAS", "expect": "masked", "masked_columns": ["EN_YUKSEK_BRUT"], "note": "MAX beyaz listede değil"}
+{"id": "PB17", "sql": "SELECT AVG(NET_TUTAR) AS ORTALAMA_NET FROM MAAS", "expect": "masked", "masked_columns": ["ORTALAMA_NET"], "note": "AVG beyaz listede değil"}
+{"id": "PB18", "sql": "SELECT DEPARTMAN_KODU, STRING_AGG(AD_SOYAD, ', ') AS KISILER FROM PERSONEL GROUP BY DEPARTMAN_KODU", "expect": "masked", "masked_columns": ["KISILER"], "note": "STRING_AGG tüm adları tek hücreye toplar"}
+{"id": "PB19", "sql": "SELECT COUNT(TCKN) AS KISI_SAYISI FROM PERSONEL", "expect": "masked", "masked_columns": [], "note": "COUNT beyaz listede: sayı değer sızdırmaz"}
+{"id": "PB20", "sql": "SELECT COUNT(DISTINCT IBAN) AS FARKLI_IBAN FROM PERSONEL", "expect": "masked", "masked_columns": [], "note": "COUNT(DISTINCT ...) de beyaz listede"}
+{"id": "PB21", "sql": "SELECT PERSONEL_KODU, TCKN, IL FROM PERSONEL", "expect": "masked", "masked_columns": ["TCKN"], "note": "yan yana temiz kolonlar maskeden payını almaz"}
+{"id": "PB22", "sql": "SELECT P.AD_SOYAD, M.NET_TUTAR FROM PERSONEL P JOIN MAAS M ON M.PERSONEL_KODU = P.PERSONEL_KODU", "expect": "masked", "masked_columns": ["AD_SOYAD", "NET_TUTAR"], "note": "join iki tablonun pii kolonunu da taşır"}
+{"id": "PB23", "sql": "SELECT IL AS X, AD_SOYAD AS X FROM PERSONEL", "expect": "masked", "masked_columns": ["X", "X"], "note": "aynı çıktı adı izi çözülemez kılar; tüm kolon gizlenir"}
+{"id": "PB24", "sql": "SELECT C.IL, P.VKN FROM HESAP_SUBE C JOIN PERSONEL P ON 1 = 1", "expect": "masked", "masked_columns": ["VKN"], "note": "karşı tablonun temiz kolonu ham kalır"}
+{"id": "PB25", "sql": "SELECT PERSONEL_KODU, COUNT(*) AS KAYIT, MAX(NET_TUTAR) AS EN_YUKSEK_NET FROM MAAS GROUP BY PERSONEL_KODU", "expect": "masked", "masked_columns": ["EN_YUKSEK_NET"], "note": "aynı sorguda COUNT sayı kalır, MAX maskelenir"}
+{"id": "PB26", "sql": "SELECT PERSONEL_KODU, (SELECT TOP 1 M.NET_TUTAR FROM MAAS M WHERE M.PERSONEL_KODU = P.PERSONEL_KODU) AS NET FROM PERSONEL P", "expect": "masked", "masked_columns": ["NET"], "note": "ilişkili skaler alt sorgu"}
+{"id": "PB27", "sql": "SELECT AD_SOYAD FROM SATIS_TEMSILCI", "expect": "masked", "masked_columns": [], "note": "aynı ad başka tabloda pii değil; işarete bakılır, ada değil"}
+{"id": "PB28", "sql": "SELECT SUBE_KODU, TELEFON, E_POSTA, ADRES FROM HESAP_SUBE", "expect": "masked", "masked_columns": ["TELEFON", "E_POSTA", "ADRES"], "note": "sınıf başına farklı maske"}
+{"id": "PB29", "sql": "SELECT D.KISILER FROM (SELECT STRING_AGG(E_POSTA, ', ') AS KISILER FROM PERSONEL) AS D", "expect": "masked", "masked_columns": ["KISILER"], "note": "türetilmiş tabloda STRING_AGG"}
+{"id": "PB30", "sql": "SELECT TOP 5 AD_SOYAD FROM PERSONEL", "expect": "masked", "masked_columns": ["AD_SOYAD"], "note": "satır sayısını azaltmak maske yerine geçmez"}
+{"id": "PB31", "sql": "SELECT PERSONEL_KODU, ADRES AS SEHIR FROM PERSONEL WHERE AKTIF = 'E'", "expect": "masked", "masked_columns": ["SEHIR"], "note": "temiz filtreli sorguda pii kolonu yine maskelenir"}
+{"id": "PB32", "sql": "SELECT PERSONEL_KODU FROM PERSONEL WHERE TCKN LIKE '1%'", "expect": "rejected", "note": "WHERE: tek hane bile cevap değere döner"}
+{"id": "PB33", "sql": "SELECT PERSONEL_KODU FROM PERSONEL WHERE TCKN IS NOT NULL", "expect": "rejected", "note": "var/yok sorgusu da sızıntıdır"}
+{"id": "PB34", "sql": "SELECT PERSONEL_KODU FROM MAAS ORDER BY BRUT_TUTAR DESC", "expect": "rejected", "note": "ORDER BY sıralamayı geri verir"}
+{"id": "PB35", "sql": "SELECT PERSONEL_KODU FROM MAAS GROUP BY NET_TUTAR", "expect": "rejected", "note": "GROUP BY değeri grup anahtarı olarak gösterir"}
+{"id": "PB36", "sql": "SELECT M.PERSONEL_KODU FROM MAAS M JOIN MAAS_DETAY D ON D.MAAS_ID = M.MAAS_ID AND D.TUTAR > 1000", "expect": "rejected", "note": "JOIN ON içindeki koşul"}
+{"id": "PB37", "sql": "SELECT HESAP_KOD FROM HESAP_KART WHERE HESAP_KOD IN (SELECT PERSONEL_KODU FROM PERSONEL WHERE E_POSTA LIKE '%@ornek.com')", "expect": "rejected", "note": "alt sorgunun filtresi"}
+{"id": "PB38", "sql": "WITH K AS (SELECT PERSONEL_KODU, IBAN FROM PERSONEL) SELECT PERSONEL_KODU FROM K WHERE K.IBAN LIKE 'TR%'", "expect": "rejected", "note": "CTE kolonu üzerinden filtre"}
+{"id": "PB39", "sql": "SELECT PERSONEL_KODU FROM PERSONEL P WHERE EXISTS (SELECT 1 FROM MAAS M WHERE M.PERSONEL_KODU = P.PERSONEL_KODU AND M.KESINTI_TUTAR > 0)", "expect": "rejected", "note": "EXISTS içindeki koşul"}
+{"id": "PB40", "sql": "SELECT PERSONEL_KODU FROM PERSONEL ORDER BY AD_SOYAD", "expect": "rejected", "note": "ad sıralaması adı geri verir"}
+{"id": "PB41", "sql": "SELECT PERSONEL_KODU FROM PERSONEL WHERE ADRES LIKE 'Kadıköy%'", "expect": "rejected", "note": "adresin ilk parçası maskede gösterilmiyor"}
+{"id": "PB42", "sql": "SELECT P.PERSONEL_KODU FROM PERSONEL P JOIN MAAS M ON P.TCKN = M.BELGE_NO", "expect": "rejected", "note": "pii kolonu eşitlik koşulunda"}
+{"id": "PB43", "sql": "SELECT PERSONEL_KODU FROM PERSONEL WHERE LEN(TCKN) = 11", "expect": "rejected", "note": "işlevin içine gömülen kolon da filtre"}
+{"id": "PB44", "sql": "SELECT PERSONEL_KODU FROM PERSONEL ORDER BY SUBSTRING(TCKN, 1, 4)", "expect": "rejected", "note": "kısmi kesmeyle sıralama"}
+{"id": "PB45", "sql": "SELECT M.PERSONEL_KODU FROM MAAS M WHERE M.NET_TUTAR = (SELECT MAX(NET_TUTAR) FROM MAAS)", "expect": "rejected", "note": "karşılaştırmanın iki tarafı da maaş"}

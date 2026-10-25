@@ -1,0 +1,16 @@
+{
+  "name": "mini",
+  "display_name": "Mini (Satış/Depo)",
+  "default_schema": null,
+  "as_of": "2016-05-31",
+  "seed": 42,
+  "builder": "builder.py:build_db",
+  "generator": "builder.py:generate",
+  "references": "reference.py:REFERENCES",
+  "outputs": {
+    "db": "data/mini.db",
+    "mssql_script": "db/mssql/build_mini.sql",
+    "index_dir": "index/mini",
+    "eval_out": "eval_out/mini"
+  }
+}

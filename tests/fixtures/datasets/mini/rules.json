@@ -1,0 +1,13 @@
+{
+  "rules": [
+    {
+      "id": "ciro",
+      "term": "Ciro (net satış hasılatı)",
+      "synonyms": ["ciro", "net ciro", "satış hasılatı", "satış geliri", "toplam ciro"],
+      "definition": "Sipariş satırlarının KDV hariç toplamı: her satırda Quantity x UnitPrice. Fiyat sipariş satırında durur; stok kartında fiyat yoktur, o yüzden ciro hiçbir zaman kart fiyatından hesaplanmaz.",
+      "sql_hint": "SUM(l.Quantity * l.UnitPrice) FROM Sales.OrderLines l",
+      "tables": ["Sales.OrderLines"],
+      "markers": ["SUM\\s*\\(\\s*(?:\\w+\\.)?Quantity\\s*\\*\\s*(?:\\w+\\.)?UnitPrice\\s*\\)"]
+    }
+  ]
+}

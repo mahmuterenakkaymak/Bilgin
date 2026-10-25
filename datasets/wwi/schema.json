@@ -1,0 +1,1634 @@
+{
+  "tables": [
+    {
+      "name": "Application.Countries",
+      "description": "Countries the sales and purchasing world is addressed by.",
+      "module": "Application",
+      "keywords": ["ülke", "kıta", "iso kodu", "ülke adı"],
+      "columns": [
+        {
+          "name": "CountryID",
+          "type": "INT",
+          "description": "Country key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CountryName",
+          "type": "NVARCHAR(60)",
+          "description": "Country name as it is written on an address.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ISOAlpha2Code",
+          "type": "NVARCHAR(2)",
+          "description": "Two-letter ISO code of the country (TR, US, DE).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Continent",
+          "type": "NVARCHAR(30)",
+          "description": "Continent the country lies in (Europe, Asia, North America, ...).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Application.StateProvinces",
+      "description": "States and provinces a city belongs to; each one sits in exactly one country.",
+      "module": "Application",
+      "keywords": ["eyalet", "bölge", "il", "eyalet kodu"],
+      "columns": [
+        {
+          "name": "StateProvinceID",
+          "type": "INT",
+          "description": "State or province key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StateProvinceCode",
+          "type": "NVARCHAR(5)",
+          "description": "Short code of the province (CA for California).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StateProvinceName",
+          "type": "NVARCHAR(50)",
+          "description": "Province name.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CountryID",
+          "type": "INT",
+          "description": "Country the province belongs to.",
+          "fk": "Application.Countries.CountryID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SalesPersonPersonID",
+          "type": "INT",
+          "description": "Sales person the company puts in charge of the province.",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Application.Cities",
+      "description": "Cities customers and suppliers are delivered to; every city sits in one province.",
+      "module": "Application",
+      "keywords": ["şehir", "il", "eyalet", "şehir adı", "şehre göre"],
+      "columns": [
+        {
+          "name": "CityID",
+          "type": "INT",
+          "description": "City key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CityName",
+          "type": "NVARCHAR(50)",
+          "description": "City name.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StateProvinceID",
+          "type": "INT",
+          "description": "Province the city lies in.",
+          "fk": "Application.StateProvinces.StateProvinceID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CountryID",
+          "type": "INT",
+          "description": "Country the city lies in.",
+          "fk": "Application.Countries.CountryID",
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Application.DeliveryMethods",
+      "description": "Ways goods can be delivered; an order and an invoice each name one.",
+      "module": "Application",
+      "keywords": ["teslimat yöntemi", "kargo", "dağıtım şekli", "teslimat süresi"],
+      "columns": [
+        {
+          "name": "DeliveryMethodID",
+          "type": "INT",
+          "description": "Delivery method key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryMethodName",
+          "type": "NVARCHAR(60)",
+          "description": "Method name as the customer sees it (Collection, Courier Delivery, Drop Down Delivery, Reception).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LeadTimeDays",
+          "type": "INT",
+          "description": "Days the company promises between the order date and the delivery.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IsCashDelivery",
+          "type": "BIT",
+          "description": "Whether the method is paid at the door instead of invoiced.",
+          "fk": null,
+          "values": {
+            "0": "the customer is invoiced later",
+            "1": "paid on delivery"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Application.People",
+      "description": "People the business talks to: sales people, buyers, customer and supplier contacts.",
+      "module": "Application",
+      "keywords": ["kişi", "çalışan", "satış temsilcisi", "müşteri temsilcisi", "telefon", "e-posta", "ad soyad"],
+      "columns": [
+        {
+          "name": "PersonID",
+          "type": "INT",
+          "description": "Person key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "FullName",
+          "type": "NVARCHAR(50)",
+          "description": "Full name of the person; personal data.",
+          "pii": "person_name",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PreferredName",
+          "type": "NVARCHAR(50)",
+          "description": "Name the person is called by; personal data.",
+          "pii": "person_name",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IsSalesPerson",
+          "type": "BIT",
+          "description": "Whether the person sells; orders and invoices point at these people.",
+          "fk": null,
+          "values": {
+            "0": "not a sales person",
+            "1": "sales person"
+          },
+          "nullable": false
+        },
+        {
+          "name": "IsBuyer",
+          "type": "BIT",
+          "description": "Whether the person buys for the company.",
+          "fk": null,
+          "values": {
+            "0": "not a buyer",
+            "1": "buyer"
+          },
+          "nullable": false
+        },
+        {
+          "name": "IsDisabled",
+          "type": "BIT",
+          "description": "Whether the person has left; the row stays for the history of old orders.",
+          "fk": null,
+          "values": {
+            "0": "active",
+            "1": "left the company"
+          },
+          "nullable": false
+        },
+        {
+          "name": "LogonName",
+          "type": "NVARCHAR(256)",
+          "description": "Account the person signs in with, an address form; personal data.",
+          "pii": "email",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "EmailAddress",
+          "type": "NVARCHAR(256)",
+          "description": "E-mail address of the person; personal data.",
+          "pii": "email",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "PhoneNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Phone number of the person; personal data.",
+          "pii": "phone",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "FaxNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Fax number of the person; personal data.",
+          "pii": "phone",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "HashedPassword",
+          "type": "VARBINARY(MAX)",
+          "description": "Password hash of the logon account; never readable.",
+          "deny": true,
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "Photo",
+          "type": "VARBINARY(MAX)",
+          "description": "Photograph of the person as binary data; never readable.",
+          "deny": true,
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "Sales.BuyingGroups",
+      "description": "Buying groups customers can be organised under; a group is billed as one party.",
+      "module": "Sales",
+      "keywords": ["satın alma grubu", "alıcı grubu", "müşteri grubu"],
+      "columns": [
+        {
+          "name": "BuyingGroupID",
+          "type": "INT",
+          "description": "Buying group key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BuyingGroupName",
+          "type": "NVARCHAR(60)",
+          "description": "Name of the buying group.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Sales.Customers",
+      "description": "Customer cards; every order and every invoice belongs to one of them.",
+      "module": "Sales",
+      "keywords": ["müşteri", "cari", "müşteri adı", "kredi limiti", "hesap açılış tarihi", "adres", "telefon", "müşteri kategorisi"],
+      "columns": [
+        {
+          "name": "CustomerID",
+          "type": "INT",
+          "description": "Customer key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerName",
+          "type": "NVARCHAR(100)",
+          "description": "Customer trading name. The same name can be on two cards - one card per buying group.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BillToCustomerID",
+          "type": "INT",
+          "description": "Customer that receives the invoice; a customer that stands alone bills itself.",
+          "fk": "Sales.Customers.CustomerID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerCategory",
+          "type": "NVARCHAR(30)",
+          "description": "Segment the customer is traded in (Primary Market, Wholesale, Supermarket, ...).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BuyingGroupID",
+          "type": "INT",
+          "description": "Buying group the customer belongs to; NULL for an independent customer.",
+          "fk": "Sales.BuyingGroups.BuyingGroupID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "MarketCategory",
+          "type": "NVARCHAR(30)",
+          "description": "Market the customer sells into.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PrimaryContactPersonID",
+          "type": "INT",
+          "description": "Person at the customer the company deals with day to day.",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryMethodID",
+          "type": "INT",
+          "description": "Delivery method the customer is used to.",
+          "fk": "Application.DeliveryMethods.DeliveryMethodID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryCityID",
+          "type": "INT",
+          "description": "City goods are delivered to.",
+          "fk": "Application.Cities.CityID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PostalCityID",
+          "type": "INT",
+          "description": "City invoices are posted to.",
+          "fk": "Application.Cities.CityID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CreditLimit",
+          "type": "DECIMAL(18,4)",
+          "description": "Credit limit of the account; not a sold amount.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "AccountOpenedDate",
+          "type": "DATE",
+          "description": "Date the account was opened.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StandardDiscountPercentage",
+          "type": "DECIMAL(19,6)",
+          "description": "Discount the customer is given as a rule; a line can still be priced differently.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IsStatementSendingAllowed",
+          "type": "BIT",
+          "description": "Whether the customer is sent an account statement.",
+          "fk": null,
+          "values": {
+            "0": "no statement",
+            "1": "statement sent"
+          },
+          "nullable": false
+        },
+        {
+          "name": "SalesPersonPersonID",
+          "type": "INT",
+          "description": "Sales person the customer is followed by.",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "PhoneNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Phone number of the customer; personal data.",
+          "pii": "phone",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "FaxNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Fax number of the customer; personal data.",
+          "pii": "phone",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DeliveryAddressLine1",
+          "type": "NVARCHAR(60)",
+          "description": "First line of the delivery address; personal data.",
+          "pii": "address",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryAddressLine2",
+          "type": "NVARCHAR(60)",
+          "description": "Second line of the delivery address; personal data.",
+          "pii": "address",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "PostalAddressLine1",
+          "type": "NVARCHAR(60)",
+          "description": "First line of the postal address; personal data.",
+          "pii": "address",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PostalAddressLine2",
+          "type": "NVARCHAR(60)",
+          "description": "Second line of the postal address; personal data.",
+          "pii": "address",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "Sales.Orders",
+      "description": "Sales orders; the header, its money lives in the order lines.",
+      "module": "Sales",
+      "keywords": ["sipariş", "sipariş tarihi", "sipariş sayısı", "faturalanmamış sipariş", "geri sipariş", "beklenen teslimat tarihi"],
+      "columns": [
+        {
+          "name": "OrderID",
+          "type": "INT",
+          "description": "Order number; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerID",
+          "type": "INT",
+          "description": "Customer who placed the order.",
+          "fk": "Sales.Customers.CustomerID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OrderDate",
+          "type": "DATE",
+          "description": "Date the order was placed. Filter a period with a half-open literal range (>= first day, < first day of the next period) so the boundary day is never lost.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IsStockItemOrderType",
+          "type": "BIT",
+          "description": "Whether this is a customer order of stock items rather than a retail counter sale.",
+          "fk": null,
+          "values": {
+            "0": "retail transaction",
+            "1": "stock item order"
+          },
+          "nullable": false
+        },
+        {
+          "name": "IsBackorder",
+          "type": "BIT",
+          "description": "Whether the order exists to deliver what an earlier order could not cover.",
+          "fk": null,
+          "values": {
+            "0": "normal order",
+            "1": "back-order"
+          },
+          "nullable": false
+        },
+        {
+          "name": "InvoiceID",
+          "type": "INT",
+          "description": "Invoice raised for the order; NULL while the order has not been invoiced, so counting orders here is not counting invoices.",
+          "fk": "Sales.Invoices.InvoiceID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "BackorderOrderID",
+          "type": "INT",
+          "description": "Order this one back-orders; NULL for an order that stands on its own.",
+          "fk": "Sales.Orders.OrderID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "ContactPersonID",
+          "type": "INT",
+          "description": "Person at the customer who placed the order.",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SalespersonPersonID",
+          "type": "INT",
+          "description": "Sales person the order is credited to.",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PickedByPersonID",
+          "type": "INT",
+          "description": "Person who picked the order; NULL while nobody has picked it yet.",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DeliveryMethodID",
+          "type": "INT",
+          "description": "Method the order is delivered by.",
+          "fk": "Application.DeliveryMethods.DeliveryMethodID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ExpectedDeliveryDate",
+          "type": "DATE",
+          "description": "Delivery date promised to the customer.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PickingCompletedWhen",
+          "type": "DATETIME2(7)",
+          "description": "Moment picking finished; NULL while the order is still waiting in the warehouse.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "Sales.OrderLines",
+      "description": "Order lines; one line per ordered stock item, what the customer asked for.",
+      "module": "Sales",
+      "keywords": ["sipariş satırı", "sipariş edilen miktar", "birim fiyat", "toplanan miktar", "hediye satırı"],
+      "columns": [
+        {
+          "name": "OrderLineID",
+          "type": "INT",
+          "description": "Order line number; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OrderID",
+          "type": "INT",
+          "description": "Order the line belongs to.",
+          "fk": "Sales.Orders.OrderID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Ordered stock item.",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Description",
+          "type": "NVARCHAR(200)",
+          "description": "Item description as it is written on the order.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IsGift",
+          "type": "BIT",
+          "description": "Whether the line is given away; a gift line is ordered and picked but never invoiced.",
+          "fk": null,
+          "values": {
+            "0": "paid line",
+            "1": "gift line"
+          },
+          "nullable": false
+        },
+        {
+          "name": "Quantity",
+          "type": "INT",
+          "description": "Ordered amount in the item's own unit.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "UnitPrice",
+          "type": "DECIMAL(18,4)",
+          "description": "Price per unit the order was placed at, VAT excluded. What was actually sold lives on the invoice line.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TaxRate",
+          "type": "DECIMAL(7,2)",
+          "description": "VAT percentage applied to the line.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PickedQuantity",
+          "type": "INT",
+          "description": "Amount picked so far; below Quantity while the line is only partly filled.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PickingCompletedWhen",
+          "type": "DATETIME2(7)",
+          "description": "Moment the line finished picking; NULL while it is not picked.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "FirstDeliveryQuantity",
+          "type": "INT",
+          "description": "Amount the customer received first; NULL while nothing has been delivered.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "FirstDeliveryDate",
+          "type": "DATE",
+          "description": "Date of that first delivery; NULL while nothing has been delivered.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "Sales.Invoices",
+      "description": "Sales invoices; the header of what was actually billed to a customer.",
+      "module": "Sales",
+      "keywords": ["fatura", "fatura tarihi", "kredi notu", "iade faturası", "teslimat onayı", "fatura sayısı"],
+      "columns": [
+        {
+          "name": "InvoiceID",
+          "type": "INT",
+          "description": "Invoice number; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerID",
+          "type": "INT",
+          "description": "Customer the invoice was raised for.",
+          "fk": "Sales.Customers.CustomerID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BillToCustomerID",
+          "type": "INT",
+          "description": "Customer that owes the invoice, the buying group's head when the buyer belongs to one.",
+          "fk": "Sales.Customers.CustomerID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OrderID",
+          "type": "INT",
+          "description": "Order the invoice bills.",
+          "fk": "Sales.Orders.OrderID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryMethodID",
+          "type": "INT",
+          "description": "Method the billed goods went out by.",
+          "fk": "Application.DeliveryMethods.DeliveryMethodID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SalespersonPersonID",
+          "type": "INT",
+          "description": "Sales person the invoice is credited to.",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "InvoiceDate",
+          "type": "DATE",
+          "description": "Date the invoice was raised; the date revenue falls on. Filter a period with a half-open literal range.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IsCreditNote",
+          "type": "BIT",
+          "description": "Whether the invoice gives money back to the customer; its lines carry negative quantities and amounts, so a revenue sum that ignores this flag counts returns as sales.",
+          "fk": null,
+          "values": {
+            "0": "sales invoice",
+            "1": "credit note (return)"
+          },
+          "nullable": false
+        },
+        {
+          "name": "ConfirmedDeliveryTime",
+          "type": "DATETIME2(7)",
+          "description": "Moment the customer confirmed the delivery; NULL when the delivery was never confirmed.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "Sales.InvoiceLines",
+      "description": "Invoice lines; the only place sold amounts and profit are stored.",
+      "module": "Sales",
+      "keywords": ["fatura satırı", "ciro", "satılan miktar", "birim fiyat", "vergi tutarı", "kâr", "net satış"],
+      "columns": [
+        {
+          "name": "InvoiceLineID",
+          "type": "INT",
+          "description": "Invoice line number; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "InvoiceID",
+          "type": "INT",
+          "description": "Invoice the line belongs to.",
+          "fk": "Sales.Invoices.InvoiceID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Billed stock item.",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Description",
+          "type": "NVARCHAR(200)",
+          "description": "Item description as it is printed on the invoice.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Quantity",
+          "type": "INT",
+          "description": "Billed amount; negative on a credit note line.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "UnitPrice",
+          "type": "DECIMAL(18,4)",
+          "description": "Price per unit actually billed, VAT excluded.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TaxRate",
+          "type": "DECIMAL(7,2)",
+          "description": "VAT percentage applied to the line.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TaxAmount",
+          "type": "DECIMAL(18,4)",
+          "description": "VAT of the line; revenue is counted without it.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LineProfit",
+          "type": "DECIMAL(18,4)",
+          "description": "Profit of the line, already multiplied out; do not recompute it from the buying price.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ExtendedPrice",
+          "type": "DECIMAL(18,4)",
+          "description": "Quantity x UnitPrice of the line, VAT excluded; the billed amount of the line.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Sales.CustomerTransactions",
+      "description": "Movements on a customer's account: invoices, payments and credit notes.",
+      "module": "Sales",
+      "keywords": ["müşteri hareketi", "ödeme", "borç", "alacak", "işlem türü", "bakiye", "hesap ekstresi"],
+      "columns": [
+        {
+          "name": "CustomerTransactionID",
+          "type": "INT",
+          "description": "Movement key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CustomerID",
+          "type": "INT",
+          "description": "Customer whose account the movement posts to.",
+          "fk": "Sales.Customers.CustomerID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TransactionDate",
+          "type": "DATE",
+          "description": "Date the movement posts on.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TransactionDescription",
+          "type": "NVARCHAR(200)",
+          "description": "Text of the movement as it appears on a statement.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TransactionTypeID",
+          "type": "INT",
+          "description": "Kind of movement; the fixture only uses these codes (WideWorldImporters keeps the full list in Application.TransactionTypes, which this dataset does not read).",
+          "fk": null,
+          "values": {
+            "1": "sales invoice",
+            "2": "customer payment",
+            "10": "customer credit note"
+          },
+          "nullable": false
+        },
+        {
+          "name": "InvoiceID",
+          "type": "INT",
+          "description": "Invoice the movement posts to; NULL for a payment.",
+          "fk": "Sales.Invoices.InvoiceID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Stock item the movement is about; NULL when the movement is about money only.",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "AmountForTransaction",
+          "type": "DECIMAL(19,4)",
+          "description": "Amount the movement posts; a credit note posts negative.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "RunningTotal",
+          "type": "DECIMAL(19,4)",
+          "description": "Customer's balance right after the movement; a running total, never to be summed.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Warehouse.StockGroups",
+      "description": "Stock groups products are reported under; an item can sit in several of them.",
+      "module": "Warehouse",
+      "keywords": ["stok grubu", "ürün kategorisi", "grup adı"],
+      "columns": [
+        {
+          "name": "StockGroupID",
+          "type": "INT",
+          "description": "Stock group key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockGroupName",
+          "type": "NVARCHAR(50)",
+          "description": "Name of the group (Novelty Items, Clothing, Toys, General Merchandise).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Warehouse.StockItems",
+      "description": "Stock items; the product card an order line, an invoice line and a movement point at.",
+      "module": "Warehouse",
+      "keywords": ["ürün", "stok kalemi", "ürün adı", "marka", "alış fiyatı", "tedarikçi", "birim fiyat"],
+      "columns": [
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Stock item key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemName",
+          "type": "NVARCHAR(200)",
+          "description": "Product name.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SupplierID",
+          "type": "INT",
+          "description": "Supplier the item is bought from.",
+          "fk": "Purchasing.Suppliers.SupplierID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ColorID",
+          "type": "INT",
+          "description": "Colour of the item; the names live in Application.Colors, which this dataset does not read.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "Brand",
+          "type": "NVARCHAR(50)",
+          "description": "Brand the item is sold under.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Size",
+          "type": "NVARCHAR(40)",
+          "description": "Size or pack form of the item (1200ml, 100 tablet, each).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LeadTimeDays",
+          "type": "INT",
+          "description": "Days the supplier needs to deliver the item.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "QuantityPerOrder",
+          "type": "INT",
+          "description": "Amount the item is ordered in at one go.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BuyingPrice",
+          "type": "DECIMAL(18,4)",
+          "description": "Cost price per unit on the card; the selling price is on the order and invoice lines, never here.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TypicalWeightPerUnit",
+          "type": "DECIMAL(18,6)",
+          "description": "Weight of one unit, used for delivery planning.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "MarketingComments",
+          "type": "NVARCHAR(200)",
+          "description": "Text the sales team may quote for the item.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "Warehouse.StockItemStockGroups",
+      "description": "Which stock item sits in which stock group; the link that lets one item be in several groups.",
+      "module": "Warehouse",
+      "keywords": ["stok grubu", "ürün grubu", "grup üyeliği", "kategori eşleşmesi"],
+      "columns": [
+        {
+          "name": "StockItemStockGroupID",
+          "type": "INT",
+          "description": "Link key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Stock item that is a member of the group.",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockGroupID",
+          "type": "INT",
+          "description": "Group the item belongs to.",
+          "fk": "Warehouse.StockGroups.StockGroupID",
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Warehouse.StockItemTransactions",
+      "description": "Every movement of stock: sales, purchases, transfers and counts.",
+      "module": "Warehouse",
+      "keywords": ["stok hareketi", "stok giriş", "stok çıkış", "transfer", "sayım", "işlem türü", "miktar"],
+      "columns": [
+        {
+          "name": "StockItemTransactionID",
+          "type": "INT",
+          "description": "Movement key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Stock item that moved.",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TransactionTypeID",
+          "type": "INT",
+          "description": "What kind of movement this is; the fixture only uses these codes (WideWorldImporters keeps the full list in Application.TransactionTypes, which this dataset does not read).",
+          "fk": null,
+          "values": {
+            "1": "sold on an invoice",
+            "3": "bought on a purchase order",
+            "7": "stock issue",
+            "8": "stock transfer",
+            "9": "stock adjustment",
+            "10": "customer credit note"
+          },
+          "nullable": false
+        },
+        {
+          "name": "InvoiceID",
+          "type": "INT",
+          "description": "Invoice the movement went out on; NULL for a movement no invoice stands behind.",
+          "fk": "Sales.Invoices.InvoiceID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "OrderID",
+          "type": "INT",
+          "description": "Order the movement belongs to; NULL when there is none.",
+          "fk": "Sales.Orders.OrderID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "PurchaseOrderID",
+          "type": "INT",
+          "description": "Purchase order the movement came in on; NULL for an outgoing movement.",
+          "fk": "Purchasing.PurchaseOrders.PurchaseOrderID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "CustomerID",
+          "type": "INT",
+          "description": "Customer the movement is for; NULL on an internal movement.",
+          "fk": "Sales.Customers.CustomerID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "SupplierID",
+          "type": "INT",
+          "description": "Supplier the movement is with; NULL on a sale.",
+          "fk": "Purchasing.Suppliers.SupplierID",
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "TransactionDate",
+          "type": "DATETIME2(7)",
+          "description": "Moment the movement happened. Filter a period with a half-open literal range on the date part.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "Quantity",
+          "type": "DECIMAL(18,4)",
+          "description": "Signed amount: goods leaving are negative, goods arriving positive; a plain sum of it is the net change, not the sold amount.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CostPrice",
+          "type": "DECIMAL(18,4)",
+          "description": "Cost per unit the movement posted at; NULL when the movement carries no cost.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "Warehouse.StockItemHoldings",
+      "description": "Current stock of every item; one line per stock item, the place on-hand stock is read from.",
+      "module": "Warehouse",
+      "keywords": ["eldeki stok", "stok miktarı", "siparişlere ayrılan", "geri sipariş miktarı", "yeniden sipariş seviyesi", "stok maliyeti"],
+      "columns": [
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Stock item this holding line belongs to; primary key, one line per item.",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "QuantityOnHand",
+          "type": "INT",
+          "description": "Units physically in the warehouse right now; the answer to how much stock is left.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "CommittedForOrders",
+          "type": "INT",
+          "description": "Part of the stock already promised to open orders.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "BackorderQuantity",
+          "type": "INT",
+          "description": "Amount still owed to customers because stock ran out.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ReorderLevel",
+          "type": "INT",
+          "description": "Level the item has to be reordered at.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TargetLevel",
+          "type": "INT",
+          "description": "Level the stock of the item is aimed at.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SafetyStockLevel",
+          "type": "INT",
+          "description": "Buffer kept so a late supplier does not stop a sale.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LastCostPrice",
+          "type": "DECIMAL(18,4)",
+          "description": "Unit cost the item was last bought at.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Purchasing.Suppliers",
+      "description": "Supplier cards; every purchase order and every bought item comes from one of them.",
+      "module": "Purchasing",
+      "keywords": ["tedarikçi", "firma", "tedarikçi adı", "tedarikçi kategorisi", "telefon", "adres", "alış"],
+      "columns": [
+        {
+          "name": "SupplierID",
+          "type": "INT",
+          "description": "Supplier key; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SupplierName",
+          "type": "NVARCHAR(100)",
+          "description": "Supplier trading name.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SupplierCategory",
+          "type": "NVARCHAR(30)",
+          "description": "Category the supplier is bought in (Novelty Suppliers, Toy Suppliers, Food Suppliers, ...).",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SupplierReference",
+          "type": "NVARCHAR(20)",
+          "description": "The supplier's own account number for us.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "InternalContactPersonID",
+          "type": "INT",
+          "description": "Buyer in our company who follows the supplier.",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryMethodID",
+          "type": "INT",
+          "description": "Method the supplier usually delivers by.",
+          "fk": "Application.DeliveryMethods.DeliveryMethodID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryCityID",
+          "type": "INT",
+          "description": "City goods are received at.",
+          "fk": "Application.Cities.CityID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PostalCityID",
+          "type": "INT",
+          "description": "City the supplier is addressed by post.",
+          "fk": "Application.Cities.CityID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "AccountOpenedDate",
+          "type": "DATE",
+          "description": "Date the supplier started working with us.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StandardDiscountPercentage",
+          "type": "DECIMAL(19,6)",
+          "description": "Discount the supplier gives as a rule; a purchase line can still be priced differently.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "IsSupplierLocked",
+          "type": "BIT",
+          "description": "Whether buying from the supplier is stopped; old orders stay readable.",
+          "fk": null,
+          "values": {
+            "0": "buying is open",
+            "1": "supplier locked"
+          },
+          "nullable": false
+        },
+        {
+          "name": "PhoneNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Phone number of the supplier; personal data.",
+          "pii": "phone",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "FaxNumber",
+          "type": "NVARCHAR(20)",
+          "description": "Fax number of the supplier; personal data.",
+          "pii": "phone",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "DeliveryAddressLine1",
+          "type": "NVARCHAR(60)",
+          "description": "First line of the delivery address; personal data.",
+          "pii": "address",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryAddressLine2",
+          "type": "NVARCHAR(60)",
+          "description": "Second line of the delivery address; personal data.",
+          "pii": "address",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "PostalAddressLine1",
+          "type": "NVARCHAR(60)",
+          "description": "First line of the postal address; personal data.",
+          "pii": "address",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PostalAddressLine2",
+          "type": "NVARCHAR(60)",
+          "description": "Second line of the postal address; personal data.",
+          "pii": "address",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "Purchasing.PurchaseOrders",
+      "description": "Purchase orders; the header of what was bought from a supplier.",
+      "module": "Purchasing",
+      "keywords": ["satın alma siparişi", "tedarikçi siparişi", "sipariş tarihi", "beklenen teslimat", "kapalı sipariş", "gecikmiş teslimat"],
+      "columns": [
+        {
+          "name": "PurchaseOrderID",
+          "type": "INT",
+          "description": "Purchase order number; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SupplierID",
+          "type": "INT",
+          "description": "Supplier the order was placed with.",
+          "fk": "Purchasing.Suppliers.SupplierID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OrderDate",
+          "type": "DATE",
+          "description": "Date the order was placed. Filter a period with a half-open literal range.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "DeliveryMethodID",
+          "type": "INT",
+          "description": "Method the goods are delivered by.",
+          "fk": "Application.DeliveryMethods.DeliveryMethodID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ContactPersonID",
+          "type": "INT",
+          "description": "Buyer who placed the order.",
+          "fk": "Application.People.PersonID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ExpectedDeliveryDate",
+          "type": "DATE",
+          "description": "Delivery date agreed with the supplier; a line received after this date is a late delivery.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "SupplierReference",
+          "type": "NVARCHAR(20)",
+          "description": "Our order number as the supplier wrote it down.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "IsOrderClosed",
+          "type": "BIT",
+          "description": "Whether the order is closed; an open order can still be delivered.",
+          "fk": null,
+          "values": {
+            "0": "open order",
+            "1": "closed order"
+          },
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "name": "Purchasing.PurchaseOrderLines",
+      "description": "Purchase order lines; one line per bought stock item, the place a receiving date is stored.",
+      "module": "Purchasing",
+      "keywords": ["satın alma satırı", "sipariş edilen miktar", "alış fiyatı", "teslim alma tarihi", "satır durumu", "geç kalan sipariş"],
+      "columns": [
+        {
+          "name": "PurchaseOrderLineID",
+          "type": "INT",
+          "description": "Purchase order line number; primary key.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "PurchaseOrderID",
+          "type": "INT",
+          "description": "Purchase order the line belongs to.",
+          "fk": "Purchasing.PurchaseOrders.PurchaseOrderID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "StockItemID",
+          "type": "INT",
+          "description": "Bought stock item.",
+          "fk": "Warehouse.StockItems.StockItemID",
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "OrderQuantity",
+          "type": "INT",
+          "description": "Ordered amount of the item.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "UnitPrice",
+          "type": "DECIMAL(18,4)",
+          "description": "Cost per unit the supplier is paid, VAT excluded.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "TaxRate",
+          "type": "DECIMAL(7,2)",
+          "description": "VAT percentage on the line.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "LineDescription",
+          "type": "NVARCHAR(200)",
+          "description": "Description of the line as it was ordered.",
+          "fk": null,
+          "values": {},
+          "nullable": false
+        },
+        {
+          "name": "ReceivedDate",
+          "type": "DATETIME2(7)",
+          "description": "Moment the line was received; NULL while nothing has arrived. Compare its date with the order's ExpectedDeliveryDate to find a late delivery.",
+          "fk": null,
+          "values": {},
+          "nullable": true
+        },
+        {
+          "name": "IsOrderClosed",
+          "type": "BIT",
+          "description": "Whether the line is closed.",
+          "fk": null,
+          "values": {
+            "0": "open line",
+            "1": "closed line"
+          },
+          "nullable": false
+        },
+        {
+          "name": "OrderLineStatus",
+          "type": "NVARCHAR(20)",
+          "description": "Status text of the line; the fixture only uses these two.",
+          "fk": null,
+          "values": {
+            "Open": "still expected from the supplier",
+            "Closed": "nothing more is expected"
+          },
+          "nullable": false
+        }
+      ]
+    }
+  ]
+}

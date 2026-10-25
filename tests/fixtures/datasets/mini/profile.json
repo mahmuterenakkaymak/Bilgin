@@ -1,0 +1,8 @@
+{
+  "name": "mini",
+  "pairs": [
+    { "left": "CustomerID", "right": "CustomerID", "confidence": 0.8 },
+    { "left": "OrderID", "right": "OrderID", "confidence": 0.8 },
+    { "left": "StockItemID", "right": "StockItemID", "confidence": 0.8 }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "status": "needs_clarification",
+  "question": "Eylül 2026'da satışlarımız ne kadar?",
+  "choice": null,
+  "answer_text": "",
+  "narration_source": null,
+  "chart": null,
+  "facts": [],
+  "columns": [],
+  "rows": [],
+  "row_count": 0,
+  "truncated": false,
+  "sql": "",
+  "tables_used": [],
+  "rules_used": [],
+  "masked_columns": [],
+  "warnings": [],
+  "notes": [],
+  "mode": "full_rules",
+  "dataset": "wwi",
+  "model": "strata",
+  "timings": { "agent_s": 2.147, "execute_ms": 0.0, "narrate_s": 0.0, "total_s": 2.148 },
+  "audit_id": "9f3b62c10d47",
+  "clarification": {
+    "question": "'satış' ile neyi kastediyorsunuz?",
+    "options": [
+      "KDV hariç ciro (hareket satırından)",
+      "İadeler düşülmüş net satış miktarı (birim)",
+      "KDV dahil brüt satış (fatura genel toplamı)"
+    ]
+  },
+  "error": null,
+  "steps": [
+    {
+      "tool": "get_schema",
+      "ok": true,
+      "summary": "STOK_HAREKET, FATURA: kolonlar, tipler ve hareket-fatura ilişkisi okundu."
+    },
+    {
+      "tool": "ask_clarification",
+      "ok": true,
+      "summary": "'satış' ile neyi kastediyorsunuz?"
+    }
+  ]
+}

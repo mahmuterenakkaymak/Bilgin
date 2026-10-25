@@ -1,0 +1,34 @@
+{"id": "WPB01", "sql": "SELECT p.FullName FROM Application.People AS p", "expect": "masked", "masked_columns": ["FullName"], "note": "şemalı tabloda takma ad izi gerçek pii kolona kadar götürür"}
+{"id": "WPB02", "sql": "SELECT p.EmailAddress AS ILETISIM FROM Application.People AS p", "expect": "masked", "masked_columns": ["ILETISIM"], "note": "maske çıktı adını taşır, kaynağın şemasını değil"}
+{"id": "WPB03", "sql": "WITH K AS (SELECT PhoneNumber AS TEL FROM Application.People) SELECT TEL FROM K", "expect": "masked", "masked_columns": ["TEL"], "note": "CTE içinde yeniden adlandırılan şemalı kolon izlenir"}
+{"id": "WPB04", "sql": "WITH K AS (SELECT PersonID, LogonName FROM Application.People) SELECT LogonName FROM K", "expect": "masked", "masked_columns": ["LogonName"], "note": "CTE temiz kolonu bırakır, pii kolonu izler"}
+{"id": "WPB05", "sql": "SELECT CONCAT(FullName, ' <', EmailAddress, '>') AS KIMLIK FROM Application.People", "expect": "masked", "masked_columns": ["KIMLIK"], "note": "iki farklı sınıf aynı kolona akarsa tamamı gizlenir"}
+{"id": "WPB06", "sql": "SELECT 'tel:' + PhoneNumber AS SATIR FROM Application.People", "expect": "masked", "masked_columns": ["SATIR"], "note": "+ ile birleştirme izi kesmez"}
+{"id": "WPB07", "sql": "SELECT CAST(PhoneNumber AS VARCHAR(20)) AS TEL_METIN FROM Application.People", "expect": "masked", "masked_columns": ["TEL_METIN"], "note": "CAST kaynağı gizlemez"}
+{"id": "WPB08", "sql": "SELECT SUBSTRING(EmailAddress, 1, 4) AS POSTA_BASI FROM Application.People", "expect": "masked", "masked_columns": ["POSTA_BASI"], "note": "parça göstermek maskelemenin kendisi değildir"}
+{"id": "WPB09", "sql": "SELECT LEFT(FullName, 3) AS AD_BASI FROM Application.People", "expect": "masked", "masked_columns": ["AD_BASI"], "note": "LEFT de adın başını sızdırır"}
+{"id": "WPB10", "sql": "SELECT CASE WHEN IsSalesPerson = 1 THEN FullName ELSE PreferredName END AS AD FROM Application.People", "expect": "masked", "masked_columns": ["AD"], "note": "CASE iki person_name dalını tek sınıfta toplar"}
+{"id": "WPB11", "sql": "SELECT CustomerName AS ETIKET FROM Sales.Customers UNION ALL SELECT PhoneNumber FROM Sales.Customers", "expect": "masked", "masked_columns": ["ETIKET"], "note": "pii olmayan kolon pozisyonuna union ile akan değer de maskelenir"}
+{"id": "WPB12", "sql": "SELECT CustomerID, (SELECT MAX(PhoneNumber) FROM Sales.Customers) AS EN_UZUN_TEL FROM Sales.Customers", "expect": "masked", "masked_columns": ["EN_UZUN_TEL"], "note": "skaler alt sorgu; temiz kolon ham kalır"}
+{"id": "WPB13", "sql": "SELECT D.TEL FROM (SELECT PhoneNumber AS TEL FROM Sales.Customers) AS D", "expect": "masked", "masked_columns": ["TEL"], "note": "türetilmiş tablo izi kesmez"}
+{"id": "WPB14", "sql": "SELECT CustomerName, DeliveryAddressLine1 FROM Sales.Customers", "expect": "masked", "masked_columns": ["DeliveryAddressLine1"], "note": "adres sınıfı ayrı maskelenir, temiz ad ham kalır"}
+{"id": "WPB15", "sql": "SELECT SupplierName, FaxNumber FROM Purchasing.Suppliers", "expect": "masked", "masked_columns": ["FaxNumber"], "note": "tedarikçinin faks numarası telefon sınıfındadır"}
+{"id": "WPB16", "sql": "SELECT p.FullName, c.PhoneNumber FROM Application.People p JOIN Sales.Customers c ON c.PrimaryContactPersonID = p.PersonID", "expect": "masked", "masked_columns": ["FullName", "PhoneNumber"], "note": "join iki şemalı tablonun pii kolonunu da taşır"}
+{"id": "WPB17", "sql": "SELECT COUNT(DISTINCT EmailAddress) AS FARKLI_POSTA FROM Application.People", "expect": "masked", "masked_columns": [], "note": "COUNT(DISTINCT ...) beyaz listede: sayı değer sızdırmaz"}
+{"id": "WPB18", "sql": "SELECT COUNT(*) AS KISI_SAYISI FROM Application.People", "expect": "masked", "masked_columns": [], "note": "COUNT(*) kapalı kolonu açmaz ve sayı kalır"}
+{"id": "WPB19", "sql": "SELECT CustomerName FROM Sales.Customers", "expect": "masked", "masked_columns": [], "note": "pii tablosunun temiz kolonu maskeden payını almaz"}
+{"id": "WPB20", "sql": "SELECT PersonID, PhoneNumber FROM Application.People WHERE IsSalesPerson = 1", "expect": "masked", "masked_columns": ["PhoneNumber"], "note": "temiz filtreli sorguda pii kolonu yine maskelenir"}
+{"id": "WPB21", "sql": "SELECT FullName, PhoneNumber, FaxNumber FROM Application.People", "expect": "masked", "masked_columns": ["FullName", "PhoneNumber", "FaxNumber"], "note": "yan yana üç pii kolonu ayrı ayrı maskelenir"}
+{"id": "WPB22", "sql": "SELECT LogonName FROM Application.People", "expect": "masked", "masked_columns": ["LogonName"], "note": "giriş adı e-posta biçiminde olduğu için e-posta maskesi yer"}
+{"id": "WPB23", "sql": "SELECT PersonID FROM Application.People WHERE EmailAddress LIKE '%@fabrikam.example'", "expect": "rejected", "note": "WHERE: e-posta filtresi cevap değere döner"}
+{"id": "WPB24", "sql": "SELECT CustomerName FROM Sales.Customers WHERE PhoneNumber IS NOT NULL", "expect": "rejected", "note": "var/yok sorgusu da sızıntıdır"}
+{"id": "WPB25", "sql": "SELECT PersonID FROM Application.People ORDER BY FullName", "expect": "rejected", "note": "ad sıralaması adı geri verir"}
+{"id": "WPB26", "sql": "SELECT COUNT(*) AS KAYIT FROM Sales.Customers GROUP BY DeliveryAddressLine1", "expect": "rejected", "note": "GROUP BY adresi grup anahtarı olarak gösterir"}
+{"id": "WPB27", "sql": "SELECT c.CustomerName FROM Sales.Customers c JOIN Application.People p ON p.PhoneNumber = c.PhoneNumber", "expect": "rejected", "note": "JOIN ON içindeki pii eşitliği"}
+{"id": "WPB28", "sql": "SELECT CustomerName FROM Sales.Customers WHERE DeliveryAddressLine1 IN (SELECT PostalAddressLine1 FROM Sales.Customers)", "expect": "rejected", "note": "alt sorgunun adres filtresi"}
+{"id": "WPB29", "sql": "WITH K AS (SELECT PersonID, PhoneNumber FROM Application.People) SELECT PersonID FROM K WHERE K.PhoneNumber LIKE '(2%'", "expect": "rejected", "note": "CTE kolonu üzerinden telefon filtresi"}
+{"id": "WPB30", "sql": "SELECT HashedPassword FROM Application.People", "expect": "denied", "note": "kapalı kolon adıyla okunamaz"}
+{"id": "WPB31", "sql": "SELECT p.Photo FROM Application.People AS p", "expect": "denied", "note": "takma ad kapalı kolonu gizlemez"}
+{"id": "WPB32", "sql": "WITH s AS (SELECT HashedPassword FROM Application.People) SELECT PersonID FROM s", "expect": "denied", "note": "CTE gövdesindeki kapalı kolon dışarı çıkamaz"}
+{"id": "WPB33", "sql": "SELECT PersonID FROM Application.People WHERE Photo IS NOT NULL", "expect": "denied", "note": "kapalı kolon filtrede de okunamaz"}
+{"id": "WPB34", "sql": "SELECT p.* FROM Application.People AS p", "expect": "denied", "note": "yıldız kapalı kolonu açtığı için tablo okunamaz kalır"}

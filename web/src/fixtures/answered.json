@@ -1,0 +1,102 @@
+{
+  "status": "answered",
+  "question": "Eylül 2026'da en çok satan 5 ürün hangileri; kodu, adı ve toplam satış miktarı nedir?",
+  "choice": null,
+  "answer_text": "Eylül 2026'da en çok satan ürün 2.480 adetle Siyah Çay 500 g oldu; ilk beş ürünün toplam satış miktarı 8.910 adet.",
+  "narration_source": "llm",
+  "chart": null,
+  "facts": [
+    {
+      "name": "row_count",
+      "label": "Satır sayısı",
+      "column": null,
+      "value": 5,
+      "display": "5",
+      "percent": false
+    },
+    {
+      "name": "total",
+      "label": "Toplam",
+      "column": "SATIS_MIKTARI",
+      "value": 8910,
+      "display": "8.910",
+      "percent": false
+    },
+    {
+      "name": "max",
+      "label": "En yüksek (Siyah Çay 500 g)",
+      "column": "SATIS_MIKTARI",
+      "value": 2480,
+      "display": "2.480",
+      "percent": false
+    },
+    {
+      "name": "min",
+      "label": "En düşük",
+      "column": "SATIS_MIKTARI",
+      "value": 1105,
+      "display": "1.105",
+      "percent": false
+    },
+    {
+      "name": "mean",
+      "label": "Ortalama",
+      "column": "SATIS_MIKTARI",
+      "value": 1782.0,
+      "display": "1.782,00",
+      "percent": false
+    },
+    {
+      "name": "top_item",
+      "label": "Öne çıkan",
+      "column": "SATIS_MIKTARI",
+      "value": "Siyah Çay 500 g",
+      "display": "Siyah Çay 500 g",
+      "percent": false
+    },
+    {
+      "name": "top_share",
+      "label": "En yüksek pay",
+      "column": "SATIS_MIKTARI",
+      "value": 27.8,
+      "display": "%27,8",
+      "percent": true
+    }
+  ],
+  "columns": ["URUN_KODU", "URUN_ADI", "SATIS_MIKTARI"],
+  "rows": [
+    ["STK0012", "Siyah Çay 500 g", 2480],
+    ["STK0003", "Buğday Unu 500 g", 2140],
+    ["STK0007", "Zeytinyağı 1 L", 1725],
+    ["STK0021", "Toz Şeker 5 kg", 1460],
+    ["STK0005", "Bulgur Pilavlık 1 kg", 1105]
+  ],
+  "row_count": 5,
+  "truncated": false,
+  "sql": "SELECT s.URUN_KODU, t.URUN_ADI, SUM(s.HAREKET_MIKTAR) AS SATIS_MIKTARI FROM STOK_HAREKET s JOIN STOK_KART t ON t.URUN_KODU = s.URUN_KODU WHERE s.HAREKET_TURU = 'S' AND s.HAREKET_TARIHI >= '2026-09-01' AND s.HAREKET_TARIHI < '2026-10-01' GROUP BY s.URUN_KODU, t.URUN_ADI ORDER BY SATIS_MIKTARI DESC, s.URUN_KODU",
+  "tables_used": ["STOK_HAREKET", "STOK_KART"],
+  "rules_used": [],
+  "masked_columns": [],
+  "warnings": [],
+  "notes": [],
+  "mode": "full_rules",
+  "dataset": "wwi",
+  "model": "strata",
+  "timings": { "agent_s": 6.412, "execute_ms": 12.5, "narrate_s": 1.884, "total_s": 8.31 },
+  "audit_id": "4c1d9e07a5b2",
+  "clarification": null,
+  "error": null,
+  "steps": [
+    {
+      "tool": "get_schema",
+      "ok": true,
+      "summary": "STOK_HAREKET, STOK_KART: kolonlar, tipler ve URUN_KODU üzerinden kurulan ilişki okundu."
+    },
+    {
+      "tool": "run_sql",
+      "ok": true,
+      "summary": "Kolonlar: URUN_KODU, URUN_ADI, SATIS_MIKTARI. 5 satır."
+    },
+    { "tool": "submit_sql", "ok": true, "summary": "Sorgu kabul edildi." }
+  ]
+}
