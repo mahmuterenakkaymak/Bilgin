@@ -95,6 +95,9 @@
   `update-service.ps1`):
   - Wrapper: **WinSW** (MIT), one pinned release, downloaded by the install script from its official GitHub release
     and verified against a SHA-256 written in the script; the script stops if the hash differs. No other download.
+    Approved by Eren on 2026-10-25 (over pywin32, NSSM and Task Scheduler). If `deploy/windows/WinSW-x64.exe`
+    already exists (the operator downloaded it by hand), the script does not download, it only checks the hash.
+    The exe is gitignored; tests never download it.
   - Service `Bilgin`, display name "Bilgin - yerel veri analisti" / "Bilgin - local data analyst" (by `NL2SQL_LANG`),
     start type automatic (delayed), restart on failure (3 tries, 10 s / 30 s / 60 s), runs as the virtual account
     `NT SERVICE\Bilgin` (no password to store). Executable: the repo's `.venv\Scripts\python.exe -m nl2sql serve
