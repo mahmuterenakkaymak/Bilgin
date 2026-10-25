@@ -87,6 +87,19 @@ export function rulesRemove(id) {
   return request(`/api/rules/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+// Yöneticinin kullanıcı defteri: liste, ekme, güncelleme (rol / etkinlik / parola).
+export function usersList() {
+  return request("/api/users");
+}
+
+export function usersCreate(body) {
+  return request("/api/users", { method: "POST", body });
+}
+
+export function usersUpdate(id, body) {
+  return request(`/api/users/${encodeURIComponent(id)}`, { method: "PUT", body });
+}
+
 export function rebuild() {
   return request("/api/index/rebuild", { method: "POST" });
 }

@@ -834,6 +834,58 @@ main {
   .btn-theme {
     margin-left: auto;
   }
+
+  /* Kullanıcı satırı beş sütuna sığmıyor (Rol'ün select'i tek başına ~150px) ve .table-wrap onu
+     kırpıyor: İşlemler hiç görünmüyor, kimse pasifleştirilemiyordu. Tablo bloğa döner — hücreler
+     tablo bağlamında kaldıkça anonim hücreler aynı tavanı korur — ve satır alt alta iner: ad, rol,
+     durum, son giriş, düğmeler. Etiketini hücrenin kendisi taşır. Seçiciler tbody/alt-sınıf ile
+     derinleşiyor: kullanıcı ekranının temelleri bu bloğun altında duruyor, sırayı değil özgüllüğü
+     kazanması gerekiyor. */
+  .users-table,
+  .users-table tbody,
+  .users-table tr,
+  .users-table th,
+  .users-table td {
+    display: block;
+  }
+
+  .users-table thead {
+    display: none;
+  }
+
+  .users-table tbody tr {
+    padding: var(--space) 0;
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+
+  .users-table tbody th,
+  .users-table tbody td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    box-shadow: none;
+  }
+
+  .users-table .users-status::before {
+    content: "Durum: ";
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .users-table .users-login::before {
+    content: "Son giriş: ";
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .users-table .users-actions {
+    text-align: left;
+  }
+
+  .users-table .users-select,
+  .users-table .users-reset .field-input {
+    width: 100%;
+    max-width: 16rem;
+  }
 }
 
 .table-note {
@@ -1371,6 +1423,134 @@ main {
   color: var(--err-text);
   font-size: 13px;
   font-weight: 600;
+}
+
+/* --- kullanıcı ekranı --------------------------------------------------------- */
+
+.users-screen > * + * {
+  margin-top: calc(var(--space) * 2);
+}
+
+.user-add-form {
+  display: grid;
+  gap: calc(var(--space) * 1.5);
+}
+
+/* Dört alan iki sütuna dizilir (880px'lik gövdede üçüncü sütun Rol'ü tek başına bırakıyordu);
+   640px'in altında tek sütuna iner. */
+.user-add-fields {
+  display: grid;
+  gap: calc(var(--space) * 2) calc(var(--space) * 3);
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.user-add-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space);
+}
+
+/* Ret cümlesi tek satır bile olsa kendi zemininde durur: ekranın geri kalanı onun rengi değil. */
+.users-error {
+  margin: 0;
+  padding: calc(var(--space) * 0.75) var(--space);
+  border-left: 3px solid var(--err-text);
+  border-radius: var(--radius);
+  background: var(--err-bg);
+  color: var(--err-text);
+  font-size: 14px;
+}
+
+.users-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.users-table th,
+.users-table td {
+  padding: calc(var(--space) * 0.75) var(--space);
+  text-align: left;
+  vertical-align: middle;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+.users-table thead th {
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.users-name {
+  min-width: 8rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.users-select {
+  width: auto;
+  min-width: 9rem;
+}
+
+/* Durum tek sözcükten fazlası: nokta rengi iki temada da okunsun diye kenarlık ve yazı rengi. */
+.users-state {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.users-state.is-active {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.users-state.is-passive {
+  color: var(--muted);
+}
+
+.users-login {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.users-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Satır içi parola alanı düğmelerin altına iner: hücrenin genişliğini o da şişirmesin. */
+.users-reset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--space) * 0.5);
+  margin-top: calc(var(--space) * 0.5);
+}
+
+.users-reset .field-input {
+  width: 12rem;
+}
+
+.users-reset .field-error {
+  flex: 1 1 100%;
+  text-align: right;
+}
+
+.users-empty {
+  padding: calc(var(--space) * 3) var(--space);
+  color: var(--muted);
+  text-align: center;
 }
 
 /* --- oturum kapısı --------------------------------------------------------- */

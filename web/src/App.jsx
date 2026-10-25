@@ -7,6 +7,7 @@ import ErrorCard from "./components/ErrorCard.jsx";
 import LoadingSteps from "./components/LoadingSteps.jsx";
 import RulesScreen from "./components/RulesScreen.jsx";
 import Sidebar from "./components/Sidebar.jsx";
+import UsersScreen from "./components/UsersScreen.jsx";
 import * as api from "./lib/api.js";
 import { askReducer, initialState } from "./lib/askState.js";
 import { ROLE_LABELS } from "./lib/auth.js";
@@ -196,8 +197,27 @@ function RulesFlow({ onChanged, readOnly }) {
   );
 }
 
+// Kullanıcı ekranı: yöneticinin defteri tek istekten okunur; her ekme ve güncelleme sonrası
+// ekran aynı isteği yineler, böylece tablo sunucudaki halini gösterir (R6-19).
+function UsersFlow() {
+  const [users, setUsers] = useState(null); // null: henüz okunmadı
+  const [error, setError] = useState("");
+
+  const refresh = () => {
+    api
+      .usersList()
+      .then((payload) => setUsers(Array.isArray(payload?.users) ? payload.users : []))
+      .catch((failure) => setError(failure?.message || "Kullanıcılar okunamadı."));
+  };
+
+  useEffect(refresh, []);
+
+  return <UsersScreen users={users ?? []} loading={!users} error={error} onRefresh={refresh} />;
+}
+
 function Screen({ route, pending, onRefresh, onChanged, onRebuild, readOnly }) {
   if (route === "rules") return <RulesFlow onChanged={onChanged} readOnly={readOnly} />;
+  if (route === "users") return <UsersFlow />;
   return <AskScreen pending={pending} onRefresh={onRefresh} onRebuild={onRebuild} />;
 }
 
@@ -294,6 +314,13 @@ export default function App({ user = null, onLogout = null, note = "" }) {
           <a className="nav-link" id="nav-rules" href="#/kurallar" aria-current={route === "rules" ? "page" : undefined}>
             Kurallar
           </a>
+          {/* Kullanıcı defteri yalnız yöneticiye açık (R6-19): kök kapı rotayı da korur, bağlantı
+              gösterilmeyen bir adrese götürmesin. */}
+          {user?.role === "admin" && (
+            <a className="nav-link" id="nav-users" href="#/kullanicilar" aria-current={route === "users" ? "page" : undefined}>
+              Kullanıcılar
+            </a>
+          )}
         </nav>
         <button
           type="button"
