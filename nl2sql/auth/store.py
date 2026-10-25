@@ -9,7 +9,10 @@ dolaştığı için tek bağlantıyı paylaşmak güvenli olmaz.
 from __future__ import annotations
 
 import contextlib
+import hashlib
+import math
 import re
+import secrets
 import sqlite3
 import time
 from collections.abc import Callable
@@ -17,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from nl2sql import config
-from nl2sql.auth.passwords import check_new_password, hash_password
+from nl2sql.auth.passwords import check_new_password, hash_password, verify_password
 
 USERNAME_RE = re.compile(r"^[a-z0-9_.-]{3,32}$")
 ROLES = ("admin", "user")
@@ -33,6 +36,8 @@ BAD_NAME_MESSAGE = (
     "Kullanıcı adı 3-32 karakter olmalı ve yalnız küçük harf, rakam, . _ - içerebilir."
 )
 BAD_ROLE_MESSAGE = "Rol admin ya da user olmalı."
+BAD_LOGIN_MESSAGE = "Kullanıcı adı ya da parola hatalı."
+LOCKED_MESSAGE = "Çok fazla hatalı deneme. {n} dakika sonra yeniden deneyin."
 
 _CREATE = (
     """
@@ -76,6 +81,14 @@ class UserError(Exception):
         super().__init__(message)
         self.message = message
         self.status = status
+
+
+class LoginError(UserError):
+    """Giriş denemesinin reddi: 401 kimlik hatası, 429 geçici kilit (R6-4).
+
+    ``UserError``dan türer: reddeden şey yine bir kullanıcı işlemidir ve yol koşucusu tek
+    ``except`` ile mesajı ve durumu olduğu gibi kullanıcıya gösterebilir.
+    """
 
 
 class UserStore:
@@ -167,6 +180,64 @@ class UserStore:
                     conn.execute("DELETE FROM sessions WHERE user_id = ?", (id,))
         return self.get_by_id(id)
 
+    # ------------------------------------------------------- login, lockout, sessions
+
+    def authenticate(self, username: str, password: str) -> dict:
+        """Adı ve parolayı doğrular; başarılıysa public kullanıcıyı döndürür, değilse LoginError.
+
+        Bilinmeyen ad, yanlış parola ve pasif kullanıcı aynı 401 satırını verir: hangisi olduğu
+        saldırgana bilgi vermesin. Üçü de ``login_failures`` satırı bırakır, böylece kilitlenme
+        sayacı bilinmeyen adlar için de işler.
+        """
+        name = str(username).lower()
+        remaining = self._locked_for(name)
+        if remaining is not None:
+            raise LoginError(LOCKED_MESSAGE.format(n=math.ceil(remaining / 60)), 429)
+        row = self._credential(name)
+        # ASSUMPTION: kilit eşiği dolunca onu dolduran denemenin kendisi 401 alır; 429 sonraki
+        # denemelerdir (kilit, geçmiş denemelerin bir sonucudur ve giriş denemesinden önce sorgulanır).
+        if row is None or not verify_password(password, row[1]) or not row[2]:
+            self._record_failure(name)
+            raise LoginError(BAD_LOGIN_MESSAGE, 401)
+        with _connect(self.path) as conn:
+            conn.execute("DELETE FROM login_failures WHERE username = ?", (name,))
+            conn.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (self._now_iso(), row[0]))
+        return self.get_by_id(row[0])
+
+    def create_session(self, user: dict) -> str:
+        """Oturum açar: ham anahtar yalnız çağırana döner, dosyaya sha256 izi yazılır (sözleşme)."""
+        token = secrets.token_urlsafe(32)
+        now = self.clock()
+        with _connect(self.path) as conn:
+            conn.execute(
+                "INSERT INTO sessions (token_hash, user_id, created_at, expires_at)"
+                " VALUES (?, ?, ?, ?)",
+                (_token_hash(token), user["id"], _iso(now), _iso(now + config.SESSION_HOURS * 3600)),
+            )
+        return token
+
+    def session_user(self, token: str) -> dict | None:
+        """Oturumun kullanıcısı; süre geçmişse satır silinir, kullanıcı pasifse None."""
+        if not token:
+            return None
+        digest = _token_hash(token)
+        with _connect(self.path) as conn:
+            row = conn.execute(
+                "SELECT user_id, expires_at FROM sessions WHERE token_hash = ?", (digest,)
+            ).fetchone()
+            if row is None:
+                return None
+            if row[1] <= self._now_iso():  # ISO metinleri aynı biçimde: sözel sıralama saat sırası
+                conn.execute("DELETE FROM sessions WHERE token_hash = ?", (digest,))
+                return None
+        user = self.get_by_id(row[0])
+        return user if user and user["active"] else None
+
+    def delete_session(self, token: str) -> None:
+        """Oturumu kapatır; tanınmayan anahtar sessizce geçilir (çerez zaten silinmiş olabilir)."""
+        with _connect(self.path) as conn:
+            conn.execute("DELETE FROM sessions WHERE token_hash = ?", (_token_hash(token),))
+
     # --------------------------------------------------------------- settings
 
     def get_setting(self, key: str) -> str | None:
@@ -197,6 +268,44 @@ class UserStore:
         with _connect(self.path) as conn:
             row = conn.execute(sql, args).fetchone()
         return _public(row) if row else None
+
+    def _credential(self, name: str) -> tuple | None:
+        """Doğrulama için gereken üç alan; public okuma hash'i hiç seçmediği için ayrı sorgu."""
+        with _connect(self.path) as conn:
+            return conn.execute(
+                "SELECT id, password_hash, active FROM users WHERE username = ?", (name,)
+            ).fetchone()
+
+    def _record_failure(self, name: str) -> None:
+        with _connect(self.path) as conn:
+            conn.execute(
+                "INSERT INTO login_failures (username, ts) VALUES (?, ?)", (name, self.clock())
+            )
+
+    def _locked_for(self, name: str) -> float | None:
+        """Kilitliyse kilidin bitmesine kalan saniye; değilse None.
+
+        Sayaç yalnız ``LOGIN_WINDOW_MIN`` dakikalık penceredeki denemeleri sayar; eşik dolduysa
+        kilit son denemeden ``LOCKOUT_MIN`` dakika sonrasına kadar sürer.
+        """
+        now = self.clock()
+        with _connect(self.path) as conn:
+            count, last = conn.execute(
+                "SELECT COUNT(*), MAX(ts) FROM login_failures WHERE username = ? AND ts >= ?",
+                (name, now - config.LOGIN_WINDOW_MIN * 60),
+            ).fetchone()
+        if count < config.LOGIN_MAX_FAILURES:
+            return None
+        return max(last + config.LOCKOUT_MIN * 60 - now, 0.0) or None
+
+
+def _iso(ts: float) -> str:
+    return datetime.fromtimestamp(ts, timezone.utc).isoformat(timespec="seconds")
+
+
+def _token_hash(token: str) -> str:
+    """Oturum anahtarının dosyada duran izi: çerez sızsa da anahtar geri okunamaz."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def _public(row: tuple) -> dict:
