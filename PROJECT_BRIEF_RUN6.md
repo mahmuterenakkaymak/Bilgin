@@ -34,7 +34,13 @@ it back, sees what will change, and applies it.
 "Done" =
 - `python -m nl2sql user add NAME --role admin` creates the first admin (password typed twice through `getpass`,
   never an argument, never a default password). Without at least one user, `serve` refuses to start and says how to
-  create one (one Turkish sentence, exit 2).
+  create one (one Turkish sentence, exit 2) - unless the development bootstrap below applies.
+- **Development bootstrap (Eren, for testing):** when the environment variable `NL2SQL_DEV_ADMIN_PASSWORD` is set
+  and the users table is empty, `serve` creates user `admin` with role `admin` and that password at startup, and
+  prints one warning line ("Geliştirme yöneticisi oluşturuldu: admin - NL2SQL_DEV_ADMIN_PASSWORD ortam
+  değişkeninden; canlı kurulumda bu değişkeni tanımlamayın."). The minimum password length does not apply to this
+  bootstrap only. No password value appears anywhere in code, config, tests, docs or the repo; tests set the variable
+  with `monkeypatch`. It never runs when at least one user exists, so it cannot reset a real admin.
 - The UI opens on a login screen; after login the header shows the user and role and a "Çıkış" button.
 - A `user` can ask, see and reopen *their own* history, save and export. A `user` sees the rules screen read-only and
   never sees the schema map or user screens. An `admin` can do everything, including users, rules, index rebuild and
@@ -120,7 +126,8 @@ the template.
 
 - **M18 - Auth core:** users/sessions tables and migration of the existing app DB (saved questions keep working; old
   rows get `username = NULL` and are visible to admins only), scrypt hashing, login/logout/me, lockout, `require`
-  dependency, CLI `user ...`, `serve` refuses without users. Tests: hashing round trip and format, wrong password and
+  dependency, CLI `user ...`, `serve` refuses without users, the `NL2SQL_DEV_ADMIN_PASSWORD` bootstrap (creates
+  only on an empty table, warns, never overwrites). Tests: hashing round trip and format, wrong password and
   unknown user give the same message, lockout and expiry with an injected clock, cookie flags, last-admin guard.
 - **M19 - Roles everywhere:** apply the matrix to every route (one table-driven test that walks every registered
   route with no session / user / admin and checks 401/403/200 - a route missing from the matrix fails the test),
