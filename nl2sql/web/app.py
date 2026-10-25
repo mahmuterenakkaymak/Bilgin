@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from nl2sql import config
 from nl2sql.agent import prompt
 from nl2sql.app import asklog
-from nl2sql.app.ask import ask_payload
+from nl2sql.app.ask import ask_payload, replay_payload
 from nl2sql.cli import main as cli
 from nl2sql.engine.result import Budget
 from nl2sql.eval import runner
@@ -134,6 +134,11 @@ def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir:
         if not question:
             raise HTTPException(status_code=400, detail=BLANK_QUESTION)
         return ask_payload(session, question, mode=body.mode, choice=body.choice, source="web")
+
+    @app.post("/api/replay/{audit_id}")
+    def replay(audit_id: str) -> dict:
+        """Geçmişteki bir soru: kayıtlı SQL modelsiz yeniden çalışır, payload /api/ask ile aynı biçimde."""
+        return replay_payload(session, audit_id, source="web")
 
     @app.get("/api/health")
     def health() -> dict:
@@ -254,7 +259,8 @@ def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir:
     @app.get("/api/history")
     def history() -> dict:
         """Son sorular: soru günlüğünün satırları, en yeni önce; veri satırları asla (R5-4)."""
-        return {"history": asklog.history(session.ask_log)}
+        name = getattr(getattr(session, "dataset", None), "name", None)
+        return {"history": asklog.history(session.ask_log, dataset=name)}
 
     @app.get("/api/export/{audit_id}.csv")
     def export_csv(audit_id: str) -> Response:
@@ -275,7 +281,9 @@ def create_app(session, saved_path: str | Path = config.APP_DB_PATH, static_dir:
         """Derlenmiş arayüz varsa o, yoksa neyin eksik olduğunu söyleyen sayfa (200)."""
         page = static / "index.html"
         if page.is_file():
-            return FileResponse(page, media_type="text/html")
+            # The page names the hashed bundle; a cached copy keeps loading the old one after a rebuild
+            # (2026-10-25). The hashed /assets files themselves can stay cached.
+            return FileResponse(page, media_type="text/html", headers={"Cache-Control": "no-cache"})
         return HTMLResponse(NO_UI_PAGE)
 
     return app

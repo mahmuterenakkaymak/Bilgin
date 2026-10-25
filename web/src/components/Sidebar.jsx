@@ -1,8 +1,8 @@
 import { useState } from "react";
 import * as api from "../lib/api.js";
 
-// Kenar çubuğu (R5-18): kayıtlı sorular ve geçmiş. Her satır soruyu yeniden sorar, kayıtlıda
-// bir de × vardır. Listeler App'ten gelir — ikisinin de ne zaman tazeleneneceği orada bellidir.
+// Kenar çubuğu (R5-18): kayıtlı sorular ve geçmiş. Kayıtlı satır soruyu yeniden sorar, geçmiş satırı
+// kayıtlı SQL'i modelsiz açar (audit_id ile); kayıtlıda bir de × vardır. Listeler App'ten gelir — ikisinin de ne zaman tazeleneneceği orada bellidir.
 // ASSUMPTION: geçmiş /api/history'den geldiği sırayla (en yeni önce) gösterilir; sözleşme sırayı üreticide veriyor.
 const EMPTY_SAVED = "Henüz kayıtlı soru yok.";
 const EMPTY_HISTORY = "Geçmiş boş.";
@@ -68,8 +68,10 @@ export default function Sidebar({ saved = [], history = [], onAsk, onRemoved }) 
       previous.count += 1;
       continue;
     }
+    const auditId = typeof item?.audit_id === "string" && item.audit_id ? item.audit_id : "";
     historyRows.push({
-      key: typeof item?.audit_id === "string" && item.audit_id ? item.audit_id : `h${index}`,
+      key: auditId || `h${index}`,
+      auditId,
       question,
       status,
       ts: typeof item?.ts === "string" ? item.ts : "",
@@ -122,7 +124,12 @@ export default function Sidebar({ saved = [], history = [], onAsk, onRemoved }) 
             const time = relativeTime(row.ts, now);
             return (
               <li className="side-item" key={row.key}>
-                <button type="button" className="side-text" title={row.question} onClick={() => onAsk?.(row.question)}>
+                <button
+                  type="button"
+                  className="side-text"
+                  title={row.question}
+                  onClick={() => onAsk?.(row.question, row.auditId || null)}
+                >
                   <span className={`side-marker marker-${tone}`} aria-hidden="true">
                     {glyph}
                   </span>

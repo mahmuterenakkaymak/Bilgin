@@ -15,6 +15,11 @@ export function ask({ question, mode = null, choice = null }) {
   return request("/api/ask", { method: "POST", body: { question, mode, choice } });
 }
 
+// Geçmişteki bir soru: kayıtlı SQL modelsiz yeniden çalışır, cevap /api/ask ile aynı biçimde gelir.
+export function replay(auditId) {
+  return request(`/api/replay/${encodeURIComponent(auditId)}`, { method: "POST" });
+}
+
 export function health() {
   return request("/api/health");
 }

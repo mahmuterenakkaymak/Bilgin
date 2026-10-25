@@ -48,10 +48,20 @@ def record_ask(entry: dict, path: str | Path = config.ASK_LOG) -> None:
         handle.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
-def history(path: str | Path = config.ASK_LOG, n: int = config.HISTORY_N) -> list[dict]:
-    """Son n kayıt, en yeni önce, ``source`` alanı olmadan; dosya yoksa boş liste."""
+_ALL = object()
+
+
+def history(path: str | Path = config.ASK_LOG, n: int = config.HISTORY_N, dataset=_ALL) -> list[dict]:
+    """Son n kayıt, en yeni önce, ``source`` alanı olmadan; dosya yoksa boş liste.
+
+    ``dataset`` verilirse yalnız o kümenin soruları gelir (2026-10-25): günlük tek dosya, ama başka
+    bir kümenin sorusuna tıklamak onu yanlış veritabanına sorar. ``None`` varsayılan kümedir; onun
+    satırları kümeyi boş yazar.
+    """
     items = []
     for record in _records(path):
+        if dataset is not _ALL and (record.get("dataset") or None) != dataset:
+            continue
         items.append({key: value for key, value in record.items() if key != "source"})
         if len(items) >= n:
             break

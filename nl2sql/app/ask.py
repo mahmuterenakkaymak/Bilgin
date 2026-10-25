@@ -111,7 +111,42 @@ def _run(session, question: str, mode: str, source: str, payload: dict, clarify:
         _fail(payload, run.status, run.stop_reason)
         return
 
-    sql = run.submitted_sql or ""
+    _answer(session, question, run.submitted_sql or "", source, payload)
+
+
+def replay_payload(session, audit_id: str, source: str = "web") -> dict:
+    """Geçmişteki bir soruyu modelsiz açar (2026-10-25, Eren: "her soruyu baştan sorup cevap oluşturuyor").
+
+    Soru günlüğünde kayıtlı SQL aynı politika ve salt-okunur yürütücüden yeniden geçer; tablo, grafik ve
+    olgular güncel veriden gelir, cümleyi yine anlatıcı kurar (tek kısa çağrı, sayı bekçisiyle). Cevabı
+    olmayan bir kayıt (hata, netleştirme) ya da başka kümenin kaydı yeniden sorulmaz: o zaman soru
+    baştan sorulur, kümesi tutmuyorsa hata döner.
+    """
+    record = asklog.find_ask(audit_id, session.ask_log)
+    if record is None or not record.get("question"):
+        payload = _skeleton("", None, "auto", session, asklog.new_audit_id(), [])
+        _fail(payload, "not_found", "Bu soru geçmişte bulunamadı.")
+        return payload
+    if (record.get("dataset") or None) != (session.dataset.name if session.dataset else None):
+        payload = _skeleton(record["question"], None, "auto", session, asklog.new_audit_id(), [])
+        _fail(payload, "dataset", "Bu soru başka bir veri kümesinde sorulmuş; o kümeyle açın.")
+        return payload
+    if record.get("status") != "answered" or not record.get("sql"):
+        return ask_payload(session, record["question"], choice=record.get("choice"), source=source)
+
+    new_id = asklog.new_audit_id()
+    started = time.perf_counter()
+    payload = _skeleton(record["question"], record.get("choice"), record.get("mode") or "auto", session, new_id,
+                        ["Geçmişten açıldı: kayıtlı SQL yeniden çalıştırıldı, model SQL yazmadı."])
+    payload["steps"] = [{"tool": "replay", "ok": True, "summary": f"Geçmişteki soru ({audit_id}) yeniden çalıştırıldı."}]
+    _answer(session, record["question"], record["sql"], f"{source}:{new_id}", payload)
+    payload["timings"]["total_s"] = round(time.perf_counter() - started, 3)
+    asklog.record_ask(_record(payload, source), session.ask_log)
+    return payload
+
+
+def _answer(session, question: str, sql: str, source: str, payload: dict) -> None:
+    """Gönderilen SQL'in arayüz bütçesiyle yürüyüşü ve cevabın doldurulması (ajan da geçmiş de buradan)."""
     payload["sql"] = sql
     # Döngü satırları metin olarak görür; tablo için SQL bir kez daha, arayüz bütçesiyle koşar.
     result = session.executor.execute(sql, Budget(max_rows=config.UI_MAX_ROWS), source)

@@ -69,12 +69,12 @@ function AskScreen({ pending = null, onRefresh, onRebuild }) {
     };
   }, []);
 
-  const send = (question, choice = null) => {
+  // auditId verilirse soru modele baştan sorulmaz: geçmişteki SQL yeniden çalışır (/api/replay).
+  const send = (question, choice = null, auditId = null) => {
     const asked = String(question ?? "").trim();
     if (!asked) return;
     dispatch({ type: "ask", question: asked, choice });
-    api
-      .ask({ question: asked, choice })
+    (auditId ? api.replay(auditId) : api.ask({ question: asked, choice }))
       .then((payload) => dispatch({ type: "receive", payload }))
       .catch((error) =>
         dispatch({
@@ -89,8 +89,13 @@ function AskScreen({ pending = null, onRefresh, onRebuild }) {
 
   // Kenar çubuğundan gelen soru, kutudan sorulmuş gibi koşar; sayaç aynı sorunun ikinci
   // tıklayışını da yeni bir istek yapar.
+  // Soru kutuya da yazılır ve ekran kutuya kayar: yoksa kutuda eski metin kalır, bekleme adımları
+  // ve cevap ekranın altında açılır, tıklama hiçbir şey yapmamış gibi görünür (2026-10-25).
   useEffect(() => {
-    if (pending?.question) send(pending.question);
+    if (!pending?.question) return;
+    setText(pending.question);
+    send(pending.question, null, pending.auditId ?? null);
+    document.getElementById("main")?.scrollIntoView?.({ block: "start", behavior: "smooth" });
   }, [pending]);
 
   // Çip soruyu kutuya yazar ve bekletmeden sorar (R5-18).
@@ -239,8 +244,8 @@ export default function App() {
   }, []);
 
   // Satıra tıklayınca soru soru ekranında koşar; dar ekranda çekmece kapanır ki cevap görünsün.
-  const askFromSidebar = (question) => {
-    setPending((current) => ({ question, n: (current?.n ?? 0) + 1 }));
+  const askFromSidebar = (question, auditId = null) => {
+    setPending((current) => ({ question, auditId, n: (current?.n ?? 0) + 1 }));
     setSidebarOpen(false);
     if (route !== "ask") window.location.hash = "#/";
   };
