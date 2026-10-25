@@ -1,8 +1,10 @@
-# NL2SQL (Bilgin) - Run 6: users and roles, admin-only rules, schema map template export/import
+# NL2SQL (Bilgin) - Run 6: users and roles, admin-only rules, onboarding a new database from an Excel template
 
 > Drafted 2026-10-25 from Eren's request: "Kullanıcı rol-yetki yönetimi. Sadece admin kullanıcı iş kuralı girebilir.
 > Veritabanı haritası için arayüzden Excel şablonunu sistem oluşturup export edecek; şablon doldurulup arayüzden import
-> edilecek. Bunu da admin kullanıcı yapabilecek." Builds on Run 1-5. Product name **Bilgin** (package and CLI stay
+> edilecek. Bunu da admin kullanıcı yapabilecek." Clarified: "Eski şemayı düzeltmek için değil. Başka db kullanmak
+> istediğimde Bilgin'e uygun formatta Excel şablonu versin, nasıl dolduracağımı göstermek için 1 tabloluk örnek versin
+> başka sheet'te. Bu şablonu yükleyince kendisi RAG'i vesaire oluşturacak." Builds on Run 1-5. Product name **Bilgin** (package and CLI stay
 > `nl2sql`). Never write the names of a specific commercial ERP product or of the owner's company in code, docs, UI
 > text or test data.
 
@@ -27,9 +29,11 @@
 
 Bilgin becomes a multi-user application on one machine: people log in, every request knows who is asking, and what a
 person may do depends on their role. Only an **admin** changes the system's knowledge: business rules and the
-database map. The database map gets a full round trip in the UI: the system **generates an Excel template** from the
-current schema, the admin downloads it, fills in meanings (descriptions, coded values, personal-data marks), uploads
-it back, sees what will change, and applies it.
+databases Bilgin knows. **Onboarding a new database needs no command line:** the admin downloads a blank Excel
+template in Bilgin's format (with a sheet showing one fully filled example table), describes the new database in it
+(tables, columns, meanings, coded values, personal-data marks, relations, optionally business rules), uploads it,
+reviews the check report, and applies it. Bilgin then creates a new dataset, builds its search index (RAG: table,
+rule and summary embeddings) and its read-only login script by itself, and the admin switches the active dataset to it.
 
 "Done" =
 - `python -m nl2sql user add NAME --role admin` creates the first admin (password typed twice through `getpass`,
@@ -45,9 +49,11 @@ it back, sees what will change, and applies it.
 - A `user` can ask, see and reopen *their own* history, save and export. A `user` sees the rules screen read-only and
   never sees the schema map or user screens. An `admin` can do everything, including users, rules, index rebuild and
   the schema map round trip. Every forbidden call returns 403 from the server whatever the UI shows.
-- From the UI an admin downloads `veritabani-haritasi.xlsx`, fills it, uploads it, reviews the change report and
-  applies it; the dataset's `schema.json` changes (previous version kept as a timestamped backup), the index is marked
-  stale and the UI offers the rebuild.
+- From the UI an admin downloads `bilgin-veritabani-sablonu.xlsx`, fills it for a database Bilgin has never seen,
+  uploads it, reviews the check report and applies it; a new dataset folder appears under `real_datasets/<name>/`
+  with schema, rules, profile and an empty golden set, its index is built automatically (progress shown in the UI),
+  and after "Bu veri kümesine geç" the next question is answered against the new database. Existing datasets
+  (`wwi_real`, `synthetic_erp`) are never modified by an upload.
 
 ## 2. Scope
 
@@ -79,48 +85,76 @@ it back, sees what will change, and applies it.
   `PUT /api/users/{id} {role?, active?, password?}`. An admin cannot demote or deactivate the **last active admin**
   (409, Turkish message). CLI: `user add NAME --role admin|user`, `user list`, `user passwd NAME`,
   `user set NAME --role ... | --deactivate | --activate`.
-- **Schema map template export** (admin): `GET /api/schema-map/template.xlsx` builds a workbook with openpyxl
-  (already a dependency) from the session dataset's current `schema.json`:
-  - Sheet `Nasıl doldurulur`: 6-10 Turkish lines (what each sheet is, which columns to fill, what not to change,
-    personal-data classes and what they do).
-  - Sheet `Tablolar`: `TABLO | MODÜL | AÇIKLAMA | ANAHTAR KELİMELER`, one row per table, filled from the schema.
-  - Sheet `Kolonlar`: `TABLO | KOLON | TİP | AÇIKLAMA | DEĞERLER | KİŞİSEL VERİ | KAPALI | REFERANS | NULL`, one row per
-    column, filled from the schema. `KİŞİSEL VERİ` has a data-validation list of the PII classes
-    (`nl2sql/policy/pii.py` CLASSES) plus empty; `KAPALI` and `NULL` have `E/H` lists. `TABLO`, `KOLON`, `TİP`,
-    `REFERANS`, `NULL` are structure (greyed, locked cells, sheet protection without password) - meaning columns are
-    editable. Headers must be in `profiles/excel_headers.json` (add `KİŞİSEL VERİ`/`KAPALI`/`ANAHTAR KELİMELER`
-    synonyms there) so the existing reader maps the template **deterministically, with no LLM call**.
-  - A hidden sheet `_bilgin` with the dataset name, schema hash and template version, so an upload for another
-    dataset or an outdated schema is detected.
-- **Schema map import** (admin), two steps, never one:
+- **Blank template for a new database** (admin): `GET /api/schema-map/template.xlsx` builds
+  `bilgin-veritabani-sablonu.xlsx` with openpyxl (already a dependency). It does **not** come from an existing
+  dataset - it is the empty format any database is described in:
+  - Sheet `Nasıl doldurulur`: 10-15 Turkish lines - what each sheet is, which columns are required (TABLO, KOLON,
+    TİP), why AÇIKLAMA matters most (the model only knows what is written there), how to write coded values
+    (`A=Alıcı; S=Satıcı`), what each personal-data class does (masked, never filterable), what KAPALI means (the
+    column is never read), how to write REFERANS (`Şema.Tablo.Kolon`), that schema-qualified names (`Sales.Orders`)
+    are fine, and that the Örnek sheet shows one finished table.
+  - Sheet `Veri kümesi`: `AD` (folder name, `^[a-z][a-z0-9_]{2,30}$`), `GÖRÜNEN AD`, `BAĞLANTI` (`mssql` | `sqlite`),
+    `VARSAYILAN ŞEMA`, `VERİ TARİHİ` (the date "bu yıl / geçen ay" is relative to, ISO), one row.
+  - Sheet `Tablolar`: `TABLO | MODÜL | AÇIKLAMA | ANAHTAR KELİMELER`, empty rows with header styling.
+  - Sheet `Kolonlar`: `TABLO | KOLON | TİP | AÇIKLAMA | DEĞERLER | KİŞİSEL VERİ | KAPALI | REFERANS | NULL`, empty.
+    `KİŞİSEL VERİ` has a data-validation list of the PII classes (`nl2sql/policy/pii.py` CLASSES) plus empty;
+    `KAPALI` and `NULL` have `E/H` lists; `TABLO` has a list fed from the Tablolar sheet.
+  - Sheet `İş kuralları` (optional): `KİMLİK | TERİM | EŞ ANLAMLILAR | TANIM | SQL İPUCU | TABLOLAR`, empty.
+  - Sheet `Örnek`: the same three blocks filled for **one** generic example table (an invoice header table, e.g.
+    `Satis.Fatura` with 6-8 columns: key, date, customer code with a REFERANS, a coded type column with DEĞERLER,
+    an amount, a personal-data column with a class, one KAPALI column) plus one example business rule that uses it.
+    The Örnek sheet is never imported. No real product or company names in the example.
+  - Headers must be in `profiles/excel_headers.json` (add the new synonyms) so the existing reader maps the template
+    **deterministically, with no LLM call**; workbooks that are not Bilgin's template still go through the existing
+    `propose` + `fallback_mapping` path. A hidden sheet `_bilgin` carries the template version.
+  - `GET /api/schema-map/template.xlsx?from_db=1` (only when the server has a database connection configured):
+    the same template with Tablolar/Kolonlar structure pre-filled by `introspect` (names, types, NULL, REFERANS from
+    foreign keys), meaning columns empty for the admin to fill. If the read-only login cannot read metadata
+    (VIEW DEFINITION denied), say so in Turkish and fall back to the blank template - never use another login.
+- **Import of a filled template** (admin), two steps, never one:
   1. `POST /api/schema-map/preview {filename, content_b64}` (base64 JSON body - no `python-multipart` dependency;
      limit `MAP_MAX_BYTES` = 5 MB, `.xlsx` only, checked by content (zip + `[Content_Types].xml`), not by name).
-     Reads with the existing `excel.read_workbook` + `fallback_mapping` + `convert` path, then validates and diffs
-     against the current schema with `merge.py`: returns `{preview_id, dataset_ok, schema_hash_ok, changes:
-     {descriptions, values, pii_added, pii_removed, deny_added, deny_removed, keywords, modules}, errors:[{sheet,
-     row, column, message}], warnings:[...]}`. Errors (unknown table or column, invalid PII class, structure cell
-     changed, wrong dataset) block applying; a schema-hash mismatch is a warning. Nothing is written in this step;
-     the parsed result waits under `data/map_previews/<preview_id>.json` for 30 minutes.
-  2. `POST /api/schema-map/apply {preview_id}`: copies the current `schema.json` to
-     `schema.json.bak-<timestamp>`, writes the merged schema (structure from the current schema, meaning from the
-     workbook), marks the index stale, records `{username, ts, preview_id, counts}` in `logs/map_changes.jsonl`, and
-     returns the counts. If PII or deny marks changed, the response carries
-     `login_script_changed: true` and the UI says, in Turkish, that the read-only login script must be regenerated
-     and re-run by the database administrator, with a download link (`GET /api/schema-map/login-script.sql`, admin,
-     generated by `make-login-script` code with the `__DEGISTIR__` placeholder, never a real password).
+     Reads with the existing `excel.read_workbook` + `fallback_mapping` + `convert` path into the canonical schema,
+     plus the dataset and rules sheets. Returns `{preview_id, dataset: {name, display_name, ...}, counts: {tables,
+     columns, pii, deny, references, rules}, errors:[{sheet, row, column, message}], warnings:[...], db_check}`.
+     Errors block applying: missing required cell, a column whose TABLO is not in Tablolar, duplicate table/column,
+     invalid PII class or E/H value, REFERANS to an unknown column, invalid dataset name, a name that already exists
+     under `datasets/` or `real_datasets/`, a rule whose tables are unknown. Warnings: tables with no description,
+     columns with an empty AÇIKLAMA (count + first 20). `db_check` (only with a configured connection): `diff-map`
+     against the live database - tables/columns in the workbook but not in the DB are errors, DB-only ones a warning.
+     Nothing is written in this step; the parsed result waits under `data/map_previews/<preview_id>.json` for 30 min.
+  2. `POST /api/schema-map/apply {preview_id}`: creates `real_datasets/<name>/` with `dataset.json` (outputs under
+     `data/<name>.db`, `index/<name>/`, `eval_out/<name>/`; builder/generator/references point to a stub like
+     `real_datasets/wwi_real/real.py`), `schema.json`, `rules.json` (from the sheet, or empty), `profile.json`
+     (empty pairs), empty `golden.jsonl`; writes the read-only login script for it (`make-login-script` code,
+     `__DEGISTIR__` placeholder, never a real password); then **builds the index** in a background thread with the
+     configured embedder (same code as `build-index`), with `GET /api/schema-map/status/{preview_id}` reporting
+     `{phase: writing|indexing|done|failed, message}`; records `{username, ts, name, counts}` in
+     `logs/map_changes.jsonl`. Existing dataset folders are never touched; a name clash is an error, not an overwrite.
+- **Active dataset** (admin): `GET /api/datasets` lists datasets with an index (name, display name, connection, index
+  fresh), `POST /api/datasets/active {name}` reopens the server's session on that dataset (same `open_session` path
+  as `serve --dataset`) and is remembered in the app DB for the next start; `serve --dataset` still wins when given.
+  The UI header chip shows the active dataset. Datasets live in `datasets/` (built ones) and `real_datasets/`
+  (database-backed ones); both are listed.
+  After switching to a database-backed dataset the UI shows, once, what the database administrator must do: run the
+  generated login script (download link `GET /api/datasets/{name}/login-script.sql`, admin) and set
+  `NL2SQL_MSSQL_CONN` for the server.
 - **UI** (`web/`): login screen (`#login-form`, `#login-username`, `#login-password`, `#login-submit`, error line);
   header user chip and `#logout`; a `user` sees the rules screen with forms disabled and a one-line note
   ("İş kurallarını yalnız yönetici değiştirebilir."); admin-only nav items `Veritabanı haritası` (`#nav-map`) and
-  `Kullanıcılar` (`#nav-users`). Map screen: "Şablonu indir" button, file input, "Önizle" -> change report (counts,
-  error table with sheet/row/column, warnings), "Uygula" enabled only without errors, then the stale-index banner and
-  rebuild button already used by the rules screen. Users screen: table, add form, role select, activate/deactivate,
+  `Kullanıcılar` (`#nav-users`). Map screen (`Yeni veritabanı`): "Boş şablonu indir" (`#map-template`) and, when a
+  connection exists, "Veritabanından doldurulmuş şablon" (`#map-template-db`); file input (`#map-file`), "Kontrol et"
+  (`#map-preview`) -> check report (counts, error table with sheet/row/column, warnings, live-DB check), "Oluştur"
+  (`#map-apply`) enabled only without errors, then a progress line (writing -> indexing -> done) and "Bu veri
+  kümesine geç" (`#map-activate`). A dataset list with the active one marked and a switch button. Users screen: table, add form, role select, activate/deactivate,
   password reset. All Turkish, same tokens, phone layout and dark mode as Run 5. Add the new pages to
   `.hybrid/visual.json` (login, admin map screen with a preview, user's read-only rules screen).
 - **CLI keeps working** for one operator on the machine: `ask`, `eval`, `import-map` etc. need no login.
 
 **Out (not this run):** network exposure, TLS, SSO/LDAP, per-table or per-column permissions for users, row-level
-filtering per user, password reset by e-mail, multiple datasets per server, editing structure (tables/columns) from
-the template.
+filtering per user, password reset by e-mail, more than one active dataset at a time, updating an existing dataset
+from a template (an upload always creates a new dataset), connection strings entered in the UI (they stay in
+environment variables), golden questions from the template.
 
 ## 3. Milestones
 
@@ -134,17 +168,23 @@ the template.
   per-user history/saved/replay/export (404 for another user's id), username in the ask log and audit source, users
   API. UI: login screen, user chip, logout, read-only rules for users, users screen. Integration test: two users,
   one admin, full flows through TestClient.
-- **M20 - Schema map round trip:** template export (sheets, validation lists, locked structure, hidden `_bilgin`
-  sheet), header dictionary additions, preview (validation + diff, no write), apply (backup, write, stale index,
-  change log, login-script flag), UI map screen. Tests: export -> read back unchanged gives zero changes; editing
-  a description / adding a PII mark shows exactly that change and applying it writes it; unknown column, invalid
-  class, changed structure cell, wrong dataset and a non-xlsx file are errors; a non-admin gets 403 on all of it;
-  wwi_real-style qualified names (`Sales.Orders`) round-trip. README Run 6 section, smoke + visual flows.
+- **M20 - New database from a template:** blank template (all sheets, Örnek with one table and one rule, validation
+  lists, hidden `_bilgin`), `from_db` pre-fill with the metadata fallback, header dictionary additions, preview
+  (validation, optional live-DB diff, no write), apply (new dataset folder, login script, background index build,
+  status, change log), datasets list and active-dataset switch, UI screen. Tests: the blank template read back gives
+  zero tables and zero errors; the Örnek sheet is never imported; a template filled in code (the Örnek table copied
+  into Tablolar/Kolonlar under a new dataset name, plus one rule) previews with the right counts, applies, creates
+  the folder with every file, builds an index with the fake embedder and answers a `--llm fake` question after the
+  switch; each listed error (missing required cell, orphan column, duplicate, invalid class, unknown REFERANS,
+  invalid or existing name, non-xlsx) blocks applying; existing datasets are byte-identical after any upload;
+  qualified names (`Sales.Orders`) work; a non-admin gets 403 on all of it. README Run 6 section ("Yeni bir
+  veritabanını Bilgin'e tanıtmak"), smoke + visual flows (template download, preview with an error, apply, switch).
 
 ## 4. Contracts to keep
 
 - Every `/api/*` response for a forbidden or missing session is JSON `{"detail": "<Türkçe cümle>"}` with 401/403/404;
   the UI shows the sentence. The 422 rules body stays `{"errors": [...]}`.
-- The template's structure columns are never applied from the workbook; meaning columns only.
+- An upload only ever creates a new dataset folder; it never writes into an existing one.
+- The template carries no connection string; the server's connection stays in `NL2SQL_MSSQL_CONN`.
 - Passwords, password hashes and session tokens never appear in logs, the ask log, the audit log, API responses
   (except the cookie itself) or test snapshots.
