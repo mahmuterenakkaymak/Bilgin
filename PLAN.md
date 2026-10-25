@@ -980,3 +980,302 @@ R5-22. **Test rules kept** (R3-12/R4-15): structure over counts, no real model, 
 - **M17 - Frontend** (T195-T204): scaffold + tokens + router, format/api libs, ask + states, answer card, chart,
   clarification, sidebar, rules screen, static serving + visual.json + README, smoke + integration (pytest +
   vitest + build + served UI).
+
+## Run 6 architecture
+
+```
+Browser --cookie bilgin_oturum--> nl2sql/web/app.py create_app(session, saved_path, static_dir, users=None)
+   web/src/main.jsx -> Root.jsx (auth gate: GET /api/auth/me first, LoginScreen or App)
+                                   |
+             nl2sql/web/authz.py   current_user(request) -> User|None ; require("public"|"user"|"admin")
+                                   ROUTE_ROLES {(method, path): level}  (one table, every route)
+                                   |
+   nl2sql/auth/  passwords.py (scrypt)  store.py UserStore(app DB: users, sessions, login_failures, settings)
+                 bootstrap.py (NL2SQL_DEV_ADMIN_PASSWORD on an empty users table)
+                                   |
+   per-user: ask_payload(..., username) -> ask record.username, audit source <src>:<user>:<id>
+             history / replay / export / saved filtered by username (admin: all)
+                                   |
+   admin:   /api/users*  (UserStore)          /api/rules writes, /api/index/rebuild (Run 5 code)
+            /api/schema-map/template.xlsx  <- schema_map/template.py build_template(skeleton=None)
+            /api/schema-map/preview        -> template_import.read_template + validate (+ merge.diff_map)
+                                              -> data/map_previews/<id>.json (nothing else written)
+            /api/schema-map/apply          -> schema_map/onboard.apply_preview -> real_datasets/<name>/ (new only)
+                                              -> background thread cli.build_index -> status
+            /api/datasets, /api/datasets/active -> open_session(name) -> app.state.session swapped, settings row
+CLI (no login): ask/eval/import-map unchanged; `user add|list|passwd|set` on the same UserStore.
+```
+
+## Run 6 file layout additions
+
+```
+nl2sql/auth/        __init__.py passwords.py store.py bootstrap.py
+nl2sql/web/         authz.py (ROUTE_ROLES, current_user, require) auth_api.py (login/logout/me, users API)
+                    map_api.py (template, sample, preview, apply, status) datasets_api.py (list, switch, login script)
+nl2sql/schema_map/  template.py (build_template, filled_example_workbook, header constants)
+                    template_import.py (read_template, validate) onboard.py (previews, apply_preview, index job)
+scripts/visual_serve.py   throwaway app DB + users for the visual flows, then `serve --llm fake`
+scripts/smoke_onboard.py  template -> filled -> preview -> apply -> index -> switch -> ask (smoke)
+web/src/Root.jsx  web/src/lib/{auth,usersForm,mapFlow,fileB64}.js
+web/src/components/{LoginScreen,UsersScreen,MapScreen,DatasetList}.jsx
+data/map_previews/ (ignored)  data/visual/ (ignored)  logs/map_changes.jsonl (ignored by logs/)
+real_datasets/<name>/  dataset.json schema.json rules.json profile.json golden.jsonl real.py readonly_login.sql
+                       (ignored: `real_datasets/*` + `!real_datasets/wwi_real/` - a customer's map never lands in git)
+```
+
+## Run 6 decisions
+
+R6-1. **Config** (`nl2sql/config.py`, existing names unchanged): `PASSWORD_MIN_LEN=10`, `SCRYPT_N=2**14`,
+      `SCRYPT_R=8`, `SCRYPT_P=1`, `SESSION_HOURS=12`, `SESSION_COOKIE="bilgin_oturum"`, `LOGIN_MAX_FAILURES=5`,
+      `LOGIN_WINDOW_MIN=15`, `LOCKOUT_MIN=15`, `DEV_ADMIN_ENV="NL2SQL_DEV_ADMIN_PASSWORD"`, `MAP_MAX_BYTES=5*1024*1024`,
+      `MAP_PREVIEW_TTL_MIN=30`, `MAP_PREVIEWS_DIR=ROOT/data/map_previews`, `MAP_CHANGES_LOG=ROOT/logs/map_changes.jsonl`,
+      `REAL_DATASETS_DIR=ROOT/real_datasets`, `TEMPLATE_FILENAME="bilgin-veritabani-sablonu.xlsx"`,
+      `TEMPLATE_VERSION="1"`, `DATASET_NAME_RE=r"^[a-z][a-z0-9_]{2,30}$"`; call-time env readers like
+      `datasets_dir()`: `app_db_path()` (`NL2SQL_APP_DB` else `APP_DB_PATH`) and `real_datasets_dir()`
+      (`NL2SQL_REAL_DATASETS_DIR` else `REAL_DATASETS_DIR`). Every Run 6 caller uses the readers, so tests, the
+      smoke and the visual server run on throwaway files and never touch `data/bilgin.db` or `real_datasets/`.
+R6-2. **Passwords** (`auth/passwords.py`, stdlib only): `hash_password(pw)` -> `scrypt$n$r$p$salt_b64$hash_b64`
+      (16-byte `secrets.token_bytes` salt, dklen 32, maxmem large enough for n=2**14); `verify_password(pw, stored)`
+      recomputes with the stored n/r/p and compares with `hmac.compare_digest`; a malformed stored value -> False,
+      never an exception. `check_new_password(pw)` -> Turkish message or None ("Parola en az 10 karakter olmalı.").
+R6-3. **UserStore** (`auth/store.py`, same SQLite file as saved questions, short-lived connections like
+      `SavedStore`, `clock=time.time` injectable): tables `users(id, username UNIQUE, password_hash, role CHECK(role IN
+      ('admin','user')), active INTEGER, created_at, last_login_at)`, `sessions(token_hash PRIMARY KEY, user_id,
+      created_at, expires_at)`, `login_failures(username, ts)`, `settings(key PRIMARY KEY, value)`. Username rule
+      `^[a-z0-9_.-]{3,32}$` (folded to lower). Errors are `UserError(message, status)` with Turkish messages: duplicate
+      409 "Bu kullanıcı adı zaten var.", unknown 404 "Kullanıcı bulunamadı.", last admin 409 "Son etkin yönetici
+      pasifleştirilemez ya da rolü düşürülemez.", bad role / name / short password 422. A password change or
+      deactivation deletes that user's sessions. Public dicts never carry `password_hash`.
+R6-4. **Login and lockout.** `authenticate(username, password)` -> User | raises `LoginError(message, status)`:
+      unknown user, wrong password and inactive user give the same 401 "Kullanıcı adı ya da parola hatalı." and all
+      record a failure row (so the lockout is no user-existence oracle); `LOGIN_MAX_FAILURES` failures inside
+      `LOGIN_WINDOW_MIN` -> 429 "Çok fazla hatalı deneme. {n} dakika sonra yeniden deneyin." until the last failure +
+      `LOCKOUT_MIN`, even with the right password; success clears that username's failures and sets
+      `last_login_at`. `create_session(user)` -> raw token (`secrets.token_urlsafe(32)`), only `sha256(token)` hex is
+      stored, expiry `SESSION_HOURS`; `session_user(token)` -> active User or None (expired rows deleted on read);
+      `delete_session(token)`.
+R6-5. **HTTP auth** (`web/authz.py`, `web/auth_api.py`). `create_app(session, saved_path=..., static_dir=...,
+      users=None)`: `users=None` is the Run 5 single-user mode (no login, every route open, username None
+      everywhere) - the ~86 existing API tests keep calling it that way unchanged. With a store: `POST
+      /api/auth/login {username, password}` -> 200 `{username, role}` + cookie `bilgin_oturum` (HttpOnly,
+      SameSite=Strict, Path=/, Max-Age = SESSION_HOURS*3600, no Secure: loopback http; README says so); `POST
+      /api/auth/logout` deletes the session and the cookie (200 even without one); `GET /api/auth/me` -> `{username,
+      role}` | 401. `require(level)` is one dependency factory; every route is declared with it and `ROUTE_ROLES`
+      is the single table the brief's matrix lives in (public: `/`, `/assets/*`, `/api/auth/login`, `/api/auth/logout`;
+      user: ask, replay, export, saved, history, examples, health, tables, GET rules, `/api/auth/me`; admin: rule
+      writes, index rebuild, `/api/users*`, `/api/schema-map/*`, `/api/datasets*`). No session -> 401 "Oturum açmanız
+      gerekiyor."; wrong role -> 403 "Bu işlem yalnız yöneticiye açık.". Bodies are always `{"detail": str}`.
+      Passwords, hashes and tokens never reach a log, the ask log, the audit log or a response body.
+R6-6. **SPA fallback.** Every GET that is not `/api/*` and not `/assets/*` returns the built `index.html` with
+      `Cache-Control: no-cache` (or the Run 5 NO_UI page); unknown `/api/*` stays a JSON 404 and, with a store and no
+      session, a 401. The UI decides what to show; the server never 404s a typed deep link.
+R6-7. **serve** always builds `UserStore(config.app_db_path())` and passes it. Empty users table: if
+      `NL2SQL_DEV_ADMIN_PASSWORD` is set (non-blank) `auth/bootstrap.dev_admin(store, environ)` creates `admin`/admin
+      with that value (no minimum length for this path only), prints the brief's warning line, and never runs when
+      a user exists; otherwise serve prints "Henüz kullanıcı yok: önce `python -m nl2sql user add <ad> --role admin`
+      ile bir yönetici oluşturun." and exits 2 before listening. **Changes R5-15/R5-14:** the served app is no
+      longer single-user; the non-loopback sentence becomes "Bilgin yalnız 127.0.0.1 üzerinde çalışır (TLS ve ağ
+      erişimi kapsam dışı)." - the two existing serve tests (`tests/test_web_api.py::test_serve_*`,
+      `tests/test_serve_default_dataset.py`) are edited by the task that changes serve (named there) to seed a user
+      and accept the `users` keyword.
+R6-8. **CLI `user`** (`cli/main.py`, no login, `config.app_db_path()`): `user add NAME --role admin|user` (password
+      through `getpass.getpass` twice: "Parola: ", "Parola (tekrar): "; mismatch "Parolalar eşleşmiyor." exit 2),
+      `user list` (Kullanıcı, Rol, Durum, Son giriş; never a hash), `user passwd NAME`, `user set NAME --role R |
+      --deactivate | --activate`; UserError -> its message, exit 2; success one ✓ line, exit 0. Passwords are never
+      arguments.
+R6-9. **Per user.** `ask_payload(..., username=None)` / `replay_payload(..., username=None)`: the ask record gains
+      `username` only when not None (absent = None, so Run 5 records and `tests/test_asklog.py` stay exact); the
+      executor source becomes `"<src>:<username>:<audit_id>"` with a username and stays `"<src>:<audit_id>"` without
+      (Run 5 pin in `tests/test_app_ask.py` holds). CLI `ask` passes `getpass.getuser()`. `asklog.history(...,
+      username=_ALL)` and `find_ask(..., username=_ALL)`: a user sees only records with their username; admin passes
+      `_ALL` and sees every record (old username-less ones too). Replay/export of an id the caller cannot see -> 404
+      `NO_ASK` (never 403). `saved` gains a nullable `username` column (added by `ALTER TABLE` when missing; old rows
+      NULL = admin only); a user lists and deletes only their own rows (another's id -> 404); the saved item shape
+      in the API is unchanged.
+R6-10. **Session holder.** Routes read `request.app.state.session` on every request (no closure capture), so a dataset
+      switch is one assignment under a `threading.Lock`; saved/history/export filter by the *current* session's
+      dataset. Every place that shows the dataset follows a switch: header chip (health), examples, tables, rules
+      screen, sidebar saved + history, export's dataset check.
+R6-11. **Datasets in two roots.** `datasets.load_dataset(name, root=None)`: root None looks in `datasets_dir()` then
+      `real_datasets_dir()` (explicit root unchanged); `datasets.all_datasets()` -> `[{"name", "display_name",
+      "connection", "root": "datasets"|"real_datasets", "path"}]` sorted by name (first root wins a clash);
+      `datasets.name_taken(name)` checks both roots (folder exists, with or without dataset.json). `list_datasets`
+      unchanged. Active dataset: settings row `active_dataset`; serve order = `--dataset` > stored (when it still
+      loads; else a one-line note and the default) > `config.DEFAULT_DATASET`.
+R6-12. **Template writer** (`schema_map/template.py`): `build_template(skeleton=None) -> bytes` (openpyxl, sheets in
+      order `Nasıl doldurulur`, `Veri kümesi`, `Tablolar`, `Kolonlar`, `İş kuralları`, `Örnek`, hidden `_bilgin`
+      with A1 `bilgin-sablon`, B1 `TEMPLATE_VERSION`). Header constants `DATASET_HEADERS = (AD, GÖRÜNEN AD, BAĞLANTI,
+      VARSAYILAN ŞEMA, VERİ TARİHİ)`, `TABLE_HEADERS = (TABLO, MODÜL, AÇIKLAMA, ANAHTAR KELİMELER)`, `COLUMN_HEADERS =
+      (TABLO, KOLON, TİP, AÇIKLAMA, DEĞERLER, KİŞİSEL VERİ, KAPALI, REFERANS, NULL)`, `RULE_HEADERS = (KİMLİK, TERİM,
+      EŞ ANLAMLILAR, TANIM, SQL İPUCU, TABLOLAR)` are used by both writer and reader. Bold header row on the token
+      accent fill, frozen header, column widths, 200 styled empty rows; data validation lists: KİŞİSEL VERİ =
+      `pii.CLASSES` (+ blank allowed), KAPALI/NULL = `E,H`, BAĞLANTI = `mssql,sqlite`, Kolonlar.TABLO = range of
+      Tablolar!A. `Örnek` = the three blocks (one table `Satis.Fatura` with 7 columns: FaturaID key, FaturaTarihi,
+      CariKod with REFERANS `Satis.Cari.CariKod`, FaturaTipi with DEĞERLER `S=Satış; I=İade`, Tutar, YetkiliAdi
+      with `person_name`, IcNot KAPALI=E) + one rule (`fatura_tutari`). `filled_example_workbook(name,
+      connection="sqlite", with_rule=True) -> bytes` = the template with the Örnek table + rule copied into the real
+      sheets under dataset `name` (REFERANS to the absent `Satis.Cari` dropped so it validates); it feeds the tests,
+      the smoke, and the UI's "Örnek dolu şablonla dene". `skeleton` (from introspect) pre-fills Tablolar/Kolonlar
+      names, types, NULL and REFERANS, meanings empty. No product or company name anywhere.
+R6-13. **Excel reader additions** (`schema_map/excel.py`, no second schema reader): `_FIELDS` gains `pii`, `deny`,
+      `keywords`; `profiles/excel_headers.json` gains `pii: [KİŞİSEL VERİ, KISISEL VERI, PII]`, `deny: [KAPALI, DENY]`,
+      `keywords: [ANAHTAR KELİMELER, ANAHTAR KELIMELER, KEYWORDS]` (`tests/test_excel_fallback.py` FIELDS is edited by
+      that task, named there); `convert` writes `pii`/`deny` on a column and `keywords` (split on `,;`) on a table
+      **only when the sheet maps that field**, so Run 3 workbooks convert byte-equal; `_fk` accepts `TABLE.COL` and
+      `SCHEMA.TABLE.COL`; `PROPOSE_SYSTEM` is unchanged (a proposal never claims the new fields; the fallback still
+      maps them); new helper `sheet_rows(path, sheet) -> (header_row, headers, [(row_number, cells)])` reusing
+      `_header_row`, for cell-level validation. The `Veri kümesi` and `İş kuralları` sheets are Bilgin's own fixed
+      format, read by `template_import` with the R6-12 constants (deviation from brief §2 "headers in
+      excel_headers.json": that file maps a customer's synonyms to schema fields and its test pins the field set).
+R6-14. **Template reader** (`schema_map/template_import.py`): `is_bilgin_template(path)` (hidden `_bilgin` A1);
+      `read_template(path) -> TemplateRead` = `read_workbook` -> `fallback_mapping` restricted to `Tablolar` and
+      `Kolonlar` -> `convert`, plus the dataset row and the rule rows (`rules_edit.normalize_rule`, lists split on
+      `,;`); `Örnek`, `Nasıl doldurulur` and `_bilgin` are never read into the result. A non-template workbook
+      (`read_template(path, llm=None)`) maps its schema sheets through the Run 3 path (`propose(preview, llm)` +
+      `fallback_mapping`; llm None -> fallback only); it still needs a `Veri kümesi` sheet, else the error "Veri
+      kümesi sayfası yok: Bilgin şablonunu kullanın." (an upload always creates a named dataset). Cell errors found while reading
+      (convert's `skipped` notes, empty TABLO/KOLON/TİP in a filled row, unknown type, E/H other than E/H/blank,
+      class not in `pii.CLASSES`) are `MapIssue {sheet, row, column, message}`; a blank template reads to 0 tables, 0
+      rules and `errors == []`.
+R6-15. **Validation** (`template_import.validate(read, db_skeleton=None) -> (errors, warnings, db_check)`), errors
+      block apply: no table at all ("Şablonda hiç tablo yok."), dataset AD missing / not matching
+      `DATASET_NAME_RE` / `datasets.name_taken`, BAĞLANTI not mssql|sqlite, VERİ TARİHİ not ISO, a Kolonlar TABLO not
+      in Tablolar, duplicate table or column, REFERANS to a column not in the workbook, a rule failing
+      `rules_edit.validate_rule` against the read schema (unknown table, missing term/definition, duplicate id).
+      Warnings: tables without AÇIKLAMA, columns with empty AÇIKLAMA (count + first 20 names). `db_check` (only with
+      a skeleton): `merge.diff_map(read.schema, skeleton)` -> workbook-only tables/columns are errors, DB-only ones a
+      warning; `{"checked": true, "missing_in_db": [...], "only_in_db": [...], "message": null}`; no connection ->
+      `{"checked": false, "message": "Canlı veritabanı bağlantısı yok; karşılaştırma yapılmadı."}`.
+R6-16. **Preview and apply** (`schema_map/onboard.py`, admin routes in `web/map_api.py`). `POST
+      /api/schema-map/preview {filename, content_b64}`: decoded size > `MAP_MAX_BYTES` -> 413; not a zip holding
+      `[Content_Types].xml` -> 422 "Yalnız .xlsx dosyası yüklenebilir." (judged by content, not name); the bytes go to
+      a temp file, `read_template` + `validate`, and the whole result is saved as
+      `MAP_PREVIEWS_DIR/<preview_id>.json` (`uuid4().hex`), nothing else written; previews older than
+      `MAP_PREVIEW_TTL_MIN` are deleted on every preview/apply call and load as 404 "Önizleme bulunamadı ya da süresi
+      doldu.". `POST /api/schema-map/apply {preview_id}`: errors present -> 409; name taken now -> 409 (re-checked);
+      `apply_preview(preview, username)` creates `real_datasets_dir()/<name>/` with `mkdir(exist_ok=False)` and
+      writes `dataset.json` (`connection`, `default_schema`, `as_of`, `seed 42`, files, `builder/generator/references
+      = "real.py:..."`, outputs `data/<name>.db`, `db/mssql/build_<name>.sql`, `index/<name>`, `eval_out/<name>`,
+      `fake_fallback_sql = SELECT COUNT(*) AS KAYIT_SAYISI FROM <first table>` so the no-model demo answers),
+      `schema.json` (`doc` shape, kind data), `rules.json`, `profile.json` (`{"name", "pairs": []}`), empty
+      `golden.jsonl`, `real.py` (stub like wwi_real's, Turkish SystemExit lines), `readonly_login.sql`
+      (`login_script.readonly_login_sql(schema, f"bilgin_{name}_ro")`, `__DEGISTIR__` placeholder), then appends
+      `{username, ts, name, counts}` to `MAP_CHANGES_LOG` and starts the index job in a daemon thread:
+      `cli.build_index(embed, dataset=name)` with embed `fake` under `--llm fake` else `openai`. Status lives in
+      memory per preview id: `writing` -> `indexing` -> `done` | `failed` (+ Turkish message); `GET
+      /api/schema-map/status/{preview_id}`. An existing folder is never written; a failed write removes only the
+      folder it created.
+R6-17. **Template download.** `GET /api/schema-map/template.xlsx` (admin) -> blank template, `Content-Disposition:
+      attachment; filename=bilgin-veritabani-sablonu.xlsx`. `?from_db=1`: only when `config.backend() == "mssql"` and
+      `NL2SQL_MSSQL_CONN` is set (`GET /api/schema-map/info` -> `{"db_connection": bool}` tells the UI whether to show
+      the button); `introspect.mssql_skeleton()` pre-fills; a metadata/permission failure returns the blank template
+      with header `X-Bilgin-Note` (percent-encoded) "Salt okunur giriş tablo bilgisini okuyamadı (VIEW DEFINITION);
+      boş şablon verildi." - never another login. `GET /api/schema-map/sample.xlsx` (admin) =
+      `filled_example_workbook("ornek_fatura")`.
+R6-18. **Datasets API** (`web/datasets_api.py`, admin): `GET /api/datasets` -> `{"active", "datasets": [all_datasets()
+      item + "active": bool, "index": {"exists", "fresh", "reason"}]}`; `POST /api/datasets/active {name}` ->
+      `open_session(name, model, llm, models_file)` of the current session (paths from the dataset) -> swap (R6-10),
+      store the setting, 200 `{"active", "dataset": {"name","display_name","connection"}, "notice"}` where notice is
+      `{"login_script_url": "/api/datasets/<name>/login-script.sql", "env": "NL2SQL_MSSQL_CONN", "message"}` for an
+      mssql dataset and null otherwise; unknown 404; `SessionError` -> 409 with its sentence (the old session stays).
+      `GET /api/datasets/{name}/login-script.sql` -> the folder's `readonly_login.sql`, else generated from its schema.
+R6-19. **What the user sees (web).** Same tokens, dark mode, 8px grid and the one `@media (max-width: 720px)` block
+      (phone rules go inside it). `main.jsx` mounts `Root.jsx`; `App.jsx` stays the workspace and gains optional
+      `user`/`onLogout` props (without them it renders as in Run 5, so its tests hold).
+      - Gate: `lib/auth.js` `boot(api, hash)` calls only `api.me()`: 401 -> `{screen: "login", requested: hash}`;
+        ok -> `{screen: "app", user, route}`; `afterLogin(user, requested)` -> requested route if `canSee(route,
+        role)` else `#/` + note "Bu sayfa yalnız yöneticiye açık."; `api.onUnauthorized(handler)` fires on any 401
+        except `/api/auth/login`, and Root drops to login with "Oturumunuz sona erdi, lütfen yeniden giriş yapın.",
+        remembering the hash. Until `me` answers Root renders a bare centred wordmark (no header, no sidebar, no
+        chip, no fetch but `me`). Logout: `POST /api/auth/logout`, then App unmounts (answers, history, rules state
+        gone) and the login screen shows.
+      - Login (`#login-form`): centred 360px card on `--bg`, "Bilgin" wordmark, "Giriş yapın", `#login-username`
+        (autocomplete username), `#login-password` (current-password), `#login-submit` ("Giriş" ->
+        "Giriş yapılıyor…" disabled), `#login-error` (err tokens, server sentence), `#login-note` (warn tokens:
+        expired / not allowed). No dataset name or other app data on it. Phone: card = viewport - 32px.
+      - Header: `#user-chip` "<ad> · Yönetici|Kullanıcı", `#logout` "Çıkış"; admin-only `#nav-map` "Veritabanı
+        haritası" (`#/harita`) and `#nav-users` "Kullanıcılar" (`#/kullanicilar`); route.js maps both (unknown
+        still -> ask). At < 720px the nav takes its own row (T221 rule kept).
+      - Rules for a user: `#rules-readonly-note` "İş kurallarını yalnız yönetici değiştirebilir." (muted band), no
+        `#rule-add`, no Düzenle/Sil, no `#index-rebuild` (the stale banner text stays).
+      - Users (`#users-screen`): add form `#user-add-form` (`#user-new-username`, `#user-new-password`,
+        `#user-new-password2`, `#user-new-role`, `#user-add-submit`, field errors from `lib/usersForm.js` mirroring
+        the server), table (Kullanıcı, Rol, Durum, Son giriş, İşlemler) with `select[data-user-role]`,
+        `button[data-user-toggle]` (Pasifleştir/Etkinleştir), `button[data-user-reset]` -> inline new password +
+        Kaydet; server 409/422 sentence in `#users-error`. Phone: rows stack (name+role, status, actions).
+      - Map (`#map-screen`, "Yeni veritabanı"): card 1 three numbered steps (İndir · Doldur · Yükle) + `#map-template`
+        "Boş şablonu indir", `#map-template-db` (only when info.db_connection; download via fetch, shows the
+        X-Bilgin-Note), `#map-try-sample` "Örnek dolu şablonla dene"; card 2 `#map-file` (.xlsx), `#map-preview`
+        "Kontrol et" (no file -> "Önce doldurduğunuz şablonu seçin."; "Kontrol ediliyor…"), `#map-report`: stat row
+        (Tablo, Kolon, Kişisel veri, Kapalı, Referans, Kural), `#map-errors` table (Sayfa, Satır, Kolon, Sorun) on
+        err tokens, `#map-warnings` amber list (first 20 + "ve N tane daha"), live-DB line, `#map-apply` "Oluştur"
+        disabled with "Önce hataları düzeltin." while errors exist, `#map-progress` (Yazılıyor → İndeks kuruluyor →
+        Hazır, or the failure sentence; polls status every 1 s), `#map-activate` "Bu veri kümesine geç"; card 3
+        `#dataset-list` (name, display name, connection, index state, "Etkin" badge, `button[data-dataset-activate]`,
+        disabled without an index) and `#dataset-notice` (mssql: login-script link + "Sunucuyu NL2SQL_MSSQL_CONN
+        ile başlatın.", shown once per dataset - localStorage key `bilgin-notice-<name>` in try/catch). Phone: stat
+        row 3 columns, error rows stack.
+R6-20. **Visual flows.** `scripts/visual_serve.py --port P`: sets `NL2SQL_APP_DB=data/visual/bilgin.db` and
+      `NL2SQL_REAL_DATASETS_DIR=data/visual/real_datasets` (both wiped first; refuses any path outside
+      `data/visual/`), creates `admin` (admin) and `analist` (user) with the fixture password `VISUAL_PASSWORD`
+      (a throwaway value valid only in that wiped file - not a dev or production password), builds
+      `data/ornek_fatura.db` with the example table (empty), then runs `serve --llm fake --port P`. Every existing
+      page gains the login steps first (they would otherwise shoot the login screen); new pages R6-21.
+R6-21. New pages: `login-deeplink` (`/#/kurallar` without a session -> login shot, wrong password -> error shot,
+      right one -> rules shot), `logout-clears` (admin asks, `#logout`, login shot), `user-readonly-rules` (analist
+      -> `#/kurallar`), `users-screen` (admin -> users -> add analist2 -> table shot), `admin-map-onboard` (admin ->
+      map -> `#map-template`, `#map-try-sample` -> report shot -> `#map-apply` -> progress shot -> `#map-activate`
+      -> switched shot -> `#map-try-sample` again -> "name exists" error shot with `#map-apply` disabled).
+R6-22. **Smoke.** `scripts/smoke_serve.py` (existing) runs serve with a tmp `NL2SQL_APP_DB`, a random
+      `NL2SQL_DEV_ADMIN_PASSWORD` generated at run time (`secrets.token_urlsafe`), checks `/api/ask` is 401 without
+      the cookie, logs in, then does its Run 5 steps with the cookie; `--roles` (M19) adds a `user` through
+      `/api/users`, logs in as it and checks `POST /api/rules` 403 and another user's export 404.
+      `scripts/smoke_onboard.py --port P`: tmp app DB + tmp real datasets dir + dev admin, template download, a
+      filled workbook via `filled_example_workbook("smoke_fatura")`, preview (0 errors), apply, status until done,
+      sqlite DB for it via `build.write_sqlite`, switch, `/api/ask` -> answered; always stops the server.
+R6-23. **Test rules kept** (R5-22) plus: auth tests use tmp app DBs and an injected clock; no test sets a real
+      password (values come from the test or `secrets`); a test hashes the tree of `datasets/` and `real_datasets/`
+      before/after uploads (byte-identical); every new web test file is new (existing web tests are not edited
+      unless a task names them).
+
+## Contracts (Run 6 additions)
+
+| Shape | Producer -> Consumer | Fields (optional = default) |
+|---|---|---|
+| error body | every 401/403/404/409/413/422/429 of Run 6 routes -> UI | `{"detail": str}` (Turkish sentence); rules 422 keeps `{"errors": [...]}` |
+| User (public) | UserStore -> users API, CLI `user list`, authz | `{"id": int, "username", "role": "admin"\|"user", "active": bool, "created_at", "last_login_at": str\|null}` - never `password_hash` |
+| me / login 200 | `/api/auth/me`, `/api/auth/login` -> Root | `{"username", "role"}`; login body `{"username": str, "password": str}` |
+| users API | `/api/users` -> UsersScreen | GET `{"users": [User]}`; POST body `{"username","password","role"}` -> 200 `{"user": User}`; PUT body `{"role"?, "active"?, "password"?}` -> `{"user": User}`; 404/409/422 detail |
+| stored password | passwords.hash_password -> users.password_hash | `scrypt$<n>$<r>$<p>$<salt_b64>$<hash_b64>` |
+| session row | UserStore -> current_user | `token_hash` = sha256 hex of the cookie value, `expires_at` ISO UTC |
+| ask record (ext.) | asklog.record_ask | + `"username": str` only when known (absent = null) |
+| audit source (ext.) | ask_payload/replay -> executor | `"<web\|cli>:<username>:<audit_id>"` with a username, `"<web\|cli>:<audit_id>"` without |
+| saved row (ext.) | SavedStore (internal) | + column `username TEXT NULL`; API item shape unchanged |
+| MapIssue | template_import -> preview, UI | `{"sheet": str, "row": int\|null, "column": str\|null, "message": str}` |
+| TemplateRead | read_template -> validate, onboard | `{"dataset": {"name"="", "display_name"="", "connection"="mssql", "default_schema"=null, "as_of"=""}, "schema": {"tables": [doc table]}, "rules": [rule], "counts": {"tables","columns","pii","deny","references","rules"}, "errors": [MapIssue], "warnings": [MapIssue], "template": bool}` |
+| db_check | validate -> preview | `null` (not asked) or `{"checked": bool, "missing_in_db": [str]=[], "only_in_db": [str]=[], "message": str\|null}` |
+| preview response | `/api/schema-map/preview` -> MapScreen | `{"preview_id", "dataset", "counts", "errors", "warnings", "db_check"}`; same object saved as `data/map_previews/<id>.json` + `{"created_at", "username", "filename", "schema", "rules"}` |
+| apply / status | `/api/schema-map/apply`, `/status/{id}` -> MapScreen | `{"preview_id", "name", "phase": "writing"\|"indexing"\|"done"\|"failed", "message": str\|null}` |
+| map change line | onboard -> logs/map_changes.jsonl | `{"ts", "username", "name", "counts"}` |
+| template info | `/api/schema-map/info` -> MapScreen | `{"db_connection": bool}` |
+| new dataset folder | onboard.apply_preview -> datasets.load_dataset, build_index, session | dataset.json (R6-16) + schema.json + rules.json `{"rules": []}` + profile.json `{"name", "pairs": []}` + golden.jsonl (empty) + real.py + readonly_login.sql |
+| datasets list | `/api/datasets` -> DatasetList, header | `{"active": str, "datasets": [{"name","display_name","connection","root","active": bool,"index": {"exists","fresh","reason"=null}}]}` |
+| switch | `/api/datasets/active` -> App | body `{"name"}`; 200 `{"active","dataset": {"name","display_name","connection"},"notice": null\|{"login_script_url","env","message"}}` |
+| settings | UserStore.settings -> serve, switch | key `active_dataset` -> dataset name |
+| auth state (UI) | lib/auth.boot -> Root | `{"screen": "checking"\|"login"\|"app", "user": {username, role}\|null, "requested": hash="#/", "note": str\|null}` |
+
+## Run 6 milestones
+
+- **M18 - Auth core** (T223-T236): config, passwords, UserStore + sessions + lockout, saved per user, auth routes +
+  `require` + cookie, SPA fallback, CLI `user`, serve store/refusal/dev bootstrap, smoke login, and - because a served
+  app requires login from this milestone on - the web auth libs, Root gate + login screen + header chip/logout and the
+  visual server with login steps in every flow (deviation from brief §3, which puts the login screen in M19: the M18
+  visual review would otherwise shoot nothing but 401 states). Integration: CLI `user add` -> real store -> real
+  create_app with the real session -> login, me, ask, logout, 401, lockout.
+- **M19 - Roles everywhere** (T237-T243): route matrix walk, per-user ask log/audit/history/replay/export, users API,
+  read-only rules, users screen (+ `#nav-users`, its visual pages). Integration: two users + one admin through
+  TestClient on the real stack; vitest + build; smoke `--roles`.
+- **M20 - New database from a template** (T244-T257): reader fields, template writer, reader, validation, datasets in
+  two roots, session holder + datasets API, preview/apply/index job, map API, map UI, README, visual + smoke
+  onboarding. Integration: real template -> filled in code -> preview API -> apply -> real fake index -> switch ->
+  `/api/ask` answered; existing datasets byte-identical; non-admin 403 on all of it.

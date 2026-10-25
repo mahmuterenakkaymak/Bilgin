@@ -1,0 +1,6 @@
+Test çalışıyor, bekleyen işi bırakmıyorum:
+
+- **6 yeni soru yazıldı** (altın setle çakışmayan): 2016 ay kırılımı ciro+sipariş · ReorderLevel altı stok · hiç sipariş vermeyen müşteri kartı · tüm dönemde adet bazında en çok satan 5 ürün · teslim alınmamış satın alma satırı · 2016 fatura başı ortalama ciro.
+- **Test başlatıldı** (arka plan, `glow-trail`): eval `strata × full_rules,rag`, 26 soru × 2 tekrar → sonra 6 altın sorunun arayüz görüntüleri → sonra 6 serbest sorum. Tahmini 20-30 dk.
+- Bağlantı dizesi hiçbir yere yazılmadı/ekrana basılmadı (script user değişkeninden okuyor; sadece "set: True" doğrulandı).
+- Bitiş bekleme kuyruğu kurulu (`kind-bloom`); tamamlandığında sonuçları okuyup `docs\GERCEK-WWI-TEST.md` raporunu yazacağım.

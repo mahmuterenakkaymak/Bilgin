@@ -1,0 +1,102 @@
+[
+  {
+    "tag": "golden:Q01",
+    "question": "Her ülkenin adı ve o ülkeye bağlı şehir sayısı kaçtır?",
+    "golden_sql": "SELECT co.CountryName, COUNT(*) AS SEHIR_SAYISI FROM Application.Cities ci JOIN Application.StateProvinces sp ON sp.StateProvinceID = ci.StateProvinceID JOIN Application.Countries co ON co.CountryID = sp.CountryID GROUP BY co.CountryName ORDER BY co.CountryName",
+    "returncode": 0,
+    "status": "answered",
+    "sql": "SELECT c.CountryName AS CountryName,\n       COUNT(ci.CityID) AS CityCount\nFROM Application.Countries c\nLEFT JOIN Application.StateProvinces sp ON sp.CountryID = c.CountryID\nLEFT JOIN Application.Cities ci ON ci.StateProvinceID = sp.StateProvinceID\nGROUP BY c.CountryName\nORDER BY CityCount DESC, c.CountryName ASC",
+    "answer_text": "190 ülke arasında United States 37.940 CityCount değeriyle öne çıkıyor; gösterilen diğer ülkelerde CityCount 0.",
+    "row_count": 190,
+    "rows": [
+      [
+        "United States",
+        37940
+      ],
+      [
+        "Afghanistan",
+        0
+      ],
+      [
+        "Albania",
+        0
+      ],
+      [
+        "Algeria",
+        0
+      ],
+      [
+        "Andorra",
+        0
+      ],
+      [
+        "Angola",
+        0
+      ],
+      [
+        "Antigua and Barb.",
+        0
+      ],
+      [
+        "Argentina",
+        0
+      ]
+    ],
+    "warnings": [],
+    "stderr_tail": []
+  },
+  {
+    "tag": "golden:Q25",
+    "question": "Kredi notları hariç, faturanın kesildiği müşterinin teslimat şehrinin eyaletine göre toplam ciro nedir?",
+    "golden_sql": "SELECT sp.StateProvinceName, SUM(il.ExtendedPrice - il.TaxAmount) AS CIRO FROM Sales.InvoiceLines il JOIN Sales.Invoices i ON i.InvoiceID = il.InvoiceID JOIN Sales.Customers c ON c.CustomerID = i.BillToCustomerID JOIN Application.Cities ci ON ci.CityID = c.DeliveryCityID JOIN Application.StateProvinces sp ON sp.StateProvinceID = ci.StateProvinceID WHERE i.IsCreditNote = 0 GROUP BY sp.StateProvinceName ORDER BY sp.StateProvinceName",
+    "returncode": 1,
+    "status": null,
+    "sql": null,
+    "answer_text": null,
+    "row_count": null,
+    "rows": [],
+    "warnings": null,
+    "stderr_tail": [
+      "        ^^^^^^^^^^^",
+      "  File \"C:\\Program Files\\Python311\\Lib\\json\\encoder.py\", line 180, in default",
+      "    raise TypeError(f'Object of type {o.__class__.__name__} '",
+      "TypeError: Object of type Decimal is not JSON serializable"
+    ]
+  },
+  {
+    "tag": "extra",
+    "question": "2016 yılının her ayı için faturalanan sipariş sayısı ve KDV hariç ciro nedir? (kredi notları hariç)",
+    "golden_sql": "",
+    "returncode": 1,
+    "status": null,
+    "sql": null,
+    "answer_text": null,
+    "row_count": null,
+    "rows": [],
+    "warnings": null,
+    "stderr_tail": [
+      "        ^^^^^^^^^^^",
+      "  File \"C:\\Program Files\\Python311\\Lib\\json\\encoder.py\", line 180, in default",
+      "    raise TypeError(f'Object of type {o.__class__.__name__} '",
+      "TypeError: Object of type Decimal is not JSON serializable"
+    ]
+  },
+  {
+    "tag": "extra",
+    "question": "Kredi notları hariç, bu yıl kesilen faturaların fatura başına ortalama cirosu (KDV hariç) ne kadardır?",
+    "golden_sql": "",
+    "returncode": 1,
+    "status": null,
+    "sql": null,
+    "answer_text": null,
+    "row_count": null,
+    "rows": [],
+    "warnings": null,
+    "stderr_tail": [
+      "        ^^^^^^^^^^^",
+      "  File \"C:\\Program Files\\Python311\\Lib\\json\\encoder.py\", line 180, in default",
+      "    raise TypeError(f'Object of type {o.__class__.__name__} '",
+      "TypeError: Object of type Decimal is not JSON serializable"
+    ]
+  }
+]

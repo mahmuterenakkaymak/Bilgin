@@ -1,0 +1,41 @@
+{
+  "question": "2016 yılının her ayı için faturalanan sipariş sayısı ve KDV hariç ciro nedir? (kredi notları hariç)",
+  "status": "answered",
+  "answer_text": "2016-01 için FaturalananSiparisSayisi 1.844, KDVHariçCiro 4.447.705,95; 2016-02 için FaturalananSiparisSayisi 1.655, KDVHariçCiro 4.005.616,85; 2016-03 için FaturalananSiparisSayisi 1.887, KDVHariçCiro 4.645.254; 2016-04 için FaturalananSiparisSayisi 1.856, KDVHariçCiro 4.563.666,1; 2016-05 için FaturalananSiparisSayisi 1.948, KDVHariçCiro 4.970.932,65.",
+  "sql": "SELECT CONVERT(char(7), i.InvoiceDate, 120) AS Ay,\n       COUNT(DISTINCT i.OrderID) AS FaturalananSiparisSayisi,\n       SUM(il.ExtendedPrice - il.TaxAmount) AS KDVHariçCiro\nFROM Sales.Invoices i\nJOIN Sales.InvoiceLines il ON il.InvoiceID = i.InvoiceID\nWHERE i.IsCreditNote = 0\n  AND i.InvoiceDate >= '2016-01-01'\n  AND i.InvoiceDate < '2017-01-01'\nGROUP BY CONVERT(char(7), i.InvoiceDate, 120)\nORDER BY Ay",
+  "row_count": 5,
+  "rows": [
+    [
+      "2016-01",
+      1844,
+      4447705.95
+    ],
+    [
+      "2016-02",
+      1655,
+      4005616.85
+    ],
+    [
+      "2016-03",
+      1887,
+      4645254.0
+    ],
+    [
+      "2016-04",
+      1856,
+      4563666.1
+    ],
+    [
+      "2016-05",
+      1948,
+      4970932.65
+    ]
+  ],
+  "warnings": [
+    {
+      "code": "fan_out",
+      "message": "Join sonrası 29458 satır, sürücü tablo INVOICES 9190 satır (3,2x): toplamlar çoğalmış olabilir.",
+      "column": null
+    }
+  ]
+}
