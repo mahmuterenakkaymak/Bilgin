@@ -54,9 +54,8 @@ def serve(project, capsys, monkeypatch) -> SimpleNamespace:
 
     def stand_in(session, **kwargs):
         built.update(kwargs)
-        return create_app(
-            session, saved_path=project / "bilgin.db", static_dir=project / "static", **kwargs
-        )
+        # R6-9: ``saved_path``ı artık ``serve`` taşıyor; buradan geçirmek ikisini çakıştırır.
+        return create_app(session, static_dir=project / "static", **kwargs)
 
     seen: dict = {}
     monkeypatch.setattr(web_app, "create_app", stand_in)

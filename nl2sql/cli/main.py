@@ -1888,7 +1888,9 @@ def serve(
             llm=session.llm_kind,
         )
     )
-    run_server(create_app(session, users=users), host, port)
+    # R6-9: kayıtlar kullanıcıyla aynı dosyadadır; ``saved_path`` söylenmezse kapı import anının
+    # ``config.APP_DB_PATH``ine düşer ve ``NL2SQL_APP_DB``i aşarak ``data/bilgin.db``yi açar.
+    run_server(create_app(session, saved_path=users.path, users=users), host, port)
     return 0
 
 

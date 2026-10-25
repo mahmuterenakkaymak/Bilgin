@@ -55,9 +55,7 @@ def serve_app(folder, dataset):
     mp.setattr(
         web_app,
         "create_app",
-        lambda session, **kwargs: create_app(
-            session, saved_path=folder / "bilgin.db", static_dir=folder / "static", **kwargs
-        ),
+        lambda session, **kwargs: create_app(session, static_dir=folder / "static", **kwargs),
     )
     seen: dict = {}
     mp.setattr(cli, "run_server", lambda app, host, port: seen.update(app=app))
@@ -65,6 +63,8 @@ def serve_app(folder, dataset):
         assert cli.serve(llm_kind="fake", dataset=dataset) == 0
     finally:
         mp.undo()
+    # R6-9: serve ``saved_path``ı kendisi taşır; kayıtlar kullanıcının dosyasındadır.
+    assert seen["app"].state.saved_path == folder / "bilgin.db"
     client = TestClient(seen["app"])
     # R6-7: sunulan kapı oturum ister, o yüzden soruyu soran ekran gibi önce giriş yapılır.
     login = client.post("/api/auth/login", json={"username": "admin", "password": PAROLA})
