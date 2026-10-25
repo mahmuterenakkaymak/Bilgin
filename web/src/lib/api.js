@@ -43,8 +43,8 @@ export function replay(auditId) {
   return request(`/api/replay/${encodeURIComponent(auditId)}`, { method: "POST" });
 }
 
-export function health() {
-  return request("/api/health");
+export function health(url = "/api/health") {
+  return request(url);
 }
 
 export function examples() {

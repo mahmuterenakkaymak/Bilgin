@@ -15,6 +15,7 @@ import { applyTheme, nextTheme, readStored, store } from "./lib/theme.js";
 
 // Düğmenin gördüğü ad, sıradaki temayı değil seçili olanı söyler: "Koyu" yazan bir düğmeye
 // basınca ne olacağı belirsiz kalmasın.
+const HEALTH_URL = "/api/health";
 const THEME_LABELS = { system: "Sistem", dark: "Koyu", light: "Açık" };
 
 // Testler App'i Node'da renderToStaticMarkup ile kuruyor: orada localStorage yoktur, tema da
@@ -224,7 +225,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
   // Ham fetch değil api.health: 401 de buradan geçer, oturum düştüğünde kök kapı haberdar olur.
   const refreshHealth = () => {
     api
-      .health()
+      .health(HEALTH_URL)
       .then((data) => setHealth(data))
       .catch(() => setHealth(null));
   };
