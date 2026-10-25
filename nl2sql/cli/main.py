@@ -13,6 +13,7 @@ uç nokta ya da embedding sunucusu hiç çalışmıyorsa kod 3 ve hangi adresin 
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
 import math
 from decimal import Decimal
@@ -40,10 +41,11 @@ from nl2sql.agent.llm import (
 )
 from nl2sql.agent.loop import AgentRun, Step, run_agent
 from nl2sql.agent.modes import MODES, ToolContext, get_mode
+from nl2sql.auth.store import NOT_FOUND_MESSAGE, UserError, UserStore
 from nl2sql.cli.table import format_table
 from nl2sql.engine import checks, login_script
 from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
+from nl2sql.engine.result import Budget, Result
 from nl2sql.eval import metrics, report, retrieval, runner
 from nl2sql.eval import compare_models
 from nl2sql.eval.compare_modes import (
@@ -218,6 +220,23 @@ DATASET_LINE = "Veri kümesi: {display_name} ({name})"
 # ``--schema``nın argparse varsayılanı: tek başına tam şemanın adı, ``--dataset`` ile birlikte
 # "şema söylenmedi" demek, yani kümenin kendi şemasının önüne geçmez (R4-4).
 FULL_SCHEMA = "full"
+
+# R6-8: ``user`` komutunun satırları. Parola hiçbir zaman argüman değildir, iki kez sorulur ve
+# uyuşmazsa hiçbir şey yazılmaz; ``list`` sözleşme "User (public)" alanlarını basar, yani karma
+# ekranın hiçbir yerine girmez.
+USER_COLUMNS = ("Kullanıcı", "Rol", "Durum", "Son giriş")
+USER_ADDED = "✓ {username} eklendi (rol {role})."
+USER_PASSWD = "✓ {username} parolası değişti."
+USER_SET = "✓ {username}: rol {role}, {status}."
+NO_USERS = (
+    "Henüz kullanıcı yok: önce `python -m nl2sql user add <ad> --role admin` ile bir yönetici "
+    "oluşturun."
+)
+PASSWORD_PROMPT = "Parola: "
+PASSWORD_REPEAT = "Parola (tekrar): "
+PASSWORD_MISMATCH = "Parolalar eşleşmiyor."
+ACTIVE = "etkin"
+INACTIVE = "pasif"
 
 
 def build_database(
@@ -1123,6 +1142,106 @@ def make_login_script(
     return 0
 
 
+def user_add(name: str, role: str) -> int:
+    """Yeni kullanıcı: parolayı iki kez sorar, uyuşmazsa hiçbir şey yazmadan çıkar (R6-8)."""
+    _utf8_stdout()
+    password = _ask_password()
+    if password is None:
+        return EXIT_BAD_INPUT
+    try:
+        user = UserStore(config.app_db_path()).add_user(name, password, role)
+    except UserError as exc:
+        print(exc.message)
+        return EXIT_BAD_INPUT
+    print(USER_ADDED.format(username=user["username"], role=user["role"]))
+    return 0
+
+
+def user_list() -> int:
+    """Bütün kullanıcılar: ad, rol, durum, son giriş; hiç yoksa ne yapılacağı söylenir (R6-8)."""
+    _utf8_stdout()
+    users = UserStore(config.app_db_path()).list_users()
+    if not users:
+        print(NO_USERS)
+        return 0
+    print(
+        format_table(
+            Result(
+                columns=list(USER_COLUMNS),
+                rows=[
+                    (
+                        user["username"],
+                        user["role"],
+                        ACTIVE if user["active"] else INACTIVE,
+                        user["last_login_at"],
+                    )
+                    for user in users
+                ],
+                row_count=len(users),
+            )
+        )
+    )
+    return 0
+
+
+def user_passwd(name: str) -> int:
+    """Kullanıcının parolasını değiştirir; eski oturumları store kendisi düşürür (R6-8)."""
+    _utf8_stdout()
+    store = UserStore(config.app_db_path())
+    user = _user_by_name(store, name)
+    if user is None:
+        return EXIT_BAD_INPUT
+    password = _ask_password()
+    if password is None:
+        return EXIT_BAD_INPUT
+    try:
+        store.update_user(user["id"], password=password)
+    except UserError as exc:
+        print(exc.message)
+        return EXIT_BAD_INPUT
+    print(USER_PASSWD.format(username=user["username"]))
+    return 0
+
+
+def user_set(name: str, role: str | None = None, active: bool | None = None) -> int:
+    """Rolü ya da etkinliği değiştirir; son etkin yöneticiyi store'un kendisi korur (R6-8)."""
+    _utf8_stdout()
+    store = UserStore(config.app_db_path())
+    user = _user_by_name(store, name)
+    if user is None:
+        return EXIT_BAD_INPUT
+    try:
+        updated = store.update_user(user["id"], **_given(role=role, active=active))
+    except UserError as exc:
+        print(exc.message)
+        return EXIT_BAD_INPUT
+    print(
+        USER_SET.format(
+            username=updated["username"],
+            role=updated["role"],
+            status=ACTIVE if updated["active"] else INACTIVE,
+        )
+    )
+    return 0
+
+
+def _ask_password() -> str | None:
+    """Parolayı iki kez sorar; uyuşmazlık bir yazım hatasıdır, yani cümle ve None (R6-8)."""
+    password = getpass.getpass(PASSWORD_PROMPT)
+    if getpass.getpass(PASSWORD_REPEAT) != password:
+        print(PASSWORD_MISMATCH)
+        return None
+    return password
+
+
+def _user_by_name(store: UserStore, name: str) -> dict | None:
+    """Adı kullanıcının ``id``sine çeviren okuma; yoksa store'un kendi cümlesi ekrana çıkar."""
+    user = store.get_user(name)
+    if user is None:
+        print(NOT_FOUND_MESSAGE)
+    return user
+
+
 def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE, dataset=None, profile=None):
     """``--llm`` değerini istemciye çevirir: fake altın kaydı oynatır, openai config'teki endpoint'e gider.
 
@@ -1434,6 +1553,30 @@ def main(argv: list[str] | None = None) -> int:
     _add_model_options(serve_cmd)
     _add_dataset_option(serve_cmd)
 
+    # R6-8: kullanıcı hesapları parolayı asla komut satırından almaz — iki kez sorulur, yani
+    # kabuk geçmişine düşmez. Komut login istemez: kendi makinesinin dosyasını kendi yönetir.
+    user_cmd = commands.add_parser("user", help="kullanıcı hesaplarını listeler, açar, değiştirir")
+    user_sub = user_cmd.add_subparsers(dest="user_command", required=True)
+    user_add_cmd = user_sub.add_parser("add", help="yeni kullanıcı açar, parolayı iki kez sorar")
+    user_add_cmd.add_argument("name", metavar="AD")
+    user_add_cmd.add_argument(
+        "--role",
+        choices=("admin", "user"),
+        default="user",
+        help="rol (varsayılan %(default)s)",
+    )
+    user_sub.add_parser("list", help="kullanıcıları, rollerini ve son girişleri listeler")
+    user_passwd_cmd = user_sub.add_parser("passwd", help="parolayı değiştirir")
+    user_passwd_cmd.add_argument("name", metavar="AD")
+    user_set_cmd = user_sub.add_parser("set", help="rolü ya da etkinliği değiştirir")
+    user_set_cmd.add_argument("name", metavar="AD")
+    user_change = user_set_cmd.add_mutually_exclusive_group(required=True)
+    user_change.add_argument("--role", choices=("admin", "user"), help="yeni rol")
+    user_change.add_argument(
+        "--deactivate", action="store_true", help="kullanıcıyı pasifleştirir"
+    )
+    user_change.add_argument("--activate", action="store_true", help="kullanıcıyı etkinleştirir")
+
     eval_cmd = commands.add_parser("eval", help="altın soruları koşar ve raporu yazar")
     eval_cmd.add_argument(
         "--llm", choices=LLMS, default=DEFAULT_LLM, help="istem kaynağı (varsayılan %(default)s)"
@@ -1574,6 +1717,18 @@ def main(argv: list[str] | None = None) -> int:
             port=args.port,
             llm_kind=args.llm,
             **_given(dataset=args.dataset, model=args.model, models_file=args.models_file),
+        )
+    if args.command == "user":
+        if args.user_command == "list":
+            return user_list()
+        if args.user_command == "add":
+            return user_add(args.name, args.role)
+        if args.user_command == "passwd":
+            return user_passwd(args.name)
+        return user_set(
+            args.name,
+            role=args.role,
+            active=None if not (args.activate or args.deactivate) else args.activate,
         )
     if args.modes and not args.models:
         print(MODES_WITHOUT_MODELS)
