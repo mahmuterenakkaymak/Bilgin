@@ -31,7 +31,7 @@ from nl2sql.schema_map import doc
 from nl2sql.schema_map.rules_edit import normalize_rule, save_rules, validate_rule
 from nl2sql.web.auth_api import create_router as create_auth_router
 from nl2sql.web.authz import NO_SESSION, ROUTE_ROLES, current_user, require
-from nl2sql.web.saved import SavedStore
+from nl2sql.web.saved import ALL as SAVED_ALL, SavedStore
 
 # R5-15: boş soru koşum açmaya değmez; cümle ekranın gösterdiği cümledir.
 BLANK_QUESTION = "Soru boş."
@@ -153,17 +153,31 @@ def create_app(
         return getattr(app, method.lower())(path, dependencies=deps, **kwargs)
 
     @guarded("POST", "/api/ask")
-    def ask(body: AskBody) -> dict:
-        """Sorunun cevabı: CLI ile birebir aynı payload, kaynağı ``web`` (R5-1)."""
+    def ask(body: AskBody, request: Request) -> dict:
+        """Sorunun cevabı: CLI ile birebir aynı payload, kaynağı ``web`` (R5-1).
+
+        Soruyu soran kişinin adı soru günlüğünün satırına ve denetim satırlarının başına karışır
+        (R6-9); tek kullanıcılı modda ad yoktur, yani Run 5'in hâli sürer.
+        """
         question = body.question.strip()
         if not question:
             raise HTTPException(status_code=400, detail=BLANK_QUESTION)
-        return ask_payload(session, question, mode=body.mode, choice=body.choice, source="web")
+        return ask_payload(session, question, mode=body.mode, choice=body.choice, source="web",
+                           username=_asker(request))
 
     @guarded("POST", "/api/replay/{audit_id}")
-    def replay(audit_id: str) -> dict:
-        """Geçmişteki bir soru: kayıtlı SQL modelsiz yeniden çalışır, payload /api/ask ile aynı biçimde."""
-        return replay_payload(session, audit_id, source="web")
+    def replay(audit_id: str, request: Request) -> dict:
+        """Geçmişteki bir soru: kayıtlı SQL modelsiz yeniden çalışır, payload /api/ask ile aynı biçimde.
+
+        R6-9: başkasının sorusu bu yol için hiç yoktur, yani cevabı yokluğu anlatan bir payload
+        değil, dışa aktarımınkiyle aynı cümle ve durumda bir 404.
+        """
+        # ASSUMPTION: replay_payload süzgeci ile yeni kaydın adını tek parametrede taşır; yönetici
+        # başkasının kaydını da gördüğü için adı söylenmez, yani onun replay satırı adsız kalır.
+        payload = replay_payload(session, audit_id, source="web", username=_scope(request, None))
+        if (payload["error"] or {}).get("kind") == "not_found":
+            raise HTTPException(status_code=404, detail=NO_ASK)
+        return payload
 
     @guarded("GET", "/api/health")
     def health() -> dict:
@@ -261,41 +275,53 @@ def create_app(
         }
 
     @guarded("GET", "/api/saved")
-    def saved_list() -> dict:
-        """Kenar çubuğu: bu kümenin kayıtlı soruları, en yeni önce (R5-16)."""
-        return {"saved": saved.list(dataset)}
+    def saved_list(request: Request) -> dict:
+        """Kenar çubuğu: bu kümenin ve bu kullanıcının kayıtlı soruları, en yeni önce (R5-16, R6-9)."""
+        return {"saved": saved.list(dataset, username=_scope(request, SAVED_ALL))}
 
     @guarded("POST", "/api/saved")
-    def saved_add(body: SavedBody) -> dict:
+    def saved_add(body: SavedBody, request: Request) -> dict:
         """Soruyu kenar çubuğuna eklemek: saklanan cevabı değil, sorunun metni ve SQL'i."""
         question = body.question.strip()
         if not question:
             raise HTTPException(status_code=400, detail=BLANK_QUESTION)
         # ASSUMPTION: POST tek kaydın kendisini döndürür; ekran istersen listeyi yeniden çeker.
-        return {"saved": saved.add(question, mode=body.mode, sql=body.sql, dataset=dataset)}
+        return {
+            "saved": saved.add(
+                question, mode=body.mode, sql=body.sql, dataset=dataset, username=_asker(request)
+            )
+        }
 
     @guarded("DELETE", "/api/saved/{id}")
-    def saved_delete(id: int) -> dict:
-        """Kaydı kenar çubuğundan çıkarır; olmayan kaydın silinecek bir şeyi yok (404)."""
-        if not saved.delete(id):
+    def saved_delete(id: int, request: Request) -> dict:
+        """Kaydı kenar çubuğundan çıkarır; olmayan ya da başkasının kaydının silinecek bir şeyi yok (404)."""
+        if not saved.delete(id, username=_scope(request, SAVED_ALL)):
             raise HTTPException(status_code=404, detail=NO_SAVED)
         return {"deleted": id}
 
     @guarded("GET", "/api/history")
-    def history() -> dict:
-        """Son sorular: soru günlüğünün satırları, en yeni önce; veri satırları asla (R5-4)."""
+    def history(request: Request) -> dict:
+        """Son sorular: soru günlüğünün satırları, en yeni önce; veri satırları asla (R5-4).
+
+        R6-9: kullanıcı kendi sorularını görür, yönetici kümenin hepsini - adı olmayan eski
+        satırlar da yalnız yöneticide görünür.
+        """
         name = getattr(getattr(session, "dataset", None), "name", None)
-        return {"history": asklog.history(session.ask_log, dataset=name)}
+        return {
+            "history": asklog.history(
+                session.ask_log, dataset=name, username=_scope(request, asklog._ALL)
+            )
+        }
 
     @guarded("GET", "/api/export/{audit_id}.csv")
-    def export_csv(audit_id: str) -> Response:
+    def export_csv(audit_id: str, request: Request) -> Response:
         """Cevabın tamamı CSV: ``bilgin_<id>.csv`` adı ile iner (R5-16)."""
-        return _export(session, dataset, audit_id, "csv")
+        return _export(session, dataset, audit_id, "csv", _scope(request, asklog._ALL))
 
     @guarded("GET", "/api/export/{audit_id}.xlsx")
-    def export_xlsx(audit_id: str) -> Response:
+    def export_xlsx(audit_id: str, request: Request) -> Response:
         """Cevabın tamamı Excel: sayı hücreleri sayı olarak kalır (R5-16)."""
-        return _export(session, dataset, audit_id, "xlsx")
+        return _export(session, dataset, audit_id, "xlsx", _scope(request, asklog._ALL))
 
     assets = static / "assets"
     if assets.is_dir():
@@ -335,14 +361,35 @@ def create_app(
     return app
 
 
-def _export(session, dataset: str, audit_id: str, ext: str) -> Response:
+def _asker(request: Request) -> str | None:
+    """Yeni kaydın sahibi: kapının çözdüğü kullanıcı; tek kullanıcılı modda ad yoktur (R6-9)."""
+    user = current_user(request)
+    return user["username"] if user else None
+
+
+def _scope(request: Request, everyone):
+    """Bu çağrının görebildiği kayıtların süzgeci: arayanın adı, ya da ``everyone`` (R6-9).
+
+    Yönetici kümenin her kaydını görür, tek kullanıcılı mod (Run 5) hepsini: ikisinde de süzgeç
+    kapının ``ALL``ıdır, yani adı hiç olmayan eski satırlar da ancak böyle görünür.
+    """
+    user = current_user(request)
+    if user is None or user["role"] == "admin":
+        return everyone
+    return user["username"]
+
+
+def _export(session, dataset: str, audit_id: str, ext: str, username) -> Response:
     """Günlükteki SQL'i dışa aktarım bütçesiyle bir kez daha koşar ve dosyayı hazırlar (R5-16).
 
     Satırlar yürütücünün döndürdükleridir: PII maskesi bu yürüyüşte de üstlerinden geçer, yani
     indirme ekranın gösterdiğinden fazlasını asla vermez. Denetim satırı ``export:<id>`` kaynağını
     taşır, böylece hangi indirmenin hangi sorguyu koştuğu soru günlüğüyle birleşir (R5-4).
+
+    ``username`` arayanın süzgecidir (R6-9): başkasının kaydı bu arama için yoktur, yani indirme
+    bilinmeyen bir kaydınkiyle aynı cümleyi alır - 404, 403 değil.
     """
-    record = asklog.find_ask(audit_id, session.ask_log)
+    record = asklog.find_ask(audit_id, session.ask_log, username=username)
     if record is None:
         raise HTTPException(status_code=404, detail=NO_ASK)
     if record.get("status") != "answered":
