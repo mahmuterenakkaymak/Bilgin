@@ -22,3 +22,9 @@ web/node_modules/
 # document backups and rendered PDFs (2026-10-25)
 docs/*.bak-*
 docs/*.pdf
+
+# Run 6: map previews, the visual-run sandbox, and customer maps (wwi_real stays in the repo)
+/data/map_previews/
+/data/visual/
+real_datasets/*
+!real_datasets/wwi_real/

@@ -65,6 +65,25 @@ CLARIFY_MAX_OPTIONS = 4  # upper bound of the mutually exclusive options
 TABLE_SUMMARIES = True  # R5-20: measured on both datasets, hybrid recall@5 gained (eval/SUMMARIES.md)
 SUMMARY_KEY_COLUMNS = 8  # key columns one table summary lists
 
+# ---------------------------------------------------------------- Run 6: auth, sessions, login limit
+PASSWORD_MIN_LEN = 10  # shorter passwords are refused
+SCRYPT_N = 2**14  # scrypt cost factors; the hash stores them, so a later change stays verifiable
+SCRYPT_R = 8
+SCRYPT_P = 1
+SESSION_HOURS = 12  # a session expires this many hours after it was created
+SESSION_COOKIE = "bilgin_oturum"
+LOGIN_MAX_FAILURES = 5  # failures inside LOGIN_WINDOW_MIN minutes lock the account for LOCKOUT_MIN
+LOGIN_WINDOW_MIN = 15
+LOCKOUT_MIN = 15
+DEV_ADMIN_ENV = "NL2SQL_DEV_ADMIN_PASSWORD"  # env var the bootstrap admin password is read from
+
+# ---------------------------------------------------------------- Run 6: schema map onboarding
+MAP_MAX_BYTES = 5 * 1024 * 1024  # an uploaded map bigger than this is refused before it is read
+MAP_PREVIEW_TTL_MIN = 30  # a preview may be applied until this many minutes after it was written
+TEMPLATE_FILENAME = "bilgin-veritabani-sablonu.xlsx"  # template the user fills in and uploads back
+TEMPLATE_VERSION = "1"  # stamped into the template; a mismatch warns that the file is outdated
+DATASET_NAME_RE = r"^[a-z][a-z0-9_]{2,30}$"  # dataset directory name: lowercase keeps Windows paths stable
+
 # ---------------------------------------------------------------- reference date
 # "geçen ay" / "bu yıl" are always relative to this date, never to the real clock.
 AS_OF = "2026-09-30"
@@ -115,6 +134,10 @@ APP_DB_PATH = ROOT / "data" / "bilgin.db"
 ASK_LOG = ROOT / "logs" / "asks.jsonl"
 STATIC_DIR = ROOT / "nl2sql" / "web" / "static"
 WEB_DIR = ROOT / "web"
+# ASSUMPTION: Run 6 paths sit here for the same reason — they need ROOT.
+MAP_PREVIEWS_DIR = ROOT / "data" / "map_previews"
+MAP_CHANGES_LOG = ROOT / "logs" / "map_changes.jsonl"
+REAL_DATASETS_DIR = ROOT / "real_datasets"
 
 # ---------------------------------------------------------------- env defaults
 DEFAULT_LLM_BASE_URL = "http://127.0.0.1:8080/v1"
@@ -181,3 +204,13 @@ def mapping_path(name: str) -> Path:
 def datasets_dir() -> Path:
     """Dataset directory: NL2SQL_DATASETS_DIR when set, else DATASETS_DIR."""
     return Path(_env("NL2SQL_DATASETS_DIR", str(DATASETS_DIR)))
+
+
+def app_db_path() -> Path:
+    """App database: NL2SQL_APP_DB when set, else APP_DB_PATH."""
+    return Path(_env("NL2SQL_APP_DB", str(APP_DB_PATH)))
+
+
+def real_datasets_dir() -> Path:
+    """Real dataset root: NL2SQL_REAL_DATASETS_DIR when set, else REAL_DATASETS_DIR."""
+    return Path(_env("NL2SQL_REAL_DATASETS_DIR", str(REAL_DATASETS_DIR)))
