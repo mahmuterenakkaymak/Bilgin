@@ -41,7 +41,10 @@ ROUTE_ROLES: dict[tuple[str, str], str] = {
     ("PUT", "/api/rules/{rule_id}"): "admin",
     ("DELETE", "/api/rules/{rule_id}"): "admin",
     ("POST", "/api/index/rebuild"): "admin",
-    # ASSUMPTION: brief'in ``/api/users*``, ``/api/schema-map/*``, ``/api/datasets*`` satırları henüz
+    ("GET", "/api/users"): "admin",
+    ("POST", "/api/users"): "admin",
+    ("PUT", "/api/users/{id}"): "admin",
+    # ASSUMPTION: brief'in ``/api/schema-map/*``, ``/api/datasets*`` satırları henüz
     # ``create_app``te yol değil - satır, yolun doğduğu görevle birlikte buraya yazılır (R6-5).
 }
 

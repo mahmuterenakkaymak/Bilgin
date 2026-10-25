@@ -1,4 +1,4 @@
-"""Giriş, çıkış ve "kimim" uçları (PLAN R6-5).
+"""Giriş, çıkış, "kimim" uçları ve yöneticinin kullanıcı defteri (PLAN R6-3, R6-5).
 
 Gövde sözleşme "me / login 200"dir: ``{username, role}``. Parola ve ham oturum anahtarı yalnız
 bu işlevlerin içinde ve çerezde dolaşır - ne bir gövdeye ne bir günlüğe düşürülürler.
@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from nl2sql import config
-from nl2sql.auth.store import LoginError
+from nl2sql.auth.store import LoginError, UserError
 from nl2sql.web.authz import AUTH_OFF, require
 
 
@@ -20,6 +20,22 @@ class LoginBody(BaseModel):
 
     username: str = ""
     password: str = ""
+
+
+class UserCreateBody(BaseModel):
+    """``POST /api/users`` gövdesi (Contracts "users API"); rolün varsayılanı CLI ile aynı."""
+
+    username: str = ""
+    password: str = ""
+    role: str = "user"
+
+
+class UserUpdateBody(BaseModel):
+    """``PUT /api/users/{id}`` gövdesi (Contracts "users API"): söylenmeyen alan olduğu gibi kalır."""
+
+    role: str | None = None
+    active: bool | None = None
+    password: str | None = None
 
 
 def create_router() -> APIRouter:
@@ -60,6 +76,52 @@ def create_router() -> APIRouter:
         return _who(user)
 
     return router
+
+
+def create_users_router() -> APIRouter:
+    """Yöneticinin kullanıcı defteri: liste, ek, güncelle (PLAN R6-3, R6-5).
+
+    Üç yol da yönetici ister; deposuz uygulamada kimlik doğrulama kapalıdır. Gövdeler sözleşme
+    "User (public)"dır: store hash'i hiç seçmediği için buradan sızacak bir alan da yoktur.
+    """
+    router = APIRouter(prefix="/api")
+    admin = [Depends(require("admin"))]
+
+    @router.get("/users", dependencies=admin)
+    def users_list(request: Request) -> dict:
+        """Bütün hesaplar, ada göre: yönetici ekranının tablosu buradan okur."""
+        return {"users": _store(request).list_users()}
+
+    @router.post("/users", dependencies=admin)
+    def users_add(body: UserCreateBody, request: Request) -> dict:
+        """Yeni hesap: reddin cümlesi ve durumu store'undur (çakışan ad 409, kısa parola 422)."""
+        try:
+            user = _store(request).add_user(body.username, body.password, body.role)
+        except UserError as exc:
+            raise _refused(exc) from None
+        return {"user": user}
+
+    @router.put("/users/{id}", dependencies=admin)
+    def users_update(id: int, body: UserUpdateBody, request: Request) -> dict:
+        """Rol, etkinlik ve parola; son etkin yöneticiyi store'un kendisi korur (409).
+
+        Parola değişimi ve pasifleştirme store'da oturumları da siler, yani kullanıcının çerezi o
+        anda geçersizdir: bir sonraki çağrısı 401.
+        """
+        try:
+            user = _store(request).update_user(
+                id, role=body.role, active=body.active, password=body.password
+            )
+        except UserError as exc:
+            raise _refused(exc) from None
+        return {"user": user}
+
+    return router
+
+
+def _refused(exc: UserError) -> HTTPException:
+    """Kullanıcı işleminin reddi HTTP'ye: durum ve cümle store'un, yol ikisini de değiştirmez."""
+    return HTTPException(status_code=exc.status, detail=exc.message)
 
 
 def _store(request: Request):

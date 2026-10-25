@@ -30,6 +30,7 @@ from nl2sql.report.export import MEDIA_TYPES, to_csv_bytes, to_xlsx_bytes
 from nl2sql.schema_map import doc
 from nl2sql.schema_map.rules_edit import normalize_rule, save_rules, validate_rule
 from nl2sql.web.auth_api import create_router as create_auth_router
+from nl2sql.web.auth_api import create_users_router
 from nl2sql.web.authz import NO_SESSION, ROUTE_ROLES, current_user, require
 from nl2sql.web.saved import ALL as SAVED_ALL, SavedStore
 
@@ -140,6 +141,7 @@ def create_app(
         return JSONResponse(status_code=422, content={"errors": exc.errors})
 
     app.include_router(create_auth_router())
+    app.include_router(create_users_router())
 
     def guarded(method: str, path: str, **kwargs):
         """Yolun kapısını ``ROUTE_ROLES``tan okuyan süsleyici (R6-5, R6-6).
