@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as api from "../lib/api.js";
 import { clientErrors, fromForm, mergeErrors, toForm } from "../lib/rulesForm.js";
 
@@ -20,8 +20,22 @@ export default function RuleForm({ rule = null, tables = [], errors = [], onSave
   const [form, setForm] = useState(() => toForm(rule));
   const [serverErrors, setServerErrors] = useState(() => mergeErrors(errors));
   const [saving, setSaving] = useState(false);
+  const [rejected, setRejected] = useState(0); // her ret, özeti bir kez daha ekrana taşır
+  const summary = useRef(null);
 
   const messages = Object.values(serverErrors).filter(Boolean);
+  // ASSUMPTION: sayı yalnız alan hatalarını sayar — alansız mesajda sayılacak bir alan yoktur.
+  const fieldCount = Object.keys(serverErrors).filter((key) => key && serverErrors[key]).length;
+
+  // Özet formun başında, Kaydet ~1400 px aşağıda: reddedilen dokunuşun görülmesi için özet
+  // odağa alınıp üstüne kayılır. Yalnız gönderim sonrası çalışır ki açılışta odak çalınmasın.
+  useEffect(() => {
+    if (!rejected) return;
+    const node = summary.current;
+    if (!node) return;
+    node.focus();
+    node.scrollIntoView?.({ block: "start", behavior: "smooth" });
+  }, [rejected]);
 
   const change = (name) => (event) => {
     setForm((current) => ({ ...current, [name]: event.target.value }));
@@ -32,6 +46,7 @@ export default function RuleForm({ rule = null, tables = [], errors = [], onSave
     const invalid = clientErrors(form);
     if (Object.keys(invalid).length) {
       setServerErrors(invalid);
+      setRejected((current) => current + 1);
       return;
     }
     setSaving(true);
@@ -42,6 +57,7 @@ export default function RuleForm({ rule = null, tables = [], errors = [], onSave
     } catch (error) {
       const fields = mergeErrors(error?.errors);
       setServerErrors(Object.keys(fields).length ? fields : { "": error?.message || "Kural kaydedilemedi." });
+      setRejected((current) => current + 1);
     } finally {
       setSaving(false);
     }
@@ -62,7 +78,7 @@ export default function RuleForm({ rule = null, tables = [], errors = [], onSave
       </div>
 
       {messages.length > 0 && (
-        <div id="rule-errors" className="rule-errors" role="alert">
+        <div id="rule-errors" className="rule-errors" role="alert" ref={summary} tabIndex={-1}>
           <p className="rule-errors-title">Kaydedilemedi — şunları düzeltin:</p>
           <ul className="rule-errors-list">
             {messages.map((message, index) => (
@@ -126,6 +142,11 @@ export default function RuleForm({ rule = null, tables = [], errors = [], onSave
         <button type="button" id="rule-cancel" className="btn" onClick={() => onCancel?.()} disabled={saving}>
           Vazgeç
         </button>
+        {fieldCount > 0 && (
+          <p className="rule-form-count" id="rule-error-count">
+            {fieldCount} alan hatalı
+          </p>
+        )}
       </div>
     </form>
   );

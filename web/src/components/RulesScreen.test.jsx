@@ -1,7 +1,13 @@
+// ASSUMPTION: ret akışı olay + etki ister, SSR ikisini de çalıştırmaz; jsdom bu yüzden devDependency.
+// @vitest-environment jsdom
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import RuleForm from "./RuleForm.jsx";
 import RulesScreen from "./RulesScreen.jsx";
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const noop = () => {};
 
@@ -153,5 +159,71 @@ describe("RuleForm", () => {
     expect(html).toContain("<li>Kural kaydedilemedi.</li>");
     expect(html).toContain('id="rule-term"');
     expect(html).toContain("Soruda geçen ad");
+  });
+});
+
+// Rettin hissedilmesi olay istemi ister: özet ekrana *geldikten sonra* odaklanıp üstüne kayılmalı,
+// sayı Kaydet'in yanında belirmeli. SSR ne olay ne etki çalıştırır, bu yüzden burada jsdom var.
+describe("RuleForm — reddedilen kayıt", () => {
+  let container;
+  let root;
+  let focus;
+  let scrollIntoView;
+
+  beforeEach(() => {
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    focus = vi.spyOn(HTMLElement.prototype, "focus");
+    // jsdom scrollIntoView'u tanımaz; ölçülen çağrısı, kaydırmanın kendisi tarayıcının işi.
+    scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+    delete Element.prototype.scrollIntoView;
+    vi.restoreAllMocks();
+  });
+
+  const open = (props = {}) => {
+    act(() => root.render(<RuleForm onSaved={noop} onCancel={noop} tables={TABLES} {...props} />));
+  };
+
+  const submit = () => {
+    act(() => {
+      const event = new Event("submit", { bubbles: true, cancelable: true });
+      container.querySelector("#rule-form").dispatchEvent(event);
+    });
+  };
+
+  it("boş form reddedilince özet odaklanıp üstüne kayılır, sayı düğmenin yanında belirir", () => {
+    open();
+    expect(container.querySelector("#rule-errors")).toBeNull();
+    expect(container.querySelector("#rule-error-count")).toBeNull();
+
+    submit();
+
+    const errors = container.querySelector("#rule-errors");
+    expect(errors.getAttribute("tabindex")).toBe("-1");
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(errors);
+    expect(container.querySelector("#rule-error-count").textContent).toBe("3 alan hatalı");
+  });
+
+  it("açılışta odak çalınmaz; ikinci ret özetin üstüne yeniden çıkar, alansız mesajda sayı yoktur", () => {
+    open({ errors: [{ message: "Kural kaydedilemedi." }] });
+    expect(container.querySelector("#rule-errors")).toBeTruthy();
+    expect(container.querySelector("#rule-error-count")).toBeNull();
+    expect(focus).not.toHaveBeenCalled();
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    submit();
+
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(container.querySelector("#rule-errors"));
+    expect(container.querySelector("#rule-error-count").textContent).toBe("3 alan hatalı");
   });
 });

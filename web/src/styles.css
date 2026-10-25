@@ -775,6 +775,12 @@ main {
     width: calc(100vw - 32px);
     padding: calc(var(--space) * 2);
   }
+
+  /* Başlık 390'da üç satıra iniyor (ölçüldü: 140px) ve özetin tamamı onun altında kalıyordu;
+     pay başlığın altına indirir. .rule-form ile derinleşiyor: özetin temeli bu bloğun altında. */
+  .rule-form .rule-errors {
+    scroll-margin-top: calc(var(--space) * 20);
+  }
 }
 
 .table-note {
@@ -1200,7 +1206,9 @@ main {
   color: var(--muted);
 }
 
+/* Retten sonra kaydırma hedefi: yapışkan başlığın (ölçüldü: 60px) altına inmek için pay. */
 .rule-errors {
+  scroll-margin-top: calc(var(--space) * 9);
   padding: calc(var(--space) * 1.25) calc(var(--space) * 1.5);
   border: 1px solid var(--err-text);
   border-left-width: 4px;
@@ -1219,6 +1227,12 @@ main {
   margin: 0;
   padding-left: calc(var(--space) * 2);
   font-size: 14px;
+}
+
+/* Retten sonra odak özetin üstüne gelir; programatik odakta :focus-visible çalışmaz. */
+.rule-errors:focus {
+  outline: 2px solid var(--err-text);
+  outline-offset: 2px;
 }
 
 .rule-fields {
@@ -1282,6 +1296,15 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space);
+}
+
+/* Kaydet'in yanı: uzun formda özet görünmese de düğme tek başına susmasın. */
+.rule-form-count {
+  margin: 0 0 0 auto;
+  align-self: center;
+  color: var(--err-text);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 /* --- oturum kapısı --------------------------------------------------------- */
