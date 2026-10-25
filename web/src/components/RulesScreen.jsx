@@ -10,7 +10,7 @@ function items(value) {
   return (Array.isArray(value) ? value : []).map((item) => String(item ?? "").trim()).filter(Boolean);
 }
 
-export default function RulesScreen({ rules = [], index = null, tables = [], loading = false, error = "", onRefresh }) {
+export default function RulesScreen({ rules = [], index = null, tables = [], loading = false, error = "", onRefresh, readOnly = false }) {
   const [draft, setDraft] = useState(null); // null: form kapalı | {} yeni kural | {rule}: düzenleme
   const [confirmId, setConfirmId] = useState(null);
   const [rebuilding, setRebuilding] = useState(false);
@@ -55,18 +55,26 @@ export default function RulesScreen({ rules = [], index = null, tables = [], loa
           <h1 className="screen-title">İş kuralları</h1>
           <p className="screen-lead">Kurallar, Bilgin'in bir soruda hangi terimi ne anladığını belirler.</p>
         </div>
-        <button
-          type="button"
-          id="rule-add"
-          className="btn btn-primary"
-          onClick={() => {
-            setNote("");
-            setDraft({});
-          }}
-        >
-          Yeni kural
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            id="rule-add"
+            className="btn btn-primary"
+            onClick={() => {
+              setNote("");
+              setDraft({});
+            }}
+          >
+            Yeni kural
+          </button>
+        )}
       </div>
+
+      {readOnly && (
+        <p className="rules-readonly" id="rules-readonly-note">
+          İş kurallarını yalnız yönetici değiştirebilir.
+        </p>
+      )}
 
       {stale && (
         <div id="index-stale" className="rules-banner" role="status">
@@ -74,9 +82,11 @@ export default function RulesScreen({ rules = [], index = null, tables = [], loa
             {STALE_MESSAGE}
             {index.reason ? ` ${index.reason}` : ""}
           </p>
-          <button type="button" id="index-rebuild" className="btn" onClick={rebuild} disabled={rebuilding}>
-            {rebuilding ? "kuruluyor…" : "İndeksi yeniden kur"}
-          </button>
+          {!readOnly && (
+            <button type="button" id="index-rebuild" className="btn" onClick={rebuild} disabled={rebuilding}>
+              {rebuilding ? "kuruluyor…" : "İndeksi yeniden kur"}
+            </button>
+          )}
         </div>
       )}
 
@@ -91,16 +101,22 @@ export default function RulesScreen({ rules = [], index = null, tables = [], loa
                 <th scope="col">Terim</th>
                 <th scope="col">Eş anlamlılar</th>
                 <th scope="col">Tablolar</th>
-                <th scope="col" className="rules-col-actions">
-                  İşlem
-                </th>
+                {!readOnly && (
+                  <th scope="col" className="rules-col-actions">
+                    İşlem
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td className="rules-empty" colSpan={4}>
-                    {loading ? "Kurallar okunuyor…" : "Henüz kural yok. “Yeni kural” ile ekleyin."}
+                  <td className="rules-empty" colSpan={readOnly ? 3 : 4}>
+                    {loading
+                      ? "Kurallar okunuyor…"
+                      : readOnly
+                        ? "Henüz kural yok."
+                        : "Henüz kural yok. “Yeni kural” ile ekleyin."}
                   </td>
                 </tr>
               )}
@@ -112,35 +128,37 @@ export default function RulesScreen({ rules = [], index = null, tables = [], loa
                   </th>
                   <td className="rules-list">{items(rule.synonyms).join(", ") || "—"}</td>
                   <td className="rules-list">{items(rule.tables).join(", ") || "—"}</td>
-                  <td className="rules-actions">
-                    {confirmId === rule.id ? (
-                      <span className="rules-confirm">
-                        Silinsin mi?
-                        <button type="button" className="btn btn-ghost" onClick={() => remove(rule.id)}>
-                          Evet
-                        </button>
-                        <button type="button" className="btn btn-ghost" onClick={() => setConfirmId(null)}>
-                          Vazgeç
-                        </button>
-                      </span>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          className="btn btn-ghost"
-                          onClick={() => {
-                            setNote("");
-                            setDraft({ rule });
-                          }}
-                        >
-                          Düzenle
-                        </button>
-                        <button type="button" className="btn btn-ghost" onClick={() => setConfirmId(rule.id)}>
-                          Sil
-                        </button>
-                      </>
-                    )}
-                  </td>
+                  {!readOnly && (
+                    <td className="rules-actions">
+                      {confirmId === rule.id ? (
+                        <span className="rules-confirm">
+                          Silinsin mi?
+                          <button type="button" className="btn btn-ghost" onClick={() => remove(rule.id)}>
+                            Evet
+                          </button>
+                          <button type="button" className="btn btn-ghost" onClick={() => setConfirmId(null)}>
+                            Vazgeç
+                          </button>
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            onClick={() => {
+                              setNote("");
+                              setDraft({ rule });
+                            }}
+                          >
+                            Düzenle
+                          </button>
+                          <button type="button" className="btn btn-ghost" onClick={() => setConfirmId(rule.id)}>
+                            Sil
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

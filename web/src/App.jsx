@@ -156,7 +156,7 @@ function AskScreen({ pending = null, onRefresh, onRebuild }) {
 
 // Kural ekranı: liste ile indeksin tazeliği aynı iki istekten gelir; kayıt, silme ve yeniden
 // kurma sonrası ekran bunları baştan okur (R5-16).
-function RulesFlow({ onChanged }) {
+function RulesFlow({ onChanged, readOnly }) {
   const [data, setData] = useState(null); // {rules, index} | null: henüz okunmadı
   const [tables, setTables] = useState([]);
   const [error, setError] = useState("");
@@ -191,12 +191,13 @@ function RulesFlow({ onChanged }) {
       loading={!data}
       error={error}
       onRefresh={refresh}
+      readOnly={readOnly}
     />
   );
 }
 
-function Screen({ route, pending, onRefresh, onChanged, onRebuild }) {
-  if (route === "rules") return <RulesFlow onChanged={onChanged} />;
+function Screen({ route, pending, onRefresh, onChanged, onRebuild, readOnly }) {
+  if (route === "rules") return <RulesFlow onChanged={onChanged} readOnly={readOnly} />;
   return <AskScreen pending={pending} onRefresh={onRefresh} onRebuild={onRebuild} />;
 }
 
@@ -346,6 +347,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
             onRefresh={refresh}
             onChanged={refreshHealth}
             onRebuild={() => api.rebuild().then(refreshHealth)}
+            readOnly={Boolean(user && user.role !== "admin")}
           />
         </main>
       </div>

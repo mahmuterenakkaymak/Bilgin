@@ -1171,6 +1171,19 @@ main {
   color: var(--err-text);
 }
 
+/* Salt-okur küme için nötr bant: kehribar uyarıyla aynı gövde, ama renksiz — burada
+   düzeltilecek bir şey yok, yalnızca yetki yok. */
+.rules-readonly {
+  margin: 0;
+  padding: calc(var(--space) * 1.25) calc(var(--space) * 1.5);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--muted);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 15px;
+}
+
 .rules-table {
   width: 100%;
   border-collapse: collapse;
