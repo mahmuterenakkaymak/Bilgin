@@ -483,6 +483,8 @@ def ask(
         return _index_failed(str(exc))
     # Bütçe yalnız verildiğinde geçirilir (R4-11: ``budget=None`` = Run 3'ün koşumu olduğu gibi).
     asked = follow_up_text(question, choice) if choice else question
+    # ASSUMPTION: ekran ``ask``ı ask_payload'dan geçmez - soru günlüğü satırı da audit_id'si de yoktur, yani
+    # R6-9'un adı taşıyacak bir kaydı burada yoktur; kaynak Run 1'in ``ask``ı olarak kalır.
     run = run_agent(
         asked,
         llm,
@@ -1818,8 +1820,14 @@ def _ask_json(args) -> int:
     except SessionError as exc:
         print(exc)
         return exc.exit_code
+    # R6-9: makinedeki oturumun sahibi soruyu sorandır; adı hem günlüğe hem denetim satırlarına karışır.
     payload = ask_payload(
-        session, args.question, mode=args.mode, choice=args.choice, source=JSON_SOURCE
+        session,
+        args.question,
+        mode=args.mode,
+        choice=args.choice,
+        source=JSON_SOURCE,
+        username=getpass.getuser(),
     )
     # SQL Server returns DECIMAL/MONEY as Decimal and dates as date objects (SQLite never did); the API
     # side gets the same conversion from FastAPI's encoder.
