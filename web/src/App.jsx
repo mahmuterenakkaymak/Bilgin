@@ -12,8 +12,6 @@ import { askReducer, initialState } from "./lib/askState.js";
 import { parseRoute } from "./lib/route.js";
 import { applyTheme, nextTheme, readStored, store } from "./lib/theme.js";
 
-const HEALTH_URL = "/api/health";
-
 // Düğmenin gördüğü ad, sıradaki temayı değil seçili olanı söyler: "Koyu" yazan bir düğmeye
 // basınca ne olacağı belirsiz kalmasın.
 const THEME_LABELS = { system: "Sistem", dark: "Koyu", light: "Açık" };
@@ -215,9 +213,10 @@ export default function App() {
   // Sağlık başlığı bir kez değil, aynı `index.fresh` alanını gösteren yer değiştikçe okunur:
   // kural ekranının bandı tazelenirken noktanın eski kalması arayüzün aynı gerçeği iki yerden
   // birini yalan söylemesi olurdu (R5-18).
+  // Ham fetch değil api.health: 401 de buradan geçer, oturum düştüğünde kök kapı haberdar olur.
   const refreshHealth = () => {
-    fetch(HEALTH_URL)
-      .then((response) => (response.ok ? response.json() : null))
+    api
+      .health()
       .then((data) => setHealth(data))
       .catch(() => setHealth(null));
   };

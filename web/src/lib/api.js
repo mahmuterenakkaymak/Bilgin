@@ -11,6 +11,29 @@ export class ApiError extends Error {
 
 const NETWORK_MESSAGE = "Sunucuya ulaşılamadı";
 
+// Giriş yolunu hem `login` hem 401 bekçisi okur: ikisi ayrışırsa oturum düşmesi sessizce kaybolur.
+const LOGIN_PATH = "/api/auth/login";
+
+// Oturumun düştüğünü her ekranın kendi yakalaması yerine kök kapıya bildirir. Giriş isteğinin 401'i
+// ("kullanıcı adı veya parola hatalı") beklenen bir yanıttır, formda görünür; handler'a gitmez.
+let unauthorized = null;
+
+export function onUnauthorized(handler) {
+  unauthorized = handler;
+}
+
+export function me() {
+  return request("/api/auth/me");
+}
+
+export function login({ username, password }) {
+  return request(LOGIN_PATH, { method: "POST", body: { username, password } });
+}
+
+export function logout() {
+  return request("/api/auth/logout", { method: "POST" });
+}
+
 export function ask({ question, mode = null, choice = null }) {
   return request("/api/ask", { method: "POST", body: { question, mode, choice } });
 }
@@ -85,7 +108,10 @@ async function request(path, { method = "GET", body } = {}) {
   } catch {
     throw new ApiError(0, NETWORK_MESSAGE);
   }
-  if (!response.ok) throw toApiError(response.status, data);
+  if (!response.ok) {
+    if (response.status === 401 && path !== LOGIN_PATH) unauthorized?.();
+    throw toApiError(response.status, data);
+  }
   return data;
 }
 

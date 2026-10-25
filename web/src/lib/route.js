@@ -1,4 +1,4 @@
-const ROUTES = { "/kurallar": "rules" };
+const ROUTES = { "/kurallar": "rules", "/harita": "map", "/kullanicilar": "users" };
 
 // ASSUMPTION: "#kurallar" (slash atlanırsa) da kural ekranıdır; tanınmayan her hash soru ekranına düşer.
 export function parseRoute(hash) {
