@@ -156,7 +156,7 @@ filtering per user, password reset by e-mail, more than one active dataset at a 
 from a template (an upload always creates a new dataset), connection strings entered in the UI (they stay in
 environment variables), golden questions from the template.
 
-**Existing tests (important for the build):** about 150 existing web/API tests call `create_app(session, ...)` and
+**Existing tests (important for the build):** about 86 existing web/API tests (15 files) call `create_app(session, ...)` and
 hit routes without a session. Do **not** edit them. `create_app` gains an explicit `users` parameter (the users and
 sessions store); when it is `None` the app runs in the Run 5 single-user mode (no login, every route open), exactly
 as the existing tests expect. `serve` **always** passes a store, so a served app always requires login - a new test
