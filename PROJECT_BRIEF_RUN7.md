@@ -1,4 +1,4 @@
-# NL2SQL (Bilgin) - Run 7: conversations - follow-up questions in one session; start screen of ready questions per business role
+# NL2SQL (Bilgin) - Run 7: conversations; start screen per business role; database connections in the admin panel
 
 > Drafted 2026-10-25 from Eren's request: "Rapor ya da soru-cevap fark etmez, girdikten sonra 2.-3. cümle ile
 > düzenlenebilmeli. 'Son satışın tutarı ne?' -> 'Bu müşteriye başka ne sattık?' Tek session'da üst üste soru-cevap
@@ -130,6 +130,46 @@ earlier turn was a plain answer or a report (table + chart).
   business role whose SQL is one of the golden SQLs or a hand-checked variant (run once through the policy on the
   real database), loaded into the app DB on first start for that dataset.
 
+- **Database connections managed in the admin panel** (Eren: "Veritabanı bağlantı bilgileri admin panel üzerinden
+  doldurulabilsin; bağlantının aktifliğini tüm kullanıcılar yeşil-kırmızı görsün"):
+  - **Per dataset**: every database-backed dataset has its own connection, so switching the active dataset (Run 6)
+    also switches the database with no restart. App DB table `connections(dataset PRIMARY KEY, server, database,
+    auth CHECK(auth IN ('sql','windows')), username, secret_blob, options_json, updated_by, updated_at,
+    last_ok_at, last_error)`. `options_json`: `encrypt`, `trust_server_certificate`, `port`, `driver` (default the
+    newest installed "ODBC Driver NN for SQL Server"). `ApplicationIntent=ReadOnly` is always added, never optional.
+  - **The password is never stored in clear and never leaves the server**: `secret_blob` is the password encrypted
+    with Windows DPAPI (`CryptProtectData` via `ctypes`, machine scope, an entropy value derived from the dataset name
+    - stdlib only, no new dependency); on non-Windows the UI form is disabled and only the environment variable path
+    works. The API is write-only for the secret: `GET /api/connections/{dataset}` returns server, database, auth,
+    username, options, `has_secret: true|false`, `last_ok_at`, `last_error` - **never** the password or a connection
+    string; `PUT` accepts a new password or keeps the stored one when the field is empty. The password never appears in
+    logs, the ask/audit log, error messages (driver errors are scrubbed of `PWD=`/`Password=` before they are stored or
+    shown) or test snapshots.
+  - **Environment variable still wins**: `NL2SQL_MSSQL_CONN_<DATASET>` (upper-case dataset name) or, for the active
+    dataset, `NL2SQL_MSSQL_CONN` override the stored connection (the Windows service and development keep working);
+    the screen shows "Ortam değişkeninden" and the form is read-only for that dataset.
+  - **Read-only guard before saving** (admin "Bağlantıyı test et" and on every save): connect with the given values
+    and refuse to save - with a Turkish explanation - when the login is too powerful: `IS_SRVROLEMEMBER('sysadmin') = 1`,
+    `IS_MEMBER('db_owner') = 1`, or `HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'INSERT' | 'UPDATE' | 'DELETE' |
+    'ALTER' | 'EXECUTE') = 1`. The message points to the dataset's generated read-only login script (download link).
+    Windows auth (`auth = windows`) uses the server process's own account; the same guard applies, so the machine's
+    sysadmin Windows account is refused. The test also checks that the dataset's tables are visible (a sample of the
+    allowlist) and reports the missing ones.
+  - **Admin screen** `Veritabanı bağlantıları` (`#nav-connections`, admin only): one row per database-backed dataset
+    with status dot, server/database, last success, last error; edit form (`#conn-server`, `#conn-database`,
+    `#conn-auth`, `#conn-username`, `#conn-password` type=password with placeholder "değiştirmek için yazın",
+    `#conn-encrypt`, `#conn-trust`, `#conn-test`, `#conn-save`); the test result shows guard and table checks line by
+    line. The Run 6 "Yeni veritabanı" flow links here after a dataset is created ("Şimdi bağlantıyı girin").
+- **Connection status for everyone** (green / red): `GET /api/health` gains `db: {state: "ok"|"down"|"none"|"unknown",
+  checked_at, message}` for the active dataset. A background checker runs `SELECT 1` with a 3-second timeout every
+  `DB_CHECK_S` (60 s) and after every connection change, plus an on-demand check after a query fails with a connection
+  error; requests never wait for it. The header shows a labelled dot visible to **all logged-in users** - "Veritabanı"
+  green (ok), red (down), grey (no connection needed: a built SQLite dataset, or not yet configured) - next to the
+  existing model/index dot, with a tooltip: users see "Veritabanına bağlanılamıyor, yöneticinize haber verin." and the
+  time; admins also see the scrubbed driver message and a link to the connections screen. When the database is down
+  the ask box stays usable but a red banner says answers cannot be produced right now, and a question fails fast with
+  that message instead of waiting for the agent.
+
 **Out (not this run):** long-term memory across conversations, sharing a conversation between users, editing an earlier
 turn in place, voice input, a conversation spanning two datasets.
 
@@ -160,6 +200,18 @@ turn in place, voice input, a conversation spanning two datasets.
   every card SQL goes through the policy (a card SQL touching a closed column is rejected at approval). Visual flows:
   start screen as sales and as purchasing user (different cards), card -> answer -> follow-up.
 
+- **M25 - Database connections and status:** `connections` table, DPAPI secret store (ctypes, Windows only; skipped
+  tests elsewhere), env-var override order, per-dataset connection used by the executor and by the dataset switch,
+  read-only guard, connections API (write-only secret) and admin screen, background status checker, `db` block in
+  `/api/health`, header "Veritabanı" dot for all users, red banner and fail-fast when down. Tests (no real SQL Server:
+  the guard and checker take an injected connector): a stored password round-trips through DPAPI and is never in any
+  API response, log line or error text (scan of everything the test produced); a login reported as sysadmin, db_owner
+  or with INSERT/EXECUTE is refused with the explanation and nothing is saved; the env var overrides the stored
+  connection and makes the form read-only; switching datasets switches connections without a restart; the checker
+  flips green -> red -> green on an injected failure/recovery and the health block follows; users get the generic
+  tooltip, admins the scrubbed message; a question while down fails fast without an agent call. Visual flows: admin
+  connections screen with a test result, header dot green and red as a user.
+
 ## 4. Contracts to keep
 
 - A turn's stored summary never holds more than `CONV_KEEP_ROWS` masked rows; full results are never stored.
@@ -167,5 +219,7 @@ turn in place, voice input, a conversation spanning two datasets.
 - Reopening a conversation from the list re-renders stored cards and runs nothing; only "replay" or a new question
   executes SQL.
 - Single-question use (no `conversation_id`) behaves exactly as in Run 6.
+- A database password entered in the UI is stored only DPAPI-encrypted and is never returned by any API, written to
+  any log or shown in any error; Bilgin refuses to save a connection whose login can write or administer.
 - A start-screen card only ever runs an approved, stored SQL through the executor; the model is never called to render
   the start screen, and every number on it comes from SQL.
