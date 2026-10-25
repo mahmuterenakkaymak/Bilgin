@@ -1,8 +1,9 @@
-# NL2SQL (Bilgin) - Run 7: conversations - follow-up questions in one session
+# NL2SQL (Bilgin) - Run 7: conversations - follow-up questions in one session; start screen of ready questions per business role
 
 > Drafted 2026-10-25 from Eren's request: "Rapor ya da soru-cevap fark etmez, girdikten sonra 2.-3. cümle ile
 > düzenlenebilmeli. 'Son satışın tutarı ne?' -> 'Bu müşteriye başka ne sattık?' Tek session'da üst üste soru-cevap
-> olmalı." Runs after Run 6 (users, roles, sessions, per-user history, onboarding a new database from a template),
+> olmalı." Added the same day: "Açılışa hazır sorulardan / genel geçer sorulardan bir başlangıç ekranı; hazır sorular
+> login olan kullanıcının rolüne göre (satışçı mı, satın almacı mı, muhasebeci mi, yönetici mi) değişsin." Runs after Run 6 (users, roles, sessions, per-user history, onboarding a new database from a template),
 > before Run 8 (English, Windows service). Product name **Bilgin** (package and CLI stay `nl2sql`). Never write the
 > names of a specific commercial ERP product or of the owner's company in code, docs, UI text or test data.
 
@@ -36,6 +37,11 @@ earlier turn was a plain answer or a report (table + chart).
   (Head Office))" - which earlier turn and which values it used.
 - A new **follow-up golden set** on `wwi_real` (chains of 2-3 questions, golden SQL per turn) is measured by `eval`:
   turn accuracy and chain accuracy, Flash-Next `full_rules` at least 80 % of turns on the first build.
+- After login the user lands on a **start screen** of ready-question cards chosen for **their business role** (sales,
+  purchasing, accounting, management, general). A card shows a number or a small chart with one line and its last
+  refresh time; it opens in seconds because it reruns a stored, approved SQL **without the model**; clicking it opens
+  the full answer card and the input under it continues the conversation ("Peki geçen ayla kıyasla?"). It is not a BI
+  dashboard: no free-form widgets, no drag-and-drop layout - every card is a question Bilgin can answer and continue.
 
 ## 2. Scope
 
@@ -91,6 +97,39 @@ earlier turn was a plain answer or a report (table + chart).
   accuracy, chain accuracy (all turns right) and "context used correctly" (the `uses_turns` note matches the golden).
   `--llm fake` gives 100 %.
 
+- **Business role of a user** (separate from the Run 6 permission role admin/user - a sales person can be either):
+  new column `users.business_role` with values from config `BUSINESS_ROLES` = `satis` (Satış), `satin_alma` (Satın
+  alma), `muhasebe` (Muhasebe), `yonetim` (Yönetim), `genel` (Genel, default). Set by an admin in the users screen and
+  the users API (`PUT /api/users/{id} {business_role}`) and on the CLI (`user set NAME --business-role R`); shown in
+  the header chip next to the name. A user cannot change their own business role.
+- **Ready questions** (app DB table `ready_questions(id, dataset, business_role, title, question, sql, display,
+  position, created_by, approved, created_at)`, `display` = `number` | `chart` | `table`): a ready question belongs to
+  one dataset and one business role (or `*` = every role). The **SQL is fixed when the question is approved**: an admin
+  asks the question once (model writes SQL as usual), checks the answer, and saves it as a ready question with that
+  SQL; from then on the card reruns exactly that SQL through the policy and the read-only executor - no model call,
+  numbers by SQL only. Admin API: `GET/POST/PUT/DELETE /api/ready-questions` (admin), "Hazır soru yap" button on an
+  answer card for admins (pre-fills title, question, SQL, a suggested display from the chart shape, role select).
+  A user may also pin **personal** cards from their own answers (same table, `business_role = NULL`, `created_by` =
+  them, visible only to them, max `PERSONAL_CARDS` = 6).
+- **Start screen** (`#start`, the default route after login): the cards for the user's business role plus `*` cards
+  plus their personal cards, in `position` order, then a short "Sorunuzu yazın" input that starts a conversation.
+  `GET /api/start` returns the card list with each card's result: `{cards: [{id, title, question, display, value?,
+  chart?, rows?, columns?, refreshed_at, error?}]}`. Each card's result is cached per dataset+card for
+  `START_CACHE_S` (300 s) - many users opening the start screen run each SQL once, not once per user; a "Yenile"
+  button refreshes one card (rate-limited to once per 30 s per card). A card whose SQL fails (e.g. the schema changed)
+  shows the Turkish error and, for admins, an "SQL'i yeniden onayla" action; it never breaks the screen. Clicking a
+  card opens the full answer card (same payload as `/api/replay`) as turn 1 of a new conversation.
+- **Suggested ready questions for a new database**: when a dataset is created from the template (Run 6) or an admin
+  asks for it on an existing dataset (`POST /api/ready-questions/suggest {dataset}`), Bilgin proposes 2-4 questions per
+  business role from the schema (modules, table descriptions and business rules: e.g. sales -> "Bu ayki ciro", "En çok
+  satan 5 ürün"; purchasing -> "Bekleyen satın alma siparişleri"; accounting -> "Vadesi geçmiş alacaklar"; management ->
+  "Aylık ciro trendi"). The model writes the question texts only; each suggestion is then asked through the normal
+  agent to get its SQL, and lands as `approved = false`. **Nothing unapproved ever runs on the start screen**; the
+  admin reviews each one's answer and approves, edits or deletes it.
+- **Seed for `wwi_real`**: a checked-in `real_datasets/wwi_real/ready_questions.json` with 2-3 approved questions per
+  business role whose SQL is one of the golden SQLs or a hand-checked variant (run once through the policy on the
+  real database), loaded into the app DB on first start for that dataset.
+
 **Out (not this run):** long-term memory across conversations, sharing a conversation between users, editing an earlier
 turn in place, voice input, a conversation spanning two datasets.
 
@@ -110,6 +149,17 @@ turn in place, voice input, a conversation spanning two datasets.
   console), README Run 7 section ("Konuşma: ardışık sorular"), smoke + visual flows. Integration test: a conversation
   through the API with TestClient and the fake model, reload of the thread from the store, replay of one turn.
 
+- **M24 - Start screen and ready questions per business role:** `users.business_role` (migration, users API/screen,
+  CLI), `ready_questions` table and admin API, "Hazır soru yap" on answer cards, personal cards, `GET /api/start` with
+  the per-card cache and refresh limit, start screen UI (cards by display kind, last refresh time, click -> answer card
+  as turn 1 of a conversation), suggestions for a dataset (unapproved until an admin approves), `wwi_real` seed.
+  Tests: each business role sees exactly its cards plus `*` plus its own personal cards; an unapproved suggestion never
+  appears on the start screen and never runs; a card makes no agent call (scripted fake asserts zero calls); two users
+  of the same role within `START_CACHE_S` execute the card's SQL once (executor call count); a failing card SQL shows
+  its error and the other cards still render; a user cannot change their business role or another user's card;
+  every card SQL goes through the policy (a card SQL touching a closed column is rejected at approval). Visual flows:
+  start screen as sales and as purchasing user (different cards), card -> answer -> follow-up.
+
 ## 4. Contracts to keep
 
 - A turn's stored summary never holds more than `CONV_KEEP_ROWS` masked rows; full results are never stored.
@@ -117,3 +167,5 @@ turn in place, voice input, a conversation spanning two datasets.
 - Reopening a conversation from the list re-renders stored cards and runs nothing; only "replay" or a new question
   executes SQL.
 - Single-question use (no `conversation_id`) behaves exactly as in Run 6.
+- A start-screen card only ever runs an approved, stored SQL through the executor; the model is never called to render
+  the start screen, and every number on it comes from SQL.
