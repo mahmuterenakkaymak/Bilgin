@@ -52,6 +52,7 @@ def check(
     top_n: int = config.TOP_N,
     pii: dict | None = None,
     deny: set[tuple[str, str]] | None = None,
+    keys: dict[str, str] | None = None,
 ) -> PolicyResult:
     """Single read-only T-SQL SELECT, real tables from the allowlist only, TOP n enforced.
 
@@ -61,6 +62,9 @@ def check(
 
     `deny` is the {(TABLE, COLUMN)} set of the columns the schema marks `deny` (R4-7). Nothing may
     read one, and a table holding one cannot be read with a star either: the star would open it.
+
+    `keys` is the {TABLE: COLUMN} map of `pii.count_keys`: a `COUNT(*)` over a table with a marked
+    column is rewritten to `COUNT(key)`, because the login's column DENY makes SQL Server refuse it.
     """
     if not sql or not sql.strip():
         return PolicyResult(ok=False, reason="Boş sorgu.")
@@ -77,6 +81,8 @@ def check(
     reason = _check_denied(tree, deny or set(), tables)
     if reason:
         return PolicyResult(ok=False, reason=reason)
+    closed = {table for table, _ in (pii or {})} | {table for table, _ in (deny or set())}
+    _rewrite_counts(tree, keys or {}, closed)
     return PolicyResult(ok=True, sql=_with_top(tree, top_n), tables=tables)
 
 
@@ -274,6 +280,41 @@ def _opens_denied(star, aliases, deny, tables) -> bool:
         table = aliases.get(owner.table.upper())
         return table is not None and any(pair[0] == table for pair in deny)
     return any(table in tables for table, _ in deny)
+
+
+# ----------------------------------------------------------------- COUNT(*) under column DENY
+
+
+def _rewrite_counts(tree, keys, closed) -> None:
+    """`COUNT(*)`/`COUNT(1)` -> `COUNT(<FROM table>.<key>)` when the SELECT touches a table with a closed column.
+
+    The key is NOT NULL, so the count is the same; the FROM table's key stays non-null under LEFT joins,
+    which is why a SELECT with a RIGHT or FULL join is left as it is. Changes the tree in place.
+    """
+    if not keys or not closed:
+        return
+    for count in list(tree.find_all(exp.Count)):
+        arg = count.this
+        if not (isinstance(arg, exp.Star) or (isinstance(arg, exp.Literal) and not arg.is_string)):
+            continue
+        select = count.find_ancestor(exp.Select)
+        source = select.args.get("from") or select.args.get("from_") if select is not None else None
+        if source is None or not isinstance(source.this, exp.Table):
+            continue
+        joins = select.args.get("joins") or []
+        if any((join.side or "").upper() in ("RIGHT", "FULL") for join in joins):
+            continue
+        involved = {_full_name(source.this).upper()}
+        involved |= {_full_name(join.this).upper() for join in joins if isinstance(join.this, exp.Table)}
+        key = keys.get(_full_name(source.this).upper())
+        if not key or not involved & closed:
+            continue
+        # A bare `People.PersonID` does not survive the SQLite transpile of `Application.People`: an
+        # unaliased table is counted by the bare key when it is alone, and left as it is in a join.
+        if source.this.alias:
+            count.set("this", exp.column(key, table=source.this.alias))
+        elif not joins:
+            count.set("this", exp.column(key))
 
 
 # ----------------------------------------------------------------- row cap

@@ -213,6 +213,7 @@ class LocalExecutor:
         self._pii_map = pii.column_map(pii_schema) if pii_schema is not None else {}
         # Kapalı kolon maskelenmez, hiç okunmaz (R4-7): o yüzden harita değil, küme politika'ya gider.
         self._deny = pii.deny_set(pii_schema) if pii_schema is not None else set()
+        self._count_keys = pii.count_keys(pii_schema) if pii_schema is not None else {}
 
     def execute(
         self,
@@ -232,7 +233,9 @@ class LocalExecutor:
 
     def _run(self, sql: str, budget: Budget, top_n: int = config.TOP_N) -> Result:
         # Filtre kuralı aynı haritayı izler: maskelenen bir kolon sorguda filtre de olamaz (R3-6).
-        verdict = policy.check(sql, self._allowlist, top_n, pii=self._pii_map, deny=self._deny)
+        verdict = policy.check(
+            sql, self._allowlist, top_n, pii=self._pii_map, deny=self._deny, keys=self._count_keys
+        )
         if not verdict.ok:
             return _error("policy", verdict.reason)
         if self._backend != "sqlite":

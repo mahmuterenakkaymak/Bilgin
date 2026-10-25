@@ -127,6 +127,21 @@ def deny_set(schema: dict) -> set[tuple[str, str]]:
     }
 
 
+def count_keys(schema: dict) -> dict[str, str]:
+    """{FULL_TABLE: COLUMN}: the first NOT NULL column with no `pii`/`deny` mark, per table.
+
+    The read-only login DENYs every marked column, and SQL Server then refuses `COUNT(*)` on that table
+    (found on the restored WideWorldImporters, 2026-10-25); `COUNT(key)` counts the same rows.
+    """
+    keys = {}
+    for table in schema["tables"]:
+        for column in table["columns"]:
+            if not column.get("nullable", True) and not column.get("pii") and not column.get("deny"):
+                keys[table["name"].upper()] = column["name"]
+                break
+    return keys
+
+
 # ----------------------------------------------------------------- lineage
 
 

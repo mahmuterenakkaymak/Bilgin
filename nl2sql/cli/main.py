@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+from decimal import Decimal
 import re
 import sqlite3
 import sys
@@ -1662,8 +1663,15 @@ def _ask_json(args) -> int:
     payload = ask_payload(
         session, args.question, mode=args.mode, choice=args.choice, source=JSON_SOURCE
     )
-    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    # SQL Server returns DECIMAL/MONEY as Decimal and dates as date objects (SQLite never did); the API
+    # side gets the same conversion from FastAPI's encoder.
+    print(json.dumps(payload, ensure_ascii=False, indent=2, default=_json_value))
     return 0 if payload["status"] in JSON_OK else 1
+
+
+def _json_value(value):
+    """JSON form of a database value json cannot write: Decimal -> number, anything else -> text."""
+    return float(value) if isinstance(value, Decimal) else str(value)
 
 
 def serve(
