@@ -1,0 +1,1229 @@
+{
+ "files": [
+  "compare_wwi_20261025-040955.json",
+  "compare_wwi_20261025-042758.json",
+  "compare_wwi_20261025-044438.json"
+ ],
+ "questions": 26,
+ "repeat": 3,
+ "cells": {
+  "strata": {
+   "full_rules": {
+    "profile": {
+     "model": "strata",
+     "context_budget": 262144,
+     "prompt_limit": 253952
+    },
+    "scores": {
+     "mean": 24.7,
+     "min": 24,
+     "max": 25
+    },
+    "answered_pct": 99,
+    "peak_estimate": 7555,
+    "peak_reported": 8457,
+    "overflows": 0,
+    "trimmed": 0,
+    "seconds_per_question": 4.1,
+    "tags": {
+     "trap:not_invoiced": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "needs_rule": {
+      "mean": 17.7,
+      "min": 17,
+      "max": 18
+     },
+     "trap:credit_note": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:backorder": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:multi_transaction": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:null_delivery": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:two_buying_groups": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:late_receipt": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "multi_join": {
+      "mean": 6.7,
+      "min": 6,
+      "max": 7
+     },
+     "needs_values": {
+      "mean": 7.0,
+      "min": 7,
+      "max": 7
+     }
+    },
+    "outcomes": {
+     "Q01": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q02": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q03": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q04": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q05": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q06": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q07": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q08": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q09": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q10": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q11": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q12": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q13": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q14": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q15": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q16": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q17": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q18": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q19": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q20": [
+      "policy_reject",
+      "pass",
+      "pass"
+     ],
+     "Q21": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q22": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q23": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q24": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q25": [
+      "wrong_result",
+      "wrong_result",
+      "wrong_result"
+     ],
+     "Q26": [
+      "pass",
+      "pass",
+      "pass"
+     ]
+    }
+   },
+   "rag": {
+    "profile": {
+     "model": "strata",
+     "context_budget": 262144,
+     "prompt_limit": 253952
+    },
+    "scores": {
+     "mean": 25.7,
+     "min": 25,
+     "max": 26
+    },
+    "answered_pct": 99,
+    "peak_estimate": 5044,
+    "peak_reported": 5517,
+    "overflows": 0,
+    "trimmed": 0,
+    "seconds_per_question": 9.9,
+    "tags": {
+     "trap:not_invoiced": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "needs_rule": {
+      "mean": 18.7,
+      "min": 18,
+      "max": 19
+     },
+     "trap:credit_note": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:backorder": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:multi_transaction": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:null_delivery": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:two_buying_groups": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:late_receipt": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "multi_join": {
+      "mean": 7.7,
+      "min": 7,
+      "max": 8
+     },
+     "needs_values": {
+      "mean": 7.0,
+      "min": 7,
+      "max": 7
+     }
+    },
+    "outcomes": {
+     "Q01": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q02": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q03": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q04": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q05": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q06": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q07": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q08": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q09": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q10": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q11": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q12": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q13": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q14": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q15": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q16": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q17": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q18": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q19": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q20": [
+      "pass",
+      "pass",
+      "policy_reject"
+     ],
+     "Q21": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q22": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q23": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q24": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q25": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q26": [
+      "pass",
+      "pass",
+      "pass"
+     ]
+    }
+   }
+  },
+  "qwen27b-24k": {
+   "full_rules": {
+    "profile": {
+     "model": "unsloth/Qwen3.8-27B-GGUF",
+     "context_budget": 24576,
+     "prompt_limit": 20480
+    },
+    "scores": {
+     "mean": 25.7,
+     "min": 25,
+     "max": 26
+    },
+    "answered_pct": 99,
+    "peak_estimate": 7487,
+    "peak_reported": 8305,
+    "overflows": 0,
+    "trimmed": 0,
+    "seconds_per_question": 4.2,
+    "tags": {
+     "trap:not_invoiced": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "needs_rule": {
+      "mean": 18.7,
+      "min": 18,
+      "max": 19
+     },
+     "trap:credit_note": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:backorder": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:multi_transaction": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:null_delivery": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:two_buying_groups": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:late_receipt": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "multi_join": {
+      "mean": 7.7,
+      "min": 7,
+      "max": 8
+     },
+     "needs_values": {
+      "mean": 7.0,
+      "min": 7,
+      "max": 7
+     }
+    },
+    "outcomes": {
+     "Q01": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q02": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q03": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q04": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q05": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q06": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q07": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q08": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q09": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q10": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q11": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q12": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q13": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q14": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q15": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q16": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q17": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q18": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q19": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q20": [
+      "pass",
+      "pass",
+      "policy_reject"
+     ],
+     "Q21": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q22": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q23": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q24": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q25": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q26": [
+      "pass",
+      "pass",
+      "pass"
+     ]
+    }
+   },
+   "rag": {
+    "profile": {
+     "model": "unsloth/Qwen3.8-27B-GGUF",
+     "context_budget": 24576,
+     "prompt_limit": 20480
+    },
+    "scores": {
+     "mean": 24.3,
+     "min": 24,
+     "max": 25
+    },
+    "answered_pct": 100,
+    "peak_estimate": 4446,
+    "peak_reported": 5076,
+    "overflows": 0,
+    "trimmed": 0,
+    "seconds_per_question": 7.5,
+    "tags": {
+     "trap:not_invoiced": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "needs_rule": {
+      "mean": 17.3,
+      "min": 17,
+      "max": 18
+     },
+     "trap:credit_note": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:backorder": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:multi_transaction": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:null_delivery": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:two_buying_groups": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:late_receipt": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "multi_join": {
+      "mean": 7.3,
+      "min": 7,
+      "max": 8
+     },
+     "needs_values": {
+      "mean": 7.0,
+      "min": 7,
+      "max": 7
+     }
+    },
+    "outcomes": {
+     "Q01": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q02": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q03": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q04": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q05": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q06": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q07": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q08": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q09": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q10": [
+      "wrong_result",
+      "wrong_result",
+      "wrong_result"
+     ],
+     "Q11": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q12": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q13": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q14": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q15": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q16": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q17": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q18": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q19": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q20": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q21": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q22": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q23": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q24": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q25": [
+      "wrong_result",
+      "wrong_result",
+      "pass"
+     ],
+     "Q26": [
+      "pass",
+      "pass",
+      "pass"
+     ]
+    }
+   }
+  },
+  "qwen27b-16k": {
+   "full_rules": {
+    "profile": {
+     "model": "unsloth/Qwen3.8-27B-GGUF",
+     "context_budget": 16384,
+     "prompt_limit": 12288
+    },
+    "scores": {
+     "mean": 26.0,
+     "min": 26,
+     "max": 26
+    },
+    "answered_pct": 100,
+    "peak_estimate": 7406,
+    "peak_reported": 8331,
+    "overflows": 0,
+    "trimmed": 0,
+    "seconds_per_question": 3.8,
+    "tags": {
+     "trap:not_invoiced": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "needs_rule": {
+      "mean": 19.0,
+      "min": 19,
+      "max": 19
+     },
+     "trap:credit_note": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:backorder": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:multi_transaction": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:null_delivery": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:two_buying_groups": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:late_receipt": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "multi_join": {
+      "mean": 8.0,
+      "min": 8,
+      "max": 8
+     },
+     "needs_values": {
+      "mean": 7.0,
+      "min": 7,
+      "max": 7
+     }
+    },
+    "outcomes": {
+     "Q01": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q02": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q03": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q04": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q05": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q06": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q07": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q08": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q09": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q10": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q11": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q12": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q13": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q14": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q15": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q16": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q17": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q18": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q19": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q20": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q21": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q22": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q23": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q24": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q25": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q26": [
+      "pass",
+      "pass",
+      "pass"
+     ]
+    }
+   },
+   "rag": {
+    "profile": {
+     "model": "unsloth/Qwen3.8-27B-GGUF",
+     "context_budget": 16384,
+     "prompt_limit": 12288
+    },
+    "scores": {
+     "mean": 25.0,
+     "min": 25,
+     "max": 25
+    },
+    "answered_pct": 100,
+    "peak_estimate": 4769,
+    "peak_reported": 5110,
+    "overflows": 0,
+    "trimmed": 0,
+    "seconds_per_question": 6.6,
+    "tags": {
+     "trap:not_invoiced": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "needs_rule": {
+      "mean": 18.0,
+      "min": 18,
+      "max": 18
+     },
+     "trap:credit_note": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:backorder": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:multi_transaction": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:null_delivery": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:two_buying_groups": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "trap:late_receipt": {
+      "mean": 1.0,
+      "min": 1,
+      "max": 1
+     },
+     "multi_join": {
+      "mean": 8.0,
+      "min": 8,
+      "max": 8
+     },
+     "needs_values": {
+      "mean": 7.0,
+      "min": 7,
+      "max": 7
+     }
+    },
+    "outcomes": {
+     "Q01": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q02": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q03": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q04": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q05": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q06": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q07": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q08": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q09": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q10": [
+      "wrong_result",
+      "wrong_result",
+      "wrong_result"
+     ],
+     "Q11": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q12": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q13": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q14": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q15": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q16": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q17": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q18": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q19": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q20": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q21": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q22": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q23": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q24": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q25": [
+      "pass",
+      "pass",
+      "pass"
+     ],
+     "Q26": [
+      "pass",
+      "pass",
+      "pass"
+     ]
+    }
+   }
+  }
+ }
+}

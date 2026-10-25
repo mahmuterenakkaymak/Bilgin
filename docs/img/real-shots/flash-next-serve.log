@@ -1,0 +1,64 @@
+INFO:     Started server process [46764]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8778 (Press CTRL+C to quit)
+Bilgin: http://127.0.0.1:8778  (veri kümesi wwi_real, model strata, llm openai)
+INFO:     127.0.0.1:62581 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60454 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60454 - "GET /assets/index-BEPSNHE0.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53225 - "GET /assets/index-B1b0GECu.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60454 - "GET /api/examples HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51825 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60225 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50637 - "GET /assets/bilgin.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53225 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53225 - "POST /api/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53225 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /assets/index-BEPSNHE0.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53225 - "GET /assets/index-B1b0GECu.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53225 - "GET /api/examples HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54605 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55502 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "POST /api/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56773 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56773 - "GET /api/examples HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61151 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50916 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "POST /api/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55818 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55818 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /assets/index-B1b0GECu.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55818 - "GET /assets/index-BEPSNHE0.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55818 - "GET /api/examples HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51119 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50803 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "POST /api/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57849 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57849 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /assets/index-B1b0GECu.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57849 - "GET /assets/index-BEPSNHE0.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57849 - "GET /api/examples HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50327 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53111 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "POST /api/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49590 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49590 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /assets/index-B1b0GECu.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49590 - "GET /assets/index-BEPSNHE0.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49590 - "GET /api/examples HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51609 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61172 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "POST /api/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64876 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55248 - "GET /api/history HTTP/1.1" 200 OK

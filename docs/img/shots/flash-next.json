@@ -1,0 +1,61 @@
+{
+ "model": "strata",
+ "label": "flash-next",
+ "dataset": "wwi",
+ "results": [
+  {
+   "id": "Q01",
+   "question": "Her ülkenin adı ve o ülkeye bağlı şehir sayısı kaçtır?",
+   "state": "answer-card",
+   "seconds": 25.0,
+   "answer_text": "4 CityCount değerine sahip CountryName Canada, France, Germany ve United States olarak listelenmiştir.",
+   "card_text": "✓ Cevaplandı · full_rules · 23,4 sn\n\n4 CityCount değerine sahip CountryName Canada, France, Germany ve United States olarak listelenmiştir.\n\n⚠\nJoin sonrası 16 satır, sürücü tablo COUNTRIES 4 satır (4,0x): toplamlar çoğalmış olabilir.\n\nCountryName\tCityCount\nCanada\t4\nFrance\t4\nGermany\t4\nUnited States\t4\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "flash-next-Q01.png"
+  },
+  {
+   "id": "Q03",
+   "question": "Kredi notları hariç, faturalanan satışların KDV hariç toplam cirosu ne kadardır?",
+   "state": "answer-card",
+   "seconds": 11.8,
+   "answer_text": "Kredi notları hariç faturalanan satışların CiroKDVHari toplamı 23.118,25'tir.",
+   "card_text": "✓ Cevaplandı · full_rules · 10,0 sn\n\nKredi notları hariç faturalanan satışların CiroKDVHari toplamı 23.118,25'tir.\n\nCiroKDVHari\n23.118,25\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "flash-next-Q03.png"
+  },
+  {
+   "id": "Q09",
+   "question": "Faturalanan satışların brüt kârı (satır kârlarının toplamı) ne kadardır?",
+   "state": "answer-card",
+   "seconds": 9.3,
+   "answer_text": "Faturalanan satışların brüt kârı 10.326,55 olarak görülmektedir.",
+   "card_text": "✓ Cevaplandı · full_rules · 7,6 sn\n\nFaturalanan satışların brüt kârı 10.326,55 olarak görülmektedir.\n\nGrossProfit\n10.326,55\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "flash-next-Q09.png"
+  },
+  {
+   "id": "Q12",
+   "question": "Bu yıl (2016) en çok ciro yapan 5 stok kalemi; adı ve cirosu (kredi notları hariç) nedir?",
+   "state": "answer-card",
+   "seconds": 12.9,
+   "answer_text": "5 stok kalemi arasında en çok ciro yapan 10.876,99 ciro ile Juniper Scented Candle oldu; Beacon Ceramic Mug 3.764,62, Crestline Wool Scarf 1.743,28, Ironbark Cast Iron Pan 1.654,24 ve Emberly Steel Bottle 1.086,59 ciro yaptı.",
+   "card_text": "✓ Cevaplandı · full_rules · 11,3 sn\n\n5 stok kalemi arasında en çok ciro yapan 10.876,99 ciro ile Juniper Scented Candle oldu; Beacon Ceramic Mug 3.764,62, Crestline Wool Scarf 1.743,28, Ironbark Cast Iron Pan 1.654,24 ve Emberly Steel Bottle 1.086,59 ciro yaptı.\n\nStockItemName\tRevenue\nJuniper Scented Candle\t10.876,99\nBeacon Ceramic Mug\t3.764,62\nCrestline Wool Scarf\t1.743,28\nIronbark Cast Iron Pan\t1.654,24\nEmberly Steel Bottle\t1.086,59\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "flash-next-Q12.png"
+  },
+  {
+   "id": "Q19",
+   "question": "Kredi notları hariç, her tedarikçinin ürünlerinden elde edilen toplam ciro tedarikçi adına göre nedir?",
+   "state": "answer-card",
+   "seconds": 11.8,
+   "answer_text": "Ashcombe Novelties 11.793,11 ile en yüksek toplam ciro değerine sahip. Dunmore Textiles 5.298,87, Cedarvale Foods 4.450,38 ve Brightline Toys 1.575,89 toplam ciro elde etti.",
+   "card_text": "✓ Cevaplandı · full_rules · 10,2 sn\n\nAshcombe Novelties 11.793,11 ile en yüksek toplam ciro değerine sahip. Dunmore Textiles 5.298,87, Cedarvale Foods 4.450,38 ve Brightline Toys 1.575,89 toplam ciro elde etti.\n\nSupplierName\tTotalRevenue\nAshcombe Novelties\t11.793,11\nDunmore Textiles\t5.298,87\nCedarvale Foods\t4.450,38\nBrightline Toys\t1.575,89\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "flash-next-Q19.png"
+  },
+  {
+   "id": "Q25",
+   "question": "Kredi notları hariç, faturaların faturalandığı müşterinin teslimat şehrinin ülkesine göre toplam cirosu nedir?",
+   "state": "answer-card",
+   "seconds": 22.4,
+   "answer_text": "Kredi notları hariç TotalRevenue toplamı 23.118,25. CountryName bazında France 9.393,85, Germany 7.572,02 ve United States 6.152,38.",
+   "card_text": "✓ Cevaplandı · full_rules · 20,5 sn\n\nKredi notları hariç TotalRevenue toplamı 23.118,25. CountryName bazında France 9.393,85, Germany 7.572,02 ve United States 6.152,38.\n\nCountryName\tTotalRevenue\nFrance\t9.393,85\nGermany\t7.572,02\nUnited States\t6.152,38\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "flash-next-Q25.png"
+  }
+ ]
+}

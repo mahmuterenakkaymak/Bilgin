@@ -1,0 +1,61 @@
+{
+ "model": "qwen27b-16k",
+ "label": "qwen27b-16k",
+ "dataset": "wwi",
+ "results": [
+  {
+   "id": "Q01",
+   "question": "Her ülkenin adı ve o ülkeye bağlı şehir sayısı kaçtır?",
+   "state": "answer-card",
+   "seconds": 20.0,
+   "answer_text": "4 CityCount değeri Canada, France, Germany ve United States CountryName değerleri için aynıdır.",
+   "card_text": "✓ Cevaplandı · full_rules · 18,0 sn\n\n4 CityCount değeri Canada, France, Germany ve United States CountryName değerleri için aynıdır.\n\n⚠\nJoin sonrası 16 satır, sürücü tablo COUNTRIES 4 satır (4,0x): toplamlar çoğalmış olabilir.\n\nCountryName\tCityCount\nCanada\t4\nFrance\t4\nGermany\t4\nUnited States\t4\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "qwen27b-16k-Q01.png"
+  },
+  {
+   "id": "Q03",
+   "question": "Kredi notları hariç, faturalanan satışların KDV hariç toplam cirosu ne kadardır?",
+   "state": "answer-card",
+   "seconds": 11.3,
+   "answer_text": "23.118,25, Kredi notları hariç faturalanan satışların KDV hariç ToplamCiro toplamıdır.",
+   "card_text": "✓ Cevaplandı · full_rules · 9,7 sn\n\n23.118,25, Kredi notları hariç faturalanan satışların KDV hariç ToplamCiro toplamıdır.\n\nToplamCiro\n23.118,25\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "qwen27b-16k-Q03.png"
+  },
+  {
+   "id": "Q09",
+   "question": "Faturalanan satışların brüt kârı (satır kârlarının toplamı) ne kadardır?",
+   "state": "answer-card",
+   "seconds": 13.8,
+   "answer_text": "10.326,55, BrutKar toplamı olarak faturalanan satışların brüt kârı (satır kârlarının toplamı) tutarıdır.",
+   "card_text": "✓ Cevaplandı · full_rules · 12,1 sn\n\n10.326,55, BrutKar toplamı olarak faturalanan satışların brüt kârı (satır kârlarının toplamı) tutarıdır.\n\nBrutKar\n10.326,55\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "qwen27b-16k-Q09.png"
+  },
+  {
+   "id": "Q12",
+   "question": "Bu yıl (2016) en çok ciro yapan 5 stok kalemi; adı ve cirosu (kredi notları hariç) nedir?",
+   "state": "answer-card",
+   "seconds": 23.9,
+   "answer_text": "10.876,99 Ciro ile Juniper Scented Candle, 3.764,62 Beacon Ceramic Mug, 1.743,28 Crestline Wool Scarf, 1.654,24 Ironbark Cast Iron Pan ve 1.086,59 Emberly Steel Bottle bu yıl en çok ciro yapan 5 stok kalemidir.",
+   "card_text": "✓ Cevaplandı · full_rules · 21,9 sn\n\n10.876,99 Ciro ile Juniper Scented Candle, 3.764,62 Beacon Ceramic Mug, 1.743,28 Crestline Wool Scarf, 1.654,24 Ironbark Cast Iron Pan ve 1.086,59 Emberly Steel Bottle bu yıl en çok ciro yapan 5 stok kalemidir.\n\nStockItemName\tCiro\nJuniper Scented Candle\t10.876,99\nBeacon Ceramic Mug\t3.764,62\nCrestline Wool Scarf\t1.743,28\nIronbark Cast Iron Pan\t1.654,24\nEmberly Steel Bottle\t1.086,59\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "qwen27b-16k-Q12.png"
+  },
+  {
+   "id": "Q19",
+   "question": "Kredi notları hariç, her tedarikçinin ürünlerinden elde edilen toplam ciro tedarikçi adına göre nedir?",
+   "state": "answer-card",
+   "seconds": 41.4,
+   "answer_text": "Satır sayısı 4. Toplam 23.118,25. Öne çıkan Ashcombe Novelties.",
+   "card_text": "✓ Cevaplandı · full_rules · 39,7 sn\n\nSatır sayısı 4. Toplam 23.118,25. Öne çıkan Ashcombe Novelties.\n\nSupplierName\tTotalRevenue\nAshcombe Novelties\t11.793,11\nDunmore Textiles\t5.298,87\nCedarvale Foods\t4.450,38\nBrightline Toys\t1.575,89\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "qwen27b-16k-Q19.png"
+  },
+  {
+   "id": "Q25",
+   "question": "Kredi notları hariç, faturaların faturalandığı müşterinin teslimat şehrinin ülkesine göre toplam cirosu nedir?",
+   "state": "answer-card",
+   "seconds": 46.0,
+   "answer_text": "Satır sayısı 4. Toplam 23.118,25. Öne çıkan France.",
+   "card_text": "✓ Cevaplandı · full_rules · 44,2 sn\n\nSatır sayısı 4. Toplam 23.118,25. Öne çıkan France.\n\nCountryName\tToplamCiro\nFrance\t9.393,85\nUnited States\t6.152,38\nGermany\t4.230,54\nCanada\t3.341,48\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "qwen27b-16k-Q25.png"
+  }
+ ]
+}

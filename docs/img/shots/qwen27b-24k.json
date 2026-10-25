@@ -1,0 +1,61 @@
+{
+ "model": "qwen27b-24k",
+ "label": "qwen27b-24k",
+ "dataset": "wwi",
+ "results": [
+  {
+   "id": "Q01",
+   "question": "Her ülkenin adı ve o ülkeye bağlı şehir sayısı kaçtır?",
+   "state": "answer-card",
+   "seconds": 28.5,
+   "answer_text": "4, Canada, France, Germany ve United States CountryName satırlarındaki CityCount değeridir.",
+   "card_text": "✓ Cevaplandı · full_rules · 26,9 sn\n\n4, Canada, France, Germany ve United States CountryName satırlarındaki CityCount değeridir.\n\n⚠\nJoin sonrası 16 satır, sürücü tablo COUNTRIES 4 satır (4,0x): toplamlar çoğalmış olabilir.\n\nCountryName\tCityCount\nCanada\t4\nFrance\t4\nGermany\t4\nUnited States\t4\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "qwen27b-24k-Q01.png"
+  },
+  {
+   "id": "Q03",
+   "question": "Kredi notları hariç, faturalanan satışların KDV hariç toplam cirosu ne kadardır?",
+   "state": "answer-card",
+   "seconds": 9.8,
+   "answer_text": "Kredi notları hariç, faturalanan satışların KDV hariç toplam cirosu ToplamCiro olarak 23.118,25'tir.",
+   "card_text": "✓ Cevaplandı · full_rules · 7,9 sn\n\nKredi notları hariç, faturalanan satışların KDV hariç toplam cirosu ToplamCiro olarak 23.118,25'tir.\n\nToplamCiro\n23.118,25\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "qwen27b-24k-Q03.png"
+  },
+  {
+   "id": "Q09",
+   "question": "Faturalanan satışların brüt kârı (satır kârlarının toplamı) ne kadardır?",
+   "state": "answer-card",
+   "seconds": 11.3,
+   "answer_text": "10.326,55 faturalanan satışların brüt kârı toplamıdır.",
+   "card_text": "✓ Cevaplandı · full_rules · 9,5 sn\n\n10.326,55 faturalanan satışların brüt kârı toplamıdır.\n\nBrutKar\n10.326,55\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "qwen27b-24k-Q09.png"
+  },
+  {
+   "id": "Q12",
+   "question": "Bu yıl (2016) en çok ciro yapan 5 stok kalemi; adı ve cirosu (kredi notları hariç) nedir?",
+   "state": "answer-card",
+   "seconds": 16.4,
+   "answer_text": "En yüksek ciroyu 10.876,99 ile Juniper Scented Candle elde etti, ardından Beacon Ceramic Mug 3.764,62, Crestline Wool Scarf 1.743,28, Ironbark Cast Iron Pan 1.654,24 ve Emberly Steel Bottle 1.086,59 ciro yaptı.",
+   "card_text": "✓ Cevaplandı · full_rules · 14,6 sn\n\nEn yüksek ciroyu 10.876,99 ile Juniper Scented Candle elde etti, ardından Beacon Ceramic Mug 3.764,62, Crestline Wool Scarf 1.743,28, Ironbark Cast Iron Pan 1.654,24 ve Emberly Steel Bottle 1.086,59 ciro yaptı.\n\nStockItemName\tCiro\nJuniper Scented Candle\t10.876,99\nBeacon Ceramic Mug\t3.764,62\nCrestline Wool Scarf\t1.743,28\nIronbark Cast Iron Pan\t1.654,24\nEmberly Steel Bottle\t1.086,59\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "qwen27b-24k-Q12.png"
+  },
+  {
+   "id": "Q19",
+   "question": "Kredi notları hariç, her tedarikçinin ürünlerinden elde edilen toplam ciro tedarikçi adına göre nedir?",
+   "state": "answer-card",
+   "seconds": 30.4,
+   "answer_text": "11.793,11 Ashcombe Novelties; 5.298,87 Dunmore Textiles; 4.450,38 Cedarvale Foods ve 1.575,89 Brightline Toys tedarikçilerinin toplam ciro değerleridir.",
+   "card_text": "✓ Cevaplandı · full_rules · 28,6 sn\n\n11.793,11 Ashcombe Novelties; 5.298,87 Dunmore Textiles; 4.450,38 Cedarvale Foods ve 1.575,89 Brightline Toys tedarikçilerinin toplam ciro değerleridir.\n\nSupplierName\tTotalRevenue\nAshcombe Novelties\t11.793,11\nDunmore Textiles\t5.298,87\nCedarvale Foods\t4.450,38\nBrightline Toys\t1.575,89\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "qwen27b-24k-Q19.png"
+  },
+  {
+   "id": "Q25",
+   "question": "Kredi notları hariç, faturaların faturalandığı müşterinin teslimat şehrinin ülkesine göre toplam cirosu nedir?",
+   "state": "answer-card",
+   "seconds": 35.4,
+   "answer_text": "23.118,25, ToplamCiro toplamıdır; CountryName değerleri France 9.393,85, Germany 7.572,02 ve United States 6.152,38 olarak görülmektedir.",
+   "card_text": "✓ Cevaplandı · full_rules · 33,5 sn\n\n23.118,25, ToplamCiro toplamıdır; CountryName değerleri France 9.393,85, Germany 7.572,02 ve United States 6.152,38 olarak görülmektedir.\n\nCountryName\tToplamCiro\nFrance\t9.393,85\nGermany\t7.572,02\nUnited States\t6.152,38\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "qwen27b-24k-Q25.png"
+  }
+ ]
+}

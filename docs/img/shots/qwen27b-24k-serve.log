@@ -1,0 +1,52 @@
+INFO:     Started server process [19656]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8778 (Press CTRL+C to quit)
+Bilgin: http://127.0.0.1:8778  (veri kümesi wwi, model qwen27b-24k, llm openai)
+INFO:     127.0.0.1:49396 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54555 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54555 - "GET /assets/index-BEPSNHE0.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50446 - "GET /assets/index-B1b0GECu.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54555 - "GET /api/examples HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60969 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59012 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53302 - "GET /assets/bilgin.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50446 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50446 - "POST /api/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50446 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53169 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53169 - "GET /api/examples HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59479 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61994 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50446 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61994 - "POST /api/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61994 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55727 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55727 - "GET /api/examples HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57554 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54117 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61994 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54117 - "POST /api/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54117 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58254 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58254 - "GET /api/examples HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62429 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51757 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54117 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51757 - "POST /api/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51757 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59789 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59789 - "GET /api/examples HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64962 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65137 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51757 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65137 - "POST /api/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65137 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65486 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65486 - "GET /api/examples HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54175 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62124 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65137 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62124 - "POST /api/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62124 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61975 - "GET /api/history HTTP/1.1" 200 OK

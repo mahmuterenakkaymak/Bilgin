@@ -1,0 +1,61 @@
+{
+ "model": "strata",
+ "label": "real-flash-next",
+ "dataset": "wwi_real",
+ "results": [
+  {
+   "id": "Q01",
+   "question": "Her ülkenin adı ve o ülkeye bağlı şehir sayısı kaçtır?",
+   "state": "answer-card",
+   "seconds": 37.5,
+   "answer_text": "Görüntülenen CountryName satırlarında United States için CityCount 37.940, Afghanistan, Albania, Algeria, Andorra, Angola, Antigua and Barb., Argentina, Armenia, Australia, Austria, Azerbaijan, Bahamas, Bahrain, Bangladesh, Barbados, Belarus, Belgium, Belize ve Benin için CityCount 0; CountryName sayısı 190.",
+   "card_text": "✓ Cevaplandı · full_rules · 35,9 sn\n\nGörüntülenen CountryName satırlarında United States için CityCount 37.940, Afghanistan, Albania, Algeria, Andorra, Angola, Antigua and Barb., Argentina, Armenia, Australia, Austria, Azerbaijan, Bahamas, Bahrain, Bangladesh, Barbados, Belarus, Belgium, Belize ve Benin için CityCount 0; CountryName sayısı 190.\n\nCountryName\tCityCount\nUnited States\t37.940\nAfghanistan\t0\nAlbania\t0\nAlgeria\t0\nAndorra\t0\nAngola\t0\nAntigua and Barb.\t0\nArgentina\t0\nArmenia\t0\nAustralia\t0\nAustria\t0\nAzerbaijan\t0\nBahamas\t0\nBahrain\t0\nBangladesh\t0\nBarbados\t0\nBelarus\t0\nBelgium\t0\nBelize\t0\nBenin\t0\nBhutan\t0\nBolivia\t0\nBosnia and Herz.\t0\nBotswana\t0\nBrazil\t0\nBrunei\t0\nBulgaria\t0\nBurkina Faso\t0\nBurundi\t0\nCambodia\t0\nCameroon\t0\nCanada\t0\nCentral African Rep.\t0\nChad\t0\nChile\t0\nChina\t0\nColombia\t0\nComoros\t0\nCongo\t0\nCosta Rica\t0\nCôte d'Ivoire\t0\nCroatia\t0\nCuba\t0\nCyprus\t0\nCzech Rep.\t0\nDem. Rep. Congo\t0\nDem. Rep. Korea\t0\nDenmark\t0\nDjibouti\t0\nDominica\t0\nDominican Rep.\t0\nEcuador\t0\nEgypt\t0\nEl Salvador\t0\nEq. Guinea\t0\nEritrea\t0\nEstonia\t0\nEthiopia\t0\nFiji\t0\nFinland\t0\nFrance\t0\nGabon\t0\nGambia\t0\nGeorgia\t0\nGermany\t0\nGhana\t0\nGreece\t0\nGrenada\t0\nGuatemala\t0\nGuinea\t0\nGuinea-Bissau\t0\nGuyana\t0\nHaiti\t0\nHonduras\t0\nHungary\t0\nIceland\t0\nIndia\t0\nIndonesia\t0\nIran\t0\nIraq\t0\nIreland\t0\nIsrael\t0\nItaly\t0\nJamaica\t0\nJapan\t0\nJordan\t0\nKazakhstan\t0\nKenya\t0\nKiribati\t0\nKorea\t0\nKuwait\t0\nKyrgyzstan\t0\nLao PDR\t0\nLatvia\t0\nLebanon\t0\nLesotho\t0\nLiberia\t0\nLibya\t0\nLiechtenstein\t0\nLithuania\t0\nLuxembourg\t0\nMacedonia\t0\nMadagascar\t0\nMalawi\t0\nMal",
+   "screenshot": "real-flash-next-Q01.png"
+  },
+  {
+   "id": "Q03",
+   "question": "Kredi notları hariç, faturalanan satışların KDV hariç toplam cirosu ne kadardır?",
+   "state": "answer-card",
+   "seconds": 9.8,
+   "answer_text": "172.261.341,2, kredi notları hariç faturalanan satışların KDV hariç toplam cirosudur.",
+   "card_text": "✓ Cevaplandı · full_rules · 8,2 sn\n\n172.261.341,2, kredi notları hariç faturalanan satışların KDV hariç toplam cirosudur.\n\nCiroKDVHaric\n172261341.20\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "real-flash-next-Q03.png"
+  },
+  {
+   "id": "Q09",
+   "question": "Faturalanan satışların brüt kârı (satır kârlarının toplamı) ne kadardır?",
+   "state": "answer-card",
+   "seconds": 8.8,
+   "answer_text": "85.729.180,9 tutarındaki GrossProfit toplamı, faturalanan satışların brüt kârıdır.",
+   "card_text": "✓ Cevaplandı · full_rules · 6,9 sn\n\n85.729.180,9 tutarındaki GrossProfit toplamı, faturalanan satışların brüt kârıdır.\n\nGrossProfit\n85729180.90\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "real-flash-next-Q09.png"
+  },
+  {
+   "id": "Q12",
+   "question": "Bu yıl (2016) en çok ciro yapan 5 stok kalemi; adı ve cirosu (kredi notları hariç) nedir?",
+   "state": "answer-card",
+   "seconds": 31.4,
+   "answer_text": "1.441.341 Ciro ile Air cushion machine (Blue) öne çıkıyor; 5 stok kalemi arasında 10 mm Anti static bubble wrap (Blue) 50m için Ciro 946.440, 20 mm Double sided bubble wrap 50m için Ciro 853.200, 32 mm Anti static bubble wrap (Blue) 50m için Ciro 750.750 ve 32 mm Double sided bubble wrap 50m için Ciro 744.800 olarak listeleniyor.",
+   "card_text": "✓ Cevaplandı · full_rules · 29,9 sn\n\n1.441.341 Ciro ile Air cushion machine (Blue) öne çıkıyor; 5 stok kalemi arasında 10 mm Anti static bubble wrap (Blue) 50m için Ciro 946.440, 20 mm Double sided bubble wrap 50m için Ciro 853.200, 32 mm Anti static bubble wrap (Blue) 50m için Ciro 750.750 ve 32 mm Double sided bubble wrap 50m için Ciro 744.800 olarak listeleniyor.\n\nStockItemName\tCiro\nAir cushion machine (Blue)\t1441341.00\n10 mm Anti static bubble wrap (Blue) 50m\t946440.00\n20 mm Double sided bubble wrap 50m\t853200.00\n32 mm Anti static bubble wrap (Blue) 50m\t750750.00\n32 mm Double sided bubble wrap 50m\t744800.00\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "real-flash-next-Q12.png"
+  },
+  {
+   "id": "Q19",
+   "question": "Kredi notları hariç, her tedarikçinin ürünlerinden elde edilen toplam ciro tedarikçi adına göre nedir?",
+   "state": "answer-card",
+   "seconds": 17.4,
+   "answer_text": "Litware, Inc. 100.664.171,55 ToplamCiro ile en yüksek SupplierName iken, Fabrikam, Inc. 46.441.244, Northwind Electric Cars 14.802.215, The Phone Company 5.763.945,45, Graphic Design Institute 3.172.130, A Datum Corporation 1.142.515,2 ve Contoso, Ltd. 275.120 ToplamCiro elde etmiştir.",
+   "card_text": "✓ Cevaplandı · full_rules · 15,4 sn\n\nLitware, Inc. 100.664.171,55 ToplamCiro ile en yüksek SupplierName iken, Fabrikam, Inc. 46.441.244, Northwind Electric Cars 14.802.215, The Phone Company 5.763.945,45, Graphic Design Institute 3.172.130, A Datum Corporation 1.142.515,2 ve Contoso, Ltd. 275.120 ToplamCiro elde etmiştir.\n\nSupplierName\tToplamCiro\nLitware, Inc.\t100664171.55\nFabrikam, Inc.\t46441244.00\nNorthwind Electric Cars\t14802215.00\nThe Phone Company\t5763945.45\nGraphic Design Institute\t3172130.00\nA Datum Corporation\t1142515.20\nContoso, Ltd.\t275120.00\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "real-flash-next-Q19.png"
+  },
+  {
+   "id": "Q25",
+   "question": "Kredi notları hariç, faturanın kesildiği müşterinin teslimat şehrinin eyaletine göre toplam ciro nedir?",
+   "state": "answer-card",
+   "seconds": 34.9,
+   "answer_text": "Kredi notları hariç teslimat eyaletine göre ToplamCiro 172.261.341,2; en yüksek eyalet Texas 11.957.764,15. StateProvinceName satır sayısı 49.",
+   "card_text": "✓ Cevaplandı · full_rules · 33,1 sn\n\nKredi notları hariç teslimat eyaletine göre ToplamCiro 172.261.341,2; en yüksek eyalet Texas 11.957.764,15. StateProvinceName satır sayısı 49.\n\nStateProvinceName\tToplamCiro\nTexas\t11957764.15\nPennsylvania\t9783132.70\nCalifornia\t8831110.45\nNew York\t8772199.75\nFlorida\t5787315.30\nOhio\t5660985.60\nMinnesota\t5045973.45\nNew Jersey\t5031679.95\nMissouri\t4877587.05\nNew Mexico\t4686447.30\nOklahoma\t4573415.25\nNorth Carolina\t4500867.10\nColorado\t4495091.85\nIllinois\t4481522.00\nWashington\t4227224.30\nAlabama\t4071091.25\nSouth Carolina\t3867711.85\nWest Virginia\t3739949.90\nMichigan\t3518207.75\nLouisiana\t3461439.75\nKansas\t3420712.00\nIndiana\t3259041.70\nWisconsin\t3233476.80\nIowa\t3118711.40\nGeorgia\t3060707.70\nAlaska\t3002070.80\nMassachusetts[E]\t2777956.35\nArizona\t2707093.60\nNorth Dakota\t2652217.20\nKentucky\t2564819.40\nVirginia\t2487655.70\nOregon\t2251099.55\nSouth Dakota\t2228144.15\nArkansas\t2219387.50\nPuerto Rico (US Territory)\t2200138.60\nMaryland\t2171296.90\nNebraska\t1963830.60\nMontana\t1909242.20\nMaine\t1825647.35\nIdaho\t1807870.25\nWyoming\t1660527.65\nMississippi\t1285255.80\nVermont\t1254536.95\nNevada\t1251229.85\nTennessee\t1218964.50\nUtah\t1204218.00\nConnecticut\t922101.95\nNew Hampshire\t915812.20\nHawaii\t316857.85\nTamamını indir:\nCSV\nExcel\nSoruyu kaydet\n▸\nNasıl hesapladım",
+   "screenshot": "real-flash-next-Q25.png"
+  }
+ ]
+}
