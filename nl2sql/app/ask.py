@@ -41,6 +41,9 @@ INDEX_ERRORS = (MissingIndexError, StaleIndexError, ForeignIndexError)
 # Konuşmanın sahibi söylenmediğinde soranla aynıdır (çok kullanıcılı web); CLI kendisininki için None der.
 _SAME_OWNER = object()
 
+# R7-25: veritabanı cevap vermiyorsa ekranda okunan cümle - modelin uyduracağı cevap değil.
+DB_DOWN_MESSAGE = "Veritabanına şu an bağlanılamıyor; cevap üretilemiyor. Yöneticinize haber verin."
+
 
 def ask_payload(
     session,
@@ -332,6 +335,27 @@ def _store(conversations, payload: dict, conversation_id: str, pending: int | No
     }
     n = conversations.complete_turn(conversation_id, pending, turn) if pending is not None else None
     return n if n is not None else conversations.add_turn(conversation_id, turn)
+
+
+def down_payload(
+    session,
+    question: str,
+    mode: str | None = None,
+    choice=None,
+    source: str = "web",
+    username: str | None = None,
+) -> dict:
+    """Düşmüş bir veritabanının cevabı: arızanın cümlesi, model hiç koşmaz (R7-25).
+
+    Yoklaması olan tek yer sunucudur, yani kararı o verir; burada yalnız payload'ın kümesi
+    kurulur. Ne ajan ne yürütücü çağrılır - arızanın üstüne bir de sorgu yüklenmez, uydurulmuş
+    bir sayı da çıkmaz. Soru yine de günlüğe düşer: hangi sorunun hangi arızaya denk geldiği
+    oradan okunur, ekranın okuduğu anahtarlar da başka hiçbir koşumdan farklı değildir.
+    """
+    payload = _skeleton(question, choice, mode or "auto", session, asklog.new_audit_id(), [])
+    _fail(payload, "db_down", DB_DOWN_MESSAGE)
+    asklog.record_ask(_record(payload, source, username), session.ask_log)
+    return payload
 
 
 def replay_payload(

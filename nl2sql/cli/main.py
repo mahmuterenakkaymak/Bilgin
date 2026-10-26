@@ -46,7 +46,8 @@ from nl2sql.auth.bootstrap import dev_admin
 from nl2sql.auth.store import NOT_FOUND_MESSAGE, UserError, UserStore
 from nl2sql.cli.table import format_table
 from nl2sql.engine import checks, login_script
-from nl2sql.engine.connections import ConnectionStore
+from nl2sql.engine.connections import ConnectionStore, resolve as resolve_connection
+from nl2sql.engine.dbstatus import DbStatus
 from nl2sql.engine.executor import LocalExecutor
 from nl2sql.engine.result import Budget, Result
 from nl2sql.eval import metrics, report, retrieval, runner
@@ -106,6 +107,11 @@ JSON_OK = ("answered", "needs_clarification")
 LOOPBACK_HOSTS = (config.SERVE_HOST, "localhost")
 LOOPBACK_ONLY = "Bilgin yalnız 127.0.0.1 üzerinde çalışır (TLS ve ağ erişimi kapsam dışı)."
 SERVE_LINE = "Bilgin: {url}  (veri kümesi {dataset}, model {model}, llm {llm})"
+# R7-26: sahte yoklama bir sunucunun yerine geçen bir dosyadır; gerçek bir modelle sunulursa
+# ekranda okunan durum uydurma olur, yani ancak model istemeyen bir yolla birlikte anlamlıdır.
+PROBE_NEEDS_FAKE = "--db-probe-file yalnız --llm fake ile kullanılır (görsel inceleme ve duman testi)."
+# Sahte yoklamanın bağlantı dizesi: sunucunun adı kümenin kendisidir, çözücü de yoklayıcı da oradan okur.
+PROBE_PREFIX = "PROBE:"
 # R6-11: ayar artık yüklenmeyen bir küme söylüyorsa sunucu bunu tek satırda söyler ve düşer.
 STORED_LOST = "Not: kayıtlı veri kümesi {name} artık yüklenmiyor; varsayılan {default} sunuluyor."
 # Run 8: ``--dataset`` söylenmemişse sunulan dünya vitrin kümesidir; sentetik küme testin dünyasıdır.
@@ -1779,6 +1785,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     _add_model_options(serve_cmd)
     _add_dataset_option(serve_cmd)
+    # R7-26: gizli - görsel inceleme ve duman testinin kendi seçeneği, kullanıcıya anlatılacak bir
+    # ayar değil; yardımı bu yüzden basılmaz.
+    serve_cmd.add_argument("--db-probe-file", default=None, help=argparse.SUPPRESS)
 
     # R6-8: kullanıcı hesapları parolayı asla komut satırından almaz — iki kez sorulur, yani
     # kabuk geçmişine düşmez. Komut login istemez: kendi makinesinin dosyasını kendi yönetir.
@@ -1971,7 +1980,12 @@ def main(argv: list[str] | None = None) -> int:
             host=args.host,
             port=args.port,
             llm_kind=args.llm,
-            **_given(dataset=args.dataset, model=args.model, models_file=args.models_file),
+            **_given(
+                dataset=args.dataset,
+                model=args.model,
+                models_file=args.models_file,
+                db_probe_file=args.db_probe_file,
+            ),
         )
     if args.command == "user":
         if args.user_command == "list":
@@ -2107,6 +2121,7 @@ def serve(
     dataset: str | None = None,
     model: str | None = None,
     models_file: str | Path | None = None,
+    db_probe_file: str | Path | None = None,
 ) -> int:
     """``serve``: oturumu bir kez kurar, API'yi loopback'e bağlar (R5-15).
 
@@ -2125,6 +2140,12 @@ def serve(
     R6-11: ``--dataset`` söylenmemişse sunulan dünya ekranda yapılan son geçişin kümesidir, yani
     ayardaki ``active_dataset``; ``--dataset`` her zaman onu da yener. Ayar yoksa - taze bir kurulum,
     model olmadan koşan inceleme - vitrin kümesi sunulur: ``_demo_dataset``.
+
+    R7-25: sunucu ayrıca veritabanının bekçisini kurar - bağlantı deposu oturumla aynı dosyadadır,
+    bekçi ``SELECT 1``i kendi iş parçacığında atar, hiçbir istek onun yoluna girmez.
+    ``--db-probe-file`` (R7-26, gizli) yoklamayı bir sunucunun yerine geçen bir dosyaya bağlar;
+    modelin gerçekten koştuğu bir sunucuda uydurma durum okunmasın diye yalnız ``--llm fake``le
+    kabul edilir.
     """
     # R5-1: web ve app içe yalnız burada girilir; cli'yi çağıran katmanlar döngü kurmasın.
     from nl2sql.app.session import SessionError, open_session
@@ -2133,6 +2154,9 @@ def serve(
     from nl2sql.web.app import create_app
 
     _utf8_stdout()
+    if db_probe_file and llm_kind != "fake":
+        print(PROBE_NEEDS_FAKE)
+        return EXIT_BAD_INPUT
     # R7-23: SQL Server kümesi sunuluyorsa yürütücü kullanıcı deposundaki kendi bağlantı satırına
     # kurulur; depo ``serve``in birazdan açacağı kullanıcı dosyasıyla aynıdadır.
     connections = ConnectionStore(config.app_db_path())
@@ -2171,8 +2195,109 @@ def serve(
     ensure_seeded(ReadyStore(users.path), users, ds, session.executor)
     # R6-9: kayıtlar kullanıcıyla aynı dosyadadır; ``saved_path`` söylenmezse kapı import anının
     # ``config.APP_DB_PATH``ine düşer ve ``NL2SQL_APP_DB``i aşarak ``data/bilgin.db``yi açar.
-    run_server(create_app(session, saved_path=users.path, users=users), host, port)
+    status = _db_status(connections, ds, db_probe_file)
+    status.start()
+    app = create_app(session, saved_path=users.path, users=users, connections=connections,
+                     dbstatus=status)
+    if db_probe_file:
+        # R7-26: bağlantı yoklaması da dosyaya sorar; guard'ın sorguladığı sunucu gerçek değildir.
+        app.state.conn_connect = _probe_guard_connect(Path(db_probe_file))
+    run_server(app, host, port)
     return 0
+
+
+def _db_status(store: ConnectionStore, ds, db_probe_file: str | Path | None = None) -> DbStatus:
+    """Veritabanı bekçisi (R7-25): ``SELECT 1``i kendi iş parçacığı atar, istekler son cevabı okur.
+
+    ``--db-probe-file`` verildiyse (R7-26) bekçi sunucuya değil dosyaya sorar - görsel inceleme ve
+    duman testinin yeşil/kırmızı noktası bir SQL Server gerektirmez.
+    """
+    active = ds.name if ds else None
+    if db_probe_file:
+        path = Path(db_probe_file)
+        return DbStatus(_probe_resolve(path, store, active), ping=_probe_ping(path))
+    return DbStatus(lambda name: resolve_connection(name, store, active))
+
+
+def _probe_read(path: Path) -> dict:
+    """Yoklama dosyasının o anki hâli (R7-26): her yoklamada yeniden okunur, okunamayanı boştur."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        data = {}
+    return {"status": data.get("status") or {}, "guard": data.get("guard") or {}}
+
+
+def _probe_resolve(path: Path, store: ConnectionStore, active: str | None):
+    """Sayılan her küme bağlantılı sayılır (R7-26): nokta SQLite'a düşmez, yoklamanın cevabını bekler."""
+
+    def resolve(dataset: str) -> dict:
+        if str(dataset) in _probe_read(path)["status"]:
+            return {"source": "probe", "conn_str": PROBE_PREFIX + str(dataset)}
+        return resolve_connection(dataset, store, active)
+
+    return resolve
+
+
+def _probe_ping(path: Path):
+    """``SELECT 1``in yerine geçen cevap: dosya ``down`` diyorsa sürücü cümlesiyle düşer."""
+
+    def ping(conn_str: str, timeout: float | None = None) -> None:
+        dataset = str(conn_str).removeprefix(PROBE_PREFIX)
+        if _probe_read(path)["status"].get(dataset) == "down":
+            raise ConnectionError(f"[08001] {dataset} sunucusuna ulaşılamadı (probe dosyası).")
+
+    return ping
+
+
+def _probe_guard_connect(path: Path):
+    """Guard'ın sahte bağdaçı (R7-26): cevap sunucudan değil, sunucu adının dosyadaki karşılığından."""
+
+    def connect(conn_str: str) -> "_ProbeConnection":
+        power = _probe_read(path)["guard"].get(_probe_server(conn_str), "readonly")
+        return _ProbeConnection(power)
+
+    return connect
+
+
+def _probe_server(conn_str: str) -> str:
+    """Bağlantı dizesinin ``SERVER=`` değeri; port virgülle ayrılmışsa adı önü söyler."""
+    found = re.search(r"(?i);?SERVER=([^;]*)", str(conn_str))
+    return found.group(1).split(",")[0] if found else ""
+
+
+class _ProbeConnection:
+    """``guard``ın yoklama dosyasından cevaplayan sahte bağlantısı (R7-26).
+
+    ``readonly`` hiçbir gücü olmayan bir giriş, ``sysadmin`` ve ``db_owner`` kendi yetkilerini,
+    ``writer`` beş yazma yetkisini 1 yanıtlar. Haritanın tabloları her zaman okunur: uydurma bir
+    sunucuda eksik tablo arızası uydurulmak istenmiyordur.
+    """
+
+    def __init__(self, power: str) -> None:
+        self._power = power
+        self._sql = ""
+
+    def execute(self, sql: str) -> "_ProbeConnection":
+        self._sql = sql
+        return self
+
+    def fetchone(self) -> tuple:
+        return (1 if self._answers() else 0,)
+
+    def close(self) -> None:
+        pass
+
+    def _answers(self) -> bool:
+        if "'OBJECT'" in self._sql:  # tablo yetkisi: haritanın tabloları hep okunur
+            return True
+        if self._power == "sysadmin":
+            return "sysadmin" in self._sql
+        if self._power == "db_owner":
+            return "db_owner" in self._sql
+        if self._power == "writer":
+            return "'DATABASE'" in self._sql
+        return False
 
 
 def _served_dataset() -> str:

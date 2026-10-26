@@ -21,7 +21,7 @@ FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 
 # Contracts "health" satırı: ekran başlığı bu kümenin dışına çıkmaz.
 HEALTH_KEYS = {
-    "status", "dataset", "llm", "index", "schema_hash", "rules_hash", "mode", "budget",
+    "status", "dataset", "db", "llm", "index", "schema_hash", "rules_hash", "mode", "budget",
 }
 
 

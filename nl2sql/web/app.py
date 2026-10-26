@@ -21,11 +21,12 @@ from pydantic import BaseModel
 from nl2sql import config
 from nl2sql.agent import prompt
 from nl2sql.app import asklog
-from nl2sql.app.ask import ask_payload, replay_payload
+from nl2sql.app.ask import ask_payload, down_payload, replay_payload
 from nl2sql.app.conversations import ConversationNotFound, ConversationStore
 from nl2sql.app.session import open_session
 from nl2sql.cli import main as cli
 from nl2sql.engine.connections import ConnectionStore
+from nl2sql.engine.dbstatus import looks_like_connection_error
 from nl2sql.engine.result import Budget
 from nl2sql.eval import runner
 from nl2sql.index.search import load_search
@@ -62,6 +63,8 @@ DUPLICATE_RULE = "Bu kimlikte bir kural zaten var: {id}."
 REBUILD_FAILED = "İndeks yeniden kurulamadı: embedding uç noktası yanıt vermiyor olabilir."
 NO_UI = "Arayüz derlenmemiş"
 BUILD_COMMAND = "npm --prefix web run build"
+# R7-25: kırmızı çipin yöneticiyi götürdüğü yer, yani bağlantıların düzenlendiği ekran (R7-27).
+CONNECTIONS_URL = "#/baglantilar"
 
 # Arayüzün yerine geçen sayfa: R5-18'in renkleri, tek kart, tek cümle ve tek komut.
 NO_UI_PAGE = f"""<!doctype html>
@@ -139,6 +142,8 @@ def create_app(
     saved_path: str | Path = config.APP_DB_PATH,
     static_dir: str | Path = config.STATIC_DIR,
     users=None,
+    connections: ConnectionStore | None = None,
+    dbstatus=None,
 ) -> FastAPI:
     """Oturumun üstünde API: soru, sağlık, örnekler, tablolar, kayıtlar, dışa aktarım ve arayüz.
 
@@ -150,6 +155,10 @@ def create_app(
 
     R7-8: her ``/api/ask`` bir konuşmanın turudur - depo ``users``tan bağımsızdır, yani tek
     kullanıcılı modda da konuşma vardır; tek fark sahibinin adıdır, o da NULL kalır.
+
+    R7-25: ``connections`` ve ``dbstatus`` ``serve``in kurduklarıdır - oturumla aynı depoyu paylaşan
+    bir bağlantı listesi ve arka planda ``SELECT 1`` atan denetleyici. ``dbstatus`` verilmediği
+    dünyada (test, model olmadan koşan inceleme) sorulacak bir sunucu yoktur: çip ``none``dır.
     """
     app = FastAPI(title="Bilgin")
     app.state.session = session
@@ -159,7 +168,11 @@ def create_app(
     app.state.users = users
     # R7-23: bağlantılar kullanıcıların ve kayıtların kendi dosyasındadır; her oturum kurulumu bu
     # depoyu sorar, yani ekrandan kaydedilen bağlantı sunucuyu yeniden başlatmadan geçerli olur.
-    app.state.connections = ConnectionStore(saved_path)
+    app.state.connections = (
+        connections if connections is not None else ConnectionStore(saved_path)
+    )
+    # R7-25: durumun bekçisi; hiçbir istek onun yoluna girmez, yalnız son cevabı okunur.
+    app.state.dbstatus = dbstatus
     saved = SavedStore(saved_path)
     # R7-8: konuşmalar kayıtlarla aynı SQLite dosyasında; yollar depoyu app.state'ten okur.
     app.state.conversations = ConversationStore(saved_path)
@@ -207,17 +220,29 @@ def create_app(
         Her soru konuşma deposuna da bir turdur (R7-8): ``conversation_id`` yoksa konuşma yeni
         açılır, payload ve günlük satırı ``conversation_id`` ile ``turn``i taşır. Olmayan ya da
         başkasının konuşması soru sayılmaz - cümle ``ConversationNotFound``ın kendi cümlesi.
+
+        Etkin kümenin veritabanı düşmüşse soru hiç koşmaz: cevabın yerini arızanın cümlesi alır
+        (``down_payload``, R7-25). Yoklama yalnız arka planda koşar, yani istek beklemez; bir
+        sorgunun bağlantı hatasına benzeyen hatası da bekçiyi bekletmez.
         """
         question = body.question.strip()
         if not question:
             raise HTTPException(status_code=400, detail=BLANK_QUESTION)
+        status = getattr(request.app.state, "dbstatus", None)
+        if status is not None and status.state(_dataset_name(request))["state"] == "down":
+            # R7-25: veritabanı cevap vermiyor - koşacak bir yer yok, yani model de koşmaz.
+            return down_payload(_session(request), question, mode=body.mode, choice=body.choice,
+                                source="web", username=_asker(request))
         try:
-            return ask_payload(_session(request), question, mode=body.mode, choice=body.choice,
-                               source="web", username=_asker(request),
-                               conversations=request.app.state.conversations,
-                               conversation_id=body.conversation_id)
+            payload = ask_payload(_session(request), question, mode=body.mode, choice=body.choice,
+                                  source="web", username=_asker(request),
+                                  conversations=request.app.state.conversations,
+                                  conversation_id=body.conversation_id)
         except ConversationNotFound:
             raise HTTPException(status_code=404, detail=NO_CONVERSATION) from None
+        if status is not None:
+            _kick_on_connection_error(status, payload)
+        return payload
 
     @guarded("POST", "/api/replay/{audit_id}")
     def replay(audit_id: str, request: Request) -> dict:
@@ -236,11 +261,12 @@ def create_app(
 
     @guarded("GET", "/api/health")
     def health(request: Request) -> dict:
-        """Başlığın çipleri: hangi küme, model sağ mı, indeks taze mi, auto eşiği ne."""
+        """Başlığın çipleri: hangi küme ve veritabanı sağ mı, model sağ mı, indeks taze mi, auto eşiği ne."""
         session = _session(request)
         return {
             "status": "ok",
             "dataset": _dataset_block(session),
+            "db": _db_block(request),
             "llm": _llm_block(session),
             "index": _index_block(session),
             "schema_hash": content_hash(session.schema, []),
@@ -486,6 +512,19 @@ def _scope(request: Request, everyone):
     return user["username"]
 
 
+def _kick_on_connection_error(status, payload: dict) -> None:
+    """Bağlantı hatasına benzeyen bir yürütme hatası bekçiyi bekletmez (R7-25).
+
+    Nokta kendi turunda yenilenirdi; kullanıcı yeniden sormadan kırmızıya dönmez. Sözdizimi ya da
+    politika hatası ise sunucunun ulaşılabildiğini zaten söyler, yani bekçiyi uyandırmaz.
+    """
+    error = payload.get("error") or {}
+    if str(error.get("kind", "")).startswith("exec:") and looks_like_connection_error(
+        error.get("message")
+    ):
+        status.kick()
+
+
 def _export(session, dataset: str, audit_id: str, ext: str, username) -> Response:
     """Günlükteki SQL'i dışa aktarım bütçesiyle bir kez daha koşar ve dosyayı hazırlar (R5-16).
 
@@ -530,6 +569,28 @@ def _dataset_block(session) -> dict:
     if ds is None:
         return {"name": config.DEFAULT_DATASET, "display_name": config.DEFAULT_DATASET}
     return {"name": ds.name, "display_name": ds.display_name}
+
+
+def _db_block(request: Request) -> dict:
+    """Veritabanı çipi (R7-25): arka plan yoklamasının son cevabı, Contracts "health db".
+
+    Okuma hiçbir zaman sunucuya sormaz - bekleyen bir ``SELECT 1``in yerinde olsa çip beklerdi.
+    Kullanıcının okuduğu tek cümle geneldir; yönetici sürücünün kendi cümlesini ve bağlantıyı
+    düzenlediği ekranın adresini de alır, çünkü "neden"i düzeltecek olan odur.
+    """
+    status = getattr(request.app.state, "dbstatus", None)
+    answer = status.state(_dataset_name(request)) if status is not None else {}
+    block = {
+        "state": answer.get("state", "none"),
+        "checked_at": answer.get("checked_at"),
+        "message": answer.get("message"),
+    }
+    # Tek kullanıcılı modda (Run 5) kapının tanıdığı tek kişi yöneticidir - ``_scope`` da böyle sayar.
+    user = current_user(request)
+    if user is None or user["role"] == "admin":
+        block["message_admin"] = answer.get("message_admin")
+        block["connections_url"] = CONNECTIONS_URL
+    return block
 
 
 def _llm_block(session) -> dict:
