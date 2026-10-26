@@ -12,7 +12,8 @@
     "profile": "profile.json",
     "golden": "golden.jsonl",
     "traps": "traps.jsonl",
-    "ambiguous": "ambiguous.jsonl"
+    "ambiguous": "ambiguous.jsonl",
+    "followups": "followups.jsonl"
   },
   "builder": "nl2sql.schema_map.build:build_db",
   "generator": "nl2sql.schema_map.generator:generate",
