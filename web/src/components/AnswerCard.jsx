@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import * as api from "../lib/api.js";
 import { formatNumber, formatSeconds } from "../lib/format.js";
+import { suggestDisplay } from "../lib/startCards.js";
 import ChartView from "./ChartView.jsx";
 import Evidence from "./Evidence.jsx";
+import ReadyQuestionForm from "./ReadyQuestionForm.jsx";
 import ResultTable from "./ResultTable.jsx";
 import Warnings from "./Warnings.jsx";
 
@@ -10,6 +12,10 @@ const EXPORTS = [
   ["csv", "CSV"],
   ["xlsx", "Excel"],
 ];
+
+// Panoya ekleme ve yeniden onay aynı iki durumun iki işidir: meşgule ikinci tıklama işlemez,
+// reddin cümlesi düğmenin yanında okunur.
+const IDLE = { phase: "idle", note: "" };
 
 // Kartın kendi özetleri: kullanıcının tabloyu gözle toplamasını önleyen üç sayı. Olguların
 // tamamı kanıt panelinde durmaya devam eder; kart yalnız bunları cümlenin altına taşır.
@@ -35,10 +41,16 @@ function headFacts(facts) {
 // uyarılar, tablo, grafiği, indirme ve kayıt düğmeleri, kanıt (R5-18). Kart hiçbir sayıyı yeniden
 // hesaplamaz.
 // Grafik cevabın parçasıdır: kartın içinde, tablonun altında; `chart` yoksa ChartView kutu açmaz.
-export default function AnswerCard({ payload, onSave, choice }) {
+// Panonun tarafları (R7-21): "Panoma ekle" cevabı kişinin kendi kartı yapar, "Hazır soru yap"
+// yöneticiye formu açar. `reapproveId` yalnız bir kartın "SQL'i yeniden onayla"sından gelmiştir
+// — yani yöneticinin yolundan — ve o zaman formun yerine geçen "Bu SQL ile güncelle" durur.
+export default function AnswerCard({ payload, onSave, choice, isAdmin = false, reapproveId = null }) {
   const [phase, setPhase] = useState("idle"); // idle | saving | saved | error
   const [note, setNote] = useState("");
   const [downloaded, setDownloaded] = useState(""); // "" | csv | xlsx
+  const [pin, setPin] = useState(IDLE); // panoya ekleme
+  const [reapprove, setReapprove] = useState(IDLE); // kartın SQL'ini bu cevapla güncelleme
+  const [readyOpen, setReadyOpen] = useState(false);
 
   const answer = typeof payload?.answer_text === "string" ? payload.answer_text : "";
   const mode = typeof payload?.mode === "string" ? payload.mode : "";
@@ -77,6 +89,30 @@ export default function AnswerCard({ payload, onSave, choice }) {
     } catch (error) {
       setPhase("error");
       setNote(error?.message || "Soru kaydedilemedi.");
+    }
+  };
+
+  // Panoya ekleme bir kişisel karttır ve yükü bu cevabın kaydıdır: SQL gönderilmez, sunucu onu
+  // `audit_id`den alır (R7-17). Kotanın 409'u kendi cümlesiyle döner — uydurulmuş bir yazı değil.
+  const pinCard = async () => {
+    setPin({ phase: "saving", note: "" });
+    try {
+      await api.pinCard({ audit_id: auditId });
+      setPin({ phase: "done", note: "" });
+    } catch (error) {
+      setPin({ phase: "error", note: error?.message || "Kart panoya eklenemedi." });
+    }
+  };
+
+  // Kartın yürümeyen SQL'i bu cevapla değiştirilir. Görünüm de birlikte söylenir: PUT `display`i
+  // kendiliğinden yeniden hesaplamaz, yoksa sayı olan yeni sonuç kartta mini tablo olarak kalırdı.
+  const reapproveCard = async () => {
+    setReapprove({ phase: "saving", note: "" });
+    try {
+      await api.readyUpdate(reapproveId, { audit_id: auditId, display: suggestDisplay(payload) });
+      setReapprove({ phase: "done", note: "" });
+    } catch (error) {
+      setReapprove({ phase: "error", note: error?.message || "Kart güncellenemedi." });
     }
   };
 
@@ -134,7 +170,41 @@ export default function AnswerCard({ payload, onSave, choice }) {
           {phase === "saving" ? "Kaydediliyor…" : phase === "saved" ? "Kaydedildi" : "Soruyu kaydet"}
         </button>
         {phase === "error" && <span className="answer-note">{note}</span>}
+        {auditId && (
+          <button
+            type="button"
+            id="pin-card"
+            className="btn"
+            onClick={pinCard}
+            disabled={pin.phase === "saving" || pin.phase === "done"}
+          >
+            {pin.phase === "saving" ? "Ekleniyor…" : pin.phase === "done" ? "Panoya eklendi" : "Panoma ekle"}
+          </button>
+        )}
+        {pin.phase === "error" && <span className="answer-note">{pin.note}</span>}
+        {reapproveId && auditId && (
+          <button
+            type="button"
+            id="ready-reapprove"
+            className="btn"
+            onClick={reapproveCard}
+            disabled={reapprove.phase === "saving" || reapprove.phase === "done"}
+          >
+            {reapprove.phase === "saving"
+              ? "Güncelleniyor…"
+              : reapprove.phase === "done"
+                ? "Kart güncellendi"
+                : "Bu SQL ile güncelle"}
+          </button>
+        )}
+        {reapprove.phase === "error" && <span className="answer-note">{reapprove.note}</span>}
+        {isAdmin && auditId && !reapproveId && !readyOpen && (
+          <button type="button" id="make-ready" className="btn" onClick={() => setReadyOpen(true)}>
+            Hazır soru yap
+          </button>
+        )}
       </div>
+      {readyOpen && <ReadyQuestionForm payload={payload} onCancel={() => setReadyOpen(false)} />}
       <Evidence payload={payload} />
     </section>
   );

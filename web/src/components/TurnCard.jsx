@@ -12,7 +12,9 @@ const COLLAPSED_ROWS = 5;
 // saklanan satırlardır, tıklayınca açılır. Kayıtlı turda yük yoktur — tam tablo ve grafik ancak
 // SQL yeniden koşularak elde edilir, o yüzden açmak hiçbir şey koşturmaz (R7-15).
 // `onExpand(tur no)` aç/kapatı çevirir, `onReplay(tur)` kayıtlı SQL'i yeniden koşar.
-export default function TurnCard({ turn, onExpand, onReplay, onChoose, onChange, onSave }) {
+// `isAdmin` ve `reapproveId` cevabın panonun diliyle konuşması içindir (R7-21): kartı yalnız canlı
+// tur açar, kayıtlı turda yürüyecek bir yük yoktur.
+export default function TurnCard({ turn, onExpand, onReplay, onChoose, onChange, onSave, isAdmin = false, reapproveId = null }) {
   const summary = turn?.summary ?? {};
   const columns = Array.isArray(summary.columns) ? summary.columns : [];
   const rows = Array.isArray(summary.rows) ? summary.rows : [];
@@ -39,7 +41,15 @@ export default function TurnCard({ turn, onExpand, onReplay, onChoose, onChange,
       );
     }
     if (payload && turn?.status === "answered") {
-      return <AnswerCard payload={payload} choice={turn?.choice} onSave={onSave} />;
+      return (
+        <AnswerCard
+          payload={payload}
+          choice={turn?.choice}
+          onSave={onSave}
+          isAdmin={isAdmin}
+          reapproveId={reapproveId}
+        />
+      );
     }
     if (payload) return <ErrorCard kind={payload?.error?.kind} message={sentence} />;
   }

@@ -1,4 +1,4 @@
-const ROUTES = { "/kurallar": "rules", "/harita": "map", "/kullanicilar": "users" };
+const ROUTES = { "/kurallar": "rules", "/harita": "map", "/kullanicilar": "users", "/hazir-sorular": "ready" };
 
 // Konuşma adresi #/c/<id>: turlar indirgeyiciden okunur, yani kimlik yolun tek sözcüğüdür (R7-15).
 const CONVERSATION = /^\/c\/([^/]+)$/;

@@ -41,6 +41,11 @@ export default function MastheadNav({ route, user }) {
         </a>
       )}
       {user?.role === "admin" && (
+        <a className="nav-link" id="nav-ready" href="#/hazir-sorular" aria-current={route === "ready" ? "page" : undefined}>
+          Hazır sorular
+        </a>
+      )}
+      {user?.role === "admin" && (
         <a className="nav-link" id="nav-users" href="#/kullanicilar" aria-current={route === "users" ? "page" : undefined}>
           Kullanıcılar
         </a>

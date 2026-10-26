@@ -7,6 +7,7 @@ import ErrorCard from "./components/ErrorCard.jsx";
 import LoadingSteps from "./components/LoadingSteps.jsx";
 import { MapFlow } from "./components/MapScreen.jsx";
 import MastheadNav from "./components/MastheadNav.jsx";
+import ReadyQuestionsScreen from "./components/ReadyQuestionsScreen.jsx";
 import RulesScreen from "./components/RulesScreen.jsx";
 import Sidebar from "./components/Sidebar.jsx";
 import StartScreen from "./components/StartScreen.jsx";
@@ -99,6 +100,10 @@ function AskScreen({
   // küme numarası olduğu için geçici bir ağ hatası kalıcı bir "pano yok" durumuna dönmez —
   // küme değişince ekran kendiliğinden yeniden dener.
   const [startBroken, setStartBroken] = useState(-1);
+  // Kartın "SQL'i yeniden onayla"sı (R7-21): hangi kartın düzeltildiği, cevabın hangi kartı
+  // güncelleyeceğini söyler. Başka bir soru koşulursa bağlantı düşer — ilgisiz bir cevap eski
+  // kartın güncelleyicisi olamaz.
+  const [reapproving, setReapproving] = useState(null); // {id, question} | null
 
   // Akışın son turu: konuşma açılmamışsa tek cevap kartı, açılmışsa akışın en alt satırı odur.
   const turns = state.turns;
@@ -173,6 +178,7 @@ function AskScreen({
   const send = (question, choice = null, auditId = null, conversationId = state.conversationId) => {
     const asked = String(question ?? "").trim();
     if (!asked) return;
+    if (reapproving && reapproving.question !== asked) setReapproving(null);
     dispatch({ type: "ask", question: asked, choice });
     (auditId ? api.replay(auditId) : api.ask({ question: asked, choice, conversation_id: conversationId }))
       .then((payload) => {
@@ -216,8 +222,10 @@ function AskScreen({
   const changeQuestion = () => document.getElementById("question")?.focus();
 
   // Kartın SQL'i yürümediyse yönetici soruyu kutuya alır (R7-21): yeniden koşan cevabın SQL'i
-  // hazır soruya yeniden onaylanır, yani hata kartı düzeltmenin yolunu gösterir.
+  // hazır soruya yeniden onaylanır, yani hata kartı düzeltmenin yolunu gösterir. Kartın kimliği de
+  // akışta kalır ki cevap geldiğinde düğme "Bu SQL ile güncelle" olarak okunsun.
   const reapprove = (card) => {
+    setReapproving({ id: card?.id ?? null, question: String(card?.question ?? "").trim() });
     setText(card?.question ?? "");
     changeQuestion();
   };
@@ -233,6 +241,7 @@ function AskScreen({
   const newConversation = () => {
     dispatch({ type: "reset" });
     onNote?.("");
+    setReapproving(null);
     setText("");
     window.location.hash = "#/";
     document.getElementById("question")?.focus();
@@ -253,6 +262,8 @@ function AskScreen({
           onChoose={choose}
           onChange={changeQuestion}
           onSave={save}
+          isAdmin={isAdmin}
+          reapproveId={reapproving?.id ?? null}
         />
         <AskBox value={text} onChange={setText} onAsk={ask} loading={loading} examples={examples} />
       </section>
@@ -304,7 +315,13 @@ function AskScreen({
             onChange={changeQuestion}
           />
         ) : last.status === "answered" && last.payload ? (
-          <AnswerCard payload={last.payload} choice={last.choice} onSave={save} />
+          <AnswerCard
+            payload={last.payload}
+            choice={last.choice}
+            onSave={save}
+            isAdmin={isAdmin}
+            reapproveId={reapproving?.id ?? null}
+          />
         ) : (
           <ErrorCard kind={last.payload?.error?.kind} message={last.answer_text} onRebuild={onRebuild} />
         ))}
@@ -375,6 +392,26 @@ function UsersFlow({ currentUser }) {
   );
 }
 
+// Hazır soru defteri (R7-21): kümenin bütün satırları tek istekten okunur; onay, düzenleme ve
+// silme sonrası aynı istek yinelenir, böylece liste sunucudaki halini gösterir.
+function ReadyFlow() {
+  const [rows, setRows] = useState(null); // null: henüz okunmadı
+  const [error, setError] = useState("");
+
+  const refresh = () => {
+    api
+      .readyList()
+      .then((payload) =>
+        setRows(Array.isArray(payload?.ready_questions) ? payload.ready_questions : []),
+      )
+      .catch((failure) => setError(failure?.message || "Hazır sorular okunamadı."));
+  };
+
+  useEffect(refresh, []);
+
+  return <ReadyQuestionsScreen rows={rows ?? []} loading={!rows} error={error} onRefresh={refresh} />;
+}
+
 function Screen({
   route,
   conversation,
@@ -391,6 +428,7 @@ function Screen({
 }) {
   if (route === "rules") return <RulesFlow onChanged={onChanged} readOnly={readOnly} />;
   if (route === "users") return <UsersFlow currentUser={currentUser} />;
+  if (route === "ready") return <ReadyFlow />;
   if (route === "map") return <MapFlow onSwitched={onSwitched} />;
   return (
     <AskScreen

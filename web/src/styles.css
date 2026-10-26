@@ -1264,6 +1264,21 @@ main {
   font-size: 13px;
 }
 
+/* Form cevabın kartının içinde açılır: `.card`ın kenar boşluğu olmadığı için üstündeki düğme
+   sırasıyla çarpışmasın diye kendi payını kendisi taşır. */
+.ready-form {
+  margin-top: calc(var(--space) * 2);
+}
+
+/* Hazır soru formunun "eklendi" cümlesi: reddin cümlesiyle aynı yerde, ama tonunda durur —
+   form kapanana kadar admin'in yaptığı işin karşılığı ekranda okunur. */
+.ready-saved {
+  margin: 0;
+  color: var(--ok);
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .evidence {
   margin-top: calc(var(--space) * 2);
   padding-top: calc(var(--space) * 2);
@@ -2445,4 +2460,108 @@ main {
 
 .login-submit {
   width: 100%;
+}
+
+/* --- hazır soru defteri ----------------------------------------------------- */
+
+.ready-screen > * + * {
+  margin-top: calc(var(--space) * 2);
+}
+
+.ready-group > * + * {
+  margin-top: var(--space);
+}
+
+.ready-group-title {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ready-list {
+  display: grid;
+  gap: var(--space);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Satır iki sütundur: söz solda, işlemler sağda. Uzun bir başlık sütunu şişirmesin. */
+.ready-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space) calc(var(--space) * 2);
+  align-items: start;
+}
+
+.ready-row-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--space) * 0.5);
+  margin: 0 0 calc(var(--space) * 0.25);
+  font-size: 16px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.ready-row-question {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ready-row-meta {
+  margin: calc(var(--space) * 0.25) 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ready-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: end;
+  gap: calc(var(--space) * 0.5);
+}
+
+.ready-confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--space) * 0.5);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Düzenleme formu satırın altına iner ve iki sütunu da kendisi kaplar: başlıkların hizası
+   bozulmaz, alanlar kartın içinde kendi ızgarasında durur. */
+.ready-edit {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: calc(var(--space) * 2) calc(var(--space) * 3);
+  padding-top: var(--space);
+  border-top: 1px solid var(--line);
+}
+
+.ready-edit-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space);
+}
+
+/* Telefon: satır yığılır, işlemler sözün altına geçer ve sola yaslanır (sağa yaslı düğme
+   sırası dar ekranda satırın sonunu bulamaz). */
+@media (max-width: 720px) {
+  .ready-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ready-row-actions {
+    justify-content: start;
+  }
 }
