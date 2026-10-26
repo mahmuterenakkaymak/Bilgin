@@ -69,6 +69,31 @@ describe("EmptyState", () => {
     expect(html).toContain("Verinize Türkçe soru sorun");
     expect(html).not.toContain("example-chip");
   });
+
+  it("örnek yoksa kart boş alanda kalmaz: cümle durumu söyler, yukarıya yönlendirir", () => {
+    const html = render(<EmptyState examples={[]} onSelect={noop} />);
+    expect(html).toContain('class="empty-hint"');
+    expect(html).toContain("Bu veri kümesinde henüz örnek soru yok");
+    expect(html).toContain("sorunu yukarıya yaz");
+    expect(html).not.toContain("example-chip");
+    // Yönlendirme yalnız kuralın da olmadığı durumda düşer; burada yönetici çağrısı yok.
+    expect(html).not.toContain("#/kurallar");
+  });
+
+  it("örnek varken çipler durur, cümle düşmez", () => {
+    const html = render(<EmptyState examples={EXAMPLES} rulesHint onSelect={noop} />);
+    expect(html).toContain('class="example-chip"');
+    expect(html).not.toContain("empty-hint");
+    expect(html).not.toContain("#/kurallar");
+  });
+
+  it("kural da yoksa cümle İş kuralları ekranına bağlanır", () => {
+    const html = render(<EmptyState examples={[]} rulesHint onSelect={noop} />);
+    expect(html).toContain('href="#/kurallar"');
+    expect(html).toContain(">İş kuralları</a>");
+    // Cümlenin iki yarısı bitişik yazılmaz: aradaki boşluk JSX'te kendiliğinden doğmaz.
+    expect(html).toContain("çevirir. Kümenin iş kuralı da yok");
+  });
 });
 
 describe("LoadingSteps", () => {

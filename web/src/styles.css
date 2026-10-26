@@ -508,6 +508,18 @@ main {
   margin-top: calc(var(--space) * 2);
 }
 
+/* Çip sırasının yerini alan cümle: aynı boşlukla başlar, aynı ölçüde kalır. Bağlantı vurguya
+   iner — kuralları götüren yol cümlenin içinde, ayrı bir düğme gerekmez. */
+.empty-state .empty-hint {
+  margin: calc(var(--space) * 2) 0 0;
+  max-width: 60ch;
+  color: var(--muted);
+}
+
+.empty-state a {
+  color: var(--accent);
+}
+
 .loading-step {
   margin: calc(var(--space) * 1.5) 0 0;
   font-size: 17px;

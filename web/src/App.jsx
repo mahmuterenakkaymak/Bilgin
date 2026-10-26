@@ -65,10 +65,11 @@ function userLabel(user) {
 
 // Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Boş, bekleyen, cevap,
 // netleştirme ve hata yuvaları burada durur; cevabın grafiği kartın içindedir.
-function AskScreen({ pending = null, onRefresh, onRebuild, datasetKey = 0 }) {
+function AskScreen({ pending = null, onRefresh, onRebuild, datasetKey = 0, canEditRules = false }) {
   const [state, dispatch] = useReducer(askReducer, initialState);
   const [text, setText] = useState("");
   const [examples, setExamples] = useState([]);
+  const [rulesEmpty, setRulesEmpty] = useState(false);
 
   // `datasetKey` her küme değişiminde büyür: örnekler kümenin sorularıdır, eski kümenin çipleri
   // yeni veritabanının üstünde kalırsa ekran yalan söylemiş olur.
@@ -84,6 +85,24 @@ function AskScreen({ pending = null, onRefresh, onRebuild, datasetKey = 0 }) {
       mounted = false;
     };
   }, [datasetKey]);
+
+  // ASSUMPTION: kutunun "kural da yok" demesinin kaynağı /api/rules; sayı yalnız çipler yokken
+  // sorulur, çünkü cümlenin ikinci yarısı o durumda görünür. Yeni haritalanmış kümede ikisi de yoktur.
+  useEffect(() => {
+    if (examples.length > 0) return;
+    let mounted = true;
+    api
+      .rulesList()
+      .then((payload) =>
+        mounted && setRulesEmpty((Array.isArray(payload?.rules) ? payload.rules : []).length === 0),
+      )
+      .catch(() => {
+        // sayı okunamazsa cümle yalnız örnek soru tarafını söyler
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [examples]);
 
   // auditId verilirse soru modele baştan sorulmaz: geçmişteki SQL yeniden çalışır (/api/replay).
   const send = (question, choice = null, auditId = null) => {
@@ -145,7 +164,9 @@ function AskScreen({ pending = null, onRefresh, onRebuild, datasetKey = 0 }) {
         loading={loading}
         examples={state.status === "idle" ? [] : examples}
       />
-      {state.status === "idle" && <EmptyState examples={examples} onSelect={ask} />}
+      {state.status === "idle" && (
+        <EmptyState examples={examples} rulesHint={canEditRules && rulesEmpty} onSelect={ask} />
+      )}
       {loading && <LoadingSteps />}
       {state.status === "answered" && (
         <AnswerCard payload={state.payload} choice={state.choice} onSave={save} />
@@ -222,7 +243,15 @@ function Screen({ route, pending, onRefresh, onChanged, onRebuild, onSwitched, d
   if (route === "rules") return <RulesFlow onChanged={onChanged} readOnly={readOnly} />;
   if (route === "users") return <UsersFlow />;
   if (route === "map") return <MapFlow onSwitched={onSwitched} />;
-  return <AskScreen pending={pending} onRefresh={onRefresh} onRebuild={onRebuild} datasetKey={datasetKey} />;
+  return (
+    <AskScreen
+      pending={pending}
+      onRefresh={onRefresh}
+      onRebuild={onRebuild}
+      datasetKey={datasetKey}
+      canEditRules={!readOnly}
+    />
+  );
 }
 
 // `user` ve `onLogout` oturum kapısı Root'tan gelir; ikisi de yoksa kabuk Run 5'teki gibi
