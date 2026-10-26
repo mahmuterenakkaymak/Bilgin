@@ -142,6 +142,15 @@
   - `serve` without `--dataset` opens the remembered active dataset (Run 6), else `wwi`, else the first dataset
     with an index - never silently the synthetic ERP. README examples use `wwi` / `wwi_real`.
 
+- **Facts not shown anywhere since T359** (Eren approved, 2026-10-26): T359 stopped the evidence panel from listing
+  `payload.facts` to avoid repeating the card's three chips, but the panel was the only place the other facts
+  (row count, lowest, "öne çıkan", highest share) could be read - they are now visible nowhere. Fix: the panel lists
+  exactly the facts the card's chip row does **not** show (no duplicates, nothing lost), under a short heading
+  ("Diğer olgular" / "Other facts"); no list when there are none. Update `EvidenceRowDump.test.jsx`'s "no `.facts`
+  list inside `#evidence`" and the two pins updated on 2026-10-26 (`AnswerCard.test.jsx`, `AnswerCardFacts.test.jsx`)
+  to this contract, naming the three files in the task so the tamper guard allows it: a test asserts every fact of a
+  payload appears exactly once across chips + panel.
+
 **Out (not this run):** languages other than Turkish and English, translating database content (descriptions in the
 schema stay as the admin wrote them), machine translation of business rules, network exposure / TLS, an MSI
 installer, Linux service.
