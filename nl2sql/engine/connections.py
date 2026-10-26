@@ -7,7 +7,9 @@ values are ever readable - the password lives in ``secret_blob`` as a DPAPI blob
 plaintext, and a connection string is built when a session opens and never stored anywhere.
 
 ``public`` is what the API may answer: it says whether a password exists (``has_secret``) and
-never carries one, ``secret`` hands the plaintext to the one caller about to connect. Refusals
+never carries one, ``secret`` hands the plaintext to the one caller about to connect. ``resolve``
+is the single door that says which place a dataset's string comes from - its own environment
+variable, the generic one, the stored row, none (PLAN R7-23). Refusals
 carry the HTTP status the API will answer with, the way ``auth.store`` and ``start.ready`` do.
 """
 
@@ -15,6 +17,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import re
 import sqlite3
 import time
@@ -24,6 +27,7 @@ from pathlib import Path
 
 from nl2sql import config
 from nl2sql.engine import dpapi
+from nl2sql.engine._mssql import CONN_ENV
 
 AUTHS = ("sql", "windows")
 
@@ -254,6 +258,25 @@ def build_conn_str(row: dict, password: str | None = None, driver: str | None = 
     return ";".join(parts) + ";"
 
 
+def resolve(dataset: str, store: ConnectionStore | None, active: str | None) -> dict:
+    """Where a dataset's connection comes from, in the order of R7-23: env_dataset > env > stored > none."""
+    own = _env(config.CONN_ENV_PREFIX + str(dataset).upper())
+    if own:
+        return {"source": "env_dataset", "conn_str": own}
+    # The generic variable names the database the whole process asks: it belongs to the active
+    # dataset only, and only while the backend is mssql, so the value sitting in the developer's
+    # shell cannot quietly answer for a Run 1-6 test that runs on SQLite.
+    if dataset == active and config.backend() == "mssql":
+        generic = _env(CONN_ENV)
+        if generic:
+            return {"source": "env", "conn_str": generic}
+    if store is not None:
+        row = store.public(dataset)
+        if row["state"] != "none":  # a row the admin saved on the screen; the secret comes with it
+            return {"source": "stored", "conn_str": build_conn_str(row, store.secret(dataset))}
+    return {"source": "none", "conn_str": None}
+
+
 def newest_driver(drivers: Callable[[], Iterable[str]] | Iterable[str] | None = None) -> str:
     """The newest installed "ODBC Driver NN for SQL Server"; "" when the machine has none."""
     names = drivers() if callable(drivers) else (_installed() if drivers is None else drivers)
@@ -272,6 +295,12 @@ def scrub(text: str | None, secret: str | None = None) -> str:
     if secret:
         value = value.replace(str(secret), "***")
     return _SECRET_RE.sub(lambda match: f"{match.group(1)}=***", value)
+
+
+def _env(name: str) -> str:
+    """An environment variable's value, "" when it is unset or blank: a blank is no connection."""
+    value = os.environ.get(name)
+    return value.strip() if value and value.strip() else ""
 
 
 def _options(value: object) -> dict:
