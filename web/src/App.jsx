@@ -9,6 +9,7 @@ import { MapFlow } from "./components/MapScreen.jsx";
 import MastheadNav from "./components/MastheadNav.jsx";
 import RulesScreen from "./components/RulesScreen.jsx";
 import Sidebar from "./components/Sidebar.jsx";
+import StartScreen from "./components/StartScreen.jsx";
 import Thread from "./components/Thread.jsx";
 import UsersScreen from "./components/UsersScreen.jsx";
 import * as api from "./lib/api.js";
@@ -74,6 +75,8 @@ function userLabel(user) {
 
 // Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Boş, bekleyen, cevap,
 // netleştirme ve hata yuvaları burada durur; cevabın grafiği kartın içindedir.
+// Boş ekran (R7-21): henüz soru yokken ekran panodur — StartScreen kartları, soru kutusunu ve
+// örnek çipleri birlikte getirir; ilk soruyla bu ekran akışın kendisine bırakır.
 // Konuşma (R7-15): turlar `lib/thread.js` indirgeyicisinde durur. İlk soru konuşmayı henüz
 // açmadığı için bugünkü gibi kutunun altında tek karttır; cevap geldiği an adres #/c/<id> olur ve
 // aynı turlar akışa taşınır — soru kutusu son turun altına iner.
@@ -86,11 +89,16 @@ function AskScreen({
   datasetKey = 0,
   canEditRules = false,
   datasetName = "",
+  isAdmin = false,
 }) {
   const [state, dispatch] = useReducer(threadReducer, initialThread);
   const [text, setText] = useState("");
   const [examples, setExamples] = useState([]);
   const [rulesEmpty, setRulesEmpty] = useState(false);
+  // Kartları okunamayan kümenin anahtarı (R7-21): o küme eski boş ekranla devam eder. Anahtar
+  // küme numarası olduğu için geçici bir ağ hatası kalıcı bir "pano yok" durumuna dönmez —
+  // küme değişince ekran kendiliğinden yeniden dener.
+  const [startBroken, setStartBroken] = useState(-1);
 
   // Akışın son turu: konuşma açılmamışsa tek cevap kartı, açılmışsa akışın en alt satırı odur.
   const turns = state.turns;
@@ -207,6 +215,13 @@ function AskScreen({
   // "Soruyu değiştir" kartı kapatmaz: imleç kutuya döner, kullanıcı yazıp yeniden sorar.
   const changeQuestion = () => document.getElementById("question")?.focus();
 
+  // Kartın SQL'i yürümediyse yönetici soruyu kutuya alır (R7-21): yeniden koşan cevabın SQL'i
+  // hazır soruya yeniden onaylanır, yani hata kartı düzeltmenin yolunu gösterir.
+  const reapprove = (card) => {
+    setText(card?.question ?? "");
+    changeQuestion();
+  };
+
   // Kayıt kenar çubuğunun listesine de düşer.
   const save = (item) =>
     api.savedAdd(item).then((result) => {
@@ -241,6 +256,24 @@ function AskScreen({
         />
         <AskBox value={text} onChange={setText} onAsk={ask} loading={loading} examples={examples} />
       </section>
+    );
+  }
+
+  // Panonun ekranı (R7-21): kartların altında soru kutusu ve örnek çipler. Henüz soru yokken ve
+  // kartlar okunabilmişken ekran odur; okunamadıysa aşağıdaki boş ekran aynı küme için sürer.
+  if (turns.length === 0 && startBroken !== datasetKey) {
+    return (
+      <StartScreen
+        examples={examples}
+        text={text}
+        onChange={setText}
+        onAsk={ask}
+        onReapprove={reapprove}
+        onFailed={() => setStartBroken(datasetKey)}
+        isAdmin={isAdmin}
+        loading={loading}
+        datasetKey={datasetKey}
+      />
     );
   }
 
@@ -369,6 +402,7 @@ function Screen({
       datasetKey={datasetKey}
       datasetName={datasetName}
       canEditRules={!readOnly}
+      isAdmin={!readOnly}
     />
   );
 }

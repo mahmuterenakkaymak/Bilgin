@@ -20,7 +20,7 @@ export default function AskBox({ value, onChange, onAsk, loading = false, exampl
         id="question"
         className="question"
         aria-label="Soru"
-        placeholder="Örneğin: Eylül 2026'da net satışımız ne kadar?"
+        placeholder="Sorunuzu yazın"
         rows={2}
         value={text}
         onChange={(event) => onChange(event.target.value)}
