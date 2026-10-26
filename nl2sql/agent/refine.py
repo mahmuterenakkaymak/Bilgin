@@ -214,9 +214,14 @@ def _row_name(row: list, index: int) -> str:
     return ""
 
 
+# ``fold`` Türkçe harfleri yerinde bırakır, oysa gerçek şemaların kolon adları ASCII'dir:
+# MUSTERI_ADI ile "müşteri" ancak aynı alfabeye inince buluşur.
+_TURKISH_TO_ASCII = str.maketrans("çğıöşü", "cgiosu")
+
+
 def _loose(value) -> str:
-    """Yumuşak katlama: ı ile i aynı sayılır - BÜYÜK HARFLİ kolon adlarında "I" ikisinin de yazımı."""
-    return fold(str(value or "")).replace("ı", "i")
+    """Yumuşak katlama: Türkçe harfler ASCII'ye iner - BÜYÜK HARFLİ kolon adlarında "I" zaten "ı"ya düşer."""
+    return fold(str(value or "")).translate(_TURKISH_TO_ASCII)
 
 
 def _last_answered(turns: list[dict] | None) -> dict | None:
