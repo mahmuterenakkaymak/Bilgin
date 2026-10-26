@@ -854,11 +854,18 @@ main {
 
   /* ASSUMPTION: iki satır dört sütunu paylaşır. Üst satırın sağı (tema 80 + durum sözcüğü) alt
      satırın sağını da belirliyor: kimlik çipi tema düğmesinin sütununa düşer, adı orada kısalır.
-     Karşılığında veri seti çipi 1fr sütunda 112px'e kadar açılıyor — ölçüldü 390px: ad 53 + tema
-     80 + "Bilinmiyor" 71 + aralıklar 24 = 228, çibe 130 kalıyor (tavanı 7rem kesiyor). */
+     Karşılığında veri seti çipi 1fr sütunun tamamını alıyor — ölçüldü 390px: ad 53 + tema 80 +
+     "Bilinmiyor" 71 + aralıklar 24 = 228, çibe 130 kalıyor; küçüleceği yer o pay, tavanı değil. */
   #model-chip {
     grid-area: chip;
-    max-width: 7rem;
+    min-width: 0;
+  }
+
+  /* Çipin dar ekranda söylemesi gereken şey ad: "Sentetik ERP (…" bir sonraki kümeden ayırmıyor,
+     "Sentetik ERP" ayırıyor. Parantez içi ile model nitelik — satırın payını ad yer, nitelik
+     çipin title'ında durur. */
+  .masthead .chip-note {
+    display: none;
   }
 
   .masthead-nav {
@@ -894,8 +901,8 @@ main {
   }
 
   /* Sütun paylaşımı küçülmeyi zorunlu kılıyor: uzun ad kendi sütununu şişirirse satır taşar.
-     Tavanı çipler zaten alıyor (7rem/5rem), buradaki taban — ellipsis çalışsın diye min-width
-     sıfıra iner. */
+     Tavanı kullanıcı çipi kendi kuralında alıyor (5rem), buradaki taban — ellipsis çalışsın diye
+     min-width sıfıra iner. */
   .masthead .chip {
     min-width: 0;
   }

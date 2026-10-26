@@ -53,9 +53,14 @@ export function healthDot(health) {
   return { tone: "ok", label: "Hazır", tip: "Hazır: model erişilebilir, indeks taze." };
 }
 
-function chipText(health) {
-  if (!health) return "";
-  return [health.dataset?.display_name, health.llm?.model].filter(Boolean).join(" · ");
+// Çip iki yuvaya ayrılır: veri kümesinin kendi adı, ardından niteliği (parantez içi ve model).
+// Telefon başlığında nitelik gizlenir — hangi veritabanından söz edildiğini söyleyen tek yer bu
+// çip, kırpılan taraf adı olmamalı. `full` başlıkta durur: ekranda görünmeyince kaybolmaz.
+function chipParts(health) {
+  const full = [health?.dataset?.display_name, health?.llm?.model].filter(Boolean).join(" · ");
+  const paren = full.match(/^(.+?)\s+\([^()]*\)/);
+  const name = paren ? paren[1] : full.split(" · ")[0];
+  return { full, name, note: full.slice(name.length) };
 }
 
 // Rol adı hiç okunamazsa çip yalnız kullanıcı adını taşır: "undefined" bir kimlik değildir.
@@ -354,7 +359,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
   const logout = () => api.logout().catch(() => null).then(() => onLogout());
 
   const dot = healthDot(health);
-  const chip = chipText(health);
+  const chip = chipParts(health);
   const who = userLabel(user);
 
   return (
@@ -363,9 +368,14 @@ export default function App({ user = null, onLogout = null, note = "" }) {
         <a className="wordmark" href="#/">
           Bilgin
         </a>
-        {chip && (
-          <span className="chip" id="model-chip" title={health?.llm?.url || undefined}>
-            {chip}
+        {chip.full && (
+          <span
+            className="chip"
+            id="model-chip"
+            title={[chip.full, health?.llm?.url].filter(Boolean).join(" · ")}
+          >
+            {chip.name}
+            {chip.note && <span className="chip-note">{chip.note}</span>}
           </span>
         )}
         <nav className="masthead-nav" aria-label="Bölümler">
