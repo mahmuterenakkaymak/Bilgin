@@ -23,6 +23,7 @@ from decimal import Decimal
 from nl2sql import config
 from nl2sql.engine.result import Budget
 from nl2sql.report.chart import chart_spec
+from nl2sql.report.shape import NUMBER, column_kinds
 
 # Kolonun şema açıklamasının başı: ilk cümle, yani ilk noktaya kadar; nokta yoksa tüm metin.
 _SENTENCE = re.compile(r"^\s*[^.]*\.")
@@ -40,7 +41,8 @@ def card_result(executor, card: dict, source: str = "") -> dict:
     """Kartın yükü: SQL'i yürütür, ``display``e göre number/chart/table ya da hata cümlesi üretir.
 
     Yürütücü hatası kartın kendi cümlesidir (``error``); öteki kartlar bundan etkilenmez. Etiket,
-    tek sayının kolonunun şema açıklamasının başıdır - şemada karşılığı yoksa kolonun adı.
+    tek sayının kolonunun şema açıklamasının başıdır - şemada karşılığı yoksa kolonun adı. Tablo
+    kartı ~380px kartta sığmayan kolonları değil, ölçüyü gösterir: bkz. ``_table_columns``.
     """
     result = executor.execute(card["sql"], Budget(max_rows=config.UI_MAX_ROWS), source)
     payload = {
@@ -60,8 +62,9 @@ def card_result(executor, card: dict, source: str = "") -> dict:
     elif card["display"] == "chart":
         payload["chart"] = chart_spec(columns, rows, card["question"])
     else:
-        payload["columns"] = columns
-        payload["rows"] = [list(row) for row in rows[: config.CARD_TABLE_ROWS]]
+        keep = _table_columns(columns, rows)
+        payload["columns"] = [columns[i] for i in keep]
+        payload["rows"] = [[row[i] for i in keep] for row in rows[: config.CARD_TABLE_ROWS]]
     return payload
 
 
@@ -121,6 +124,29 @@ class StartCache:
     def _lock_for(self, key: tuple) -> threading.Lock:
         with self._guard:
             return self._locks.setdefault(key, threading.Lock())
+
+
+def _table_columns(columns: list[str], rows: list[tuple]) -> list[int]:
+    """Kart tablosunun kolon indeksleri: her sayısal kolon ve en dar tek metin kolonu.
+
+    Başlıklar ve hücreler ``nowrap``: ~380px kartta üçüncü kolon sağına sığmıyor ve kullanıcının
+    sorusu ölçtüğü kolonu hiç görmüyor. Ölçü her zaman kalsın diye metin kolonlarından en uzunu
+    düşer - tam tablo kart açılınca zaten görünüyor. Satır yoksa düşecek geniş hücre de yoktur.
+    """
+    if not rows:
+        return list(range(len(columns)))
+    kinds = column_kinds(columns, rows)
+    numbers = [i for i, kind in enumerate(kinds) if kind == NUMBER]
+    texts = [i for i, kind in enumerate(kinds) if kind != NUMBER]
+    if len(texts) > 1:
+        texts = [min(texts, key=lambda i: _column_width(i, columns, rows))]
+    return sorted(numbers + texts)
+
+
+def _column_width(index: int, columns: list[str], rows: list[tuple]) -> int:
+    """Kolonun karttaki genişliği: en uzun hücre; başlık ondan kısaysa başlığın kendisi."""
+    cells = [len(str(row[index])) for row in rows if row[index] is not None]
+    return max([len(columns[index])] + cells)
 
 
 def _number(value):
