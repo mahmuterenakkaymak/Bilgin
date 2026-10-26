@@ -2038,6 +2038,7 @@ def _ask_json(args) -> int:
         return exc.exit_code
     # R6-9: makinedeki oturumun sahibi soruyu sorandır; adı hem günlüğe hem denetim satırlarına karışır.
     # R7-9: ``--new``/``--conversation`` verilmişse payload bir konuşmanın turudur (conversation_id/turn/context).
+    # Konuşmanın sahibi ekranla aynı: NULL (M21 review 2) - iki uç aynı threadin turlarını sürdürür.
     store, conversation_id = _conversation(args)
     payload = ask_payload(
         session,
@@ -2048,6 +2049,7 @@ def _ask_json(args) -> int:
         username=getpass.getuser(),
         conversations=store,
         conversation_id=conversation_id,
+        owner=None,
     )
     # SQL Server returns DECIMAL/MONEY as Decimal and dates as date objects (SQLite never did); the API
     # side gets the same conversion from FastAPI's encoder.

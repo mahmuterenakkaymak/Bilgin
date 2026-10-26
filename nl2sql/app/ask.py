@@ -38,6 +38,9 @@ _CHART_WORDS = {"line": "çizgi", "bar": "çubuk", "pie": "pasta", "table": "tab
 # R5-2: indeksteki bir sorun koşumu düşürmez, cevabın hatası olur.
 INDEX_ERRORS = (MissingIndexError, StaleIndexError, ForeignIndexError)
 
+# Konuşmanın sahibi söylenmediğinde soranla aynıdır (çok kullanıcılı web); CLI kendisininki için None der.
+_SAME_OWNER = object()
+
 
 def ask_payload(
     session,
@@ -48,6 +51,7 @@ def ask_payload(
     username: str | None = None,
     conversations=None,
     conversation_id: str | None = None,
+    owner=_SAME_OWNER,
 ) -> dict:
     """Bir soruyu AskPayload'a çeviren tek fonksiyon (R5-1): modu çözer, ajanı koşurur, yürütür.
 
@@ -57,6 +61,9 @@ def ask_payload(
 
     ``username`` soruyu soran kişinin adıdır (R6-9): günlüğün satırına ve denetim satırlarının
     başına (``<web|cli>:<kullanıcı>:<audit_id>``) karışır; söylenmediğinde her şey Run 5'in halidir.
+    Konuşmanın sahibi ondan ayrı sorulur (M21 review 2): ``owner`` söylenmediğinde adla aynıdır -
+    çok kullanıcılı webde bir kimliğin konuşması başkasına yoktur - ve None verildiğinde konuşma
+    adsız doğar, yani komut satırının iki ucu aynı threadi sürdürür; ad yine yalnız günlükte durur.
 
     İlk soru netleştirme sorabilir (R5-10); ``choice`` verilmişse soru seçilen anlamla koşar ve o
     tur soramaz, yani açıklama döngüsü kurulmaz (R5-11). Günlük soruyu ve seçimi ayrı taşır.
@@ -78,7 +85,8 @@ def ask_payload(
     payload = _skeleton(question, choice, mode or "auto", session, audit_id, notes)
     asked = follow_up_text(question, choice) if choice else question
     conversation_id, pending, turns, clarification = _thread(
-        conversations, conversation_id, username, question, choice, payload["dataset"]
+        conversations, conversation_id, username if owner is _SAME_OWNER else owner,
+        question, choice, payload["dataset"]
     )
     if conversation_id is not None:
         # Contracts "AskPayload (ext.)": üç anahtar yalnız konuşmayla koşan payloadda vardır.
@@ -110,22 +118,23 @@ def ask_payload(
     return payload
 
 
-def _thread(conversations, conversation_id, username, question, choice, dataset) -> tuple:
+def _thread(conversations, conversation_id, owner, question, choice, dataset) -> tuple:
     """Konuşmanın hali: (kimlik, tamamlanacak bekleyen turun numarası, miras alınan turlar, bekleyen şıklar).
 
-    Depo yoksa dördü de None'dır ve koşum Run 6'dır. Sahiplik elle karşılaştırılır: tek
-    kullanıcılı modda konuşmanın sahibi NULL, ``get``in ``username`` süzgeci ise ``username = ?``
-    demek - NULL hiçbir şeyle eşitleşmediği için o süzgeç tek kullanıcılı modu hiç bulamazdı.
+    Depo yoksa dördü de None'dır ve koşum Run 6'dır. ``owner`` konuşmanın sahibidir - soranın adı
+    olmak zorunda değildir (M21 review 2) - ve sahiplik elle karşılaştırılır: adsız modda
+    konuşmanın sahibi NULL, ``get``in ``username`` süzgeci ise ``username = ?`` demek - NULL hiçbir
+    şeyle eşitleşmediği için o süzgeç adsız konuşmayı hiç bulamazdı.
     Bekleyen şıklar R7-12de kurulan netleştirmenin kolonunu da taşır; seçimin hangi varlık olduğunu
     oradan okumak için tur olduğu gibi geri verilir.
     """
     if conversations is None:
         return None, None, None, None
     if conversation_id is None:
-        created = conversations.create(username=username, dataset=dataset, title=question)
+        created = conversations.create(username=owner, dataset=dataset, title=question)
         return created, None, [], None
     found = conversations.get(conversation_id, dataset=dataset)
-    if found is None or found["conversation"]["username"] != username:
+    if found is None or found["conversation"]["username"] != owner:
         raise ConversationNotFound()
     last = found["turns"][-1] if found["turns"] else None
     waiting = bool(
