@@ -30,6 +30,17 @@ BAR_ROWS = [("Çay", 40.0), ("Şeker", 90.0), ("Su", 65.0)]
 SCATTER_COLUMNS = ["FIYAT", "MIKTAR"]
 SCATTER_ROWS = [(1.5, 10.0), (2.5, 4.0), (3.0, 8.0)]
 
+# Q02'nin gerçek cevabındaki beş ürün adı: eksende tam durmak zorundalar (T266).
+GOLDEN_NAMES = [
+    "Kakaolu Bisküvi 500 g",
+    "Domates Salçası 700 g",
+    "Toz Şeker 5 kg",
+    "Yumuşatıcı 1 L",
+    "Nohut 1 kg",
+]
+# 12px yazıda bir karakter ~7px: kutu bu eşiğin altındaysa en uzun ad kesilir.
+GOLDEN_NAME_PX = max(len(name) for name in GOLDEN_NAMES) * 7
+
 
 @pytest.fixture
 def db(tmp_path):
@@ -123,7 +134,10 @@ def test_the_bilgin_block_names_the_columns_and_the_number_format():
 
 
 def test_every_cartesian_chart_draws_every_category_name():
-    """T258: ECharts'ın interval "auto"su çakışan adları sessizce düşürür — hiçbiri düşmemeli."""
+    """T258: ECharts'ın interval "auto"su çakışan adları sessizce düşürür — hiçbiri düşmemeli.
+
+    T266: aynı kusurun öteki yarısı — ad düşmüyordu ama 90px kutuda üç noktayla kesiliyordu.
+    """
     specs = [
         chart.chart_spec(BAR_COLUMNS, BAR_ROWS, "Ürüne göre satış miktarı ne?"),
         chart.chart_spec(DATE_COLUMNS, DATE_ROWS, "Günlük ciro ne kadar?"),
@@ -135,9 +149,25 @@ def test_every_cartesian_chart_draws_every_category_name():
         assert label["interval"] == 0, "adlar çakışma uğruna silinmez"
         assert label["rotate"], "dönen ad yanındakine değmez"
         assert label["hideOverlap"] is False
-        assert label["overflow"] == "truncate" and label["width"] > 0, "uzun ad kartı taşmaz"
+        assert label["overflow"] != "truncate", "uzun ad üç noktayla kesilmez"
+        assert label["lineHeight"] > 0, "saran iki satır üst üste binmez"
+        assert label["width"] >= GOLDEN_NAME_PX, "kutu altın cevabın en uzun adını kesmeyecek kadar geniş"
         assert option["grid"]["bottom"] > 30, "dönen ad eski alt boşluğa sığmaz"
         assert chart.validate_option(option) == []
+
+
+def test_the_golden_product_names_survive_the_option_in_full(db, tmp_path):
+    """T266: "Kakaolu Biskü…" değil — altın cevabın beş ürün adı eksende tam durur."""
+    line = next(item for item in datasets.load_dataset("synthetic_erp").golden() if item["id"] == "Q02")
+    executor = LocalExecutor(backend="sqlite", db_path=db, audit_path=tmp_path / "audit.jsonl")
+    result = executor.execute(line["sql"], None, "test")
+
+    option = chart.chart_spec(result.columns, result.rows, line["question"])["option"]
+    labels = option["xAxis"]["data"]
+
+    assert sorted(labels) == sorted(GOLDEN_NAMES), "adlar eksende tam ve değişmeden"
+    assert not any("…" in label or "..." in label for label in labels), "eksende kesilmiş ad yok"
+    assert chart.validate_option(option) == []
 
 
 # ------------------------------------------------------------------ grafik çıkmayan haller
