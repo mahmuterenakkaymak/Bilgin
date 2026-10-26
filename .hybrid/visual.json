@@ -207,7 +207,7 @@
         {"click": "#map-try-sample"},
         "wait:3",
         "shot:map-name-taken",
-        {"click": "button[data-dataset-activate='synthetic_erp']"},
+        {"click": "button[data-dataset-activate='wwi']"},
         "wait:2",
         "shot:map-back"
       ]
@@ -437,7 +437,7 @@
         "wait:2",
         {"click": "#nav-map"},
         "wait:1",
-        {"click": "button[data-dataset-activate='synthetic_erp']"},
+        {"click": "button[data-dataset-activate='wwi']"},
         "wait:2",
         "shot:switched-back"
       ]
