@@ -140,7 +140,12 @@ def all_datasets() -> list[dict]:
         for name in list_datasets(base):
             if name in found:
                 continue
-            dataset = load_dataset(name, root=base)
+            try:
+                dataset = load_dataset(name, root=base)
+            except (DatasetError, OSError, json.JSONDecodeError):
+                # Yarıda kesilmiş bir apply (R6-16) ya da elle düzenlenmiş bir dataset.json tek
+                # başına listeyi düşürmez: klasör atlanır, adı ``name_taken`` için yine dolu sayılır.
+                continue
             found[name] = {
                 "name": dataset.name,
                 "display_name": dataset.display_name,
@@ -170,7 +175,11 @@ def _read(base: Path, name: str) -> Dataset:
     """``base/name``'in ``dataset.json``'unu okuyup ``Dataset``'a çevirir (var olduğu biliniyor)."""
     folder = base / name
     path = folder / "dataset.json"
-    raw = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        # Hata DatasetError olarak kalır ki yükleyen herkes (CLI, oturum, web) aynı cümleyi söylesin.
+        raise DatasetError(f"Veri kümesi tanımı okunamıyor: {path}") from exc
     for key in REQUIRED_KEYS:
         if not raw.get(key):
             raise DatasetError(f"Veri kümesi tanımı geçersiz: '{key}' yok ({path})")

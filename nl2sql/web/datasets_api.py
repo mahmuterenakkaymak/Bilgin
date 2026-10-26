@@ -8,6 +8,8 @@ edilir: kurulamayan bir geçiş eski dünyayı olduğu gibi bırakır.
 
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -26,6 +28,10 @@ LOGIN_SCRIPT_ENV = "NL2SQL_MSSQL_CONN"
 LOGIN_NOTICE = "Bu küme SQL Server'a bağlı: salt okunur girişi kurun ve sunucuyu {env} ile başlatın."
 # R6-16: haritadan kurulan küme betiği klasöründe taşır; eski kümelerde o dosya yoktur, üretilir.
 LOGIN_SCRIPT_FILE = "readonly_login.sql"
+# Bozuk bir klasör (yarıda kesilmiş bir apply, elle düzenlenmiş bir dosya) ekranı düşürmez: liste
+# o satırı okunamayan bir cümleyle, tek tek yollar ise 404/409 cümlesiyle söyler.
+INDEX_UNREADABLE = "Kümenin şeması okunamadığı için indeksi denetlenemedi."
+BROKEN_DATASET = "Veri kümesi okunamıyor: {name}. Klasördeki bir dosya eksik ya da bozuk."
 
 
 class ActiveBody(BaseModel):
@@ -77,6 +83,9 @@ def create_router() -> APIRouter:
             )
         except SessionError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from None
+        except (OSError, json.JSONDecodeError):
+            # Klasördeki bir dosya eksik ya da bozuk: oturum kurulamaz, eski dünya yerinde kalır.
+            raise HTTPException(status_code=409, detail=BROKEN_DATASET.format(name=name)) from None
         with request.app.state.session_lock:
             request.app.state.session = new
         users = request.app.state.users
@@ -97,11 +106,14 @@ def create_router() -> APIRouter:
         """Kümenin salt okunur giriş betiği: klasördeki varsa o, yoksa şemasından kurulur (R3-8)."""
         ds = _load(name)
         stored = ds.root / LOGIN_SCRIPT_FILE
-        sql = (
-            stored.read_text(encoding="utf-8")
-            if stored.is_file()
-            else readonly_login_sql(ds.schema(), DEFAULT_LOGIN)
-        )
+        try:
+            sql = (
+                stored.read_text(encoding="utf-8")
+                if stored.is_file()
+                else readonly_login_sql(ds.schema(), DEFAULT_LOGIN)
+            )
+        except (OSError, json.JSONDecodeError):
+            raise HTTPException(status_code=409, detail=BROKEN_DATASET.format(name=name)) from None
         return Response(content=sql, media_type="text/plain; charset=utf-8")
 
     return router
@@ -131,6 +143,10 @@ def _index_state(ds: datasets.Dataset) -> dict:
             "fresh": False,
             "reason": str(exc),
         }
+    except (OSError, json.JSONDecodeError):
+        # Şeması okunamayan bir küme (R6-16'nın yarım kalan koşumu) listeyi düşürmez: satır
+        # "İndeks yok" olarak çıkar, sebebi ekranın göstereceği cümledir.
+        return {"exists": False, "fresh": False, "reason": INDEX_UNREADABLE}
     return {"exists": True, "fresh": True, "reason": None}
 
 
