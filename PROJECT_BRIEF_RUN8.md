@@ -123,6 +123,24 @@
     (the operator updates the code), rebuild the UI if `web/` changed, start, health check. `uninstall-service.ps1`:
     stop, remove; data in `C:\ProgramData\Bilgin` is kept unless `-RemoveData` is given (and then it asks).
   - The service stays on 127.0.0.1 like `serve`; opening it to the network is out of scope.
+- **No commercial ERP product name anywhere, and WWI as the face of the product** (Eren, 2026-10-26: the M22
+  screenshots still showed the synthetic ERP dataset as "Sentetik ERP (... benzeri)" with its coded tables):
+  - Remove every mention of the commercial ERP product the synthetic dataset imitates from code, comments,
+    docstrings, UI text, README files, docs, `pyproject.toml` description, dataset `display_name`s, profile names
+    and file names (about 80 mentions in 34 files at the time of writing; a `git grep -i` for the product name over
+    the tracked files - `.hybrid/` excluded - must return nothing). The synthetic dataset's display name becomes
+    "Sentetik ERP"; its ERP profile file is renamed to a neutral name (e.g. `profiles/erp_tr.json`) with every
+    reference updated; its table and column names (`TBLSTHAR`, `CARI_KOD`, ...) stay as they are - they are
+    generic coded names, not a brand. Add a test that fails if the name reappears in a tracked file outside
+    `.hybrid/` (the name itself stored only as a sha256 in the test, never in clear).
+  - Visual review and demo run on the **`wwi` dataset** (the server-less WideWorldImporters copy, SQLite, fake model
+    replaying its golden SQL) instead of the synthetic ERP: `.hybrid/visual.json`'s start command, `scripts/
+    visual_serve.py` and the smoke scripts serve `--dataset wwi` (`wwi` needs the same fake-model coverage the flows
+    use: golden replay, one clarification, one follow-up chain, ready questions - add what is missing to `wwi`'s
+    golden/ambiguous/followups files, each SQL run once through the policy on the `wwi` fixture). The synthetic ERP
+    stays the main **test** dataset; tests are not moved.
+  - `serve` without `--dataset` opens the remembered active dataset (Run 6), else `wwi`, else the first dataset
+    with an index - never silently the synthetic ERP. README examples use `wwi` / `wwi_real`.
 
 **Out (not this run):** languages other than Turkish and English, translating database content (descriptions in the
 schema stay as the admin wrote them), machine translation of business rules, network exposure / TLS, an MSI
