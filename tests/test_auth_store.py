@@ -271,6 +271,14 @@ def test_no_returned_dict_carries_the_hash_or_the_plain_password(store):
     assert users
     for item in users:
         assert "password_hash" not in item
-        assert set(item) == {"id", "username", "role", "active", "created_at", "last_login_at"}
+        assert set(item) == {
+            "id",
+            "username",
+            "role",
+            "active",
+            "created_at",
+            "last_login_at",
+            "business_role",
+        }
         assert PAROLA not in json.dumps(item, ensure_ascii=False)
     assert PAROLA not in _stored_hash(store, user["id"])

@@ -25,8 +25,8 @@ from nl2sql.auth.passwords import check_new_password, hash_password, verify_pass
 USERNAME_RE = re.compile(r"^[a-z0-9_.-]{3,32}$")
 ROLES = ("admin", "user")
 
-# Sözleşme "User (public)": okuma sorgusu hash'i hiç seçmez, o yüzden yanlışlıkla da çıkmaz.
-_COLUMNS = ("id", "username", "role", "active", "created_at", "last_login_at")
+# Sözleşme "User (public)" ve Run 7 "User (ext.)": okuma sorgusu hash'i hiç seçmez, o yüzden yanlışlıkla da çıkmaz.
+_COLUMNS = ("id", "username", "role", "active", "created_at", "last_login_at", "business_role")
 _SELECT = ", ".join(_COLUMNS)
 
 DUPLICATE_MESSAGE = "Bu kullanıcı adı zaten var."
@@ -36,11 +36,12 @@ BAD_NAME_MESSAGE = (
     "Kullanıcı adı 3-32 karakter olmalı ve yalnız küçük harf, rakam, . _ - içerebilir."
 )
 BAD_ROLE_MESSAGE = "Rol admin ya da user olmalı."
+BAD_BUSINESS_ROLE_MESSAGE = "Geçersiz iş rolü."
 BAD_LOGIN_MESSAGE = "Kullanıcı adı ya da parola hatalı."
 LOCKED_MESSAGE = "Çok fazla hatalı deneme. {n} dakika sonra yeniden deneyin."
 
 _CREATE = (
-    """
+    f"""
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT NOT NULL UNIQUE,
@@ -48,7 +49,8 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL CHECK (role IN ('admin', 'user')),
   active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL,
-  last_login_at TEXT
+  last_login_at TEXT,
+  business_role TEXT NOT NULL DEFAULT '{config.DEFAULT_BUSINESS_ROLE}'
 )
 """,
     """
@@ -103,25 +105,34 @@ class UserStore:
         with _connect(self.path) as conn:
             for ddl in _CREATE:
                 conn.execute(ddl)
+            _add_business_role(conn)
 
     # ------------------------------------------------------------------ users
 
-    def add_user(self, username: str, password: str, role: str) -> dict:
+    def add_user(
+        self,
+        username: str,
+        password: str,
+        role: str,
+        business_role: str = config.DEFAULT_BUSINESS_ROLE,
+    ) -> dict:
         """Kullanıcıyı açar ve public sözlüğünü döndürür; ad küçük harfe katlanır."""
         name = str(username).lower()
         if not USERNAME_RE.match(name):
             raise UserError(BAD_NAME_MESSAGE, 422)
         if role not in ROLES:
             raise UserError(BAD_ROLE_MESSAGE, 422)
+        if business_role not in config.BUSINESS_ROLES:
+            raise UserError(BAD_BUSINESS_ROLE_MESSAGE, 422)
         refused = check_new_password(password)
         if refused:
             raise UserError(refused, 422)
         with _connect(self.path) as conn:
             try:
                 conn.execute(
-                    "INSERT INTO users (username, password_hash, role, active, created_at)"
-                    " VALUES (?, ?, ?, 1, ?)",
-                    (name, hash_password(password), role, self._now_iso()),
+                    "INSERT INTO users (username, password_hash, role, active, created_at, business_role)"
+                    " VALUES (?, ?, ?, 1, ?, ?)",
+                    (name, hash_password(password), role, self._now_iso(), business_role),
                 )
             except sqlite3.IntegrityError:
                 raise UserError(DUPLICATE_MESSAGE, 409) from None
@@ -148,14 +159,21 @@ class UserStore:
             return conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
 
     def update_user(
-        self, id: int, role: str | None = None, active: bool | None = None, password: str | None = None
+        self,
+        id: int,
+        role: str | None = None,
+        active: bool | None = None,
+        password: str | None = None,
+        business_role: str | None = None,
     ) -> dict:
-        """Rolü, etkinliği ve/veya parolayı değiştirir; son etkin yöneticiyi korur."""
+        """Rolü, etkinliği, parolayı ve/veya iş rolünü değiştirir; son etkin yöneticiyi korur."""
         user = self.get_by_id(id)
         if user is None:
             raise UserError(NOT_FOUND_MESSAGE, 404)
         if role is not None and role not in ROLES:
             raise UserError(BAD_ROLE_MESSAGE, 422)
+        if business_role is not None and business_role not in config.BUSINESS_ROLES:
+            raise UserError(BAD_BUSINESS_ROLE_MESSAGE, 422)
         refused = check_new_password(password) if password is not None else None
         if refused:
             raise UserError(refused, 422)
@@ -173,6 +191,9 @@ class UserStore:
         if password is not None:
             sets.append("password_hash = ?")
             args.append(hash_password(password))
+        if business_role is not None:
+            sets.append("business_role = ?")
+            args.append(business_role)
         if sets:
             with _connect(self.path) as conn:
                 conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = ?", (*args, id))
@@ -312,6 +333,18 @@ def _public(row: tuple) -> dict:
     user = dict(zip(_COLUMNS, row))
     user["active"] = bool(user["active"])
     return user
+
+
+def _add_business_role(conn) -> None:
+    """Run 6 dosyalarında iş rolü kolonu yoktur: sona eklenir, eski satırlar varsayılanı okur (R7-16)."""
+    if "business_role" in {row[1] for row in conn.execute("PRAGMA table_info(users)")}:
+        return
+    # ASSUMPTION: ALTER TABLE bağlama parametresi kabul etmediği için varsayılan DDL metnine yazılır;
+    # değer config'in sabit listesinden gelir, kullanıcı girdisi değildir.
+    conn.execute(
+        "ALTER TABLE users ADD COLUMN business_role TEXT NOT NULL DEFAULT"
+        f" '{config.DEFAULT_BUSINESS_ROLE}'"
+    )
 
 
 @contextlib.contextmanager
