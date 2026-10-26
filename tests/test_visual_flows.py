@@ -165,3 +165,19 @@ def test_every_page_shoots_something_or_ends_on_a_state():
     for page in visual()["pages"]:
         ends_on_a_state = isinstance(page["steps"][-1], dict)
         assert any(is_shot(step) for step in page["steps"]) or ends_on_a_state, page["name"]
+
+
+def test_the_sidebar_page_opens_the_drawer_it_is_named_for():
+    """720px altında yan panel ``#sidebar-toggle`` arkasında (styles.css:192-218).
+
+    Akış düğmeye basmadan çekilirse çekmecesiyle anılan sayfanın telefon karesi boş bir sayfa
+    gösterir: kaydedilen satır oradadır ama çekmece kapalıdır (M19 incelemesi 5).
+    """
+    page = next(page for page in visual()["pages"] if page["name"] == "saved-and-history-sidebar")
+    steps = page["steps"]
+    first_shot = next((i for i, step in enumerate(steps) if is_shot(step)), len(steps))
+
+    clicked_before = [step for step in steps[:first_shot] if isinstance(step, dict)]
+    assert {"click": "#sidebar-toggle"} in clicked_before, (
+        f"kare çekilmeden önce {page['name']} akışı #sidebar-toggle'a basmıyor: {steps}"
+    )

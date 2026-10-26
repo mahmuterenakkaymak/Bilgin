@@ -80,6 +80,8 @@
         "wait:4",
         {"click": "#save-question"},
         "wait:1",
+        {"click": "#sidebar-toggle"},
+        "wait:1",
         "shot:sidebar-saved-history"
       ]
     },
