@@ -957,14 +957,18 @@ main {
      bırakıyor, 390'da "Sor Kurallar" / "Veritabanı haritası" / "Kullanıcılar" üç satıra dizilip
      başlığı dörde çıkarıyordu (landing-empty-state-390.png, users-screen-390.png). Satır tek
      olarak yazılır, taşan taraf kaydırılır; başlığın iki satırı bozulmaz. Kaydırma çubuğu satırı
-     kabartmaz — kenarda kesilen ad devamı olduğunu zaten söylüyor. Odak halkası kutunun 4px
-     dışına çiziliyor: pay içeride, negatif pay ile metnin başlangıcı yine sözcükle hizada. */
+     kabartmaz, ama devamı da söylemez: çubuk gizli, "Veritabanı harita" kesik ad yazım hatası
+     okunuyor (users-screen-users-table-390.png). Devamını taşan kenardaki maske söylüyor — son
+     bağlantı orada eriyor. Odak halkası kutunun 4px dışına çiziliyor: pay içeride, negatif pay
+     ile metnin başlangıcı yine sözcükle hizada. */
   .masthead-nav {
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
     padding: 4px;
     margin: -4px;
+    -webkit-mask-image: linear-gradient(to left, transparent 0, #000 1.75rem);
+    mask-image: linear-gradient(to left, transparent 0, #000 1.75rem);
   }
 
   .masthead-nav::-webkit-scrollbar {
