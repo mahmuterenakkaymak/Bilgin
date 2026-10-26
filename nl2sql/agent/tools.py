@@ -89,6 +89,59 @@ SUBMIT_SQL = {
     },
 }
 
+# R7-5: geçmişi olan bir koşta submit_sql'e eklenen alan. SUBMIT_SQL Run 6'dır ve olduğu gibi kalır;
+# döngü yalnız geçmiş gördüğü koşta aşağıdaki yardımcının döndürdüğü şemayı gönderir.
+CONTEXT_NOTE = {
+    "type": "object",
+    "description": "Cevabın hangi önceki turlara dayandığı; önceki tur olmayan bir soruda boş bırakın.",
+    "properties": {
+        "uses_turns": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": "Cevabın dayandığı tur numaraları, örn. [1, 2].",
+        },
+        "entities": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "column": {
+                        "type": "string",
+                        "description": 'O turun kolon adlarında geçen kolon, örn. "CustomerID".',
+                    },
+                    "value": {
+                        "type": "string",
+                        "description": 'O turun gösterilen satırlarında görünen değer, örn. "832".',
+                    },
+                },
+                "required": ["column", "value"],
+            },
+        },
+        "refines_sql_of": {
+            "anyOf": [{"type": "integer"}, {"type": "null"}],
+            "description": "Sorgusunu başlangıç aldığın turun numarası; yoksa null.",
+        },
+    },
+}
+
+
+def submit_sql_with_context() -> dict:
+    """submit_sql'in bağlam notuna açık hali: yeni sözlükler, Run 6 şemasına dokunmaz (R7-5)."""
+    submit = SUBMIT_SQL["function"]
+    parameters = submit["parameters"]
+    return {
+        **SUBMIT_SQL,
+        "function": {
+            **submit,
+            "parameters": {
+                **parameters,
+                # context zorunlu değil: kendi başına okunan bir soruda model onu boş bırakır.
+                "properties": {**parameters["properties"], "context": CONTEXT_NOTE},
+            },
+        },
+    }
+
+
 # Aşağıdakiler `rag` modunun arama araçlarıdır (PLAN R2-5): hangi modun hangi araçları gördüğüne
 # nl2sql.agent.modes karar verir, yani burada liste halinde durmaları gerekmiyor.
 SEARCH_SCHEMA = {

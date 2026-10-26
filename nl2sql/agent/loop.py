@@ -12,6 +12,12 @@ With a prompt budget (PLAN R4-11) every turn is estimated before it is sent: an 
 transcript is trimmed with ``budget.trim_tool_answers`` (permanently, tool answers only) and, if it
 still does not fit, the run ends as ``context_overflow`` without ever reaching the model.
 
+With a history (PLAN R7-4) the earlier turns join the run as one block appended to the system
+message — the user message stays the bare question — and the block is what the budget shrinks
+first: ``context.fit_history`` drops the oldest turn, then rows, and only a budget that cannot
+carry the bare prompt stops the run. Such a run also shows ``submit_sql`` a ``context`` field and
+keeps whatever the model writes there on the run, raw, for the caller to validate (R7-5).
+
 The mode (PLAN R2-5) decides the rest of the run: the system prompt, the tools the model is shown
 and the tool-call limit all come from ``modes``, so the three arms of the A/B differ in nothing but
 the context and the tools they hand the model. A context with ``clarify`` adds one tool to that list
@@ -28,8 +34,9 @@ from dataclasses import dataclass, field, replace
 from nl2sql import config
 from nl2sql.agent import modes
 from nl2sql.agent.budget import estimate_prompt, trim_tool_answers
+from nl2sql.agent.context import context_block, fit_history, followup_hints
 from nl2sql.agent.llm import LLMError
-from nl2sql.agent.tools import answer_is_ok, clarify_request, dispatch
+from nl2sql.agent.tools import answer_is_ok, clarify_request, dispatch, submit_sql_with_context
 
 # Sözleşmede adı geçen dördüncü bir sınır yok; bu yalnızca hiç araç çağırmayıp metin üreten bir
 # modelin sonsuz dönmemesi için bir emniyet.
@@ -77,6 +84,10 @@ class AgentRun:
     peak_estimate: int = 0  # en yüksek gönderilen istem tahmini (R4-11); taşmada reddedilen tahmin
     trimmed: int = 0  # bütçe için kısaltılan araç cevabı sayısı
     overflows: int = 0  # 1: bütçeye sığmadığı için modele gitmeden durdu
+    # R7-5: submit_sql'in ham context alanı; doğrulama çağıranın (validate_note).
+    context_note: dict | None = None
+    history_turns: int = 0  # bloğa giren önceki tur sayısı (R7-4; bütçe eksilttiyse daha azı)
+    history_rows_dropped: int = 0  # bütçe için bloktan düşürülen satır sayısı
 
 
 def run_agent(
@@ -91,9 +102,11 @@ def run_agent(
     max_turns: int = DEFAULT_MAX_TURNS,
     timeout_s: float = config.AGENT_TIMEOUT_S,
     budget: int | None = None,
+    history: list[dict] | None = None,
 ) -> AgentRun:
     """Drive one question to a submitted SQL, a limit, or a model failure, in one mode; with a
-    prompt budget, keep every request under it (R4-11)."""
+    prompt budget, keep every request under it (R4-11); with a history, let the earlier turns say
+    what "bu müşteri" means (R7-4)."""
     started = time.perf_counter()
     deadline = started + timeout_s
     mode_def = modes.get_mode(mode)
@@ -106,6 +119,22 @@ def run_agent(
         {"role": "system", "content": modes.system_prompt(ctx)},
         {"role": "user", "content": question},
     ]
+    turns = list(history or [])[-config.CONV_TURNS :]
+    if turns:
+        # R7-4: geçmiş tek system mesajının sonuna eklenir, kullanıcının çıplak sorusu olduğu gibi
+        # kalır. Bütçe daralıyorsa ilk eksilen de geçmiştir; bloğa hiç tur sığmıyorsa hiçbir şey
+        # eklenmez ve kararı aşağıdaki bütçe denetimi verir - Run 6'nın tek başarısızlığı.
+        kept, rows_dropped, _ = fit_history(turns, messages, sent_tools, budget)
+        run.history_turns, run.history_rows_dropped = kept, rows_dropped
+        if kept:
+            # ASSUMPTION: ipucu satırını followup_hints doldurur (R7-11) - bloğun üretebileceği tek
+            # soru ile şema ikili burada, döngünün elinde; context_block kendi ipucusunu kurmuyor.
+            block = context_block(turns, followup_hints(question, ctx.schema))
+            messages[0] = {"role": "system", "content": f"{messages[0]['content']}\n\n{block}"}
+            sent_tools = [
+                submit_sql_with_context() if shown["function"]["name"] == "submit_sql" else shown
+                for shown in sent_tools
+            ]
     tool_calls = failed_runs = 0
     peak = 0
 
@@ -170,6 +199,9 @@ def run_agent(
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": answer})
                 if call.name == "submit_sql" and ok:
                     run.submitted_sql = str(call.arguments.get("sql") or "")
+                    note = call.arguments.get("context")
+                    if isinstance(note, dict):  # ham kalır; doğrulayacak olan çağıran (R7-5)
+                        run.context_note = note
                     return finish("submitted")
                 if call.name == "ask_clarification" and ok:
                     # Geçersiz çağrı yukarıdaki red satırından okunur ve çalışma burada durmaz;
