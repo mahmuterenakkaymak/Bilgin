@@ -9,7 +9,8 @@
     "schema": "schema.json",
     "rules": "rules.json",
     "profile": "profile.json",
-    "golden": "golden.jsonl"
+    "golden": "golden.jsonl",
+    "followups": "followups.jsonl"
   },
   "builder": "real.py:build_db",
   "generator": "real.py:generate",
