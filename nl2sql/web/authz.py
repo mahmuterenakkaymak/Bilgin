@@ -59,6 +59,17 @@ ROUTE_ROLES: dict[tuple[str, str], str] = {
     ("GET", "/api/users"): "admin",
     ("POST", "/api/users"): "admin",
     ("PUT", "/api/users/{id}"): "admin",
+    # R7-17, R7-18: başlangıç ekranının kartları ve kişinin kendi panosu herkesin; hazır soruların
+    # deposu - listesi, onayı, değişikliği, silinmesi - yalnız yöneticinin.
+    ("GET", "/api/start"): "user",
+    ("POST", "/api/start/cards"): "user",
+    ("POST", "/api/start/cards/{id}/open"): "user",
+    ("POST", "/api/start/cards/{id}/refresh"): "user",
+    ("DELETE", "/api/start/cards/{id}"): "user",
+    ("GET", "/api/ready-questions"): "admin",
+    ("POST", "/api/ready-questions"): "admin",
+    ("PUT", "/api/ready-questions/{id}"): "admin",
+    ("DELETE", "/api/ready-questions/{id}"): "admin",
 }
 
 

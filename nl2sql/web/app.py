@@ -31,6 +31,8 @@ from nl2sql.index.store import META_FILE, MissingIndexError, StaleIndexError, co
 from nl2sql.report.export import MEDIA_TYPES, to_csv_bytes, to_xlsx_bytes
 from nl2sql.schema_map import doc
 from nl2sql.schema_map.rules_edit import normalize_rule, save_rules, validate_rule
+from nl2sql.start.cards import StartCache
+from nl2sql.start.ready import ReadyStore
 from nl2sql.web.auth_api import create_router as create_auth_router
 from nl2sql.web.auth_api import create_users_router
 from nl2sql.web.authz import NO_SESSION, ROUTE_ROLES, current_user, require
@@ -39,6 +41,8 @@ from nl2sql.web.conversations_api import create_router as create_conversations_r
 from nl2sql.web.datasets_api import create_router as create_datasets_router
 from nl2sql.web.map_api import create_router as create_map_router
 from nl2sql.web.saved import ALL as SAVED_ALL, SavedStore
+from nl2sql.web.start_api import SessionExecutor
+from nl2sql.web.start_api import create_router as create_start_router
 
 # R5-15: boş soru koşum açmaya değmez; cümle ekranın gösterdiği cümledir.
 BLANK_QUESTION = "Soru boş."
@@ -152,6 +156,11 @@ def create_app(
     saved = SavedStore(saved_path)
     # R7-8: konuşmalar kayıtlarla aynı SQLite dosyasında; yollar depoyu app.state'ten okur.
     app.state.conversations = ConversationStore(saved_path)
+    # R7-17: hazır sorular da aynı dosyada. Kart önbelleği uygulamanın üstünde yaşar - TTL'i ve
+    # tek uçuş kilidi uygulama kadar ömürlü olmalı - ama yürütücüyü her yürüyüşte o anki oturumdan
+    # okur, yani bir küme geçişinden (R6-10) sonra kartlar eski veritabanında koşmaz.
+    app.state.ready = ReadyStore(saved_path)
+    app.state.start_cache = StartCache(SessionExecutor(app))
     static = Path(static_dir)
 
     @app.exception_handler(RuleRejected)
@@ -164,6 +173,7 @@ def create_app(
     app.include_router(create_conversations_router())
     app.include_router(create_datasets_router())
     app.include_router(create_map_router())
+    app.include_router(create_start_router())
 
     def guarded(method: str, path: str, **kwargs):
         """Yolun kapısını ``ROUTE_ROLES``tan okuyan süsleyici (R6-5, R6-6).
