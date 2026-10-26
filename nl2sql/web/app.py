@@ -174,9 +174,10 @@ def create_app(
         R6-9: başkasının sorusu bu yol için hiç yoktur, yani cevabı yokluğu anlatan bir payload
         değil, dışa aktarımınkiyle aynı cümle ve durumda bir 404.
         """
-        # ASSUMPTION: replay_payload süzgeci ile yeni kaydın adını tek parametrede taşır; yönetici
-        # başkasının kaydını da gördüğü için adı söylenmez, yani onun replay satırı adsız kalır.
-        payload = replay_payload(session, audit_id, source="web", username=_scope(request, None))
+        # ASSUMPTION: süzgeç ile ad ayrıdır: yönetici başkasının kaydını da görür (süzgeç herkese
+        # açık), ama yeniden sorduğunda satırı ve denetim satırları kendi adını taşır (R6-9).
+        payload = replay_payload(session, audit_id, source="web", username=_asker(request),
+                                 scope=_scope(request, asklog._ALL))
         if (payload["error"] or {}).get("kind") == "not_found":
             raise HTTPException(status_code=404, detail=NO_ASK)
         return payload

@@ -124,7 +124,9 @@ def _run(session, question: str, mode: str, source: str, payload: dict, clarify:
     _answer(session, question, run.submitted_sql or "", source, payload)
 
 
-def replay_payload(session, audit_id: str, source: str = "web", username: str | None = None) -> dict:
+def replay_payload(
+    session, audit_id: str, source: str = "web", username: str | None = None, scope=None
+) -> dict:
     """Geçmişteki bir soruyu modelsiz açar (2026-10-25, Eren: "her soruyu baştan sorup cevap oluşturuyor").
 
     Soru günlüğünde kayıtlı SQL aynı politika ve salt-okunur yürütücüden yeniden geçer; tablo, grafik ve
@@ -132,12 +134,14 @@ def replay_payload(session, audit_id: str, source: str = "web", username: str | 
     olmayan bir kayıt (hata, netleştirme) ya da başka kümenin kaydı yeniden sorulmaz: o zaman soru
     baştan sorulur, kümesi tutmuyorsa hata döner.
 
-    ``username`` verildiğinde arayan yalnız kendi kaydını bulur; yeni satır ve denetim satırları da o
-    adı taşır (R6-9).
+    ``username`` soruyu yeniden soran kişinin adıdır: yeni satır ve denetim satırları onu taşır.
+    ``scope`` arayanın hangi kayıtları gördüğünün süzgecidir (``asklog._ALL`` herkese açıktır);
+    söylenmediğinde adın kendisidir, yani tek başına ``username`` hem arar hem yazar (R6-9).
     """
-    # ASSUMPTION: username=None "kimin aradığı söylenmedi" demektir, "kullanıcısız kaydı ara" değil;
-    # arama o yüzden _ALL ile yapılır, söylenen ad ise başkasının kaydını bulunamaz kılar (R6-9).
-    record = asklog.find_ask(audit_id, session.ask_log, username=asklog._ALL if username is None else username)
+    # ASSUMPTION: süzgeç söylenmediğinde adın kendisi süzgeç olur; adı olmayan bir çağrı ise
+    # "kullanıcısız kaydı ara" demez, aramayı _ALL ile yapar (R6-9).
+    who = username if scope is None else scope
+    record = asklog.find_ask(audit_id, session.ask_log, username=asklog._ALL if who is None else who)
     if record is None or not record.get("question"):
         payload = _skeleton("", None, "auto", session, asklog.new_audit_id(), [])
         _fail(payload, "not_found", "Bu soru geçmişte bulunamadı.")
