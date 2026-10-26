@@ -20,6 +20,9 @@ SQLITE_TYPES = {
     "DECIMAL": "REAL",
     "VARCHAR": "TEXT",
     "NVARCHAR": "TEXT",
+    # Sabit genişlikli metin de TEXT yakınlığıdır: şablonun kod kolonları CHAR(1)/NCHAR(1) gelir.
+    "CHAR": "TEXT",
+    "NCHAR": "TEXT",
     # SQLite'ta bunlar yalnız bildirilen ad, yakınlık yeter: sayıya dönmeyen ISO tarih metin
     # kalır, BIT 0/1, VARBINARY bytes olarak döner (PLAN R4-6).
     "BIT": "BOOLEAN",
