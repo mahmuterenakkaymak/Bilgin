@@ -206,7 +206,10 @@
         "shot:map-switched-chip",
         {"click": "#map-try-sample"},
         "wait:3",
-        "shot:map-name-taken"
+        "shot:map-name-taken",
+        {"click": "button[data-dataset-activate='synthetic_erp']"},
+        "wait:2",
+        "shot:map-back"
       ]
     }
   ]

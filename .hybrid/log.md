@@ -942,3 +942,42 @@
 2026-10-26 06:02:27 | ORCH   | T256: PASSED (hands)
 2026-10-26 06:02:37 | HANDS  | T257 try 1: M20 integration (no hand-made fakes): add tests/test_integration_m20.py (new file, tmp roots and tmp app DB, real store + real create_app + real session: the admin downloads /api/schema-map/template.xlsx, the test fills it in code with openpyxl (the Örnek table copied into Tablolar/Kolonlar under "entegre_fatura", BAĞLANTI sqlite, one rule) -> /api/schema-map/preview counts right and 0 errors -> apply -> status done with the fake embedder -> data/entegre_fatura.db built from the new schema -> /api/datasets lists it with a fresh index -> switch -> /api/ask with the fake LLM answered against it; each brief error case (missing required cell, orphan column, duplicate, invalid class, unknown REFERANS, invalid name, existing name, non-xlsx) blocks apply; qualified names Satis.Fatura work end to end; datasets/ and real_datasets/ copies byte-identical after all uploads; a user gets 403 on every map and datasets route); then fix whatever the whole suite shows red
 2026-10-26 06:19:08 | ORCH   | hands: changed memory note nl2sql-preexisting-red-tests.md - GREEN at HEAD as of T257 (4708 passed, 0 failed) — no known pre-existing red; test_web_health_refresh's HEALTH_URL pin went green again when App.jsx re-declared HEALTH_URL. Re-verify before hunting a phantom red, and check the owning task before touching one.
+2026-10-26 06:25:13 | ORCH   | T257: PASSED (hands)
+2026-10-26 06:25:13 | ORCH   | M20: whole-project checks
+2026-10-26 06:31:47 | ORCH   | M20: whole-project checks green (17 command(s))
+2026-10-26 06:31:47 | ORCH   | M20: screenshots for the visual review
+2026-10-26 06:36:07 | ORCH   | M20: page problem: landing-empty-state-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: ask-golden-answer-chart-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: ask-ambiguous-clarify-then-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: export-buttons-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: saved-and-history-sidebar-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: rules-screen-validation-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: dark-mode-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: logout-clears-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: users-screen-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: user-readonly-rules-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: admin-map-onboard-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: landing-empty-state-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: ask-golden-answer-chart-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: ask-ambiguous-clarify-then-answer-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-26 06:36:07 | ORCH   | M20: page problem: ask-ambiguous-clarify-then-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: export-buttons-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-26 06:36:07 | ORCH   | M20: page problem: export-buttons-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: saved-and-history-sidebar-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-26 06:36:07 | ORCH   | M20: page problem: saved-and-history-sidebar-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: rules-screen-validation-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: dark-mode-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: logout-clears-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: users-screen-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: users-screen-1366: console error: Failed to load resource: the server responded with a status of 409 (Conflict)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: user-readonly-rules-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:36:07 | ORCH   | M20: page problem: admin-map-onboard-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-26 06:36:07 | ORCH   | M20: page problem: admin-map-onboard-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-26 06:39:15 | BRAIN  | M20: visual review with local Strata (64 screenshots)
+2026-10-26 06:50:36 | BRAIN  | M20: visual review done - 7 fix task(s) added
+2026-10-26 06:50:45 | BRAIN  | M20: review with sonnet in the background - hands keep building
+2026-10-26 06:50:56 | HANDS  | T275 try 1: the visual run leaves the app on the dataset its last page created (M20 review 1): `.hybrid/visual.json` runs all twelve pages against one `scripts/visual_serve.py` server and `admin-map-onboard` ends on "Bu veri kümesine geç", so the second width pass starts with `ornek_fatura` - an empty one-table dataset - active: landing-empty-state-1366.png has no example chips at all, every later ask falls back to `SELECT COUNT(*)` with no chart (ask-golden-answer-chart-answer-with-chart-1366.png), and ask-ambiguous-clarify-then-answer-1366, export-buttons-1366, saved-and-history-sidebar-1366 and admin-map-onboard-1366 die on a 10 s click timeout, so ten desktop frames were never taken. Fix: the map page ends the way it began - after its last `shot` step, `{"click": "button[data-dataset-activate='synthetic_erp']"}`, `wait:2`, `shot:map-back` - so the suite leaves the world as it found it; extend tests/test_visual_flows.py (named here: the admin-map-onboard page's last click is that `synthetic_erp` activate button and it comes after the page's last shot step)

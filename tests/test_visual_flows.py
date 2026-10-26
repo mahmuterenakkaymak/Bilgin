@@ -181,3 +181,22 @@ def test_the_sidebar_page_opens_the_drawer_it_is_named_for():
     assert {"click": "#sidebar-toggle"} in clicked_before, (
         f"kare çekilmeden önce {page['name']} akışı #sidebar-toggle'a basmıyor: {steps}"
     )
+
+
+def test_the_map_page_hands_the_dataset_it_found_back_to_the_next_page():
+    """On iki sayfa tek sunucuda koşar: son sayfada kalan etkin küme öteki genişliğin başıdır.
+
+    ``admin-map-onboard`` ``#map-activate``la ``ornek_fatura``ya geçip orada bitiriyordu; 1366px
+    koşusu boş, tek tabloluk bir kümeyle açıldığından örnek çipler kayboluyor, sorular grafik
+    vermeden ``SELECT COUNT(*)``a düşüyor ve sonraki sayfaların tıklamaları 10 sn'de doluyordu
+    (M20 incelemesi 1).
+    """
+    page = next(page for page in visual()["pages"] if page["name"] == "admin-map-onboard")
+    steps = page["steps"]
+
+    clicks = [i for i, step in enumerate(steps) if isinstance(step, dict) and "click" in step]
+    assert steps[clicks[-1]] == {"click": "button[data-dataset-activate='synthetic_erp']"}, steps
+
+    # Son kare geri dönüşü kanıtlar; tık ondan önce gelir, yani inceleme karelerinin hepsinden sonra.
+    shots = [i for i, step in enumerate(steps) if is_shot(step)]
+    assert clicks[-1] > shots[-2], f"geri dönüş tıkı inceleme karelerinden önce kalıyor: {steps}"
