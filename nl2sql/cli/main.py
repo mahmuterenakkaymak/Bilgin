@@ -546,8 +546,8 @@ def ask(
         if conversations is not None:
             _conversation_line(
                 conversations, conversation_id, pending, question=question, choice=choice,
-                status="needs_clarification", sql=None, columns=[], rows=[], facts=[],
-                answer_text="", clarification=run.clarification,
+                status="needs_clarification", sql=None, columns=[], rows=[], row_count=0,
+                facts=[], answer_text="", clarification=run.clarification,
             )
         return 0
     if not run.submitted_sql:
@@ -556,8 +556,8 @@ def ask(
         if conversations is not None:
             _conversation_line(
                 conversations, conversation_id, pending, question=question, choice=choice,
-                status="failed", sql=None, columns=[], rows=[], facts=[], answer_text="",
-                clarification=None,
+                status="failed", sql=None, columns=[], rows=[], row_count=0, facts=[],
+                answer_text="", clarification=None,
             )
         return 1
 
@@ -579,7 +579,8 @@ def ask(
         _conversation_line(
             conversations, conversation_id, pending, question=question, choice=choice,
             status="answered", sql=run.submitted_sql, columns=result.columns, rows=result.rows,
-            facts=[fact.to_dict() for fact in facts], answer_text=sentence, clarification=None,
+            row_count=len(result.rows), facts=[fact.to_dict() for fact in facts],
+            answer_text=sentence, clarification=None,
         )
     return 0
 
@@ -633,6 +634,7 @@ def _conversation_turn(conversations, conversation_id, pending, **turn) -> int:
         "summary": turn_summary(
             {
                 "columns": turn["columns"],
+                "row_count": turn["row_count"],
                 "rows": turn["rows"],
                 "facts": turn["facts"],
                 "clarification": turn["clarification"],
