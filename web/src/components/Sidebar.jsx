@@ -1,5 +1,6 @@
 import { useState } from "react";
 import * as api from "../lib/api.js";
+import ConversationList from "./ConversationList.jsx";
 
 // Kenar çubuğu (R5-18): kayıtlı sorular ve geçmiş. Kayıtlı satır soruyu yeniden sorar, geçmiş satırı
 // kayıtlı SQL'i modelsiz açar (audit_id ile); kayıtlıda bir de × vardır. Listeler App'ten gelir — ikisinin de ne zaman tazeleneneceği orada bellidir.
@@ -50,7 +51,7 @@ function relativeTime(value, now) {
   return `${Math.floor(days / 365)} yıl önce`;
 }
 
-export default function Sidebar({ saved = [], history = [], onAsk, onRemoved }) {
+export default function Sidebar({ saved = [], history = [], conversations = [], onAsk, onRemoved }) {
   const [note, setNote] = useState("");
 
   const savedRows = list(saved)
@@ -73,12 +74,16 @@ export default function Sidebar({ saved = [], history = [], onAsk, onRemoved }) 
       continue;
     }
     const auditId = typeof item?.audit_id === "string" && item.audit_id ? item.audit_id : "";
+    // Konuşmayla koşan soru kaçıncı tur olduğunu taşır: satır "tur n" ile hangi tur olduğunu söyler.
+    const conversationId = typeof item?.conversation_id === "string" && item.conversation_id ? item.conversation_id : "";
+    const turn = conversationId && Number.isFinite(item?.turn) ? item.turn : null;
     historyRows.push({
       key: auditId || `h${index}`,
       auditId,
       question,
       status,
       ts: typeof item?.ts === "string" ? item.ts : "",
+      turn,
       count: 1,
     });
   }
@@ -123,6 +128,7 @@ export default function Sidebar({ saved = [], history = [], onAsk, onRemoved }) 
           })}
         </ul>
       </section>
+      <ConversationList conversations={conversations} onRemoved={onRemoved} />
       <section className="side-block">
         <h2 className="side-title">Geçmiş</h2>
         <ul id="history-list" className="side-list">
@@ -143,6 +149,7 @@ export default function Sidebar({ saved = [], history = [], onAsk, onRemoved }) 
                   </span>
                   {time && <span className="side-time">{time}</span>}
                   <span className="side-label">{row.question}</span>
+                  {row.turn != null && <span className="side-turn">tur {row.turn}</span>}
                   {row.count > 1 && <span className="side-count">×{row.count}</span>}
                 </button>
               </li>

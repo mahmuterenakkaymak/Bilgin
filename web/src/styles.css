@@ -339,6 +339,13 @@ body {
   font-weight: 650;
 }
 
+/* Konuşmayla koşan geçmiş sorusunun tur numarası: sayı kadar ikincil, ama sorunun üstüne binmesin. */
+.side-turn {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .side-remove {
   flex: none;
   padding: 0 var(--space);

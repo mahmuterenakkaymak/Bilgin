@@ -381,6 +381,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [saved, setSaved] = useState([]);
   const [history, setHistory] = useState([]);
+  const [conversations, setConversations] = useState([]);
   const [pending, setPending] = useState(null); // {question, n}: kenar çubuğundan gelen soru
   const [datasetKey, setDatasetKey] = useState(0); // her küme değişiminde büyür, örnekler tazelenir
   const [theme, setTheme] = useState(() => readStored(themeStorage()));
@@ -439,6 +440,10 @@ export default function App({ user = null, onLogout = null, note = "" }) {
     api
       .history()
       .then((data) => setHistory(Array.isArray(data?.history) ? data.history : []))
+      .catch(() => {});
+    api
+      .conversationsList()
+      .then((data) => setConversations(Array.isArray(data?.conversations) ? data.conversations : []))
       .catch(() => {});
   };
 
@@ -537,7 +542,13 @@ export default function App({ user = null, onLogout = null, note = "" }) {
               Kapat
             </button>
           )}
-          <Sidebar saved={saved} history={history} onAsk={askFromSidebar} onRemoved={refresh} />
+          <Sidebar
+            saved={saved}
+            history={history}
+            conversations={conversations}
+            onAsk={askFromSidebar}
+            onRemoved={refresh}
+          />
         </aside>
         <main id="main">
           {/* Cümle düşülen ekranın üstünde durur; başka bir ekrana geçince kendiliğinden kalkar. */}
