@@ -19,6 +19,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from nl2sql import config
+from nl2sql.app import asklog
+from nl2sql.engine.result import Budget
+from nl2sql.report import shape
+from nl2sql.report.chart import chart_spec
 
 # Contracts "ready question": alan adları ve sırası burada; ``approved`` dışarı bool çıkar.
 _ROW = (
@@ -47,6 +51,9 @@ NOT_FOUND_MESSAGE = "Hazır soru bulunamadı."
 BAD_ROLE_MESSAGE = "Geçersiz iş rolü."
 BAD_DISPLAY_MESSAGE = "Geçersiz görünüm: number, chart ya da table olmalı."
 CAP_MESSAGE = f"En fazla {config.PERSONAL_CARDS} kişisel kart ekleyebilirsiniz."
+
+# R6-9'un cümlesi: başkasının sorusu arayan için hiç yoktur, yani red 403 değil 404'tür.
+NO_ASK_MESSAGE = "Bu soru geçmişte bulunamadı."
 
 _CREATE = """
 CREATE TABLE IF NOT EXISTS ready_questions (
@@ -237,6 +244,73 @@ class ReadyStore:
         return datetime.fromtimestamp(self.clock(), timezone.utc).isoformat(timespec="seconds")
 
 
+def approve_from_audit(
+    session, store: ReadyStore, audit_id: str, username: str | None, scope, fields: dict
+) -> dict:
+    """Onay: SQL'i soru günlüğündeki kayıttan alır, aynı yürütücüden geçirir, satırı onaylı yazar.
+
+    İstemci hiç SQL göndermez (R7-17): kartın cümlesi yalnız onaylayanın görebildiği bir sorunun
+    çalıştırdığı cümledir, ve onayda bir daha politika ve salt okunur yürütücüden geçer - kapalı
+    bir kolon ya da bozuk bir sorgu burada da döner, satıra hiçbir şey yazılmaz. ``scope``
+    ``asklog.find_ask``ın süzgecidir: yöneticide ``asklog._ALL``, kullanıcıda kendi adı; başkasının
+    kaydı arayan için hiç yoktur, yani red 404'tür.
+
+    ``fields`` gövdenin alanlarıdır (``title``, ``question``, ``display``, ``business_role``,
+    ``position``) - ``sql`` yoktur, kayıttan gelir. ``question`` ve ``title`` söylenmediğinde
+    sorunun kendisidir; ``display`` söylenmediğinde yeniden yürüyen sonucun biçimidir.
+    """
+    record = asklog.find_ask(audit_id, session.ask_log, username=scope)
+    if record is None or not record.get("sql"):
+        raise ReadyError(NO_ASK_MESSAGE, 404)
+    source = f"ready:{username}:{audit_id}" if username else f"ready:{audit_id}"
+    result = session.executor.execute(record["sql"], Budget(max_rows=config.UI_MAX_ROWS), source)
+    if result.error is not None:
+        # Reddin cümlesi yürütücünün kendi cümlesidir: ekran ne söylediyse kullanıcı onu okur.
+        raise ReadyError(result.error.message, 422)
+    question = fields.get("question") or record.get("question", "")
+    display = fields.get("display") or suggest_display(
+        result.columns, result.rows, chart_spec(result.columns, result.rows, question)
+    )
+    return store.add(
+        _dataset_of(session),
+        fields.get("business_role"),
+        fields.get("title") or question,
+        question,
+        record["sql"],
+        display,
+        position=fields.get("position", 0),
+        created_by=username,
+        approved=True,
+        audit_id=audit_id,
+    )
+
+
+def personal_from_audit(
+    session, store: ReadyStore, audit_id: str, username: str, fields: dict
+) -> dict:
+    """Kişisel kart: kişinin kendi sorusundan, iş rolü olmadan (R7-17).
+
+    Süzgeç adın kendisidir - başkasının kaydı onun için hiç yoktur. İş rolü NULL olduğu için
+    ``PERSONAL_CARDS`` sınırı ve kartın yalnız sahibince silinebilmesi ``ReadyStore``un yoludur.
+    """
+    return approve_from_audit(
+        session, store, audit_id, username, username, {**fields, "business_role": None}
+    )
+
+
+def suggest_display(columns: list[str], rows: list[tuple], chart) -> str:
+    """Önerilen görünüm: tek sayı ``number``, grafiği olan sonuç ``chart``, ötekiler ``table``.
+
+    ``chart`` sonucun kendi grafiğidir (``chart_spec``ın döndürdüğü); None çizilecek bir şey
+    olmadığıdır. Tür dönen değerlerden okunur (``shape``), sorunun sözcüklerinden değil.
+    """
+    if len(columns) == 1 and len(rows) == 1 and shape.column_kinds(columns, rows)[0] == shape.NUMBER:
+        return "number"
+    if chart is not None:
+        return "chart"
+    return "table"
+
+
 def _check_role(business_role: str | None) -> None:
     if business_role is None or business_role == EVERY_ROLE:
         return
@@ -247,6 +321,11 @@ def _check_role(business_role: str | None) -> None:
 def _check_display(display: str) -> None:
     if display not in DISPLAYS:
         raise ReadyError(BAD_DISPLAY_MESSAGE, 422)
+
+
+def _dataset_of(session) -> str:
+    """Kartın kümesi: oturumun o anki kümesinin adı - başlangıç ekranı da kartları ona göre listeler."""
+    return session.dataset.name if session.dataset else config.DEFAULT_DATASET
 
 
 def _value(value):
