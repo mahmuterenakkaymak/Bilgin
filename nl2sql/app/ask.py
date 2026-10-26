@@ -152,13 +152,21 @@ def _chosen(clarification: dict | None, choice) -> dict | None:
     """Seçilen şıkkın varlığı (R7-12): bekleyen netleştirme bir varlık sorusuyduysa kolon ve değer geri okunur.
 
     Modelin kendi netleştirmesinin (R5-10) kolonu yoktur, o yüzden oradan hiçbir şey çıkmaz.
-    Şıkkın biçimi R7-12de sabittir - ``"<değer> (ad)"`` - yani değer ilk " ("e kadardır; yanlış
-    okunan bir değer zaten ``validate_note``ın kanıt kapısından geçemez, ekrana kanıt olamaz.
+    Değer şıkkın içinden geri okunmaz: ``values`` şıkların sırasıyla hizalı hücre değerleridir ve
+    bir kaydın adı da " (" taşıyabilir - WWI müşterilerinin hepsi taşır ("Tailspin Toys (Peeples
+    Valley, AZ)") - kesilen değer o turun satırlarında bulunamaz, not düşer. Şık bu anahtardan önce
+    yazılmış bir netleştirmenin şıkkıysa tek yol bugünkü kesimdir; yanlış okunan bir değer zaten
+    ``validate_note``ın kanıt kapısından geçemez, ekrana kanıt olamaz.
     """
     if not clarification or not clarification.get("column"):
         return None
-    if choice not in (clarification.get("options") or []):
+    options = clarification.get("options") or []
+    if choice not in options:
         return None
+    values = clarification.get("values") or []
+    index = options.index(choice)
+    if index < len(values):
+        return {"column": clarification["column"], "value": values[index]}
     return {"column": clarification["column"], "value": str(choice).split(" (", 1)[0]}
 
 

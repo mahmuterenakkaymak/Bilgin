@@ -141,9 +141,11 @@ def ambiguous_entity(question: str, turns: list[dict] | None, schema: dict | Non
     değer bellidir; çoğul zamir ("bunlar") ve çoğul varlık ("bu carilerin") tek bir varlığı sormayı
     gerektirmez - üçünde de None.
 
-    Dönüş ``needs_clarification``ın kendisidir: ``{"question", "options", "column"}``. ``column``
-    şıkkın hangi kolonun değeri olduğunu söyler ve turda dolaşır, böylece seçim bağlam notunun
-    varlığı olur - değeri kod yazar, model değil.
+    Dönüş ``needs_clarification``ın kendisidir: ``{"question", "options", "values", "column"}``.
+    ``column`` şıkkın hangi kolonun değeri olduğunu söyler ve turda dolaşır, böylece seçim bağlam
+    notunun varlığı olur - değeri kod yazar, model değil. ``values`` şıkların sırasıyla hizalı
+    hücre değerleridir: bir kaydın adı da " (" taşıyabildiği için ("Tailspin Toys (Peeples Valley,
+    AZ)") değer şıkkın içinden geri okunmaz, şıkkın numarası buradan okunur.
     """
     turn = _last_answered(turns)
     if turn is None:
@@ -160,6 +162,7 @@ def ambiguous_entity(question: str, turns: list[dict] | None, schema: dict | Non
     return {
         "question": ENTITY_QUESTIONS[noun],
         "options": [f"{value} ({name})" if name else value for value, name in rows],
+        "values": [value for value, _ in rows],
         "column": column,
     }
 
