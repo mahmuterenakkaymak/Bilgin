@@ -84,6 +84,51 @@ TEMPLATE_FILENAME = "bilgin-veritabani-sablonu.xlsx"  # template the user fills 
 TEMPLATE_VERSION = "1"  # stamped into the template; a mismatch warns that the file is outdated
 DATASET_NAME_RE = r"^[a-z][a-z0-9_]{2,30}$"  # dataset directory name: lowercase keeps Windows paths stable
 
+# ---------------------------------------------------------------- Run 7: conversation
+CONV_KEEP_ROWS = 5  # masked rows of a turn kept in summary_json for the next turn
+CONV_TURNS = 3  # earlier turns the context block offers the model
+CONV_TITLE_CHARS = 80  # a conversation title is the first question cut to this
+FOLLOWUP_MARKERS = (
+    "bu",
+    "bunlar",
+    "bunları",
+    "bunların",
+    "şu",
+    "şunlar",
+    "o",
+    "onlar",
+    "aynı",
+    "sadece",
+    "yalnız",
+    "bunu",
+    "peki",
+    "ya",
+    "bunlardan",
+    "onun",
+    "bunun",
+)  # deterministic hints: the question probably continues the previous turn
+
+# ---------------------------------------------------------------- Run 7: start screen
+BUSINESS_ROLES = {
+    "satis": "Satış",
+    "satin_alma": "Satın alma",
+    "muhasebe": "Muhasebe",
+    "yonetim": "Yönetim",
+    "genel": "Genel",
+}  # order = the order roles are listed in on the start screen and in the users screen
+DEFAULT_BUSINESS_ROLE = "genel"
+PERSONAL_CARDS = 6  # cards one user may pin for themselves
+START_CACHE_S = 300  # a card's result is rerun at most once per dataset+card this often
+CARD_REFRESH_MIN_S = 30  # "Yenile" on one card is rate-limited to this
+CARD_TABLE_ROWS = 10  # rows of a table card the start screen shows
+SUGGEST_PER_ROLE = (2, 4)  # ready questions suggested per business role: at least, at most
+
+# ---------------------------------------------------------------- Run 7: database connections
+DB_CHECK_S = 60  # the background checker asks "is the database up?" this often
+DB_CHECK_TIMEOUT_S = 3  # seconds the SELECT 1 is given
+CONN_ENV_PREFIX = "NL2SQL_MSSQL_CONN_"  # NL2SQL_MSSQL_CONN_<DATASET> overrides a stored connection
+CONN_TABLE_SAMPLE = 10  # tables of the map the read-only guard samples against the live database
+
 # ---------------------------------------------------------------- reference date
 # "geçen ay" / "bu yıl" are always relative to this date, never to the real clock.
 AS_OF = "2026-09-30"
