@@ -174,6 +174,61 @@ export function loginScriptUrl(name) {
   return `/api/datasets/${encodeURIComponent(name)}/login-script.sql`;
 }
 
+// --- Başlangıç ekranı ve hazır sorular (R7-17, R7-18, R7-20): kartların yükü sunucuda yürür,
+// yani burada SQL gönderilen tek bir yol bile yoktur.
+
+export function start() {
+  return request("/api/start");
+}
+
+export function startRefresh(id) {
+  return request(`/api/start/cards/${encodeURIComponent(id)}/refresh`, { method: "POST" });
+}
+
+export function startOpen(id) {
+  return request(`/api/start/cards/${encodeURIComponent(id)}/open`, { method: "POST" });
+}
+
+// Kişisel kart kişinin kendi cevaplanmış sorusundan: ``sql`` gövdede yoktur, gönderilse okunmaz.
+export function pinCard({ audit_id, title = "", display = null }) {
+  return request("/api/start/cards", { method: "POST", body: { audit_id, title, display } });
+}
+
+export function unpinCard(id) {
+  return request(`/api/start/cards/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+// Yöneticinin defteri: ``pending`` üç değerlidir — true bekleyenler, false onaylılar, yoksa hepsi.
+// Bu yüzden ``false`` adres'e yazılır, yalnız yokluk atlanır.
+export function readyList({ dataset = null, pending = null } = {}) {
+  const query = new URLSearchParams();
+  if (dataset) query.set("dataset", dataset);
+  if (pending !== null && pending !== undefined) query.set("pending", String(pending));
+  const search = query.toString();
+  return request(`/api/ready-questions${search ? `?${search}` : ""}`);
+}
+
+export function readyCreate(body) {
+  return request("/api/ready-questions", { method: "POST", body });
+}
+
+export function readyUpdate(id, body) {
+  return request(`/api/ready-questions/${encodeURIComponent(id)}`, { method: "PUT", body });
+}
+
+export function readyRemove(id) {
+  return request(`/api/ready-questions/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+// Öneri işi (R7-20): boş küme sunucunun o anki kümesidir, aşama ``job_id`` ile yoklanır.
+export function readySuggest(dataset = "") {
+  return request("/api/ready-questions/suggest", { method: "POST", body: { dataset } });
+}
+
+export function readySuggestStatus(jobId) {
+  return request(`/api/ready-questions/suggest/${encodeURIComponent(jobId)}`);
+}
+
 async function request(path, { method = "GET", body } = {}) {
   const init = {
     method,
