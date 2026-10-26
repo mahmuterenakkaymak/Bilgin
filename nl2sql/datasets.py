@@ -31,6 +31,9 @@ FILE_DEFAULTS = {
 }
 REQUIRED_KEYS = ("name", "as_of", "builder", "generator", "references")
 
+# ``all_datasets``'in "root" etiketleri; ``_roots`` sırasıyla birebir eşleşir (PLAN R6-11).
+ROOT_LABELS = ("datasets", "real_datasets")
+
 
 class DatasetError(Exception):
     """Klasör veri kümesi değil ya da ``dataset.json`` eksik."""
@@ -121,14 +124,52 @@ def list_datasets(root: str | Path | None = None) -> list[str]:
     return sorted(path.parent.name for path in base.glob("*/dataset.json"))
 
 
+def _roots() -> list[Path]:
+    """Arama sırası (PLAN R6-11): üretilen kümelerin kökü, sonra ekrandan yüklenen gerçek kümelerin kökü."""
+    return [Path(config.datasets_dir()), Path(config.real_datasets_dir())]
+
+
+def all_datasets() -> list[dict]:
+    """İki kökteki veri kümeleri ad sırasıyla; ``root`` kümenin hangi kökten geldiğini söy.
+
+    Aynı ad iki kökte de varsa ilk kök kazanır; ``path`` klasörün dizgi halidir, böylece
+    öğe olduğu gibi JSON'a yazılabilir.
+    """
+    found: dict[str, dict] = {}
+    for label, base in zip(ROOT_LABELS, _roots()):
+        for name in list_datasets(base):
+            if name in found:
+                continue
+            dataset = load_dataset(name, root=base)
+            found[name] = {
+                "name": dataset.name,
+                "display_name": dataset.display_name,
+                "connection": dataset.connection,
+                "root": label,
+                "path": str(dataset.root),
+            }
+    return [found[name] for name in sorted(found)]
+
+
+def name_taken(name: str) -> bool:
+    """True when a folder of that name exists in either root, with or without a ``dataset.json``."""
+    return any((base / name).is_dir() for base in _roots())
+
+
 def load_dataset(name: str, root: str | Path | None = None) -> Dataset:
-    """The dataset folder ``name`` under ``root`` (default ``config.datasets_dir()``)."""
-    base = Path(config.datasets_dir() if root is None else root)
+    """The dataset folder ``name``: under ``root``, else ``datasets_dir()`` then ``real_datasets_dir()``."""
+    bases = [Path(root)] if root is not None else _roots()
+    for base in bases:
+        if (base / name / "dataset.json").is_file():
+            return _read(base, name)
+    known = sorted({n for base in bases for n in list_datasets(base)})
+    raise DatasetError(f"Bilinmeyen veri kümesi: {name} (bilinenler: {', '.join(known)})")
+
+
+def _read(base: Path, name: str) -> Dataset:
+    """``base/name``'in ``dataset.json``'unu okuyup ``Dataset``'a çevirir (var olduğu biliniyor)."""
     folder = base / name
     path = folder / "dataset.json"
-    if not path.is_file():
-        known = ", ".join(list_datasets(base))
-        raise DatasetError(f"Bilinmeyen veri kümesi: {name} (bilinenler: {known})")
     raw = json.loads(path.read_text(encoding="utf-8"))
     for key in REQUIRED_KEYS:
         if not raw.get(key):
