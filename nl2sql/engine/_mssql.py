@@ -58,7 +58,11 @@ def run(sql: str, budget: Budget, conn_str: str | None = None) -> Result:
             elapsed_ms=_elapsed(started),
         )
     except pyodbc.Error as exc:
-        text = " ".join(str(exc).split())
+        # The driver quotes the connection string back, and this message reaches the screen, the
+        # step list and the stored turn - so the secret goes here, where it is born.
+        from nl2sql.engine.connections import scrub  # connections imports this module: lazy here
+
+        text = scrub(" ".join(str(exc).split()))
         if "timeout" in text.lower():
             return _failure(started, TIMEOUT_MESSAGE, kind="timeout")
         return _failure(started, f"SQL Server: {text}" if text else "SQL Server sorguyu çalıştıramadı.")
