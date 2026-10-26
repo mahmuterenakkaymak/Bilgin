@@ -186,6 +186,13 @@ function AskScreen({
     (auditId ? api.replay(auditId) : api.ask({ question: asked, choice, conversation_id: conversationId }))
       .then((payload) => {
         dispatch({ type: "receive", payload });
+        // Cevapla biten tur kutuyu boşaltır: kutu akışın üstündeki balonun kopyasını taşırsa
+        // takip eden soru seç-sil ile başlar ve telefonda "Sorunuzu yazın" ipucu hiç görünmez.
+        // Netleştirme ve hata soruyu tutar — "Soruyu değiştir" kutudaki metni düzenler. Kutuda o
+        // soru duruyorsa silinir: şıkla koşan cevabın altına yazılan taslak kaybolmasın.
+        if (payload?.status === "answered" && !payload?.clarification) {
+          setText((current) => (current.trim() === asked ? "" : current));
+        }
         // İlk cevap konuşmayı sunucuda açtı: adres turların kimliğidir, yenileme akışı geri
         // getirir. Turlar zaten elde; adresin açacağı okuma aynı konuşmadır, o yüzden geçilir.
         if (payload?.conversation_id && payload.conversation_id !== conversation) {
