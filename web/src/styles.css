@@ -644,6 +644,12 @@ main {
   line-height: 1.5;
 }
 
+/* Cevabın özet sayıları cümlenin altında, tablonun üstünde: kartın blokları akışta kendi
+   boşluğunu taşır, `.facts` ise panelde yapışık durması için margin'siz. */
+.answer-facts {
+  margin-top: calc(var(--space) * 1.5);
+}
+
 /* Bantların ortak köşe şekli (M20 görsel inceleme 7): 4px'lik sol vurgu yuvarlak köşeyi
    dolanınca ilk harfin önüne "(" gibi düşüyor — kalın solun bastığı iki köşe kare, kartın
    sağı yumuşak kalır. Rengi ve iç boşluğu her bant kendi kuralında tutuyor. */

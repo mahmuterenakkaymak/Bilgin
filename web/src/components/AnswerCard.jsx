@@ -11,6 +11,20 @@ const EXPORTS = [
   ["xlsx", "Excel"],
 ];
 
+// Kartın kendi özetleri: kullanıcının tabloyu gözle toplamasını önleyen üç sayı. Olguların
+// tamamı kanıt panelinde durmaya devam eder; kart yalnız bunları cümlenin altına taşır.
+const CHIP_FACTS = ["total", "max", "mean"];
+
+function headFacts(facts) {
+  const picked = [];
+  for (const name of CHIP_FACTS) {
+    const fact = facts.find((item) => item.name === name);
+    // Tek hücrelik cevapta üç olgu aynı sayıyı söyler; kartta bir kez okunur.
+    if (fact && !picked.some((item) => item.display === fact.display)) picked.push(fact);
+  }
+  return picked;
+}
+
 // Cevap kartı: aynı AskPayload'ın her parçası burada durur — durum satırı, seçilen anlam, cümle,
 // uyarılar, tablo, grafiği, indirme ve kayıt düğmeleri, kanıt (R5-18). Kart hiçbir sayıyı yeniden
 // hesaplamaz.
@@ -30,6 +44,10 @@ export default function AnswerCard({ payload, onSave, choice }) {
   const status = ["✓ Cevaplandı", mode, elapsed].filter(Boolean).join(" · ");
   // Seçilen anlam: sorunun birden çok okuması varsa hangisiyle koşulduğu cevapta da okunur.
   const chosen = typeof choice === "string" ? choice.trim() : "";
+  // Okunur bir okunuşu olmayan olgu karta çıkmaz; panelde zaten kendi satırında duruyor.
+  const chips = headFacts(
+    (Array.isArray(payload?.facts) ? payload.facts : []).filter((fact) => fact?.label && fact?.display),
+  );
 
   // İndirme bir <a>: sekme yer değiştirmediği için tek geri bildirim düğmenin kendisi. Ad 2 sn
   // "İndirildi" kalır, sonra eski adına döner; kart kapanırsa bekleyen sayaç bırakılır.
@@ -61,6 +79,16 @@ export default function AnswerCard({ payload, onSave, choice }) {
       )}
       {answer && <p id="answer-text" className="answer-text">{answer}</p>}
       <Warnings warnings={payload?.warnings} />
+      {chips.length > 0 && (
+        <ul id="answer-facts" className="facts answer-facts">
+          {chips.map((fact, index) => (
+            <li key={`${index}-${fact.name ?? ""}`}>
+              <span className="fact-label">{fact.label}</span>
+              <span className="fact-value">{fact.display}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       <ResultTable
         columns={payload?.columns}
         rows={payload?.rows}
