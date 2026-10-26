@@ -802,47 +802,69 @@ main {
     scroll-margin-top: calc(var(--space) * 20);
   }
 
-  /* Başlık telefonda iki satır: üstte ad + model çipi + tema + durum sözcüğü, altta gezinme +
-     kimlik + Çıkış. Kırımı gezinmenin önüne giren sıfır yükseklikli tam genişlikli öğe yapar;
-     `order` yalnız dar ekranda geçerlidir, DOM (ve sekme) sırası değişmez. */
+  /* Başlık telefonda iki satır: üstte ad + veri seti çipi + tema + durum sözcüğü, altta gezinme +
+     kimlik + Çıkış. Kırım sarmaya bırakılmadı — flex-wrap'ta sırayı içeriğin genişliği belirliyor,
+     Çıkış'ın sığamadığı son satır kendi satırı oluyordu ve başlık üç satıra iniyordu
+     (landing-empty-state-390.png, users-screen-390.png). Izgara satırı kendisi yazar; DOM (ve
+     sekme) sırası değişmez, `order`/`::after` hilesine gerek kalmadığı için onlar kalktı. */
   .masthead {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "word chip theme health"
+      "nav  nav  user  out";
     gap: calc(var(--space) * 0.75) var(--space);
   }
 
-  .masthead::after {
-    content: "";
-    flex: 0 0 100%;
-    order: 5;
+  .wordmark {
+    grid-area: word;
   }
 
-  .masthead-nav {
-    order: 6;
-    margin-left: 0;
-  }
-
-  #user-chip {
-    order: 7;
-    margin-left: auto;
-    max-width: 10rem;
-  }
-
-  #logout {
-    order: 8;
-  }
-
-  /* Sarma, küçültmeden önce gelir: çip kendi satırına da inebilir. O yüzden çipler burada
-     tavanla durdurulur (ölçüldü 390px: ad 53 + tema 80 + "Bilinmiyor" 80 + aralıklar 24 = 237,
-     satırda çipe 121 kalıyor) ve ellipsis çalışsın diye min-width sıfıra iner. */
-  .masthead .chip {
-    min-width: 0;
-  }
-
+  /* ASSUMPTION: iki satır dört sütunu paylaşır. Üst satırın sağı (tema 80 + durum sözcüğü) alt
+     satırın sağını da belirliyor: kimlik çipi tema düğmesinin sütununa düşer, adı orada kısalır.
+     Karşılığında veri seti çipi 1fr sütunda 112px'e kadar açılıyor — ölçüldü 390px: ad 53 + tema
+     80 + "Bilinmiyor" 71 + aralıklar 24 = 228, çibe 130 kalıyor (tavanı 7rem kesiyor). */
   #model-chip {
+    grid-area: chip;
     max-width: 7rem;
   }
 
+  .masthead-nav {
+    grid-area: nav;
+    margin-left: 0;
+  }
+
+  /* Sütun payı: yöneticinin üç bağlantısı 207px, oysa gezinmenin yayıldığı iki sütun en dar
+     durumda ("Bilinmiyor" ile) 191px kalıyor — bağlantı iç boşluğu telefonda yarıya iner,
+     gezinme 183px'e düşer ve Çıkış'ın önüne sarkmaz. */
+  .nav-link {
+    padding-inline: calc(var(--space) * 0.5);
+  }
+
   .btn-theme {
-    margin-left: auto;
+    grid-area: theme;
+  }
+
+  .health {
+    grid-area: health;
+  }
+
+  /* Çipin tavanı sütunun payı: 10rem bırakılınca çip kendi adı kadar yer kapıyor (ölçüldü 116px),
+     tema sütunu şişiyor ve gezinme onun üstüne biniyordu. */
+  #user-chip {
+    grid-area: user;
+    max-width: 5rem;
+  }
+
+  #logout {
+    grid-area: out;
+  }
+
+  /* Sütun paylaşımı küçülmeyi zorunlu kılıyor: uzun ad kendi sütununu şişirirse satır taşar.
+     Tavanı çipler zaten alıyor (7rem/5rem), buradaki taban — ellipsis çalışsın diye min-width
+     sıfıra iner. */
+  .masthead .chip {
+    min-width: 0;
   }
 
   /* Kullanıcı satırı beş sütuna sığmıyor (Rol'ün select'i tek başına ~150px) ve .table-wrap onu
