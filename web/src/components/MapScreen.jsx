@@ -158,6 +158,20 @@ function Report({ preview }) {
   );
 }
 
+// Kartın numarası adımın hâlini taşır: sürerken vurgu, bitende yerini tik alır — üç kartlık
+// işin nerede olduğu başlıktan okunur; sırası gelmeyende numara kendi renginde kalır.
+function CardTitle({ n, step, children }) {
+  return (
+    <h2 className="map-card-title">
+      <span className="map-card-n" aria-hidden="true">
+        {step === "done" ? "✓" : n}
+      </span>
+      {" · "}
+      {children}
+    </h2>
+  );
+}
+
 export default function MapScreen({
   state = initialMapState,
   info = null,
@@ -187,6 +201,15 @@ export default function MapScreen({
   const running = state.status === "applying" || Boolean(state.job);
   const alert =
     state.status === "switchError" || (state.status === "failed" && !state.job) ? text(state.error?.message) : "";
+  // Üç kartın sırası ekranın zaten bildiğinden okunur: şablon alındıysa 1 biter, küme kurulduysa
+  // 2 biter ve sıra kümeler kartına geçer. Yeni bir hâl tutulmaz, yalnız aynı hâl üçe çevrilir.
+  const taken = Boolean(state.filename);
+  const created = state.status === "done" || state.status === "activated";
+  const steps = [
+    taken ? "done" : "current",
+    created ? "done" : taken ? "current" : "todo",
+    state.status === "activated" ? "done" : created ? "current" : "todo",
+  ];
 
   return (
     <section id="map-screen" className="screen map-screen">
@@ -195,8 +218,10 @@ export default function MapScreen({
         <p className="screen-lead">Şablonu doldurun; Bilgin onu okuyup kendi veri kümenizi kursun.</p>
       </div>
 
-      <div className="card map-card">
-        <h2 className="map-card-title">1 · Şablonu alın</h2>
+      <div className="card map-card" data-step-state={steps[0]}>
+        <CardTitle n={1} step={steps[0]}>
+          Şablonu alın
+        </CardTitle>
         <ol className="map-steps">
           {HOW_TO.map(([title, hint], index) => (
             <li className="map-step" key={title}>
@@ -230,8 +255,10 @@ export default function MapScreen({
         )}
       </div>
 
-      <div className="card map-card">
-        <h2 className="map-card-title">2 · Doldurduğunuz dosyayı denetleyin</h2>
+      <div className="card map-card" data-step-state={steps[1]}>
+        <CardTitle n={2} step={steps[1]}>
+          Doldurduğunuz dosyayı denetleyin
+        </CardTitle>
         <label className="field-label" htmlFor="map-file">
           Şablon dosyası (.xlsx)
         </label>
@@ -315,8 +342,10 @@ export default function MapScreen({
         )}
       </div>
 
-      <div className="card map-card">
-        <h2 className="map-card-title">3 · Veri kümeleri</h2>
+      <div className="card map-card" data-step-state={steps[2]}>
+        <CardTitle n={3} step={steps[2]}>
+          Veri kümeleri
+        </CardTitle>
         <DatasetList
           datasets={datasets}
           active={active}

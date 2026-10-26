@@ -1745,6 +1745,15 @@ main {
   font-weight: 650;
 }
 
+/* Kartın numarası adımın hâlini söyler: sürerken vurgu, bitince tik. Renkler yeniden kullanılır. */
+.map-card[data-step-state="current"] .map-card-n {
+  color: var(--accent);
+}
+
+.map-card[data-step-state="done"] .map-card-n {
+  color: var(--ok);
+}
+
 /* Şablonun üç adımı ekranın sırasıyla aynı kalsın diye numarasını işarette taşıyor: sayaç
    sırası telefonla daralan listede şaştığında "1 · İndir" başka bir şeye denk düşerdi. */
 .map-steps {
