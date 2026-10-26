@@ -217,6 +217,25 @@ body {
   display: block;
 }
 
+/* Açık çekmecenin kendi düğmesi: panel ekranı dolduruyor, toggle 17 satırın üstünde kalıyordu.
+   Varsayılan gizli — telefon bloğu gösterir, geniş ekranda yan panel zaten kalıcı. */
+.sidebar-close {
+  display: none;
+  align-items: center;
+  gap: var(--space);
+  /* Etinine göre boyutlanan blok: satır içi olsaydı alt boşluğu satır yüksekliğine girmezdi. */
+  width: fit-content;
+  margin: 0 0 calc(var(--space) * 2);
+  padding: calc(var(--space) * 0.75) calc(var(--space) * 1.5);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
 .side-block + .side-block {
   margin-top: calc(var(--space) * 3);
 }
@@ -753,6 +772,12 @@ main {
 @media (max-width: 720px) {
   /* ASSUMPTION: başlık 320/390'da flex-wrap ile zaten satırlara iniyor ve çip ellipsis'le kısalıyor
      (ölçüldü: taşma yok) — M17'deki "üst üste biniyor" izlenimi sayfanın 660px'e taşmasından geliyordu. */
+
+  /* Kapatma düğmesi yalnız çekmecenin açık olduğu genişlikte: `#sidebar` temelden özgünlüğü
+     geçtiği için sırayı değil seçiciyi kazanıyor (temel kural display: none). */
+  #sidebar .sidebar-close {
+    display: flex;
+  }
 
   /* Cevabın sayısı yan kaydırmanın ardında kalmasın: telefon genişliğinde hücreler sarar,
      böylece her sütun ekrana sığar. Geniş ekrandaki nowrap yukarıda duruyor. */
@@ -1329,6 +1354,11 @@ main {
     display: none;
   }
 
+  /* Yan panel burada kalıcı: çekmecenin düğmesi de toggle ile birlikte kalkar. */
+  #sidebar .sidebar-close {
+    display: none;
+  }
+
   .sidebar {
     display: block;
   }
@@ -1348,8 +1378,9 @@ main {
     top: calc(var(--space) * 11);
   }
 
-  /* Boş yan panel 280px'lik çukur bırakmasın: dolunca (kayıtlılar/geçmiş) kendiliğinden iki sütuna döner. */
-  .shell:not(:has(.sidebar > *)) {
+  /* Boş yan panel 280px'lik çukur bırakmasın: dolunca (kayıtlılar/geçmiş) kendiliğinden iki sütuna döner.
+     Kapatma düğmesi "dolu" saymaz: telefon çekmecesi açıkken genişe çıkılırsa panel yine boş kalır. */
+  .shell:not(:has(.sidebar > :not(.sidebar-close))) {
     grid-template-columns: minmax(0, var(--main-max));
   }
 }

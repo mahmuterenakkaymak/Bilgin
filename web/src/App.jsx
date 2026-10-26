@@ -417,6 +417,19 @@ export default function App({ user = null, onLogout = null, note = "" }) {
           Kayıtlılar ve geçmiş
         </button>
         <aside id="sidebar" className={sidebarOpen ? "sidebar is-open" : "sidebar"} aria-label="Kayıtlılar ve geçmiş">
+          {/* Çekmece ekranı doldurup tek kapatma düğmesini (toggle'ı) listenin üstünde ekrandan
+              çıkarıyordu: açık panel kendi düğmesini tepesinde taşır (M22 görsel inceleme 5). */}
+          {sidebarOpen && (
+            <button
+              type="button"
+              id="sidebar-close"
+              className="sidebar-close"
+              aria-controls="sidebar"
+              onClick={() => setSidebarOpen(false)}
+            >
+              Kapat
+            </button>
+          )}
           <Sidebar saved={saved} history={history} onAsk={askFromSidebar} onRemoved={refresh} />
         </aside>
         <main id="main">
