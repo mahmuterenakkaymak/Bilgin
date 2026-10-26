@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import AnswerCard from "./components/AnswerCard.jsx";
 import AskBox from "./components/AskBox.jsx";
 import ClarificationCard from "./components/ClarificationCard.jsx";
@@ -9,16 +9,19 @@ import { MapFlow } from "./components/MapScreen.jsx";
 import MastheadNav from "./components/MastheadNav.jsx";
 import RulesScreen from "./components/RulesScreen.jsx";
 import Sidebar from "./components/Sidebar.jsx";
+import Thread from "./components/Thread.jsx";
 import UsersScreen from "./components/UsersScreen.jsx";
 import * as api from "./lib/api.js";
-import { askReducer, initialState } from "./lib/askState.js";
 import { NOT_ALLOWED_NOTE, ROLE_LABELS, canSee } from "./lib/auth.js";
 import { parseRoute } from "./lib/route.js";
 import { applyTheme, nextTheme, readStored, store } from "./lib/theme.js";
+import { initialState as initialThread, threadReducer } from "./lib/thread.js";
 
 // Düğmenin gördüğü ad, sıradaki temayı değil seçili olanı söyler: "Koyu" yazan bir düğmeye
 // basınca ne olacağı belirsiz kalmasın.
 const HEALTH_URL = "/api/health";
+// Konuşmayı açamamanın cümlesi: sunucudaki 404 ile aynı sözcükler (conversations_api).
+const NO_CONVERSATION = "Konuşma bulunamadı.";
 const THEME_LABELS = { system: "Sistem", dark: "Koyu", light: "Açık" };
 
 // Testler App'i Node'da renderToStaticMarkup ile kuruyor: orada localStorage yoktur, tema da
@@ -71,18 +74,28 @@ function userLabel(user) {
 
 // Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Boş, bekleyen, cevap,
 // netleştirme ve hata yuvaları burada durur; cevabın grafiği kartın içindedir.
+// Konuşma (R7-15): turlar `lib/thread.js` indirgeyicisinde durur. İlk soru konuşmayı henüz
+// açmadığı için bugünkü gibi kutunun altında tek karttır; cevap geldiği an adres #/c/<id> olur ve
+// aynı turlar akışa taşınır — soru kutusu son turun altına iner.
 function AskScreen({
   pending = null,
   onRefresh,
   onRebuild,
+  onNote = null,
+  conversation = null,
   datasetKey = 0,
   canEditRules = false,
   datasetName = "",
 }) {
-  const [state, dispatch] = useReducer(askReducer, initialState);
+  const [state, dispatch] = useReducer(threadReducer, initialThread);
   const [text, setText] = useState("");
   const [examples, setExamples] = useState([]);
   const [rulesEmpty, setRulesEmpty] = useState(false);
+
+  // Akışın son turu: konuşma açılmamışsa tek cevap kartı, açılmışsa akışın en alt satırı odur.
+  const turns = state.turns;
+  const last = turns.length > 0 ? turns[turns.length - 1] : null;
+  const loading = Boolean(last?.pending);
 
   // `datasetKey` her küme değişiminde büyür: örnekler kümenin sorularıdır, eski kümenin çipleri
   // yeni veritabanının üstünde kalırsa ekran yalan söylemiş olur.
@@ -117,20 +130,53 @@ function AskScreen({
     };
   }, [examples]);
 
+  // Adresin okuduğu konuşma: açmak hiçbir SQL koşturmaz, GET yalnız depoda yazılı olanı getirir
+  // (R7-8). Yaşayan konuşmanın adresi ilk cevapla yazıldığı için `opened` orada da dolu olur ve
+  // akış baştan okunmaz; adres değişmeden aynı adrese dönmek de okuma yenilemez.
+  const opened = useRef(null);
+  useEffect(() => {
+    if (!conversation) {
+      opened.current = null;
+      return undefined;
+    }
+    if (opened.current === conversation) return undefined;
+    opened.current = conversation;
+    let mounted = true;
+    onNote?.("");
+    api
+      .conversationGet(conversation)
+      .then((data) =>
+        mounted &&
+        dispatch({ type: "load", conversation: data?.conversation, turns: data?.turns }),
+      )
+      .catch((error) => {
+        if (!mounted) return;
+        // Olmayan konuşma ile erişilemeyen konuşma aynı yere düşer: cümle ve kök adres.
+        onNote?.(error?.status === 404 ? NO_CONVERSATION : error?.message || "Konuşma açılamadı.");
+        window.location.hash = "#/";
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [conversation]);
+
   // auditId verilirse soru modele baştan sorulmaz: geçmişteki SQL yeniden çalışır (/api/replay).
-  const send = (question, choice = null, auditId = null) => {
+  // Açık bir konuşma varsa soru ona bir tur ekler; kimlik her soruyla gider (R7-15).
+  const send = (question, choice = null, auditId = null, conversationId = state.conversationId) => {
     const asked = String(question ?? "").trim();
     if (!asked) return;
     dispatch({ type: "ask", question: asked, choice });
-    (auditId ? api.replay(auditId) : api.ask({ question: asked, choice }))
-      .then((payload) => dispatch({ type: "receive", payload }))
-      .catch((error) =>
-        dispatch({
-          type: "fail",
-          kind: error?.status === 0 ? "network" : "failed",
-          message: error?.message ?? "",
-        }),
-      )
+    (auditId ? api.replay(auditId) : api.ask({ question: asked, choice, conversation_id: conversationId }))
+      .then((payload) => {
+        dispatch({ type: "receive", payload });
+        // İlk cevap konuşmayı sunucuda açtı: adres turların kimliğidir, yenileme akışı geri
+        // getirir. Turlar zaten elde; adresin açacağı okuma aynı konuşmadır, o yüzden geçilir.
+        if (payload?.conversation_id && payload.conversation_id !== conversation) {
+          opened.current = payload.conversation_id;
+          window.location.hash = `#/c/${payload.conversation_id}`;
+        }
+      })
+      .catch((error) => dispatch({ type: "fail", message: error?.message ?? "" }))
       // Soru neyle biterse bitsin günlüğe bir satır düşer: kenar çubuğu her durumda tazelenir.
       .finally(() => onRefresh?.());
   };
@@ -139,10 +185,12 @@ function AskScreen({
   // tıklayışını da yeni bir istek yapar.
   // Soru kutuya da yazılır ve ekran kutuya kayar: yoksa kutuda eski metin kalır, bekleme adımları
   // ve cevap ekranın altında açılır, tıklama hiçbir şey yapmamış gibi görünür (2026-10-25).
+  // Kenar çubuğunun sorusu kendi başına bir sorudur: açık bir konuşma varsa yenisi açılır.
   useEffect(() => {
     if (!pending?.question) return;
+    dispatch({ type: "reset" });
     setText(pending.question);
-    send(pending.question, null, pending.auditId ?? null);
+    send(pending.question, null, pending.auditId ?? null, null);
     document.getElementById("main")?.scrollIntoView?.({ block: "start", behavior: "smooth" });
   }, [pending]);
 
@@ -153,7 +201,8 @@ function AskScreen({
   };
 
   // Seçenek, sorunun hangi anlamla koşulacağını sabitler: aynı soru choice ile yeniden koşar (R5-11).
-  const choose = (option) => send(state.question, option);
+  // Akışta netleştirme sorusu son turdur; indirgeyici şıkkı onun üstünü tamamlayarak koşar.
+  const choose = (option) => send(last?.question ?? "", option);
 
   // "Soruyu değiştir" kartı kapatmaz: imleç kutuya döner, kullanıcı yazıp yeniden sorar.
   const changeQuestion = () => document.getElementById("question")?.focus();
@@ -165,8 +214,35 @@ function AskScreen({
       return result;
     });
 
-  const loading = state.status === "loading";
-  const failed = state.status === "failed" || state.status === "network_error";
+  // Yeni konuşma: akış boşalır ve adres köke döner; turlar sunucuda durmaya devam eder.
+  const newConversation = () => {
+    dispatch({ type: "reset" });
+    onNote?.("");
+    setText("");
+    window.location.hash = "#/";
+    document.getElementById("question")?.focus();
+  };
+
+  // Konuşma açıkken ekran akıştır: turlar yukarıdan aşağı sıralanır, soru kutusu en alttaki
+  // turun altına iner (R7-15). Kartın hali TurnCard'da çözülür.
+  if (conversation) {
+    return (
+      <section className="screen ask-flow">
+        <button type="button" id="new-conversation" className="btn btn-ghost" onClick={newConversation}>
+          Yeni konuşma
+        </button>
+        <Thread
+          turns={turns}
+          onExpand={(n) => dispatch({ type: "expand", n })}
+          onReplay={(turn) => send(turn.question, null, turn.audit_id)}
+          onChoose={choose}
+          onChange={changeQuestion}
+          onSave={save}
+        />
+        <AskBox value={text} onChange={setText} onAsk={ask} loading={loading} examples={examples} />
+      </section>
+    );
+  }
 
   return (
     <section className="screen ask-flow">
@@ -175,9 +251,9 @@ function AskScreen({
         onChange={setText}
         onAsk={ask}
         loading={loading}
-        examples={state.status === "idle" ? [] : examples}
+        examples={turns.length === 0 ? [] : examples}
       />
-      {state.status === "idle" && (
+      {turns.length === 0 && (
         <EmptyState
           examples={examples}
           rulesHint={canEditRules && rulesEmpty}
@@ -186,13 +262,19 @@ function AskScreen({
         />
       )}
       {loading && <LoadingSteps />}
-      {state.status === "answered" && (
-        <AnswerCard payload={state.payload} choice={state.choice} onSave={save} />
-      )}
-      {state.status === "clarifying" && (
-        <ClarificationCard payload={state.payload} onChoose={choose} onChange={changeQuestion} />
-      )}
-      {failed && <ErrorCard kind={state.error?.kind} message={state.error?.message} onRebuild={onRebuild} />}
+      {last &&
+        !last.pending &&
+        (last.summary?.clarification ? (
+          <ClarificationCard
+            payload={last.payload ?? { clarification: last.summary.clarification }}
+            onChoose={choose}
+            onChange={changeQuestion}
+          />
+        ) : last.status === "answered" && last.payload ? (
+          <AnswerCard payload={last.payload} choice={last.choice} onSave={save} />
+        ) : (
+          <ErrorCard kind={last.payload?.error?.kind} message={last.answer_text} onRebuild={onRebuild} />
+        ))}
     </section>
   );
 }
@@ -262,11 +344,13 @@ function UsersFlow({ currentUser }) {
 
 function Screen({
   route,
+  conversation,
   pending,
   onRefresh,
   onChanged,
   onRebuild,
   onSwitched,
+  onNote,
   datasetKey,
   datasetName,
   readOnly,
@@ -278,8 +362,10 @@ function Screen({
   return (
     <AskScreen
       pending={pending}
+      conversation={conversation}
       onRefresh={onRefresh}
       onRebuild={onRebuild}
+      onNote={onNote}
       datasetKey={datasetKey}
       datasetName={datasetName}
       canEditRules={!readOnly}
@@ -298,13 +384,19 @@ export default function App({ user = null, onLogout = null, note = "" }) {
   const [pending, setPending] = useState(null); // {question, n}: kenar çubuğundan gelen soru
   const [datasetKey, setDatasetKey] = useState(0); // her küme değişiminde büyür, örnekler tazelenir
   const [theme, setTheme] = useState(() => readStored(themeStorage()));
-  // Adres rolle çözülür: `#/kullanicilar` ile açan ya da yenileyen sıradan bir kullanıcı yönetici
-  // defterini görmez, kapının girişte yaptığı gibi soru ekranına bir cümleyle düşer. Kullanıcı yoksa
-  // kabuk tek kullanıcılıdır ve Run 5'teki gibi her ekran açıktır.
+  // Cümlenin iki kaynağı var: kapınınki (prop) ve konuşmanın açılamaması. İkincisi burada durur,
+  // çünkü onu yalnız soru ekranının akışı üretir.
+  const [localNote, setLocalNote] = useState("");
+  // Adres ya bir ekrandır ya bir konuşma (`#/c/<id>`, R7-15); konuşmanın ekranı soru ekranıdır.
+  // Rol kararı kapının girişiyle aynı: `#/kullanicilar` ile açan ya da yenileyen sıradan bir
+  // kullanıcı yönetici defterini görmez, soru ekranına bir cümleyle düşer. Kullanıcı yoksa kabuk
+  // tek kullanıcılıdır ve Run 5'teki gibi her ekran açıktır.
   const requested = parseRoute(hash);
-  const allowed = !user || canSee(requested, user.role);
-  const route = allowed ? requested : "ask";
-  const screenNote = note || (allowed ? "" : NOT_ALLOWED_NOTE);
+  const conversation = requested?.route === "conversation" ? requested.id : null;
+  const requestedRoute = conversation ? "conversation" : requested;
+  const allowed = !user || canSee(requestedRoute, user.role);
+  const route = allowed ? requestedRoute : "ask";
+  const screenNote = localNote || note || (allowed ? "" : NOT_ALLOWED_NOTE);
 
   // Kök nitelik seçili temayı taşısın: açılışta bir kez, her değişimde yeniden. main.jsx ilk
   // boyamadan önce aynı işi yaptığı için koyu teması olan açılışta açık bir kare görmez.
@@ -393,7 +485,8 @@ export default function App({ user = null, onLogout = null, note = "" }) {
             {chip.note && <span className="chip-note">{chip.note}</span>}
           </span>
         )}
-        <MastheadNav route={route} user={user} />
+        {/* Konuşma soru ekranının bir halidir: gezinmede "Sor" açık kalır. */}
+        <MastheadNav route={conversation ? "ask" : route} user={user} />
         <button
           type="button"
           id="theme-toggle"
@@ -455,7 +548,9 @@ export default function App({ user = null, onLogout = null, note = "" }) {
           )}
           <Screen
             route={route}
+            conversation={conversation}
             pending={pending}
+            onNote={setLocalNote}
             onRefresh={refresh}
             onChanged={refreshHealth}
             onRebuild={() => api.rebuild().then(refreshHealth)}

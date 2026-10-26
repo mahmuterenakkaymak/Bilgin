@@ -69,6 +69,9 @@ export default function Evidence({ payload }) {
   );
   const notes = (Array.isArray(payload?.notes) ? payload.notes : []).filter((note) => String(note ?? "").trim());
   const tail = summaryTail(steps.length, names(payload?.tables_used));
+  // Bağlamın kanıt satırı (R7-5): cevabın hangi önceki turun hangi değerine dayandığı. Panelden
+  // dışarıda durur — kapalıyken de okunmalı, yoksa kanıtın kendisi kullanıcıya hiç görünmez.
+  const contextLine = typeof payload?.context?.line === "string" ? payload.context.line.trim() : "";
 
   const copy = async () => {
     try {
@@ -81,6 +84,11 @@ export default function Evidence({ payload }) {
 
   return (
     <div className="evidence">
+      {contextLine && (
+        <p id="context-line" className="context-line">
+          {contextLine}
+        </p>
+      )}
       <button
         type="button"
         id="evidence-toggle"
