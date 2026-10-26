@@ -1399,3 +1399,69 @@ operable program or batch file.
 2026-10-26 23:46:28 | HANDS  | T311 try 1: thread look, phone and dark (PLAN R7-15, R6-19): web/src/styles.css rules for #thread, .turn, .turn-question (right-aligned bubble, accent-soft token), .turn-collapsed (muted, max 5 rows, pointer), #context-line (muted line with the accent edge drawn like the T281 band rule), #new-conversation (secondary pill), #conversation-list; phone rules only inside the existing `@media (max-width: 720px)` block (bubbles full width, collapsed table scrolls in its card); colours only via tokens so dark mode follows; add tests/test_web_thread_css.py (new file: each selector exists, no second max-width block, no hex colour in the new rules); tests/test_web_bands.py green
 2026-10-26 23:58:07 | ORCH   | T311: PASSED (hands)
 2026-10-26 23:58:26 | HANDS  | T315 try 1: M23 integration (no hand-made fakes): add tests/test_integration_m23.py (new file: real create_app + real session (fake from make_client) + tmp app db through TestClient: F02 through /api/ask with ids from responses, reload the thread with GET /api/conversations/{id} (same 3 turns, no new audit lines), replay turn 1's audit_id through /api/replay (answered, same sql), eval --followups --llm fake on synthetic_erp via the CLI main() writes 100 %) and run the whole suite + build
+2026-10-27 00:14:36 | ORCH   | T315: PASSED (hands)
+2026-10-27 00:14:36 | ORCH   | M23: whole-project checks
+2026-10-27 00:22:15 | ORCH   | M23: whole-project checks RED: ['.venv\\Scripts\\python -m nl2sql build-db --seed 42 && .venv\\Scripts\\python -m nl2sql import-map tests\\fixtures\\map_netsis_style.xlsx --llm fake && .venv\\Scripts\\python -m nl2sql import-map tests\\fixtures\\map_netsis_style.xlsx --accept --llm fake --out schema\\imported.json']
+2026-10-27 00:23:07 | ORCH   | M23: screenshots for the visual review
+2026-10-27 00:32:08 | ORCH   | M23: page problem: landing-empty-state-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: ask-golden-answer-chart-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: ask-ambiguous-clarify-then-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: export-buttons-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: saved-and-history-sidebar-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: rules-screen-validation-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: dark-mode-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: logout-clears-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: users-screen-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: user-readonly-rules-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: admin-map-onboard-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: conversation-three-turns-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: conversation-chart-refine-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: new-conversation-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: start-sales-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: start-sales-390: console error: Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: start-purchasing-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: card-answer-followup-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: admin-ready-questions-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: admin-connections-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 00:32:08 | ORCH   | M23: page problem: admin-connections-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: db-dot-user-ok-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: db-dot-user-down-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 00:32:08 | ORCH   | M23: page problem: db-dot-user-down-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: landing-empty-state-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: ask-golden-answer-chart-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: ask-ambiguous-clarify-then-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: export-buttons-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: saved-and-history-sidebar-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 00:32:08 | ORCH   | M23: page problem: saved-and-history-sidebar-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: rules-screen-validation-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: dark-mode-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: logout-clears-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: users-screen-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: users-screen-1366: console error: Failed to load resource: the server responded with a status of 409 (Conflict)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: user-readonly-rules-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: admin-map-onboard-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 00:32:08 | ORCH   | M23: page problem: admin-map-onboard-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: conversation-three-turns-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 00:32:08 | ORCH   | M23: page problem: conversation-three-turns-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: conversation-chart-refine-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: new-conversation-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: start-sales-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: start-sales-1366: console error: Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: start-purchasing-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: card-answer-followup-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: card-answer-followup-1366: console error: Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: admin-ready-questions-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: admin-connections-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 00:32:08 | ORCH   | M23: page problem: admin-connections-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: db-dot-user-ok-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:32:08 | ORCH   | M23: page problem: db-dot-user-down-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 00:32:08 | ORCH   | M23: page problem: db-dot-user-down-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 00:37:43 | BRAIN  | M23: visual review with local Strata (131 screenshots)
+2026-10-27 01:07:19 | BRAIN  | M23: visual review done - 7 fix task(s) added
+2026-10-27 01:07:54 | BRAIN  | M23: review with sonnet in the background - hands keep building
+2026-10-27 01:08:12 | HANDS  | T366 try 1: the start board's chart card draws its chart in a 140px box, so the only chart on the board is unreadable (M23 visual review 1): `.start-card-chart { height: 140px }` (web/src/styles.css:2647) with `.start-card-chart .chart { height: 100% }` leaves an option that carries a title and rotated category labels about 40px of plot, so the title prints through the y-axis numbers ("180" under "Satış miktarı") and the labels pile across the bars (start-sales-start-sales-cards-390.png, start-purchasing-start-purchasing-cards-1366.png, new-conversation-clean-start-1366.png, db-dot-user-ok-1366.png) - the card a user glances at is a 30px strip at every width. Fix: the card's chart box gets a height a titled chart with rotated labels fits (at least 200px; the answer card's own chart is 280px, 320px from 721px up) and no media block may shrink it below that; the card keeps its own heading and the chart keeps its option, only the box grows. New tests/test_web_start_card_chart_css.py (new file, a web/src/styles.css scan like tests/test_web_thread_css.py: the `.start-card-chart` rule declares a height of at least 200px, `.start-card-chart .chart` still fills it with `height: 100%`, and no `@media` block sets `.start-card-chart` to a smaller height)
+2026-10-27 01:34:16 | ORCH   | hands: changed memory note browser-check-keys-limits.md - browser_check.py --keys cannot type text and splits on commas — how to drive the nl2sql web UI in a real browser anyway

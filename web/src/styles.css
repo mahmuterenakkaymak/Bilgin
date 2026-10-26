@@ -2644,8 +2644,10 @@ main {
   line-height: 1.2;
 }
 
+/* Kutunun 240px tabanı ölçüldü (M23 görsel inceleme 1): başlık ~40px, eğik kategori etiketleri
+   ~116px yer — 140px'de plot 30px'e iniyor, başlık eksen sayılarına basıyordu. */
 .start-card-chart {
-  height: 140px;
+  height: 240px;
   min-width: 0;
 }
 
