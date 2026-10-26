@@ -468,3 +468,63 @@ describe("App — Veritabanı haritası bağlantısı", () => {
     }
   });
 });
+
+// Şablon seçme ham dosya düğmesi değil, ikincil düğme + seçilen dosyanın adı ve boyutu. Örnek
+// şablon dosya adını kurar ama #map-file-name'i boş bırakır — ad yalnız gerçek seçimde gelir.
+describe("MapFlow — şablon seçme", () => {
+  let container;
+  let root;
+
+  const settle = async () => {
+    await act(async () => {
+      for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+    });
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it("seçilen dosya adını #map-file-name'e yazar", async () => {
+    api.mapInfo.mockResolvedValue({ db_connection: false });
+    api.datasetsList.mockResolvedValue({ active: "synthetic_erp", datasets: [] });
+    await act(async () => root.render(<MapFlow />));
+    await settle();
+
+    const input = container.querySelector("#map-file");
+    Object.defineProperty(input, "files", {
+      value: [new File(["x".repeat(2048)], "harita.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })],
+      configurable: true,
+    });
+    await act(async () => {
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await settle();
+
+    expect(container.querySelector("#map-file-name").textContent).toContain("harita.xlsx");
+  });
+
+  it("örnek şablon #map-file-name'i boş bırakır", async () => {
+    api.mapInfo.mockResolvedValue({ db_connection: false });
+    api.datasetsList.mockResolvedValue({ active: "synthetic_erp", datasets: [] });
+    api.mapSampleBlob.mockResolvedValue({ arrayBuffer: () => Promise.resolve(new Uint8Array([1, 2, 3]).buffer) });
+    api.mapPreview.mockResolvedValue(previewResponse());
+    await act(async () => root.render(<MapFlow />));
+    await settle();
+
+    await act(async () => container.querySelector("#map-try-sample").click());
+    await settle();
+
+    // örnek şablon denetimden geçer ama seçilen dosyanın adı #map-file-name'de durmaz
+    expect(container.innerHTML).toContain("Örnek Fatura");
+    expect(container.querySelector("#map-file-name").textContent).toBe("");
+  });
+});

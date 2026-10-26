@@ -1760,9 +1760,36 @@ main {
   gap: var(--space);
 }
 
+.map-file-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space);
+}
+
+/* Ham dosya seçme düğmesi görünmez; etiket onun yerine geçer ama giriş odakta kalır. */
 .map-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.map-file:focus-visible + .map-file-btn {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.map-file-name {
   color: var(--muted);
   font-size: 14px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .map-hint {

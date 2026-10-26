@@ -45,6 +45,21 @@ function cell(value) {
   return value === null || value === undefined || value === "" ? "—" : String(value);
 }
 
+// Seçilen dosyanın boyutu: bayt, KB ya da MB; ondalık Türkçe biçimde (2,5 KB).
+function formatSize(bytes) {
+  const n = Number(bytes);
+  if (!Number.isFinite(n) || n < 0) return "";
+  const units = ["B", "KB", "MB"];
+  let value = n;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  const rounded = unit === 0 ? String(Math.round(value)) : value.toFixed(1).replace(/\.0$/, "");
+  return `${rounded.replace(".", ",")} ${units[unit]}`;
+}
+
 function issues(value) {
   return (Array.isArray(value) ? value : []).filter((issue) => text(issue?.message));
 }
@@ -147,6 +162,7 @@ export default function MapScreen({
   downloading = false,
   sampling = false,
   note = null,
+  fileName = "",
   onTemplateDb,
   onSample,
   onFile,
@@ -210,13 +226,21 @@ export default function MapScreen({
         <label className="field-label" htmlFor="map-file">
           Şablon dosyası (.xlsx)
         </label>
-        <input
-          id="map-file"
-          className="map-file"
-          type="file"
-          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          onChange={onFile}
-        />
+        <div className="map-file-row">
+          <input
+            id="map-file"
+            className="map-file"
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={onFile}
+          />
+          <label className="btn map-file-btn" htmlFor="map-file">
+            Şablon seç…
+          </label>
+          <span className="map-file-name" id="map-file-name">
+            {fileName}
+          </span>
+        </div>
         <div className="map-actions">
           <button
             type="button"
@@ -311,6 +335,7 @@ export function MapFlow({ onSwitched }) {
   const [downloading, setDownloading] = useState(false);
   const [sampling, setSampling] = useState(false);
   const [note, setNote] = useState(null);
+  const [picked, setPicked] = useState(null); // seçilen gerçek dosya {name,size}; örnek şablon onu boşaltır
   const [listError, setListError] = useState("");
   const fileRef = useRef(null); // seçilen dosyanın kendisi: baytlar yalnız kontrol edildiğinde okunur
 
@@ -379,6 +404,7 @@ export function MapFlow({ onSwitched }) {
       .then((blob) => blob.arrayBuffer())
       .then((buffer) => {
         fileRef.current = null;
+        setPicked(null);
         dispatch({ type: "select", filename: SAMPLE_FILENAME });
         runPreview(SAMPLE_FILENAME, arrayBufferToBase64(buffer));
       })
@@ -440,6 +466,7 @@ export function MapFlow({ onSwitched }) {
   const chooseFile = (event) => {
     const file = event.target.files?.[0] ?? null;
     fileRef.current = file;
+    setPicked(file ? { name: file.name, size: file.size } : null);
     dispatch({ type: "select", filename: file?.name ?? "" });
   };
 
@@ -457,6 +484,7 @@ export function MapFlow({ onSwitched }) {
       downloading={downloading}
       sampling={sampling}
       note={note}
+      fileName={picked ? `${picked.name} · ${formatSize(picked.size)}` : ""}
       onTemplateDb={templateDb}
       onSample={trySample}
       onFile={chooseFile}
