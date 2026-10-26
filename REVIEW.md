@@ -1,14 +1,12 @@
-# REVIEW M22 (T296-T303 + M21 review fixes T353-T355; range 0a1aa84^ -> 69a4f49)
+# REVIEW M23 (T304-T315 + visual review T366-T372; range 5911118^ -> 2cab047)
 
-Whole-project checks pass (17 commands). Compared against PLAN R7-10..R7-14 and Contracts "chart_spec (ext.)", "followup chain", "ContextNote", "TurnSummary". Visual-review findings are already T356-T362.
+Whole-project checks: the listed smoke failure is stale, not a regression - `tests\fixtures\map_netsis_style.xlsx` was renamed `map_erp_style.xlsx` by T356 and `.hybrid/checks.json` already follows it (f34f419); build-db, both import-map runs, `eval --followups --llm fake` (100 %) and `smoke_serve.py --conversation` all pass now. Full pytest here: 5397 passed, 1 failed + 14 errors, all worktree artefacts: `web/node_modules/.bin/vite` is missing in this worktree (14 build-fixture errors), and `test_dataset_move` hashes `datasets/synthetic_erp/schema.json` which this checkout has as CRLF (index is LF) - no task changed the file since T123.
 
-- **BUG (T363)**: `ambiguous_entity` never matches ASCII column names. `_loose` uses `index.text.fold`, which keeps ü/ş/ç, so aliases "müşteri"/"ürün"/"tedarikçi" miss MUSTERI_ID / URUN_ADI / TEDARIKCI_ADI (the wwi_real style); only CARI_KOD, STOK_*, FATURA_* work (reproduced).
-- **BUG (T364)**: false positives - "Bu ay hangi ürün en çok satıldı?", "Bu yıl müşteri sayısı?", plural "Bu carilerin ..." / "Bu müşterilerin hepsi" all ask "Hangi müşteriyi kastediyorsunuz?" (any bu/şu/o + any prefix match; R7-12 says singular demonstrative). The tests only pin "Bunlara" and "Bu müşteriye".
-- **BUG (T365)**: `_chosen` splits the option at the first " (", so a value holding one (every WWI customer name) becomes a prefix, fails `validate_note` and the evidence line silently disappears for the entity the user chose.
-- ASSUMPTIONs checked and holding: loop hint lines (followup_hints + refine_hint), forced-chart fallback `{"type": None, "option": None, "reason"}` (ChartView draws nothing, answer_text carries the reason), `_chain_note` refines_sql_of, GET conversation dataset filter (NULL dataset skips the filter), `--followups` default dataset.
-- Contracts traced: chart-only payload keys equal the normal path's (`_execute` fills tables_used/rules_used/masked/warnings; no agent, no narrator); `chart_kind` in the summary reads `type` (None when only a reason); eval followups report keys match report.py/CLI lines; Dataset.followups defaults match "followup chain".
-- Risk: `clarification` now carries a `column` key (stored, sent to the UI); Contracts list only {question, options}. Harmless today, a strict schema test would flag it.
-- Risk: `_chain_note` sets refines_sql_of only for a turn tagged "refine", but no synthetic/wwi chain uses that tag (they use filter/period/top/set), so fake notes never carry it; eval compares uses_turns only, so nothing notices.
-- Risk: the first, standalone question ignores a chart wish ("aylık cirosu çizgi grafikte") - only a follow-up chart-only turn forces the kind; `eval --compare --followups` silently ignores `--followups`; `Dataset.followups()` KeyErrors on a chain line without "turns".
-- Risk: the screen `ask --conversation` still skips chart_only/ambiguous_entity (documented), so CLI and web differ.
-- Missing tests: ambiguity on ASCII/plural/"Bu ay" inputs, option values containing " (", and an eval chain whose turn is answered by a clarification (the runner never supplies a choice, so such a turn is scored wrong).
+- **BUG (T373)**: the stored-turn replay button appends a local turn that the server never stored (`replay_payload` has no `turn`/`conversation_id`); the next ask gets the same number -> duplicate `n`, reload loses it.
+- **BUG (T374)**: deleting the open conversation from the list only refreshes the list; the next question is sent with the dead id and 404s.
+- **BUG (T375)**: the last turn of a reloaded conversation shows a "Kapat" that cannot do anything (`mark` never folds the last turn).
+- Visual-review findings already queued: T366-T372 (start-card chart box, composer not cleared, pie legend, card table columns, shared-server dataset restore, conversation row, start grid).
+- ASSUMPTIONs checked and holding: loop hints (loop.py:131), eval followups default dataset, GET conversation NULL-dataset skip, ConversationList sorts/times by updated_at.
+- Contracts traced: eval followups report keys == CLI/report.md; TurnSummary rows cap (5) == COLLAPSED_ROWS; ask payload `conversation_id`/`turn` consumed by thread.js `receive`; replay payload is the one producer that omits them.
+- Risk: `test_dataset_move` pins raw bytes, so a CRLF checkout (autocrlf) turns it red on Windows; risk: `run_followups` scores a clarification turn wrong (runner never supplies a choice).
+- Missing tests: replay inside a thread, delete of the open conversation, last stored turn controls, `eval --compare --followups` (flag silently ignored).
