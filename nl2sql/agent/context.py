@@ -13,6 +13,7 @@ from datetime import date
 from decimal import Decimal
 
 from nl2sql import config
+from nl2sql.index.text import fold, tokens
 
 
 def turn_summary(payload: dict) -> dict:
@@ -43,3 +44,31 @@ def _cell(value):
     if isinstance(value, (Decimal, date)):
         return str(value)
     return value
+
+
+def followup_hints(question: str, schema: dict) -> dict:
+    """Soru kendi başına mı okunuyor, yoksa önceki tura mı bağlı (PLAN R7-11).
+
+    ``markers`` ``FOLLOWUP_MARKERS``da soruda geçtiği sırayla duranlar - katlanmış tam kelime
+    eşitliği, "Ortalama" içindeki "o" işaret sayılmaz. ``table_noun`` sorunun bir tabloyu
+    adlandırdığını söyler; işaret varsa ama tablo adı yoksa soru tek başına okunamıyordur.
+    Katlama indeksle aynı ``fold``'dan geçer, aksi halde "Müşteri" ile "müşteri" ayrışırdı.
+    """
+    words = tokens(question)
+    markers = [word for word in words if word in config.FOLLOWUP_MARKERS]
+    nouns = _table_words(schema)
+    return {
+        "markers": list(dict.fromkeys(markers)),
+        "table_noun": any(word in nouns for word in words),
+    }
+
+
+def _table_words(schema: dict) -> set[str]:
+    """Tabloyu adlandıran katlanmış kelimeler: ad parçaları, anahtar kelimeler, tanımın başı."""
+    words: set[str] = set()
+    for table in (schema or {}).get("tables", []):
+        words.update(tokens(table.get("name", "")))
+        words.update(fold(keyword) for keyword in table.get("keywords", []))
+        # tanımdan yalnız ilk kelime: tamamı "detail", "group" gibi genel sözcükleri de sokardı
+        words.update(tokens(table.get("description", ""))[:1])
+    return words
