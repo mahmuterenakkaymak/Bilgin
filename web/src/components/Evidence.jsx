@@ -29,6 +29,14 @@ function summaryTail(stepCount, tables) {
   return parts.join(" · ");
 }
 
+// Araç sözlüğü modelin bir sonraki turu için yazılmıştır (tools.py `_unknown`); cevabı bulunan bir
+// koşta iş kullanıcıya hiçbir şey söylemez, o yüzden satırda kalmaz.
+const TOOL_LIST = /\s*Kullan\p{L}*:\s*[^.]*\./u;
+
+function stepSummary(summary) {
+  return String(summary ?? "").replace(TOOL_LIST, "");
+}
+
 // Süreler koşmayan aşamaları hiç yazmaz: 0, "koşmadı" demektir. Saniyenin tek ondalık basamağı
 // 0,04'ü "0,0 sn" yapar — okunur bir süre olmadığı için o da yazılmaz.
 function timingsText(timings) {
@@ -47,6 +55,9 @@ export default function Evidence({ payload }) {
   const [copied, setCopied] = useState(false);
 
   const sql = typeof payload?.sql === "string" ? payload.sql : "";
+  // ASSUMPTION: "cevabın kendisi başarılı" AskPayload.status === "answered"dır; cevaplanmamış bir
+  // yanıt (failed, needs_clarification, alanı olmayan) adımların işaretini olduğu gibi bırakır.
+  const succeeded = payload?.status === "answered";
   const timings = timingsText(payload?.timings);
   const facts = (Array.isArray(payload?.facts) ? payload.facts : []).filter((fact) => fact?.label);
   const steps = (Array.isArray(payload?.steps) ? payload.steps : []).filter(
@@ -131,15 +142,17 @@ export default function Evidence({ payload }) {
         )}
         {steps.length > 0 && (
           <ol className="steps">
-            {steps.map((step, index) => (
-              <li key={index} className={step.ok ? "step" : "step step-failed"}>
-                <span className="step-mark" aria-hidden="true">
-                  {step.ok ? "✓" : "✗"}
-                </span>
-                <span className="step-tool">{step.tool || "yanıt"}</span>
-                <span className="step-summary">{step.summary}</span>
-              </li>
-            ))}
+            {steps.map((step, index) => {
+              const failed = !step.ok && !succeeded;
+              const mark = step.ok ? "✓" : failed ? "✗" : "";
+              return (
+                <li key={index} className={failed ? "step step-failed" : "step"}>
+                  {mark && <span className="step-mark" aria-hidden="true">{mark}</span>}
+                  <span className="step-tool">{step.tool || "yanıt"}</span>
+                  <span className="step-summary">{failed ? step.summary : stepSummary(step.summary)}</span>
+                </li>
+              );
+            })}
           </ol>
         )}
         {notes.length > 0 && (
