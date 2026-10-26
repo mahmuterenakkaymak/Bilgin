@@ -1461,10 +1461,23 @@ main {
   font-size: 14px;
 }
 
-.users-note {
+/* Formun cevabı çıplak paragraf değil, kendi bandı (M19 review 2): şekil burada, rengi türünde.
+   Zemin kartın beyazından ayrışsın diye --surface değil --bg. */
+.users-band {
   margin: 0;
-  color: var(--muted);
+  padding: calc(var(--space) * 0.75) var(--space);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--muted);
+  border-radius: var(--radius);
+  background: var(--bg);
   font-size: 14px;
+  font-weight: 600;
+}
+
+.users-note {
+  border-color: var(--ok);
+  border-left-color: var(--ok);
+  color: var(--ok);
 }
 
 .users-table {

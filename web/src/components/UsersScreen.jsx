@@ -22,7 +22,10 @@ function lastLogin(value) {
 }
 
 // Alanın üç hali tek yerde: etiket, girdi, altında ya ipucu ya reddin cümlesi.
-function Field({ id, label, hint, error, value, type = "text", autoComplete, onChange }) {
+// `invalid` cümlesi olmayan hal: sunucunun reddi formun bandında duruyor, alan aynı cümleyi
+// bir daha altta saymıyor — yalnız kendi hatasının işaretini taşıyor.
+function Field({ id, label, hint, error, invalid = false, value, type = "text", autoComplete, onChange }) {
+  const marked = Boolean(error) || invalid;
   return (
     <div className="field">
       <label className="field-label" htmlFor={id}>
@@ -34,8 +37,8 @@ function Field({ id, label, hint, error, value, type = "text", autoComplete, onC
         type={type}
         autoComplete={autoComplete}
         value={value}
-        aria-invalid={error ? "true" : undefined}
-        aria-describedby={`${id}-note`}
+        aria-invalid={marked ? "true" : undefined}
+        aria-describedby={invalid ? `${id}-note users-error` : `${id}-note`}
         onChange={onChange}
       />
       <p className={error ? "field-error" : "field-hint"} id={`${id}-note`}>
@@ -45,9 +48,20 @@ function Field({ id, label, hint, error, value, type = "text", autoComplete, onC
   );
 }
 
+// Formun kendi cevabı: çıplak paragraf değil, bandı var — yoksa .screen-lead ile aynı renk ve
+// boyutta kaldığı için sayfanın sözü sanılıyor (M19 review 2).
+export function UsersNote({ children }) {
+  return (
+    <p className="users-note users-band" role="status">
+      {children}
+    </p>
+  );
+}
+
 export default function UsersScreen({ users = [], loading = false, error = "", onRefresh }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [flagged, setFlagged] = useState(""); // sunucunun reddettiği alan: cümle bantta, işaret alanda
   const [adding, setAdding] = useState(false);
   const [busyId, setBusyId] = useState(null); // kendi isteği süren satır
   const [failure, setFailure] = useState("");
@@ -65,6 +79,7 @@ export default function UsersScreen({ users = [], loading = false, error = "", o
   const change = (name) => (event) => {
     setForm((current) => ({ ...current, [name]: event.target.value }));
     setFieldErrors((current) => (current[name] ? { ...current, [name]: "" } : current));
+    setFlagged((current) => (current === name ? "" : current));
   };
 
   const add = async () => {
@@ -74,13 +89,17 @@ export default function UsersScreen({ users = [], loading = false, error = "", o
     const payload = toPayload(form);
     setAdding(true);
     setFailure("");
+    setFlagged("");
     try {
       await api.usersCreate(payload);
       setForm(EMPTY_FORM);
       setNote(`“${payload.username}” eklendi.`);
       onRefresh?.();
     } catch (rejected) {
+      // ASSUMPTION: istemci denetimlerini geçmiş bir eklemede sunucunun reddi kullanıcı adına
+      // ilişkindir (409 "zaten var"), o yüzden işaret edilecek alan kullanıcı adıdır.
       setFailure(rejected?.message || "Kullanıcı eklenemedi.");
+      setFlagged("username");
     } finally {
       setAdding(false);
     }
@@ -127,9 +146,6 @@ export default function UsersScreen({ users = [], loading = false, error = "", o
         <p className="screen-lead">Hesaplar, rolleri ve son girişleri; her değişiklik hemen geçerlidir.</p>
       </div>
 
-      {problem && <p className="users-error" id="users-error" role="alert">{problem}</p>}
-      {note && <p className="users-note" role="status">{note}</p>}
-
       <form
         id="user-add-form"
         className="card user-add-form"
@@ -145,6 +161,7 @@ export default function UsersScreen({ users = [], loading = false, error = "", o
             label="Kullanıcı adı"
             hint="Küçük harf, rakam, . _ -; 3-32 karakter."
             error={fieldErrors.username}
+            invalid={flagged === "username"}
             value={form.username}
             autoComplete="off"
             onChange={change("username")}
@@ -192,6 +209,13 @@ export default function UsersScreen({ users = [], loading = false, error = "", o
             </p>
           </div>
         </div>
+        {/* Cevap düğmenin hemen üstünde: iki mesaj üst üste binmesin, kırmızı varsa yeşil susar. */}
+        {problem && (
+          <p className="users-error" id="users-error" role="alert">
+            {problem}
+          </p>
+        )}
+        {!problem && note && <UsersNote>{note}</UsersNote>}
         <div className="user-add-actions">
           <button type="submit" id="user-add-submit" className="btn btn-primary" disabled={adding}>
             {adding ? "Ekleniyor…" : "Kullanıcıyı ekle"}

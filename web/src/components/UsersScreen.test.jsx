@@ -4,7 +4,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import App from "../App.jsx";
-import UsersScreen from "./UsersScreen.jsx";
+import UsersScreen, { UsersNote } from "./UsersScreen.jsx";
 
 const noop = () => {};
 
@@ -97,6 +97,30 @@ describe("UsersScreen", () => {
     expect(failed).toContain("Kullanıcılar okunamadı.");
     expect(failed).not.toContain("okunuyor…");
     expect(screen({ users: [null, {}, USERS[0]] })).not.toMatch(/undefined|null/);
+  });
+});
+
+// Cevabın yeri (M19 review 2): yanıt, isteğin geldiği kartın içinde durur. Formun işareti
+// kendi id'sinden kesilir; kartın içindekiler sırayla okunur.
+function formMarkup(html) {
+  const open = html.indexOf('id="user-add-form"');
+  return html.slice(open, html.indexOf("</form>", open));
+}
+
+describe("UsersScreen — cevabın yeri", () => {
+  it("#users-error ekleme formunun soyudur ve düğmenin hemen üstünde durur", () => {
+    const refused = formMarkup(screen({ users: USERS, error: "Bu kullanıcı adı zaten var." }));
+    expect(refused).toContain('id="users-error"');
+    expect(refused).toContain("Bu kullanıcı adı zaten var.");
+    expect(refused.indexOf('id="user-new-role"')).toBeLessThan(refused.indexOf('id="users-error"'));
+    expect(refused.indexOf('id="users-error"')).toBeLessThan(refused.indexOf('id="user-add-submit"'));
+  });
+
+  it("başarı cümlesi çıplak paragraf değil, kendi bandını taşır", () => {
+    const band = render(<UsersNote>“analist2” eklendi.</UsersNote>);
+    expect(band).toContain('class="users-note users-band"');
+    expect(band).toContain('role="status"');
+    expect(band).toContain("eklendi.");
   });
 });
 
