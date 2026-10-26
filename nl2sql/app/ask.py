@@ -15,6 +15,7 @@ from __future__ import annotations
 import time
 
 from nl2sql import config
+from nl2sql.agent import refine
 from nl2sql.agent.clarify import follow_up_text
 from nl2sql.agent.context import evidence_line, turn_summary, validate_note
 from nl2sql.agent.loop import run_agent
@@ -30,6 +31,9 @@ from nl2sql.schema_map.rules import matching_rules
 
 # Adım özeti ekranda okunur; uzun bir araç cevabı payload'ı şişirmesin.
 STEP_CHARS = 300
+
+# R7-10: modelsiz sunum değişikliğinin cümlesi türü kullanıcının diliyle söylenir.
+_CHART_WORDS = {"line": "çizgi", "bar": "çubuk", "pie": "pasta", "table": "tablo"}
 
 # R5-2: indeksteki bir sorun koşumu düşürmez, cevabın hatası olur.
 INDEX_ERRORS = (MissingIndexError, StaleIndexError, ForeignIndexError)
@@ -62,6 +66,8 @@ def ask_payload(
     yolun 404'ü oradan okunur. Soru son ``CONV_TURNS`` turla koşar, tur özetini konuşmaya
     bırakır, payload ve günlük satırı ``conversation_id`` ile ``turn``i taşır; bekleyen bir
     netleştirmenin aynı sorusuna verilen ``choice`` o turu tamamlar, üstüne yeni tur açmaz.
+    Yalnızca sunumu değiştiren bir soru (``refine.chart_only``, R7-10) modeli hiç koşurmaz: son
+    yanıtlanmış turun SQL'i aynıyla yeniden yürür, cümlesi koddan kurulur.
     """
     audit_id = asklog.new_audit_id()
     notes: list[str] = []
@@ -75,13 +81,18 @@ def ask_payload(
         # Contracts "AskPayload (ext.)": üç anahtar yalnız konuşmayla koşan payloadda vardır.
         payload.update(conversation_id=conversation_id, turn=None, context=None)
     dropped = None
+    wish = refine.chart_only(asked, turns)
     try:
         resolved, _ = session.resolve_mode(payload["mode"], notes)
         payload["mode"] = resolved
-        dropped = _run(
-            session, asked, resolved, _audit_source(source, username, audit_id), payload,
-            clarify=not choice, history=turns,
-        )
+        if wish is not None:
+            # R7-10: soru yalnızca sunumu değiştiriyor - model hiç koşmaz, sayı riski doğmaz.
+            _chart_only(session, asked, wish, turns, _audit_source(source, username, audit_id), payload)
+        else:
+            dropped = _run(
+                session, asked, resolved, _audit_source(source, username, audit_id), payload,
+                clarify=not choice, history=turns,
+            )
     except INDEX_ERRORS as exc:
         _fail(payload, "index", str(exc))
     if conversation_id is not None:
@@ -187,6 +198,41 @@ def _run(
     return dropped
 
 
+def _chart_only(session, question: str, wish: str, turns, source: str, payload: dict) -> None:
+    """Sunum değişikliğinin cevabı: önceki turun SQL'i aynen yeniden, grafik istenen türde (R7-10).
+
+    Ne ajan ne anlatıcı koşar: cümle koddan kurulur, sayılar yürütücünün döndürdüğü satırlardır.
+    Biçim isteği kaldırmıyorsa ``chart_spec``ın eklediği gerekçe konuşur, kendi grafik kalır.
+    """
+    turn = _refined(turns)
+    if not _execute(session, turn["sql"], source, payload):
+        return
+    payload["facts"] = [fact.to_dict() for fact in compute_facts(payload["columns"], payload["rows"])]
+    payload["chart"] = chart_spec(payload["columns"], payload["rows"], question, kind=wish)
+    payload["answer_text"] = _chart_text(wish, payload["chart"])
+    payload["narration_source"] = "template"
+    payload["steps"] = [
+        {"tool": "chart", "ok": True,
+         "summary": f"Tur {turn['n']} sorgusu yeniden çalıştırıldı, model SQL yazmadı."}
+    ]
+    note = {"uses_turns": [turn["n"]], "entities": [], "refines_sql_of": turn["n"]}
+    payload["context"] = {**note, "line": evidence_line(note, turns, session.schema)}
+
+
+def _refined(turns) -> dict:
+    """Sunumu değiştirilen tur: ``chart_only``ın kabul ettiği son yanıtlanmış tur."""
+    return next(turn for turn in reversed(turns) if turn.get("sql"))
+
+
+def _chart_text(wish: str, chart) -> str:
+    """Koddan kurulan cümle: uyan tür söylenir, uymayanın gerekçesi grafikten olduğu gibi okunur."""
+    if chart and chart.get("reason"):
+        return chart["reason"]
+    if wish == "table":
+        return "Sonuç tablo olarak gösteriliyor."
+    return f"Grafik {_CHART_WORDS[wish]} olarak gösteriliyor."
+
+
 def _note(session, payload: dict, note, turns) -> str | None:
     """Modelin bağlam notu: doğrulanırsa kanıt satarıyla payload'a girer, doğrulanmazsa düşer (R7-5).
 
@@ -268,13 +314,19 @@ def replay_payload(
 
 def _answer(session, question: str, sql: str, source: str, payload: dict) -> None:
     """Gönderilen SQL'in arayüz bütçesiyle yürüyüşü ve cevabın doldurulması (ajan da geçmiş de buradan)."""
+    if _execute(session, sql, source, payload):
+        _report(session, question, payload)
+
+
+def _execute(session, sql: str, source: str, payload: dict) -> bool:
+    """SQL'in arayüz bütçesiyle yürüyüşü ve cevabın satırları: yürümediyse False (R5-2)."""
     payload["sql"] = sql
     # Döngü satırları metin olarak görür; tablo için SQL bir kez daha, arayüz bütçesiyle koşar.
     result = session.executor.execute(sql, Budget(max_rows=config.UI_MAX_ROWS), source)
     payload["timings"]["execute_ms"] = round(result.elapsed_ms, 1)
     if result.error is not None:
         _fail(payload, f"exec:{result.error.kind}", result.error.message)
-        return
+        return False
 
     payload["status"] = "answered"
     payload["columns"] = list(result.columns)
@@ -287,7 +339,7 @@ def _answer(session, question: str, sql: str, source: str, payload: dict) -> Non
     payload["warnings"] = [
         warning.to_dict() for warning in checks.post_checks(sql, result, session.executor)
     ]
-    _report(session, question, payload)
+    return True
 
 
 def _report(session, question: str, payload: dict) -> None:
