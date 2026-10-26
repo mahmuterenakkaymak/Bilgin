@@ -3,11 +3,17 @@
 // aynı çip iki kez görünmesin diye kutu boş durumdayken kendi çip sırasını vermez.
 // Çip yoksa kutu başlık ve tek cümlenin altında boş bir alanla kalmasın: durum söylenir ve
 // yönetici, kümenin açığını kapattığı tek ekrana, İş kuralları'na bağlanır (`rulesHint`).
-export default function EmptyState({ examples = [], rulesHint = false, onSelect }) {
+// ASSUMPTION: ad geldiğinde lead'in kendisi onun cümlesidir; iki cümle üst üste binmesin (M22: tek
+// cümle, yeni veri yok). Ad yoksa — sağlık çıktısı henüz gelmediyse — ekran bugünkü cümlesiyle açılır.
+export default function EmptyState({ examples = [], rulesHint = false, datasetName = "", onSelect }) {
   return (
     <section className="card empty-state">
       <h1 className="screen-title">Verinize Türkçe soru sorun</h1>
-      <p className="screen-lead">Bilgin SQL'i yazar, sonucu ve nasıl hesapladığını gösterir.</p>
+      <p className="screen-lead">
+        {datasetName
+          ? `«${datasetName}» üzerinde soruyorsun; örnekler onun tablolarından.`
+          : "Bilgin SQL'i yazar, sonucu ve nasıl hesapladığını gösterir."}
+      </p>
       {examples.length > 0 ? (
         <div className="examples">
           {examples.map((example, index) => (

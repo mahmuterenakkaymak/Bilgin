@@ -71,7 +71,14 @@ function userLabel(user) {
 
 // Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Boş, bekleyen, cevap,
 // netleştirme ve hata yuvaları burada durur; cevabın grafiği kartın içindedir.
-function AskScreen({ pending = null, onRefresh, onRebuild, datasetKey = 0, canEditRules = false }) {
+function AskScreen({
+  pending = null,
+  onRefresh,
+  onRebuild,
+  datasetKey = 0,
+  canEditRules = false,
+  datasetName = "",
+}) {
   const [state, dispatch] = useReducer(askReducer, initialState);
   const [text, setText] = useState("");
   const [examples, setExamples] = useState([]);
@@ -171,7 +178,12 @@ function AskScreen({ pending = null, onRefresh, onRebuild, datasetKey = 0, canEd
         examples={state.status === "idle" ? [] : examples}
       />
       {state.status === "idle" && (
-        <EmptyState examples={examples} rulesHint={canEditRules && rulesEmpty} onSelect={ask} />
+        <EmptyState
+          examples={examples}
+          rulesHint={canEditRules && rulesEmpty}
+          datasetName={datasetName}
+          onSelect={ask}
+        />
       )}
       {loading && <LoadingSteps />}
       {state.status === "answered" && (
@@ -256,6 +268,7 @@ function Screen({
   onRebuild,
   onSwitched,
   datasetKey,
+  datasetName,
   readOnly,
   currentUser,
 }) {
@@ -268,6 +281,7 @@ function Screen({
       onRefresh={onRefresh}
       onRebuild={onRebuild}
       datasetKey={datasetKey}
+      datasetName={datasetName}
       canEditRules={!readOnly}
     />
   );
@@ -447,6 +461,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
             onRebuild={() => api.rebuild().then(refreshHealth)}
             onSwitched={switched}
             datasetKey={datasetKey}
+            datasetName={health?.dataset?.display_name ?? ""}
             readOnly={Boolean(user && user.role !== "admin")}
             currentUser={user}
           />
