@@ -34,6 +34,7 @@ from nl2sql.web.auth_api import create_router as create_auth_router
 from nl2sql.web.auth_api import create_users_router
 from nl2sql.web.authz import NO_SESSION, ROUTE_ROLES, current_user, require
 from nl2sql.web.datasets_api import create_router as create_datasets_router
+from nl2sql.web.map_api import create_router as create_map_router
 from nl2sql.web.saved import ALL as SAVED_ALL, SavedStore
 
 # R5-15: boş soru koşum açmaya değmez; cümle ekranın gösterdiği cümledir.
@@ -148,6 +149,7 @@ def create_app(
     app.include_router(create_auth_router())
     app.include_router(create_users_router())
     app.include_router(create_datasets_router())
+    app.include_router(create_map_router())
 
     def guarded(method: str, path: str, **kwargs):
         """Yolun kapısını ``ROUTE_ROLES``tan okuyan süsleyici (R6-5, R6-6).

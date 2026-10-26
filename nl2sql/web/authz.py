@@ -45,11 +45,16 @@ ROUTE_ROLES: dict[tuple[str, str], str] = {
     ("GET", "/api/datasets"): "admin",
     ("POST", "/api/datasets/active"): "admin",
     ("GET", "/api/datasets/{name}/login-script.sql"): "admin",
+    # R6-16, R6-17: şemayı tanıtan ekran - biri sunucuya yeni bir veri kümesi ekliyor.
+    ("GET", "/api/schema-map/info"): "admin",
+    ("GET", "/api/schema-map/template.xlsx"): "admin",
+    ("GET", "/api/schema-map/sample.xlsx"): "admin",
+    ("POST", "/api/schema-map/preview"): "admin",
+    ("POST", "/api/schema-map/apply"): "admin",
+    ("GET", "/api/schema-map/status/{preview_id}"): "admin",
     ("GET", "/api/users"): "admin",
     ("POST", "/api/users"): "admin",
     ("PUT", "/api/users/{id}"): "admin",
-    # ASSUMPTION: brief'in ``/api/schema-map/*`` satırları henüz ``create_app``te yol değil -
-    # satır, yolun doğduğu görevle birlikte buraya yazılır (R6-5).
 }
 
 
