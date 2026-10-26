@@ -96,13 +96,22 @@ function Report({ preview }) {
         </p>
       )}
       <dl className="map-stats">
-        {COUNTS.map(([key, label]) => (
-          <div className="map-stat" key={key}>
-            <dt>{label}</dt>
-            <dd>{count(counts[key])}</dd>
-          </div>
-        ))}
+        {COUNTS.map(([key, label]) => {
+          const value = count(counts[key]);
+          // Kişisel verinin sıfırdan farklı olması bir sonraki adımı durdurması gereken bir
+          // sözdür: kare kehribara döner ki sayı diğer beşinden ayrılsın (renk yeni değil).
+          return (
+            <div className={key === "pii" && value > 0 ? "map-stat is-warn" : "map-stat"} key={key}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          );
+        })}
       </dl>
+      <p className="map-stats-note" id="map-stats-note">
+        Kapalı: modelin hiçbir metnine düşmeyen kolonlar; sorgu onları göremez. Referans: bir kolonun hangi tabloya
+        bağlandığını söyler — cevaplar bu bağlantılar üzerinden kurulur.
+      </p>
       {errors.length > 0 && (
         <div className="map-errors-wrap">
           <table className="map-errors" id="map-errors">

@@ -1888,6 +1888,26 @@ main {
   font-weight: 650;
 }
 
+/* Kişisel veri sıfırın üstünde olduğunda kare kehribara döner: altı kare tek listedir ve uyarı
+   olması gereken sayı diğerlerinden ancak böyle ayrılıyor. dt kendi rengini bıraksın ki bant
+   bütün kareyi sarmalasın. */
+.map-stat.is-warn {
+  border-color: var(--warn-line);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.map-stat.is-warn dt {
+  color: inherit;
+}
+
+/* Karelerin altındaki tek satır, çıplak etiketleri açıklar: Kapalı ve Referans'ın ne saydığı. */
+.map-stats-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 /* Hata listesi kendi zemininde: kullanıcı neyi neden düzeltmesi gerektiğini ekranın geri
    kalanından ayıran bir bantta okur. */
 .map-errors-wrap {
