@@ -1,15 +1,23 @@
 import { useState } from "react";
 import * as api from "../lib/api.js";
 import { ROLE_LABELS } from "../lib/auth.js";
+import { BUSINESS_ROLES, roleLabel } from "../lib/startCards.js";
 import { PASSWORD_MESSAGE, PASSWORD_MIN_LEN, ROLES, clientErrors, toPayload } from "../lib/usersForm.js";
 
 // Kullanıcı ekranı (R6-19): yöneticinin defteri. Liste üstten okunur; her ekme ve güncelleme
 // sonrası aynı istek yinelenir ki tablo sunucudaki halini göstersin. Reddin cümlesi değiştirilmeden
 // #users-error'a düşer — son etkin yöneticiyi koruyan 409'un sözü de sunucunundur.
-const EMPTY_FORM = { username: "", password: "", password2: "", role: "user" };
+// nl2sql/config.DEFAULT_BUSINESS_ROLE: arayüz Python'u okuyamadığı için varsayılan burada da duruyor.
+const DEFAULT_BUSINESS_ROLE = "genel";
+
+const EMPTY_FORM = { username: "", password: "", password2: "", role: "user", businessRole: DEFAULT_BUSINESS_ROLE };
 
 // Kendi rolü tek tıkla düşmez: değişince yönetici ekranları kapanır, o yüzden önce söz istenir.
 const SELF_ROLE_QUESTION = "Kendi rolünüzü değiştiriyorsunuz; yönetici ekranları kapanır. Değiştirilsin mi?";
+
+// İş rolü kendi üstüne değişilemez (R7-16) — reddin cümlesi sunucunundur (auth_api.OWN_BUSINESS_ROLE),
+// alan o yüzden kapalı geliyor ve ipucusu aynı sözü söylüyor.
+const OWN_BUSINESS_ROLE = "Kendi iş rolünüzü değiştiremezsiniz.";
 
 // ASSUMPTION: "Son giriş" tarayıcının yerel saatiyle okunur; sunucu UTC yazıyor, dilim yalnız gösterim.
 function lastLogin(value) {
@@ -92,7 +100,9 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
     const invalid = clientErrors(form);
     setFieldErrors(invalid);
     if (Object.keys(invalid).length) return;
-    const payload = toPayload(form);
+    // İş rolü formda `businessRole` adıyla duruyor (React alanı), API'nin beklediği anahtar ise
+    // `business_role`; `toPayload`ın şekli usersForm.test.js'de sabit, o yüzden burada ekleniyor.
+    const payload = { ...toPayload(form), business_role: form.businessRole };
     setAdding(true);
     setFailure("");
     setFlagged("");
@@ -214,6 +224,27 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
               {fieldErrors.role || "Yönetici kullanıcıları ve iş kurallarını değiştirir."}
             </p>
           </div>
+          <div className="field">
+            <label className="field-label" htmlFor="user-new-business-role">
+              İş rolü
+            </label>
+            <select
+              id="user-new-business-role"
+              className="field-input"
+              value={form.businessRole}
+              aria-describedby="user-new-business-role-note"
+              onChange={change("businessRole")}
+            >
+              {BUSINESS_ROLES.map((item) => (
+                <option value={item.role} key={item.role}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            <p className="field-hint" id="user-new-business-role-note">
+              Başlangıç ekranı ve hazır sorular bu role göre gelir.
+            </p>
+          </div>
         </div>
         {/* Cevap düğmenin hemen üstünde: iki mesaj üst üste binmesin, kırmızı varsa yeşil susar. */}
         {problem && (
@@ -235,6 +266,7 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
             <tr>
               <th scope="col">Kullanıcı</th>
               <th scope="col">Rol</th>
+              <th scope="col">İş rolü</th>
               <th scope="col">Durum</th>
               <th scope="col">Son giriş</th>
               <th scope="col" className="users-col-actions">
@@ -245,7 +277,7 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td className="users-empty" colSpan={5}>
+                <td className="users-empty" colSpan={6}>
                   {emptyText}
                 </td>
               </tr>
@@ -254,6 +286,11 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
               const busy = busyId === user.id;
               const self = Boolean(selfName) && String(user.username ?? "").toLowerCase() === selfName;
               const login = lastLogin(user.last_login_at);
+              // İş rolü Run 7'nin alanı: eski bir listede hiç olmayabilir, o zaman sunucunun
+              // varsayılanı okunur; listede olmayan kod ilk seçenek olarak düşmesin, kendi adıyla dursun.
+              const listed = typeof user.business_role === "string" ? user.business_role : "";
+              const business = listed || DEFAULT_BUSINESS_ROLE;
+              const extraRole = BUSINESS_ROLES.some((item) => item.role === business) ? [] : [business];
               return (
                 <tr key={user.id}>
                   <th scope="row" className="users-name">
@@ -276,6 +313,36 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
                       {ROLES.map((role) => (
                         <option value={role} key={role}>
                           {ROLE_LABELS[role] ?? role}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="users-business">
+                    {/* Alan kendi satırında kapalı: sunucu bu işe 403 diyor, tek tık boşuna denemez. */}
+                    <select
+                      id={`user-business-role-${user.id}`}
+                      className="field-input users-select"
+                      aria-label={`${user.username} iş rolü`}
+                      data-user-business-role={user.id}
+                      value={business}
+                      disabled={busy || self}
+                      title={self ? OWN_BUSINESS_ROLE : undefined}
+                      onChange={(event) =>
+                        update(
+                          user,
+                          { business_role: event.target.value },
+                          `“${user.username}” iş rolü güncellendi.`,
+                        )
+                      }
+                    >
+                      {BUSINESS_ROLES.map((item) => (
+                        <option value={item.role} key={item.role}>
+                          {item.label}
+                        </option>
+                      ))}
+                      {extraRole.map((role) => (
+                        <option value={role} key={role}>
+                          {roleLabel(role)}
                         </option>
                       ))}
                     </select>

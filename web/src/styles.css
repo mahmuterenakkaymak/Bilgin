@@ -1119,6 +1119,20 @@ main {
     font-weight: 600;
   }
 
+  /* Rol ile iş rolü alt alta inince iki çıplak select birbirine karışıyor — "Yönetici" mi iş rolü
+     mü, telefon başlığı hiç göstermiyor. Adları hücrelerin kendisi taşır, Durum ve Son giriş gibi. */
+  .users-table .users-role::before {
+    content: "Rol: ";
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .users-table .users-business::before {
+    content: "İş rolü: ";
+    color: var(--text);
+    font-weight: 600;
+  }
+
   .users-table .users-actions {
     text-align: left;
   }

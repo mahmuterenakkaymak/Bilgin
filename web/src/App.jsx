@@ -16,6 +16,7 @@ import UsersScreen from "./components/UsersScreen.jsx";
 import * as api from "./lib/api.js";
 import { NOT_ALLOWED_NOTE, ROLE_LABELS, canSee } from "./lib/auth.js";
 import { parseRoute } from "./lib/route.js";
+import { roleLabel } from "./lib/startCards.js";
 import { applyTheme, nextTheme, readStored, store } from "./lib/theme.js";
 import { initialState as initialThread, threadReducer } from "./lib/thread.js";
 
@@ -70,8 +71,10 @@ function chipParts(health) {
 }
 
 // Rol adı hiç okunamazsa çip yalnız kullanıcı adını taşır: "undefined" bir kimlik değildir.
+// İş rolü (R7-16) Run 7 öncesi kimlikte yoktur; halka yoksa çip onu hiç taşımaz, boş bırakmaz.
 function userLabel(user) {
-  return [user?.username, ROLE_LABELS[user?.role]].filter(Boolean).join(" · ");
+  const business = user?.business_role ? roleLabel(user.business_role) : "";
+  return [user?.username, business, ROLE_LABELS[user?.role]].filter(Boolean).join(" · ");
 }
 
 // Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Boş, bekleyen, cevap,
