@@ -143,7 +143,9 @@ export default function Evidence({ payload }) {
         {steps.length > 0 && (
           <ol className="steps">
             {steps.map((step, index) => {
-              const failed = !step.ok && !succeeded;
+              // Cevabı bulunan bir koşta yalnız araç sözlüğü taşıyan (bilinmeyen araç) hata nötr kalır;
+              // gerçek bir SQL hatası cevap bulunsa da ✗ ile okunur.
+              const failed = !step.ok && !(succeeded && TOOL_LIST.test(String(step.summary ?? "")));
               const mark = step.ok ? "✓" : failed ? "✗" : "";
               return (
                 <li key={index} className={failed ? "step step-failed" : "step"}>
