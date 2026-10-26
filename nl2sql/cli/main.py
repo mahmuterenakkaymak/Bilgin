@@ -143,6 +143,12 @@ EVAL_NO_AUTO = "eval auto modu kabul etmez; modu açıkça seçin: full, full_ru
 # --compare üç modu koşar, oysa belirsiz set bir modun netleştirme davranışının ölçümüdür.
 NO_AMBIGUOUS = "Bu veri kümesinin belirsiz soru seti yok."
 AMBIGUOUS_COMPARE = "--ambiguous tek mod eval'i içindir."
+# R7-14: --followups kümenin ardışık soru seti yoksa koşmaz — ölçülecek zincir yoktur, tıpkı
+# belirsiz setin yokluğu gibi. Ekran zincir başına bir satır ve bir toplam satırı basar.
+NO_FOLLOWUPS = "Bu veri kümesinde ardışık soru seti yok."
+FOLLOWUPS_HEAD = "Ardışık sorular:"
+FOLLOWUP_CHAIN = "  {id}  {passed}/{total} tur  bağlam {mark}"
+FOLLOWUP_TOTAL = "Toplam: tur {turn} · zincir {chain} · bağlam {context}"
 # R5-14: metrik bloğunun başlığı; satırlarını report.metrics_block kurar, yani ekran ile report.md
 # aynı altı ölçüyü söyler.
 METRICS_HEAD = "Metrikler:"
@@ -660,6 +666,7 @@ def evaluate(
     profile: ModelProfile | None = None,
     ambiguous: bool = False,
     narrate: bool = False,
+    followups: bool = False,
 ) -> int:
     """Altın soruları bir modda koşar, her soru biter bitmez tek satır dökerek (Delight 4)
     ilerler, raporu ``out_dir`` altına yazar (CLI ona ``eval_out/<mode>`` verir, R2-12), skoru söyler; koşu tamamlandıysa kod 0'dır.
@@ -687,6 +694,10 @@ def evaluate(
     (R5-12): soru soruldukça ölçülen şey cevap isabeti değil, tahmin etmek yerine sormaktır. Kümenin
     böyle bir seti yoksa koşacak belirsiz soru yoktur, yani tek cümle ve kod 2. ``narrate``
     gönderilen her altın cevabı bir kez daha yürütüp anlatır ve anlatıcı kaynaklarını sayar (R5-13).
+
+    ``followups`` altın koşumun ardına kümenin ardışık soru zincirlerini de ``ask_payload``dan
+    geçirir (R7-14): her tur gerçek konuşma deposundan geçer, ölçüm tur/zincir/bağlam doğruluğudur.
+    Kümenin böyle bir seti yoksa koşulacak zincir yoktur, yani tek cümle ve kod 2.
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
@@ -698,6 +709,11 @@ def evaluate(
     ambiguous_lines = ds.ambiguous() if ambiguous and ds else []
     if ambiguous and not ambiguous_lines:
         print(NO_AMBIGUOUS)
+        return EXIT_BAD_INPUT
+    # Ardışık setin yokluğu da veritabanından önce sorulur: eksik olan ölçümün tanımıdır (R7-14).
+    chains = ds.followups() if followups and ds else []
+    if followups and not chains:
+        print(NO_FOLLOWUPS)
         return EXIT_BAD_INPUT
     budget = _or(budget, profile.prompt_limit if profile else None)
     db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
@@ -752,6 +768,12 @@ def evaluate(
     passed = sum(1 for result in judged if result.outcome == "pass")
     kind, model = _client_kind(llm, profile)
     name = ds.name if ds else config.DEFAULT_DATASET
+    followup_data = None
+    if followups:
+        followup_data = _run_followup_chains(
+            ds, schema, rules, executor, profile, budget, index_dir, db_path, audit_path,
+            out_dir, llm, kind, chains, mode,
+        )
     run_dir = report.write_report(
         results,
         out_dir,
@@ -769,6 +791,8 @@ def evaluate(
         dataset=name,
         profile=_profile_block(profile),
         narration=narration,
+        followups=followup_data,
+        followup_chains=chains if followups else None,
     )
     print(f"Skor: {passed}/{len(judged)}")
     if ambiguous:
@@ -776,8 +800,59 @@ def evaluate(
         for line in report.metrics_block(metrics.compute_metrics(results)):
             print(line)
         print()
+    if followups:
+        print(f"\n{FOLLOWUPS_HEAD}")
+        for line in _followup_lines(followup_data):
+            print(line)
     print(f"Rapor: {run_dir / 'report.md'}")
     return 0
+
+
+def _run_followup_chains(
+    ds, schema, rules, executor, profile, budget, index_dir, db_path, audit_path, out_dir,
+    llm, kind, chains, mode,
+) -> dict:
+    """Ardışık zincirleri altın koşumla aynı yürütücü ve istemci üzerinden ``ask_payload``dan geçirir.
+
+    Oturum ``open_session``dan değil doğrudan kurulur: altın koşumun şeması, kuralları, yürütücüsü ve
+    istemcisi zaten vardır, ölçüm onların üstünde aynı dünyayı görmelidir. Konuşma deposu ve soru
+    günlüğü ``out_dir/followups`` altında, yani her koşumda sil-baştan (R7-14).
+    """
+    from nl2sql.app.session import Session
+    from nl2sql.eval.followups import followup_metrics, run_followups
+
+    session = Session(
+        dataset=ds, schema=schema, rules=rules, executor=executor, profile=profile,
+        budget=budget, llm_kind=kind, index_dir=Path(index_dir), db_path=Path(db_path),
+        audit_path=Path(audit_path),
+        ask_log=Path(out_dir) / "followups" / "asks.jsonl",
+        client_factory=lambda _mode: llm,
+    )
+    return followup_metrics(run_followups(session, chains, out_dir, mode=mode))
+
+
+def _followup_lines(followup_data: dict) -> list[str]:
+    """Konsolun ardışık soru bloğu (R7-14): zincir başına bir satır, sonda üç doğruluğun toplamı."""
+    chains: dict[str, list[bool]] = {}
+    for item in followup_data["items"]:
+        chains.setdefault(item["id"], []).append(item["outcome"] == "pass")
+    lines = [
+        FOLLOWUP_CHAIN.format(
+            id=chain_id,
+            passed=sum(ok for ok in oks),
+            total=len(oks),
+            mark="✓" if all(oks) else "✗",
+        )
+        for chain_id, oks in chains.items()
+    ]
+    lines.append(
+        FOLLOWUP_TOTAL.format(
+            turn=report.metric_percent(followup_data["turn_accuracy"]),
+            chain=report.metric_percent(followup_data["chain_accuracy"]),
+            context=report.metric_percent(followup_data["context_accuracy"]),
+        )
+    )
+    return lines
 
 
 def compare_modes(
@@ -1759,6 +1834,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="gönderilen her altın cevabı anlatıp anlatıcının kaynağını sayar",
     )
+    eval_cmd.add_argument(
+        "--followups",
+        action="store_true",
+        help="altın koşumun ardına kümenin ardışık soru zincirlerini konuşmadan geçirip bağlamı ölçer",
+    )
     _add_model_options(eval_cmd)
     _add_dataset_option(eval_cmd)
 
@@ -1875,10 +1955,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.compare and args.ambiguous:
         print(AMBIGUOUS_COMPARE)
         return EXIT_BAD_INPUT
-    # ASSUMPTION: --ambiguous belirsiz seti bir veri kümesinden okur; --dataset söylenmemişse ölçülen
-    # dünya adıyla da söylenir, yani config'in sabitleriyle aynı değerleri taşıyan sentetik ERP
-    # (R5-12) — sahte kayıt belirsiz soruları ancak küme tanınırsa oynatır.
-    dataset = args.dataset or (config.DEFAULT_DATASET if args.ambiguous else None)
+    # ASSUMPTION: --ambiguous/--followups setleri bir veri kümesinden okunur; --dataset söylenmemişse
+    # ölçülen dünya adıyla da söylenir, yani config'in sabitleriyle aynı değerleri taşıyan sentetik ERP
+    # (R5-12, R7-14) — sahte kayıt belirsiz soruları ve zincirleri ancak küme tanınırsa oynatır.
+    dataset = args.dataset or (
+        config.DEFAULT_DATASET if (args.ambiguous or args.followups) else None
+    )
     ds, code = _dataset(dataset)
     if code:
         return code
@@ -1919,6 +2001,7 @@ def main(argv: list[str] | None = None) -> int:
             out_dir=_eval_out(ds, args.mode),
             ambiguous=args.ambiguous,
             narrate=args.narrate,
+            followups=args.followups,
             **_given(schema_path=schema, dataset=dataset, profile=profile),
         )
     except LLMError as exc:

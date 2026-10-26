@@ -54,6 +54,8 @@ def write_report(
     dataset: str = config.DEFAULT_DATASET,
     profile: dict | None = None,
     narration: dict | None = None,
+    followups: dict | None = None,
+    followup_chains: list | None = None,
 ) -> Path:
     """Write ``<out_dir>/<timestamp>/report.json`` + ``report.md``, copy them to ``<out_dir>/latest``.
 
@@ -69,16 +71,21 @@ def write_report(
     (PLAN R4-14) - the same rule as ``schema_info``: no profile, no field. ``narration`` is the
     narrator's own count (PLAN R5-13) and stays null for a run that never narrated; the metrics
     block is not a caller's choice at all - every run has answered/wrong/clarification numbers.
+
+    ``followups`` is the ``eval --followups`` block (PLAN R7-14, Contracts "followups report") and
+    stays out of the report when the run measured no chains; ``followup_chains`` carries the chain
+    questions the markdown table shows but the json block does not repeat.
     """
     stamp = datetime.now()
     out = Path(out_dir)
     previous = _load(out / "latest" / REPORT_FILES[0])
     report = _report(
-        results, model, config, stamp, previous, mode, schema_info, dataset, profile, narration
+        results, model, config, stamp, previous, mode, schema_info, dataset, profile, narration,
+        followups,
     )
     run_dir = out / stamp.strftime(STAMP)
-    _write(run_dir, report)
-    _write(out / "latest", report)
+    _write(run_dir, report, followup_chains)
+    _write(out / "latest", report, followup_chains)
     return run_dir
 
 
@@ -168,6 +175,7 @@ def _report(
     dataset: str = config.DEFAULT_DATASET,
     profile: dict | None = None,
     narration: dict | None = None,
+    followups: dict | None = None,
 ) -> dict:
     # Kill-gate skoru altın setin sayısıdır (R5-12): belirsiz satırlar netleştirmeyi ölçer, altın
     # cevabın yerine geçmez. Metrik bloğunun hemen üstünde başka bir paydaya bölünmüş bir skor,
@@ -202,6 +210,9 @@ def _report(
         # null'dır, yani "ölçülmedi" ile "hiç netleştirme olmadı" ayrımı diskte de durur.
         "metrics": compute_metrics(results),
         "narration": narration,
+        # Ardışık sorular yalnız ``--followups`` koşumunda ölçülür (R7-14): ölçmeyen koşumda anahtar
+        # hiç yoktur, yani "zincir yok" ile "zincir koşulmadı" ayrımı diskte de durur.
+        **({"followups": followups} if followups else {}),
         "questions": [dataclasses.asdict(result) for result in results],
         "previous": _delta(previous, results),
     }
@@ -264,13 +275,13 @@ def _decision(total: int, passed: int) -> str:
     return next(text for floor, text in DECISIONS if points >= floor)
 
 
-def _write(directory: Path, report: dict) -> None:
+def _write(directory: Path, report: dict, followup_chains: list | None = None) -> None:
     directory.mkdir(parents=True, exist_ok=True)
     for name in REPORT_FILES:
         text = (
             json.dumps(report, ensure_ascii=False, indent=2)
             if name.endswith(".json")
-            else _markdown(report)
+            else _markdown(report, followup_chains)
         )
         (directory / name).write_text(text, encoding="utf-8")
 
@@ -288,7 +299,7 @@ def metrics_block(metrics: dict) -> list[str]:
     ]
 
 
-def _markdown(report: dict) -> str:
+def _markdown(report: dict, followup_chains: list | None = None) -> str:
     score, context, metrics = report["score"], report["context"], report["metrics"]
     lines = [
         f"# Değerlendirme raporu — {report['model'] or 'model adı verilmemiş koşum'}",
@@ -322,6 +333,8 @@ def _markdown(report: dict) -> str:
     lines += [f"| {label} | {metric_percent(metrics[key])} |" for key, label in METRIC_ROWS]
     if report.get("narration"):
         lines += ["", _narration_note(report["narration"])]
+    if report.get("followups"):
+        lines += ["", *_followups_section(report["followups"], followup_chains)]
     if report["previous"]:
         lines += ["", "## Önceki koşuya göre", ""] + _delta_lines(report)
     if report["tags"]:
@@ -414,6 +427,50 @@ def _narration_note(narration: dict) -> str:
         f"Anlatı: llm {narration['llm']} · llm_retry {narration['llm_retry']} · şablon "
         f"{narration['template']} (şablon oranı {metric_percent(narration['template_pct'])})"
     )
+
+
+FOLLOWUP_HEAD = "Ardışık sorular"
+FOLLOWUP_COLUMNS = "| Zincir | Tur | Soru | Sonuç | Bağlam |"
+FOLLOWUP_RULE = "| --- | ---: | --- | --- | --- |"
+
+
+def _followups_section(followups: dict, chains: list | None) -> list[str]:
+    """Ardışık sorular bölümü (R7-14): üç doğruluğun üstüne zincir başına bir tablo.
+
+    Doğruluklar ``followups`` bloğundan (Contracts "followups report"), sorunun kendisi
+    ``chains``den gelir - ölçüm satırı soruyu tekrar taşımaz, zincirin satırı taşır.
+    """
+    lines = [
+        f"## {FOLLOWUP_HEAD}",
+        "",
+        f"- Tur doğruluğu: {metric_percent(followups['turn_accuracy'])}"
+        f" ({followups['turns']} tur)",
+        f"- Zincir doğruluğu: {metric_percent(followups['chain_accuracy'])}"
+        f" ({followups['chains']} zincir)",
+        f"- Bağlam doğruluğu: {metric_percent(followups['context_accuracy'])}",
+    ]
+    questions = _followup_questions(chains)
+    grouped: dict[str, list[dict]] = {}
+    for item in followups["items"]:
+        grouped.setdefault(item["id"], []).append(item)
+    for chain_id, items in grouped.items():
+        lines += ["", f"### {chain_id}", "", FOLLOWUP_COLUMNS, FOLLOWUP_RULE]
+        for item in items:
+            lines.append(
+                f"| {chain_id} | {item['turn']} | {questions.get((chain_id, item['turn']), '')} "
+                f"| {_mark(item['outcome'])} {item['outcome']} "
+                f"| {'✓' if item['context_ok'] else '✗'} |"
+            )
+    return lines
+
+
+def _followup_questions(chains: list | None) -> dict:
+    """``(zincir, tur) -> soru``: zincirin kendi sırası, tabloya soruyu oradan okumak için."""
+    return {
+        (str(chain.get("id") or ""), n): str(turn.get("question") or "")
+        for chain in chains or ()
+        for n, turn in enumerate(chain.get("turns") or (), start=1)
+    }
 
 
 def _schema_note(info: dict) -> str:
