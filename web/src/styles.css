@@ -724,6 +724,16 @@ main {
     overflow-wrap: anywhere;
   }
 
+  /* Başlık bölünmez: STOK_KODU alt çizgisinden "STOK_KO / DU" diye kesiliyor ve ekranın konusu
+     olan sütun adı okunaksızlaşıyor (M19 görsel inceleme 4). Adının tamamı sütunun asgari
+     genişliğidir; sığmayan .table-wrap'ın yan kaydırmasına düşer.
+     ASSUMPTION: sarma kuralı iki seçicili kalmalı (test_web_narrow_table onu öyle arıyor), o
+     yüzden başlık yukarıdaki kuralı aynı blokta kendi nowrap'ıyla geçersiz kılar. */
+  .result-table th {
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+
   /* Sarayan hücre kuralı sayıya işlemez: bölünen sayı kesilmiş sayıdır. Sığmayan sütun
      tabloyu uzatır, .table-wrap onu yan kaydırır (overflow-x: auto yukarıda duruyor). */
   .result-table .num {
