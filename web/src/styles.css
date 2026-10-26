@@ -1177,9 +1177,11 @@ main {
 
 /* --- grafik ------------------------------------------------------------------- */
 
-/* ECharts yüksekliği kutudan okur; telefon 260px ister (R5-18), geniş ekranda grafik büyür. */
+/* ECharts yüksekliği kutudan okur; geniş ekranda grafik büyür.
+   ASSUMPTION: PLAN R5-18 telefonu 260px ister; adlar plot'un dışına çıkınca o kutudan plot'a
+   104px kalıyordu (T276), o yüzden telefon 280px: 280 - 40 üst - 116 alt = 124px plot. */
 .chart {
-  height: 260px;
+  height: 280px;
 }
 
 /* Grafik kartın içinde, tablonun altında: aralık yalnız grafik varsa doğar, boş kutu kalmaz. */

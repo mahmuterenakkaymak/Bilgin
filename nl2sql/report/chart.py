@@ -27,7 +27,10 @@ _SCATTER_WORDS = ("iliski", "korelasyon", "sacilim", "scatter")
 # değer kolonunun adında ya da soruda geçiyorsa yüzde, değilse sayı.
 _PERCENT_WORDS = ("oran", "yuzde", "percent", "ratio")
 
-_GRID = {"left": 40, "right": 20, "top": 40, "bottom": 30, "containLabel": True}
+# Izgara boşlukları plot'un kendi payıdır: containLabel True, dönen adları bottom'un İÇİNE
+# yerleştirip plot'u ezdiği için kapatıldı (M20 görsel inceleme 2). Sol boşluk o yüzden sayısal
+# eksenin Türkçe biçimli etiketini (123.456,78) de tek başına tutmak zorundadır.
+_GRID = {"left": 56, "right": 20, "top": 40, "bottom": 30, "containLabel": False}
 # ECharts'ın interval "auto"su çakışan adları sessizce düşürür: hepsi çizilir, 30° döner.
 # Kutu altın cevabın en uzun adının (21 karakter) üstünde: ad üç noktayla kesilmez, sığmazsa sarar.
 _CATEGORY_LABEL = {
@@ -38,8 +41,10 @@ _CATEGORY_LABEL = {
     "overflow": "break",
     "lineHeight": 14,
 }
-# Dönen ve iki satıra saran adlar alt boşluğa sığmalı; pasta ve saçılımın düz ekseni bu büyümeyi almaz.
-_CATEGORY_BOTTOM = 72
+# Adlar artık alt boşluğun dışında, onun içine çiziliyor: 160px'lik ad kutusunun 30° dönük düşey
+# izimi (160·sin30° = 80) + iki satır (2·14) + eksen payı (8). Pasta ve saçılımın düz ekseni bu
+# büyümeyi almaz.
+_CATEGORY_BOTTOM = 116
 
 
 def chart_spec(columns: list[str], rows: list[tuple], question: str) -> dict | None:
