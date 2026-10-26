@@ -1358,6 +1358,7 @@ def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE, dataset=None, p
     ``dataset`` verildiğinde kayıtlar o kümenin altın sorularıdır ve eşleşmeyen bir sorunun
     cevabı da kümenin kendi sorgusudur (R4-4) - başka bir kümenin tablosunu uydurmasın. Belirsiz
     soruları da küme taşır (R5-11); kümenin böyle bir dosyası yoksa sahte hiçbir soruyu sormaz.
+    Ardışık soru zincirleri de kümenin dosyasıdır (R7-13); olmayan kümede sahte zincir tanımaz.
 
     ``profile`` ``--model``in profilidir (R4-10): openai istemcisi onun uç noktasından, model
     adından ve anahtar değişkeninden kurulur; anahtar tanımsızsa ``LLMError`` burada yükseltir.
@@ -1369,6 +1370,7 @@ def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE, dataset=None, p
             dataset.fake_fallback_sql if dataset else fake.FALLBACK_SQL,
             mode=mode,
             ambiguous=dataset.ambiguous() if dataset else (),
+            followups=dataset.followups() if dataset else (),
         )
     if profile is not None:
         return client_for(profile)

@@ -16,6 +16,7 @@ instead of a turn; replaying it raises, which is how `unreachable` reaches the l
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import replace
 
@@ -34,6 +35,10 @@ FAKE_URL = "http://127.0.0.1:9/v1"
 FORBIDDEN_SQL = "SELECT name FROM sys.objects"
 BROKEN_SQL = "SELECT OLMAKOLAN_KOLON FROM TBLSTSABIT"
 FALLBACK_SQL = "SELECT TOP 20 STOK_KODU, STOK_ADI FROM TBLSTSABIT ORDER BY STOK_KODU"
+
+# A follow-up turn is told from the same wording in another chain by the questions asked before
+# it, and those are exactly the `Tur n sorusu:` lines the history block writes (PLAN R7-4, R7-13).
+_TURN_QUESTION = re.compile(r"^Tur \d+ sorusu: (.*)$", re.MULTILINE)
 
 CHARS_PER_TOKEN = 4
 FAKE_LATENCY_MS = 180.0
@@ -57,12 +62,17 @@ class FakeLLM:
 
 # ------------------------------------------------------------------ builders
 
-def golden_replay(golden_sql: str) -> list[Turn]:
-    """The passing path: read the schema, run the golden SQL, submit it."""
+def golden_replay(golden_sql: str, context: dict | None = None) -> list[Turn]:
+    """The passing path: read the schema, run the golden SQL, submit it.
+
+    ``context`` is the conversation note a follow-up turn submits with its SQL (PLAN R7-13); left
+    out, the submit is the one Run 6 always wrote.
+    """
+    submit = {"sql": golden_sql} if context is None else {"sql": golden_sql, "context": context}
     return [
         _ask("get_schema"),
         _ask("run_sql", sql=golden_sql),
-        _ask("submit_sql", sql=golden_sql),
+        _ask("submit_sql", **submit),
     ]
 
 
@@ -137,6 +147,7 @@ def for_golden(
     fallback_sql: str = FALLBACK_SQL,
     mode: str = "full",
     ambiguous: Iterable[dict] | None = None,
+    followups: Iterable[dict] | None = None,
 ) -> FakeLLM:
     """One client for every question: golden replay when the question text matches, stock query else.
 
@@ -148,7 +159,23 @@ def for_golden(
     itself gets one ask_clarification turn whose options are the reading labels, and its follow-up
     (R5-11) runs the chosen reading's SQL - in `rag` mode after a search, like every other answer.
     A choice no reading offers falls back to the stock query; a golden question never asks.
+
+    `followups` lines (PLAN R7-13) are the conversation chains. A chain turn is recognised by its
+    question *and* the questions of the turns before it, read back out of the history block, so the
+    same wording in two chains gets its own SQL, and its submit carries the golden `uses_turns` as
+    the context note. A chain's first turn has no earlier questions, so it answers that question
+    wherever it is asked - which is what a turn 1 golden question always did.
     """
+    by_chain = {}
+    for chain in followups or ():
+        earlier: list[str] = []
+        for turn in chain.get("turns") or []:
+            question = _key(turn.get("question"))
+            sql = str(turn.get("sql") or "").strip()
+            if question and sql:
+                by_chain[(question, tuple(earlier))] = (sql, _chain_note(turn))
+            earlier.append(question)
+
     by_question = {}
     for line in golden_lines:
         question = str(line.get("question") or "").strip()
@@ -164,6 +191,10 @@ def for_golden(
 
     def script(messages: list[dict]) -> list[Turn]:
         question, choice = split_follow_up(_question(messages))
+        chain = by_chain.get((_key(question), _previous_questions(messages)))
+        if chain is not None:
+            sql, note = chain
+            return golden_replay(sql, note)
         line = by_ambiguous.get(question)
         if line is not None:
             readings = _readings(line)
@@ -249,6 +280,31 @@ def _question(messages: list[dict]) -> str:
         if message.get("role") == "user":
             return str(message.get("content") or "").strip()
     return ""
+
+
+def _previous_questions(messages: list[dict]) -> tuple[str, ...]:
+    """The questions the history block says were asked before this one, in the order it lists them."""
+    for message in messages:
+        if message.get("role") == "system":
+            return tuple(_key(line) for line in _TURN_QUESTION.findall(str(message.get("content") or "")))
+    return ()
+
+
+def _chain_note(turn: dict) -> dict:
+    """The context note a chain turn submits: its golden `uses_turns`, empty when it stood alone.
+
+    ASSUMPTION: `refine` is one of the free-form turn tags a chain line carries (Contracts
+    "followup chain"); a turn tagged with it rewrites the last turn it says it uses, so that turn
+    is what `refines_sql_of` names.
+    """
+    uses = [number for number in (turn.get("uses_turns") or []) if isinstance(number, int)]
+    refines = uses[-1] if uses and "refine" in (turn.get("tags") or []) else None
+    return {"uses_turns": uses, "entities": [], "refines_sql_of": refines}
+
+
+def _key(text) -> str:
+    """Question key in the shape the block stores it: one line, runs of whitespace collapsed."""
+    return " ".join(str(text or "").split())
 
 
 def _readings(line: dict) -> list[tuple[str, str]]:
