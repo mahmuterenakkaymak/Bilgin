@@ -22,6 +22,7 @@ from nl2sql import config
 from nl2sql.agent import prompt
 from nl2sql.app import asklog
 from nl2sql.app.ask import ask_payload, replay_payload
+from nl2sql.app.conversations import ConversationNotFound, ConversationStore
 from nl2sql.cli import main as cli
 from nl2sql.engine.result import Budget
 from nl2sql.eval import runner
@@ -33,6 +34,8 @@ from nl2sql.schema_map.rules_edit import normalize_rule, save_rules, validate_ru
 from nl2sql.web.auth_api import create_router as create_auth_router
 from nl2sql.web.auth_api import create_users_router
 from nl2sql.web.authz import NO_SESSION, ROUTE_ROLES, current_user, require
+from nl2sql.web.conversations_api import NO_CONVERSATION
+from nl2sql.web.conversations_api import create_router as create_conversations_router
 from nl2sql.web.datasets_api import create_router as create_datasets_router
 from nl2sql.web.map_api import create_router as create_map_router
 from nl2sql.web.saved import ALL as SAVED_ALL, SavedStore
@@ -91,11 +94,16 @@ NO_UI_PAGE = f"""<!doctype html>
 
 
 class AskBody(BaseModel):
-    """``POST /api/ask`` gövdesi (Contracts): soru zorunlu, mod ve seçim sorulabilir."""
+    """``POST /api/ask`` gövdesi (Contracts): soru zorunlu, mod, seçim ve konuşma sorulabilir.
+
+    ``conversation_id`` verilmezse soru yeni bir konuşma açar, verilmişse o konuşmanın sıradaki
+    turudur (R7-8, Contracts "ask body (ext.)").
+    """
 
     question: str = ""
     mode: str | None = None
     choice: str | None = None
+    conversation_id: str | None = None
 
 
 class SavedBody(BaseModel):
@@ -131,6 +139,9 @@ def create_app(
 
     R6-10: oturum burada bir daha anılmaz - her yol onu ``app.state``ten kendi okur, yani bir küme
     geçişi hiçbir yolu yeniden kurmaz; kayıtlar ve dışa aktarım da süzgecini aynı yerden alır.
+
+    R7-8: her ``/api/ask`` bir konuşmanın turudur - depo ``users``tan bağımsızdır, yani tek
+    kullanıcılı modda da konuşma vardır; tek fark sahibinin adıdır, o da NULL kalır.
     """
     app = FastAPI(title="Bilgin")
     app.state.session = session
@@ -139,6 +150,8 @@ def create_app(
     app.state.saved_path = Path(saved_path)
     app.state.users = users
     saved = SavedStore(saved_path)
+    # R7-8: konuşmalar kayıtlarla aynı SQLite dosyasında; yollar depoyu app.state'ten okur.
+    app.state.conversations = ConversationStore(saved_path)
     static = Path(static_dir)
 
     @app.exception_handler(RuleRejected)
@@ -148,6 +161,7 @@ def create_app(
 
     app.include_router(create_auth_router())
     app.include_router(create_users_router())
+    app.include_router(create_conversations_router())
     app.include_router(create_datasets_router())
     app.include_router(create_map_router())
 
@@ -168,12 +182,21 @@ def create_app(
 
         Soruyu soran kişinin adı soru günlüğünün satırına ve denetim satırlarının başına karışır
         (R6-9); tek kullanıcılı modda ad yoktur, yani Run 5'in hâli sürer.
+
+        Her soru konuşma deposuna da bir turdur (R7-8): ``conversation_id`` yoksa konuşma yeni
+        açılır, payload ve günlük satırı ``conversation_id`` ile ``turn``i taşır. Olmayan ya da
+        başkasının konuşması soru sayılmaz - cümle ``ConversationNotFound``ın kendi cümlesi.
         """
         question = body.question.strip()
         if not question:
             raise HTTPException(status_code=400, detail=BLANK_QUESTION)
-        return ask_payload(_session(request), question, mode=body.mode, choice=body.choice,
-                           source="web", username=_asker(request))
+        try:
+            return ask_payload(_session(request), question, mode=body.mode, choice=body.choice,
+                               source="web", username=_asker(request),
+                               conversations=request.app.state.conversations,
+                               conversation_id=body.conversation_id)
+        except ConversationNotFound:
+            raise HTTPException(status_code=404, detail=NO_CONVERSATION) from None
 
     @guarded("POST", "/api/replay/{audit_id}")
     def replay(audit_id: str, request: Request) -> dict:
@@ -324,14 +347,17 @@ def create_app(
 
         R6-9: kullanıcı kendi sorularını görür, yönetici kümenin hepsini - adı olmayan eski
         satırlar da yalnız yöneticide görünür.
+
+        R7-8: konuşmayla koşan satır turunu taşır; konuşma alanı olmayan eski satırlarda iki alan
+        da None'dır, yani ekranın okuduğu küme hiç değişmez (Contracts "history item (ext.)").
         """
         session = _session(request)
         name = getattr(getattr(session, "dataset", None), "name", None)
-        return {
-            "history": asklog.history(
-                session.ask_log, dataset=name, username=_scope(request, asklog._ALL)
-            )
-        }
+        items = asklog.history(session.ask_log, dataset=name, username=_scope(request, asklog._ALL))
+        for item in items:
+            item.setdefault("conversation_id", None)
+            item.setdefault("turn", None)
+        return {"history": items}
 
     @guarded("GET", "/api/export/{audit_id}.csv")
     def export_csv(audit_id: str, request: Request) -> Response:

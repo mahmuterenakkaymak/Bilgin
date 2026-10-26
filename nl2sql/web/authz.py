@@ -27,6 +27,10 @@ ROUTE_ROLES: dict[tuple[str, str], str] = {
     ("GET", "/api/auth/me"): "user",
     ("POST", "/api/ask"): "user",
     ("POST", "/api/replay/{audit_id}"): "user",
+    # R7-8: konuşmanın üç yolu - seviye oturum, sahiplik yolda çözülür, başkasınınki 403 değil 404.
+    ("GET", "/api/conversations"): "user",
+    ("GET", "/api/conversations/{id}"): "user",
+    ("DELETE", "/api/conversations/{id}"): "user",
     ("GET", "/api/health"): "user",
     ("GET", "/api/examples"): "user",
     ("GET", "/api/tables"): "user",
