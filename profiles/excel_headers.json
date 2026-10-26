@@ -4,7 +4,7 @@
   "data_type": ["TİP", "TIP", "TYPE", "TÜR", "TUR"],
   "description": ["AÇIKLAMA", "ACIKLAMA", "DESCRIPTION"],
   "fk_target": ["REFERANS", "FK"],
-  "values": ["DEĞER", "DEGER", "VALUES"],
+  "values": ["DEĞER", "DEGER", "DEĞERLER", "DEGERLER", "VALUES"],
   "nullable": ["NULL", "NULLABLE", "BOŞ", "BOS"],
   "module": ["MODÜL", "MODUL", "MODULE"],
   "pii": ["KİŞİSEL VERİ", "KISISEL VERI", "PII"],
