@@ -33,6 +33,8 @@ from nl2sql.web.authz import AUTH_OFF, current_user, require
 
 # Kartın açılışı cevabın notunda da okunur: ``replay_payload``ınkiyle aynı biçim, kaynağı kart.
 OPEN_NOTE = "Karttan açıldı: kayıtlı SQL yeniden çalıştırıldı, model SQL yazmadı."
+# R7-20: öneri işi bellektedir; sunucu yeniden doğduğunda onun da aşaması yoktur.
+NO_JOB = "Öneri işi bulunamadı."
 
 
 class PersonalBody(BaseModel):
@@ -55,6 +57,12 @@ class ReadyCreateBody(BaseModel):
     position: int = 0
 
 
+class SuggestBody(BaseModel):
+    """``POST /api/ready-questions/suggest`` gövdesi (R7-20): küme söylenmezse sunucunun o anki kümesidir."""
+
+    dataset: str = ""
+
+
 class SessionExecutor:
     """O anki oturumun yürütücüsüne bakan kabuk (R6-10).
 
@@ -75,7 +83,7 @@ class SessionExecutor:
 
 
 def create_router() -> APIRouter:
-    """Kartların beş kullanıcı yolu ve hazır soruların dört yönetici yolu (R7-17, R7-18)."""
+    """Kartların beş kullanıcı yolu ve hazır soruların altı yönetici yolu (R7-17, R7-18, R7-20)."""
     router = APIRouter()
     user = [Depends(require("user"))]
     admin = [Depends(require("admin"))]
@@ -184,6 +192,23 @@ def create_router() -> APIRouter:
         with _rejected():
             _store(request).delete(id)
         return {"deleted": id}
+
+    @router.post("/api/ready-questions/suggest", dependencies=admin)
+    def ready_suggest(body: SuggestBody, request: Request) -> dict:
+        """Öneri işini başlatır ve iş kaydını döndürür (R7-20): koşumlar iş parçacığındadır.
+
+        Yalnız cevaplanan sorular satır olur, hepsi onaysızdır - yani hiçbirinin kartı ekranlarda
+        görünmez, ta ki bir yönetici onu onaylayana kadar.
+        """
+        return request.app.state.suggest.start(body.dataset.strip() or _dataset(request), _name(request))
+
+    @router.get("/api/ready-questions/suggest/{job_id}", dependencies=admin)
+    def ready_suggest_status(job_id: str, request: Request) -> dict:
+        """Sözleşme "suggest job": hiç başlamamış bir işin aşaması yoktur, o yüzden 404."""
+        job = request.app.state.suggest.status(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail=NO_JOB)
+        return job
 
     return router
 

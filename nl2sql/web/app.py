@@ -23,6 +23,7 @@ from nl2sql.agent import prompt
 from nl2sql.app import asklog
 from nl2sql.app.ask import ask_payload, replay_payload
 from nl2sql.app.conversations import ConversationNotFound, ConversationStore
+from nl2sql.app.session import open_session
 from nl2sql.cli import main as cli
 from nl2sql.engine.result import Budget
 from nl2sql.eval import runner
@@ -33,6 +34,7 @@ from nl2sql.schema_map import doc
 from nl2sql.schema_map.rules_edit import normalize_rule, save_rules, validate_rule
 from nl2sql.start.cards import StartCache
 from nl2sql.start.ready import ReadyStore
+from nl2sql.start.suggest import SuggestJobs
 from nl2sql.web.auth_api import create_router as create_auth_router
 from nl2sql.web.auth_api import create_users_router
 from nl2sql.web.authz import NO_SESSION, ROUTE_ROLES, current_user, require
@@ -161,6 +163,9 @@ def create_app(
     # okur, yani bir küme geçişinden (R6-10) sonra kartlar eski veritabanında koşmaz.
     app.state.ready = ReadyStore(saved_path)
     app.state.start_cache = StartCache(SessionExecutor(app))
+    # R7-20: öneri işi kendi oturumunu kendi kurar - öneri koşarken uygulamanın etkin kümesi
+    # değişebilir, iş o geçişin üstüne yazmamalı.
+    app.state.suggest = SuggestJobs(app.state.ready, _suggest_opener(app))
     static = Path(static_dir)
 
     @app.exception_handler(RuleRejected)
@@ -419,6 +424,27 @@ def create_app(
         return page()
 
     return app
+
+
+def _suggest_opener(app):
+    """Öneri işinin oturum kurucusu (R7-20): aynı model ve günlükler, başka bir dünyanın üstünde.
+
+    Alanlar ``datasets_api``nin küme geçişiyle aynıdır - öneri dünyayı değiştirir, sunduğu modeli
+    değiştirmez. Oturum iş çağrıldığı anki oturumdan okunur, yani bir geçişten sonrakini taşır.
+    """
+
+    def open_for(name: str):
+        current = app.state.session
+        return open_session(
+            dataset=name,
+            model=current.profile.name if current.profile else None,
+            llm=current.llm_kind,
+            models_file=current.models_file,
+            audit_path=current.audit_path,
+            ask_log=current.ask_log,
+        )
+
+    return open_for
 
 
 def _session(request: Request):

@@ -10,7 +10,8 @@
     "rules": "rules.json",
     "profile": "profile.json",
     "golden": "golden.jsonl",
-    "followups": "followups.jsonl"
+    "followups": "followups.jsonl",
+    "ready_questions": "ready_questions.json"
   },
   "builder": "real.py:build_db",
   "generator": "real.py:generate",

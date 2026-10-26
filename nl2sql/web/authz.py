@@ -70,6 +70,9 @@ ROUTE_ROLES: dict[tuple[str, str], str] = {
     ("POST", "/api/ready-questions"): "admin",
     ("PUT", "/api/ready-questions/{id}"): "admin",
     ("DELETE", "/api/ready-questions/{id}"): "admin",
+    # R7-20: öneri işini başlatan da yoklayan da yönetici - aday satırlar onaylanmadan kimse görmez.
+    ("POST", "/api/ready-questions/suggest"): "admin",
+    ("GET", "/api/ready-questions/suggest/{job_id}"): "admin",
 }
 
 

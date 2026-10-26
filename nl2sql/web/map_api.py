@@ -133,7 +133,7 @@ def create_router() -> APIRouter:
         except FileExistsError:
             # Rapor okunduğu anda ad boştu; arada biri aynı kümeyi kurmuşsa var olana dokunulmaz.
             raise HTTPException(status_code=409, detail=NAME_TAKEN.format(name=name)) from None
-        jobs.start(body.preview_id, name, _embed(request))
+        jobs.start(body.preview_id, name, _embed(request), suggest=_suggest(request.app))
         return jobs.status(body.preview_id)
 
     @router.get("/api/schema-map/status/{preview_id}", dependencies=admin)
@@ -145,6 +145,19 @@ def create_router() -> APIRouter:
         return job
 
     return router
+
+
+def _suggest(app):
+    """İndeks bittiğinde öneri işini başlatan kanca (R7-20): işlerin deposu uygulamada yaşar.
+
+    Uygulama kancanın içine yol tarafından konur - kanca iş parçacığında koşar, onu kuran istek
+    o zamana kadar çoktan kapanmış olur.
+    """
+
+    def start(name: str) -> None:
+        app.state.suggest.start(name)
+
+    return start
 
 
 def _db_connection() -> bool:

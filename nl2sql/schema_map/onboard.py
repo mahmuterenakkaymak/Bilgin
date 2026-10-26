@@ -117,12 +117,19 @@ class IndexJobs:
         self._lock = threading.Lock()
         self._jobs: dict[str, dict] = {}
 
-    def start(self, preview_id: str, name: str, embed: str) -> None:
-        """İşi kaydedip döner; indeks kurma iş parçacığında başlar."""
+    def start(self, preview_id: str, name: str, embed: str, suggest=None) -> None:
+        """İşi kaydedip döner; indeks kurma iş parçacığında başlar.
+
+        ``suggest`` indeks bittiğinde kümeyi çağıran kancadır (R7-20): yeni doğan kümenin
+        başlangıç ekranı boş kalmasın. Kendi iş parçacığında koşan ayrı bir iş çağrılır, yani
+        önerinin hatası bu işin aşamasını değiştirmez.
+        """
         # ASSUMPTION: `writing` bu kayıttır; iş parçacığı build'e girerken `indexing`e geçer,
         # böylece sözleşmenin dört aşaması iki metotla kurulur.
         self._set(preview_id, name, "writing", None)
-        threading.Thread(target=self._run, args=(preview_id, name, embed), daemon=True).start()
+        threading.Thread(
+            target=self._run, args=(preview_id, name, embed, suggest), daemon=True
+        ).start()
 
     def status(self, preview_id: str) -> dict | None:
         """Sözleşme "apply / status"; hiç başlamamış bir iş için None (route 404 der)."""
@@ -130,7 +137,7 @@ class IndexJobs:
             job = self._jobs.get(preview_id)
             return dict(job) if job else None
 
-    def _run(self, preview_id: str, name: str, embed: str) -> None:
+    def _run(self, preview_id: str, name: str, embed: str, suggest=None) -> None:
         # Geç import: şema katmanı, yalnız arka planda ihtiyaç duyduğu CLI'ı döngüye sokmasın.
         from nl2sql.cli import main as cli
 
@@ -143,6 +150,8 @@ class IndexJobs:
         except Exception as exc:  # iş parçacığı buradan öte geçemez; cümle ekrana ulaşmalı
             problem = str(exc) or exc.__class__.__name__
         self._set(preview_id, name, "failed" if problem else "done", problem)
+        if problem is None and suggest is not None:
+            suggest(name)  # R7-20: öneri küme kurulup indekslendikten sonra istenir, yarım iş kalmasın
 
     def _set(self, preview_id: str, name: str, phase: str, message: str | None) -> None:
         with self._lock:

@@ -1,0 +1,114 @@
+[
+  {
+    "business_role": "satis",
+    "title": "2016'da en çok ciro yapan 5 ürün",
+    "question": "Bu yıl (2016) en çok ciro yapan 5 stok kalemi; adı ve cirosu (kredi notları hariç) nedir?",
+    "sql": "SELECT TOP 5 si.StockItemName, SUM(il.ExtendedPrice - il.TaxAmount) AS CIRO FROM Sales.InvoiceLines il JOIN Sales.Invoices i ON i.InvoiceID = il.InvoiceID JOIN Warehouse.StockItems si ON si.StockItemID = il.StockItemID WHERE i.IsCreditNote = 0 AND i.InvoiceDate >= '2016-01-01' AND i.InvoiceDate < '2017-01-01' GROUP BY si.StockItemName ORDER BY CIRO DESC, si.StockItemName",
+    "display": "chart",
+    "position": 1
+  },
+  {
+    "business_role": "satis",
+    "title": "Satış temsilcisi bazında ciro",
+    "question": "Kredi notları hariç, bu yıl her satış temsilcisine atfedilen faturaların cirosu temsilci numarasıyla nedir?",
+    "sql": "SELECT i.SalespersonPersonID, SUM(il.ExtendedPrice - il.TaxAmount) AS CIRO FROM Sales.InvoiceLines il JOIN Sales.Invoices i ON i.InvoiceID = il.InvoiceID WHERE i.IsCreditNote = 0 AND i.InvoiceDate >= '2016-01-01' AND i.InvoiceDate < '2017-01-01' GROUP BY i.SalespersonPersonID ORDER BY i.SalespersonPersonID",
+    "display": "chart",
+    "position": 2
+  },
+  {
+    "business_role": "satis",
+    "title": "Satış temsilcisi bazında sipariş sayısı",
+    "question": "Bu yıl her satış temsilcisinin kaç siparişi var; temsilci numarası ile birlikte?",
+    "sql": "SELECT o.SalespersonPersonID, COUNT(*) AS SIPARIS FROM Sales.Orders o WHERE o.OrderDate >= '2016-01-01' AND o.OrderDate < '2017-01-01' GROUP BY o.SalespersonPersonID ORDER BY o.SalespersonPersonID",
+    "display": "table",
+    "position": 3
+  },
+  {
+    "business_role": "satin_alma",
+    "title": "Tedarikçi bazında toplam ciro",
+    "question": "Kredi notları hariç, her tedarikçinin ürünlerinden elde edilen toplam ciro tedarikçi adına göre nedir?",
+    "sql": "SELECT su.SupplierName, SUM(il.ExtendedPrice - il.TaxAmount) AS CIRO FROM Sales.InvoiceLines il JOIN Sales.Invoices i ON i.InvoiceID = il.InvoiceID JOIN Warehouse.StockItems si ON si.StockItemID = il.StockItemID JOIN Purchasing.Suppliers su ON su.SupplierID = si.SupplierID WHERE i.IsCreditNote = 0 GROUP BY su.SupplierName ORDER BY su.SupplierName",
+    "display": "chart",
+    "position": 1
+  },
+  {
+    "business_role": "satin_alma",
+    "title": "Eldeki stok miktarları",
+    "question": "Her stok kaleminin adı ve şu anki eldeki stok miktarı nedir?",
+    "sql": "SELECT si.StockItemName, h.QuantityOnHand FROM Warehouse.StockItemHoldings h JOIN Warehouse.StockItems si ON si.StockItemID = h.StockItemID ORDER BY si.StockItemName",
+    "display": "table",
+    "position": 2
+  },
+  {
+    "business_role": "satin_alma",
+    "title": "Tailspin Toys grubundaki müşteri sayısı",
+    "question": "'Tailspin Toys' satın alma grubundaki kaç müşteri kartı var?",
+    "sql": "SELECT COUNT(c.CustomerID) AS MUSTERI FROM Sales.Customers c JOIN Sales.BuyingGroups bg ON bg.BuyingGroupID = c.BuyingGroupID WHERE bg.BuyingGroupName = 'Tailspin Toys'",
+    "display": "number",
+    "position": 3
+  },
+  {
+    "business_role": "muhasebe",
+    "title": "Toplam net ciro (KDV hariç)",
+    "question": "Kredi notları hariç, faturalanan satışların KDV hariç toplam cirosu ne kadardır?",
+    "sql": "SELECT SUM(il.ExtendedPrice - il.TaxAmount) AS CIRO FROM Sales.InvoiceLines il JOIN Sales.Invoices i ON i.InvoiceID = il.InvoiceID WHERE i.IsCreditNote = 0",
+    "display": "number",
+    "position": 1
+  },
+  {
+    "business_role": "muhasebe",
+    "title": "Nisan 2016 net cirosu",
+    "question": "Geçen ay (Nisan 2016) düzenlenen faturaların, kredi notları hariç, KDV hariç cirosu ne kadardır?",
+    "sql": "SELECT SUM(il.ExtendedPrice - il.TaxAmount) AS CIRO FROM Sales.InvoiceLines il JOIN Sales.Invoices i ON i.InvoiceID = il.InvoiceID WHERE i.IsCreditNote = 0 AND i.InvoiceDate >= '2016-04-01' AND i.InvoiceDate < '2016-05-01'",
+    "display": "number",
+    "position": 2
+  },
+  {
+    "business_role": "muhasebe",
+    "title": "Müşteri hesap bakiyeleri",
+    "question": "Her müşterinin hesap bakiyesi (tüm hesap hareketlerinin toplamı) müşteri numarası ile birlikte ne kadardır?",
+    "sql": "SELECT ct.CustomerID, SUM(ct.TransactionAmount) AS BAKIYE FROM Sales.CustomerTransactions ct GROUP BY ct.CustomerID ORDER BY ct.CustomerID",
+    "display": "table",
+    "position": 3
+  },
+  {
+    "business_role": "yonetim",
+    "title": "Eyalet bazında toplam ciro",
+    "question": "Kredi notları hariç, faturanın kesildiği müşterinin teslimat şehrinin eyaletine göre toplam ciro nedir?",
+    "sql": "SELECT sp.StateProvinceName, SUM(il.ExtendedPrice - il.TaxAmount) AS CIRO FROM Sales.InvoiceLines il JOIN Sales.Invoices i ON i.InvoiceID = il.InvoiceID JOIN Sales.Customers c ON c.CustomerID = i.BillToCustomerID JOIN Application.Cities ci ON ci.CityID = c.DeliveryCityID JOIN Application.StateProvinces sp ON sp.StateProvinceID = ci.StateProvinceID WHERE i.IsCreditNote = 0 GROUP BY sp.StateProvinceName ORDER BY sp.StateProvinceName",
+    "display": "chart",
+    "position": 1
+  },
+  {
+    "business_role": "yonetim",
+    "title": "Stok grubu bazında ciro",
+    "question": "Kredi notları hariç, her stok grubundaki ürünlerin toplam cirosu grup adına göre nedir?",
+    "sql": "SELECT sg.StockGroupName, SUM(il.ExtendedPrice - il.TaxAmount) AS CIRO FROM Sales.InvoiceLines il JOIN Sales.Invoices i ON i.InvoiceID = il.InvoiceID JOIN Warehouse.StockItemStockGroups sig ON sig.StockItemID = il.StockItemID JOIN Warehouse.StockGroups sg ON sg.StockGroupID = sig.StockGroupID WHERE i.IsCreditNote = 0 GROUP BY sg.StockGroupName ORDER BY sg.StockGroupName",
+    "display": "chart",
+    "position": 2
+  },
+  {
+    "business_role": "yonetim",
+    "title": "Brüt kâr",
+    "question": "Faturalanan satışların brüt kârı (satır kârlarının toplamı) ne kadardır?",
+    "sql": "SELECT SUM(il.LineProfit) AS BRUT_KAR FROM Sales.InvoiceLines il",
+    "display": "number",
+    "position": 3
+  },
+  {
+    "business_role": "genel",
+    "title": "Kayıtlı müşteri kartı sayısı",
+    "question": "Sistemde kayıtlı kaç farklı müşteri kartı vardır?",
+    "sql": "SELECT COUNT(c.CustomerID) AS MUSTERI_KARTI FROM Sales.Customers c",
+    "display": "number",
+    "position": 1
+  },
+  {
+    "business_role": "genel",
+    "title": "Ülke bazında şehir sayıları",
+    "question": "Her ülkenin adı ve o ülkeye bağlı şehir sayısı kaçtır?",
+    "sql": "SELECT co.CountryName, COUNT(*) AS SEHIR_SAYISI FROM Application.Cities ci JOIN Application.StateProvinces sp ON sp.StateProvinceID = ci.StateProvinceID JOIN Application.Countries co ON co.CountryID = sp.CountryID GROUP BY co.CountryName ORDER BY co.CountryName",
+    "display": "table",
+    "position": 2
+  }
+]

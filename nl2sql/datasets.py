@@ -29,6 +29,7 @@ FILE_DEFAULTS = {
     "traps": None,
     "ambiguous": None,
     "followups": None,
+    "ready_questions": None,
 }
 
 REQUIRED_KEYS = ("name", "as_of", "builder", "generator", "references")
@@ -63,6 +64,7 @@ class Dataset:
     traps_path: Path | None
     ambiguous_path: Path | None
     followups_path: Path | None
+    ready_questions_path: Path | None
     db_path: Path
     mssql_script: Path
     index_dir: Path
@@ -142,6 +144,19 @@ class Dataset:
                     turn.setdefault(name, [])
             chains.append(chain)
         return chains
+
+    def ready_questions(self) -> list[dict]:
+        """Tohum hazır sorular (PLAN R7-19); kümenin böyle bir dosyası yoksa boş.
+
+        Satırların doğruluğu tohumun kendi testidir (``tests/test_ready_seed.py``); burada yalnız
+        okunur ve sözleşmenin ``position`` alanı boş varsayılanını alır.
+        """
+        if self.ready_questions_path is None or not self.ready_questions_path.is_file():
+            return []
+        rows = json.loads(self.ready_questions_path.read_text(encoding="utf-8"))
+        for row in rows:
+            row.setdefault("position", 0)
+        return rows
 
 
 def list_datasets(root: str | Path | None = None) -> list[str]:
@@ -230,6 +245,7 @@ def _read(base: Path, name: str) -> Dataset:
         traps_path=folder / files["traps"] if files["traps"] else None,
         ambiguous_path=folder / files["ambiguous"] if files["ambiguous"] else None,
         followups_path=folder / files["followups"] if files["followups"] else None,
+        ready_questions_path=folder / files["ready_questions"] if files["ready_questions"] else None,
         db_path=config.ROOT / outputs.get("db", f"data/{name}.db"),
         mssql_script=config.ROOT / outputs.get("mssql_script", f"db/mssql/build_{name}.sql"),
         index_dir=config.ROOT / outputs.get("index_dir", f"index/{name}"),

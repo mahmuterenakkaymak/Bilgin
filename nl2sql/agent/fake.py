@@ -221,6 +221,22 @@ def for_golden(
     return FakeLLM(script)
 
 
+def suggest_client(golden_lines: Iterable[dict], roles: Iterable[str]) -> FakeLLM:
+    """The suggester's fake (PLAN R7-20): the dataset's golden questions dealt round-robin.
+
+    Round-robin is what keeps the fake honest here - every text it hands back is a question this
+    same client can answer from the golden replay, so a suggestion run reaches the store exactly
+    the way a real model's run does.
+    """
+    by_role: dict[str, list[str]] = {role: [] for role in roles}
+    names = list(by_role)
+    for n, line in enumerate(golden_lines):
+        question = str(line.get("question") or "").strip()
+        if question and names:
+            by_role[names[n % len(names)]].append(question)
+    return FakeLLM(lambda messages: [_says(json.dumps(by_role, ensure_ascii=False))])
+
+
 # ------------------------------------------------------------------ narrators
 
 # The number no result has, written the way the guard would otherwise accept.

@@ -19,6 +19,7 @@ from nl2sql.app.session import SessionError, open_session
 from nl2sql.engine.login_script import DEFAULT_LOGIN, readonly_login_sql
 from nl2sql.index.search import load_search
 from nl2sql.index.store import META_FILE, MissingIndexError, StaleIndexError
+from nl2sql.start.seed import ensure_seeded
 from nl2sql.web.authz import require
 
 # Sözleşme "settings": etkin kümenin adı kullanıcı deposunun ayarlarındadır, ``serve`` oradan okur.
@@ -91,6 +92,9 @@ def create_router() -> APIRouter:
         users = request.app.state.users
         if users is not None:
             users.set_setting(ACTIVE_SETTING, ds.name)
+            # R7-19: geçilen kümenin tohum hazır soruları da ilk geçişte bir kez yazılır -
+            # başlangıç ekranı yeni dünyada boş doğmaz.
+            ensure_seeded(request.app.state.ready, users, ds, new.executor)
         return {
             "active": ds.name,
             "dataset": {

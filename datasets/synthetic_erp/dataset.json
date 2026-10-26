@@ -13,7 +13,8 @@
     "golden": "golden.jsonl",
     "traps": "traps.jsonl",
     "ambiguous": "ambiguous.jsonl",
-    "followups": "followups.jsonl"
+    "followups": "followups.jsonl",
+    "ready_questions": "ready_questions.json"
   },
   "builder": "nl2sql.schema_map.build:build_db",
   "generator": "nl2sql.schema_map.generator:generate",

@@ -1,0 +1,90 @@
+[
+  {
+    "business_role": "satis",
+    "title": "Geçen ayın net cirosu",
+    "question": "Geçen ay satış hareketlerinin net fiyat üzerinden toplam cirosu (KDV hariç) ne kadar?",
+    "sql": "SELECT SUM(s.STHAR_GCMIK * s.STHAR_NF) AS NET_CIRO FROM TBLSTHAR s WHERE s.STHAR_HTUR = 'S' AND s.STHAR_TARIH >= '2026-08-01' AND s.STHAR_TARIH < '2026-09-01'",
+    "display": "number",
+    "position": 1
+  },
+  {
+    "business_role": "satis",
+    "title": "Eylül 2026'da en çok satan 5 ürün",
+    "question": "Eylül 2026'da en çok satan 5 ürün hangileri; kodu, adı ve toplam satış miktarı nedir?",
+    "sql": "SELECT TOP 5 s.STOK_KODU, t.STOK_ADI, SUM(s.STHAR_GCMIK) AS SATIS_MIKTARI FROM TBLSTHAR s JOIN TBLSTSABIT t ON t.STOK_KODU = s.STOK_KODU WHERE s.STHAR_HTUR = 'S' AND s.STHAR_TARIH >= '2026-09-01' AND s.STHAR_TARIH < '2026-10-01' GROUP BY s.STOK_KODU, t.STOK_ADI ORDER BY SATIS_MIKTARI DESC, s.STOK_KODU",
+    "display": "chart",
+    "position": 2
+  },
+  {
+    "business_role": "satin_alma",
+    "title": "Tedarikçi bazında toplam alış",
+    "question": "Her satıcı cariden yapılan toplam alış tutarı ne kadar?",
+    "sql": "SELECT c.CARI_KOD, c.CARI_ISIM, SUM(f.GENELTOPLAM) AS ALIS_TOPLAMI FROM TBLFATUIRS f JOIN TBLCASABIT c ON c.CARI_KOD = f.CARI_KODU WHERE f.FTIRSIP = 2 AND f.IPTAL = 'H' AND c.CARI_TIP IN ('S', 'H') GROUP BY c.CARI_KOD, c.CARI_ISIM ORDER BY c.CARI_KOD",
+    "display": "chart",
+    "position": 1
+  },
+  {
+    "business_role": "satin_alma",
+    "title": "Teslim tarihi belirsiz sipariş satırları",
+    "question": "Teslim tarihi henüz belirlenmemiş sipariş satırlarının sayısı carilere göre nasıl dağılıyor?",
+    "sql": "SELECT c.CARI_KOD, c.CARI_ISIM, COUNT(*) AS BELIRSIZ_SATIR FROM TBLSIPATRA a JOIN TBLSIPAMAS m ON m.SIPARIS_NO = a.SIPARIS_NO JOIN TBLCASABIT c ON c.CARI_KOD = m.CARI_KODU WHERE a.TESLIM_TARIHI IS NULL GROUP BY c.CARI_KOD, c.CARI_ISIM ORDER BY c.CARI_KOD",
+    "display": "table",
+    "position": 2
+  },
+  {
+    "business_role": "muhasebe",
+    "title": "Geçen ayın KDV dahil fatura toplamı",
+    "question": "Geçen ay düzenlenen iptal edilmemiş satış faturalarının KDV dahil genel toplamı ne kadar?",
+    "sql": "SELECT SUM(f.GENELTOPLAM) AS BRUT_SATIS FROM TBLFATUIRS f WHERE f.FTIRSIP = 1 AND f.IPTAL = 'H' AND f.TARIH >= '2026-08-01' AND f.TARIH < '2026-09-01'",
+    "display": "number",
+    "position": 1
+  },
+  {
+    "business_role": "muhasebe",
+    "title": "Plasiyer bazında borç ve alacak",
+    "question": "Bu yıl her plasiyerin carilerine ait cari hesap hareketlerinin borç ve alacak toplamları ayrı ayrı ne kadardır?",
+    "sql": "SELECT p.PLASIYER_KODU, p.AD_SOYAD, SUM(CASE WHEN h.BA = 'B' THEN h.TUTAR ELSE 0 END) AS BORC, SUM(CASE WHEN h.BA = 'A' THEN h.TUTAR ELSE 0 END) AS ALACAK FROM TBLCAHAR h JOIN TBLCASABIT c ON c.CARI_KOD = h.CARI_KODU JOIN TBLPLASIYER p ON p.PLASIYER_KODU = c.PLASIYER_KODU WHERE h.TARIH >= '2026-01-01' AND h.TARIH < '2027-01-01' GROUP BY p.PLASIYER_KODU, p.AD_SOYAD ORDER BY p.PLASIYER_KODU",
+    "display": "table",
+    "position": 2
+  },
+  {
+    "business_role": "yonetim",
+    "title": "Bu yılın brüt satışı ve net cirosu",
+    "question": "Bu yılın brüt satışı (iptal edilmemiş satış faturalarının KDV dahil genel toplamı) ile net cirosu (KDV hariç hareket toplamı) ayrı ayrı ne kadardır?",
+    "sql": "SELECT (SELECT SUM(f.GENELTOPLAM) FROM TBLFATUIRS f WHERE f.FTIRSIP = 1 AND f.IPTAL = 'H' AND f.TARIH >= '2026-01-01' AND f.TARIH < '2027-01-01') AS BRUT_SATIS, (SELECT SUM(s.STHAR_GCMIK * s.STHAR_NF) FROM TBLSTHAR s WHERE s.STHAR_HTUR = 'S' AND s.STHAR_TARIH >= '2026-01-01' AND s.STHAR_TARIH < '2027-01-01') AS NET_CIRO",
+    "display": "table",
+    "position": 1
+  },
+  {
+    "business_role": "yonetim",
+    "title": "Ürün grubu bazında ciro",
+    "question": "Bu yıl her ürün grubunun KDV hariç satış cirosu ve grubun bu yıl satan farklı ürün sayısı nedir?",
+    "sql": "SELECT g.GRUP_KODU, g.GRUP_ISIMI, SUM(s.STHAR_GCMIK * s.STHAR_NF) AS CIRO, COUNT(DISTINCT s.STOK_KODU) AS SATILAN_URUN FROM TBLSTHAR s JOIN TBLSTSABIT t ON t.STOK_KODU = s.STOK_KODU JOIN TBLSTGRUP g ON g.GRUP_KODU = t.GRUP_KODU WHERE s.STHAR_HTUR = 'S' AND s.STHAR_TARIH >= '2026-01-01' AND s.STHAR_TARIH < '2027-01-01' GROUP BY g.GRUP_KODU, g.GRUP_ISIMI ORDER BY g.GRUP_KODU",
+    "display": "table",
+    "position": 2
+  },
+  {
+    "business_role": "genel",
+    "title": "Ankara'daki alıcı cariler",
+    "question": "Ankara'da faaliyet gösteren alıcı carilerin kodu ve ünvanı nedir?",
+    "sql": "SELECT CARI_KOD, CARI_ISIM FROM TBLCASABIT WHERE IL = 'ANKARA' AND CARI_TIP IN ('A', 'H') ORDER BY CARI_KOD",
+    "display": "table",
+    "position": 1
+  },
+  {
+    "business_role": "genel",
+    "title": "Depo bazında toplam giriş",
+    "question": "Her depoya toplam kaç birim giriş yapıldı?",
+    "sql": "SELECT DEPO_KODU, SUM(STHAR_GCMIK) AS GIRIS_MIKTARI FROM TBLSTHAR WHERE STHAR_GCKOD = 'G' GROUP BY DEPO_KODU ORDER BY DEPO_KODU",
+    "display": "chart",
+    "position": 2
+  },
+  {
+    "business_role": "*",
+    "title": "Bu yılın net satış miktarı",
+    "question": "Bu yıl içinde iadeler düşülmüş net satış miktarı kaç birim?",
+    "sql": "SELECT SUM(CASE WHEN STHAR_HTUR = 'S' THEN STHAR_GCMIK ELSE 0 END) - SUM(CASE WHEN STHAR_HTUR = 'I' THEN STHAR_GCMIK ELSE 0 END) AS NET_MIKTAR FROM TBLSTHAR WHERE STHAR_TARIH >= '2026-01-01' AND STHAR_TARIH < '2027-01-01'",
+    "display": "number",
+    "position": 0
+  }
+]

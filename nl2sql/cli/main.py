@@ -2127,6 +2127,8 @@ def serve(
     """
     # R5-1: web ve app içe yalnız burada girilir; cli'yi çağıran katmanlar döngü kurmasın.
     from nl2sql.app.session import SessionError, open_session
+    from nl2sql.start.ready import ReadyStore
+    from nl2sql.start.seed import ensure_seeded
     from nl2sql.web.app import create_app
 
     _utf8_stdout()
@@ -2159,6 +2161,9 @@ def serve(
             llm=session.llm_kind,
         )
     )
+    # R7-19: kümenin tohum hazır soruları ilk açılışta bir kez deposuna yazılır, böylece başlangıç
+    # ekranı taze bir kurulumda da boş kalmaz; sonraki açılışlar ayarı gördüğü için geçmez.
+    ensure_seeded(ReadyStore(users.path), users, ds, session.executor)
     # R6-9: kayıtlar kullanıcıyla aynı dosyadadır; ``saved_path`` söylenmezse kapı import anının
     # ``config.APP_DB_PATH``ine düşer ve ``NL2SQL_APP_DB``i aşarak ``data/bilgin.db``yi açar.
     run_server(create_app(session, saved_path=users.path, users=users), host, port)
