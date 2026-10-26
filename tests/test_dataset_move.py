@@ -26,9 +26,10 @@ MOVED = {
         f"{DATASET_DIR}/rules.json",
         "2a3a7574834a8ec2aadf9aacb87f9812468cce37cc0dfc0dd27a3ebcaef8f87f",
     ),
-    "profiles/netsis.json": (
+    # Updated 2026-10-26 (Eren: "otomatik olsun"): the old ERP profile path; T357 took the product name out of the file (new bytes).
+    "profiles/erp_profile.json": (
         f"{DATASET_DIR}/profile.json",
-        "0de07e0be6f5584bdf214c04e67884d575877523f83a6dbeb7f452c22b732e5e",
+        "748b9ab2ab7e0f50edd9f469847926dbcb6ce4bab92a7b4d5e54c5df8166c0fe",
     ),
     "eval/golden.jsonl": (
         f"{DATASET_DIR}/golden.jsonl",
@@ -104,7 +105,7 @@ def test_dataset_json_has_every_contract_key():
     doc = dataset_doc()
     assert set(doc) == CONTRACT_KEYS
     assert doc["name"] == DATASET == config.DEFAULT_DATASET
-    assert doc["display_name"] == "Sentetik ERP (Netsis benzeri)"
+    assert doc["display_name"] == "Sentetik ERP"  # Updated 2026-10-26 (Eren: "otomatik olsun"): T357, no product name
     assert doc["connection"] == "sqlite"
     assert doc["default_schema"] == "dbo"
     assert doc["as_of"] == config.AS_OF
@@ -117,7 +118,8 @@ def test_dataset_json_files_are_the_moved_files():
     # "ambiguous" came with T187 (Run 5, R5-12): a new file, not a moved one, so it has no config constant.
     # Updated 2026-10-24 with Eren's approval.
     # followups came with Run 7 (R7-13), a new file like ambiguous. Updated 2026-10-26 with Eren's approval.
-    assert set(files) - {"ambiguous", "followups"} == set(CONFIG_PATHS)
+    # Updated 2026-10-26 (Eren: "otomatik olsun"): ready_questions came with Run 7 (R7-19), a new file like the other two.
+    assert set(files) - {"ambiguous", "followups", "ready_questions"} == set(CONFIG_PATHS)
     for name, path in CONFIG_PATHS.items():
         assert path == config.ROOT / DATASET_DIR / files[name], name
 

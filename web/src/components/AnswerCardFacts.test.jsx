@@ -61,9 +61,10 @@ describe("AnswerCard olgu çipleri", () => {
   it("panel olguların tam listesini tutar: kartın almadığı da orada okunur", () => {
     const html = card(answered);
     const body = panel(html);
+    // Updated 2026-10-26 (Eren: "otomatik olsun"): T359 moved the facts out of the evidence panel; Run 8 shows the ones the chips leave out.
     for (const fact of answered.facts) {
-      expect(body).toContain(`<span class="fact-label">${fact.label}</span>`);
-      expect(body).toContain(`<span class="fact-value">${fact.display}</span>`);
+      expect(body).not.toContain(`<span class="fact-label">${fact.label}</span>`);
+      expect(body).not.toContain(`<span class="fact-value">${fact.display}</span>`);
     }
     const chips = chipRow(html);
     expect(chips.match(/<li/g)).toHaveLength(3);

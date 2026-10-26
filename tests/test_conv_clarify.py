@@ -127,6 +127,8 @@ def test_a_follow_up_on_five_customers_asks_the_user_not_the_model(project, stor
         "question": "Hangi müşteriyi kastediyorsunuz?",
         "options": [f"{kod} ({isim})" for kod, isim in customers],
         "column": "CARI_KOD",
+        # Updated 2026-10-26 (Eren: "otomatik olsun"): T365 sends the raw values next to the labels.
+        "values": [kod for kod, _ in customers],
     }
     assert asked["sql"] == "" and asked["answer_text"] == "" and asked["context"] is None
     assert scripted.calls == calls, "şık sorulurken model hiç koşmaz"

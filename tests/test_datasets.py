@@ -103,7 +103,7 @@ def test_synthetic_erp_paths_are_the_config_paths():
 
 def test_synthetic_erp_fields_match_dataset_json():
     dataset = load_dataset("synthetic_erp")
-    assert dataset.display_name == "Sentetik ERP (Netsis benzeri)"
+    assert dataset.display_name == "Sentetik ERP"  # Updated 2026-10-26 (Eren: "otomatik olsun"): T357, no product name
     assert dataset.dialect == "tsql"
     assert dataset.connection == "sqlite"
     assert dataset.default_schema == "dbo"

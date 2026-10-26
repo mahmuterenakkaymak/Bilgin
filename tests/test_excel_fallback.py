@@ -53,7 +53,7 @@ def mapped_as(header: str) -> str | None:
     return filled[0] if filled else None
 
 
-def test_netsis_style_headers_cover_every_field():
+def test_erp_style_headers_cover_every_field():
     headers = ["TABLO", "KOLON", "TİP", "AÇIKLAMA", "REFERANS", "DEĞER", "NULL", "MODÜL"]
     entries = columns(fallback_mapping(preview(headers)))
     assert [entry["column"] for entry in entries] == headers

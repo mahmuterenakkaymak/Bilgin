@@ -98,7 +98,7 @@ def test_every_profile_pair_names_a_column_the_schema_has():
     assert all(pair["left"] in columns and pair["right"] in columns for pair in PROFILE)
 
 
-def test_the_profile_carries_the_netsis_column_pairs():
+def test_the_profile_carries_the_erp_column_pairs():
     assert {(pair["left"], pair["right"]): pair["confidence"] for pair in PROFILE} == {
         ("STOK_KODU", "STOK_KODU"): 0.9,
         ("DEPO_KODU", "DEPO_KODU"): 0.9,

@@ -285,9 +285,12 @@ def test_a_stored_dataset_that_no_longer_loads_falls_back_with_a_note(project, c
     users = UserStore(project / "app.db")
     users.add_user("admin", PAROLA, "admin")
     users.set_setting(ACTIVE_SETTING, "kaybolmus")
-    monkeypatch.setattr(cli, "run_server", refuse)
+    # Updated 2026-10-26 (Eren: "otomatik olsun"): since T357 (Run 8 brief) a lost stored dataset falls back to the
+    # demo dataset - the first one with an index - and the server opens with a one-line note instead of exiting 2.
+    served = []
+    monkeypatch.setattr(cli, "run_server", lambda app, host, port: served.append(app))
 
-    assert cli.serve(llm_kind="fake") == 2
+    assert cli.serve(llm_kind="fake") == 0 and served
     out = capsys.readouterr().out
     assert "kayıtlı veri kümesi kaybolmus" in out
-    assert config.DEFAULT_DATASET in out
+    assert cli._demo_dataset() in out

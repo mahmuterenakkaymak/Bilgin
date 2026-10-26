@@ -156,7 +156,8 @@ def test_login_and_me_name_the_same_admin_and_nothing_else(app: App):
     signed_in = login(app.client)
 
     assert signed_in.status_code == 200
-    assert signed_in.json() == {"username": "admin", "role": "admin"}
+    # Updated 2026-10-26 (Eren: "otomatik olsun"): Run 7 (R7-16) adds the business role; a fresh admin is "genel".
+    assert signed_in.json() == {"username": "admin", "role": "admin", "business_role": "genel"}
     assert app.client.cookies.get(config.SESSION_COOKIE), "anahtar yalnız çerezle gider"
 
     me = app.client.get("/api/auth/me")

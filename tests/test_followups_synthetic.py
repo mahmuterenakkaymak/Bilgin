@@ -9,6 +9,7 @@ SQL'ini yinelenmesi doğrulanır.
 import json
 
 import pytest
+from pathlib import Path
 
 from nl2sql import config
 from nl2sql.datasets import load_dataset
@@ -137,9 +138,10 @@ def test_every_turn_sql_runs_on_the_built_world(chain, results):
 
 
 def test_a_dataset_without_the_key_has_no_followups():
-    wwi = load_dataset("wwi")
-    assert wwi.followups_path is None
-    assert wwi.followups() == []
+    # Updated 2026-10-26 (Eren: "otomatik olsun"): wwi gained this file for the visual flows (Run 8 brief); mini has none.
+    mini = load_dataset("mini", root=Path(__file__).parent / "fixtures" / "datasets")
+    assert mini.followups_path is None
+    assert mini.followups() == []
 
 
 def test_a_key_without_a_file_has_no_followups(tmp_path):

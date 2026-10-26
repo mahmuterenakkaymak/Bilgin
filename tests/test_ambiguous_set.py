@@ -9,6 +9,7 @@ hiçbirinin metni aranabilir metne sızmaz (R2-16 kuralı altın küme için zat
 import itertools
 
 import pytest
+from pathlib import Path
 
 from nl2sql import config
 from nl2sql.datasets import load_dataset
@@ -111,6 +112,7 @@ def test_no_ambiguous_question_leaks_into_the_searchable_text():
 
 
 def test_a_dataset_without_the_file_has_no_ambiguous_set():
-    wwi = load_dataset("wwi")
-    assert wwi.ambiguous_path is None
-    assert wwi.ambiguous() == []
+    # Updated 2026-10-26 (Eren: "otomatik olsun"): wwi gained this file for the visual flows (Run 8 brief); mini has none.
+    mini = load_dataset("mini", root=Path(__file__).parent / "fixtures" / "datasets")
+    assert mini.ambiguous_path is None
+    assert mini.ambiguous() == []
