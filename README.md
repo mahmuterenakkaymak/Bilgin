@@ -804,3 +804,104 @@ sets) are never written by an upload, so a bad map cannot break the eval you are
 `real_datasets/*` is **git-ignored except `real_datasets/wwi_real/`**: a customer's schema, rules and
 generated login script stay on the machine that produced them, and the one real dataset used for public
 measurements stays in the repo.
+
+---
+
+# Run 7 — A question that leans on the answer before it
+
+Run 7 turns a session into a conversation: a follow-up is understood against what was just answered,
+the sidebar keeps the threads you had, and the same chains are measured — did the second question use
+the right turn, and did it get the right number? The core rule is untouched: the LLM writes SQL and
+words, the executor runs it read-only with the mask on, and every number in an answer still comes from
+**this turn's** rows.
+
+## Konuşma: ardışık sorular
+
+A turn is one question and its answer; a conversation is the turns under one id. "Bunlardan kaç
+taneydi?" after a list of customers works because the earlier turn is in front of the model again —
+not because anything was guessed at.
+
+**Bir takip sorusu neye yaslanabilir.** The model is offered the last `CONV_TURNS` (3) **answered**
+turns of the conversation as a `## Önceki turlar` block appended to the single system message: per
+turn its question, its SQL, its column names and its kept rows. A keyword hint under it names what
+kind of refinement this is — a `sadece / yalnız` filter, a `karşılaştır / önceki yıl` comparison, an
+`aylık / yıllık` period change, an `ilk N` top-N — and the model resolves *bu / bunlar / o müşteri /
+aynı dönem / bunu / peki* from those turns. Two follow-ups never reach the model at all:
+
+- **A chart-only turn** ("bunun grafiğini çizgi yap") reruns the previous turn's SQL through the
+  executor and redraws it in the requested kind: zero model calls, one new audit line. A kind the
+  result shape refuses says so (`Bu sonuç çizgi grafiğe uygun değil: …`) and shows the automatic
+  chart instead.
+- **An ambiguous entity** ("Bu müşteri kim?") while the kept rows hold several customers comes back as
+  a clarification built from those rows — Run 5's clarification, one turn down the line. The chosen
+  option runs the agent with that value fixed.
+
+**Kanıt satırı.** When an answer stands on an earlier turn, the card says which one, above
+*"Nasıl hesapladım"* (`#context-line`): `Önceki cevaptan: <etiket> <değer> (<ad>)`, where the label is
+the column's schema description and never its technical name, and the parenthesis is the other text
+cell of the row carrying the value. A turn that only reused an earlier query says
+`Önceki cevaptan: 2. turun sorgusu temel alındı.` That line is the model's own claim about which turn
+and which value it used, and **code checks it**: every turn number must exist, the value must appear
+in that turn's kept rows or SQL, and the column must be one of that turn's columns. A claim that fails
+is dropped, the answer stands on its own with no evidence line, and the ask record carries
+`context_dropped: <reason>`. Nothing in the claim can move a number — the narrator's allowed set is
+still this turn's rows and facts, so an earlier turn's total is never repeated as if it were
+recomputed.
+
+**Ekranda.** The address becomes `#/c/<id>` the moment the first answer arrives, so a thread is a link
+you can return to. Reloading it reads the stored turns and **runs no SQL**: an older turn shows its
+sentence and its kept rows with "Tam tablo ve grafik için yeniden çalıştırın." and the replay button.
+**Yeni konuşma** empties the thread and goes back to `#/` — the turns stay on the server, and the
+sidebar (`#conversation-list`, above history) lists them by title, relative time and turn count, with
+a delete that asks first. A conversation belongs to the user who started it and to the dataset it was
+started on: an id that is someone else's, or from another dataset, answers `Konuşma bulunamadı.` —
+the same sentence as an id that does not exist, so the screen is not a way to discover either. The id
+is a random uuid hex precisely so that a `#/c/<id>` in a link is not guessable.
+
+**CLI.**
+
+```bash
+python -m nl2sql ask "Eylül 2026 fatura sayısı?" --new                   # yeni konuşma açar
+python -m nl2sql ask "Bunlardan kaç müşteri?" --conversation <id>        # devamını sorar
+```
+
+Both end with one line, `Konuşma: <id> · tur <n>`, which is what you paste into the next call, and
+`--json` adds `conversation_id`, `turn` and `context` to the payload it already printed. The two flags
+are mutually exclusive; a plain `ask` is still Run 6 — no conversation is opened and nothing is
+written — and an unknown id is `Konuşma bulunamadı.` with exit code 2.
+
+**Ölçüm: `eval --followups`.** A dataset may carry `followups.jsonl`: chains of 2–3 turns, each turn
+with its golden SQL and the turns it is allowed to lean on (`uses_turns`). `--followups` runs them
+after the golden questions, turn by turn through the same door the screen uses, with a throwaway
+conversation store under `eval_out/<dataset>/followups/` — the real producer, not a copy of the loop:
+
+| | |
+|---|---|
+| **Tur doğruluğu** (`turn_accuracy`) | the turn's result set equals its own golden SQL |
+| **Zincir doğruluğu** (`chain_accuracy`) | every turn of the chain is right |
+| **Bağlam doğruluğu** (`context_accuracy`) | the note's `uses_turns` equals the golden set — an empty set is correct for a turn that stood alone |
+
+report.md gets an **Ardışık sorular** section with those three numbers and a table per chain, and the
+console prints one line per chain plus a total. `--llm fake` replays the chains and must come out
+100 % — it proves the wiring, not the model. The number worth watching is a real model's **tur
+doğruluğu** in `full_rules` (target ≥ 80 %).
+
+**Gerçek veritabanında elle koşum.** `wwi_real`'s chains are written for the public sample database
+and are measured on the real server **by hand** — never as an automated test, because the numbers they
+check against live on a machine this repo does not own:
+
+```bash
+NL2SQL_BACKEND=mssql NL2SQL_MSSQL_CONN="<salt okunur giriş>" \
+  python -m nl2sql eval --followups --dataset wwi_real --mode full_rules --model <model>
+```
+
+What a test *does* guarantee is that every turn's golden SQL passes the policy against that dataset's
+allowlist, so the manual run measures the model rather than a broken chain.
+
+**Bir turda ne saklanır.** Per turn the store keeps the question, the status, the answer sentence, the
+column names, the row count, the computed facts, the chart kind, the context note and **at most
+`CONV_KEEP_ROWS` (5) result rows** — the rows exactly as the executor returned them, i.e. already
+masked, so a masked cell stays masked in the next turn's context too. No chart option, no export, no
+row 6 and beyond: a full table is re-run from its SQL, never read back out of a conversation. A failed
+turn stays in the thread but never enters a context block. Conversations live in the app's own SQLite
+file, `data/bilgin.db`, never in the analysed database.

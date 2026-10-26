@@ -5,6 +5,7 @@
   --muted: #6a6963;
   --line: #e3e1da;
   --accent: #1f5fad;
+  --accent-soft: #e8eff9;
   --on-accent: #ffffff;
   --warn-bg: #fef3c7;
   --warn-line: #f59e0b;
@@ -32,6 +33,7 @@
   --muted: #a5a399;
   --line: #37362f;
   --accent: #6fa8e8;
+  --accent-soft: #2b3a52;
   --on-accent: #10233b;
   --warn-bg: #3a2e10;
   --warn-line: #d19414;
@@ -51,6 +53,7 @@
     --muted: #a5a399;
     --line: #37362f;
     --accent: #6fa8e8;
+    --accent-soft: #2b3a52;
     --on-accent: #10233b;
     --warn-bg: #3a2e10;
     --warn-line: #d19414;
@@ -776,6 +779,135 @@ main {
   line-height: 1.5;
 }
 
+/* --- konuşma akışı ----------------------------------------------------------- */
+
+/* Turlar yukarıdan aşağı akar; her tur kendi soru balonu ve kartıdır. Izgara maddesi olarak
+   turun genişleme payı sıfır: içindeki tablonun genişliği akışı sağa taşımaz. */
+#thread {
+  display: grid;
+  gap: calc(var(--space) * 2);
+  min-width: 0;
+}
+
+.turn {
+  display: grid;
+  gap: var(--space);
+  min-width: 0;
+}
+
+/* Soru balonu: konuşan taraf sağda durur ve cevabın kartından ayrışması için vurgu zeminindedir
+   (--accent-soft koyu temada kendi tonunu taşır). Alt sağ köşenin küçülmesi balonun ucunu
+   konuşana çevirir. */
+.turn-question {
+  max-width: 85%;
+  margin: 0;
+  justify-self: end;
+  padding: calc(var(--space) * 0.75) calc(var(--space) * 1.5);
+  border-radius: var(--radius) var(--radius) 2px var(--radius);
+  background: var(--accent-soft);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* Katlanmış tur: cümle ve saklanan satırlar; canlı turun yanında soluk kalır. Kart yalnız
+   kapalıyken tıklamayla açılır - rolü TurnCard o durumda veriyor, açılmış kartın imleci ve
+   vurgusu düğme gibi olmaz. */
+.turn-collapsed {
+  min-width: 0;
+  padding: calc(var(--space) * 1.5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.turn-collapsed[role="button"] {
+  cursor: pointer;
+}
+
+.turn-collapsed[role="button"]:hover {
+  border-color: var(--accent);
+}
+
+.turn-sentence {
+  margin: 0;
+}
+
+/* Katlanmış kart en çok beş satır gösterir (TurnCard COLLAPSED_ROWS); tavan, depodan daha çok
+   satır gelse de kartı uzatmasın. */
+.turn-collapsed[role="button"] .turn-table-wrap {
+  max-height: 12rem;
+  overflow: auto;
+}
+
+.turn-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.turn-table th,
+.turn-table td {
+  padding: calc(var(--space) * 0.5) var(--space);
+  text-align: left;
+  white-space: nowrap;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+.turn-table .num {
+  text-align: right;
+}
+
+.turn-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space) calc(var(--space) * 2);
+  margin-top: var(--space);
+}
+
+.turn-note {
+  margin: 0;
+  font-size: 13px;
+}
+
+.turn-close {
+  margin-top: var(--space);
+}
+
+/* Bağlam satırı: cevabın hangi kayıtla ve hangi koşulla üretildiğini söyleyen ikincil satır.
+   Vurgu T281'in bandı gibi çizilir: dört yanı saran 1px ton çizgisinin kalınlaşmış solu ve
+   sol iki köşenin karesi - yuvarlak köşeye binen kalın kenar ilk harfin önüne "(" gibi düşüyor. */
+#context-line {
+  margin: 0;
+  padding: calc(var(--space) * 0.5) var(--space);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Yeni konuşma akışın üstünde ikincil hap: açık konuşmayı bırakır, yeni bir şey üretmez - o
+   yüzden vurgu düğmesi değil, kenarlığı vurguya dönmüş saydam hap. */
+#new-conversation {
+  border-color: var(--accent);
+  background: none;
+  color: var(--accent);
+}
+
+#new-conversation:hover {
+  background: var(--accent-soft);
+}
+
+/* Konuşmalar bir gezinme listesi: her satır başka bir konuşmanın adresine gider. Satırlar
+   ayraçla bölünür, böylece uzun defterde soldaki başlık ile sağdaki × aynı konuşmaya ait
+   okunur. */
+#conversation-list .side-item + .side-item {
+  border-top: 1px solid var(--line);
+}
+
 @media (max-width: 720px) {
   /* ASSUMPTION: başlık 320/390'da flex-wrap ile zaten satırlara iniyor ve çip ellipsis'le kısalıyor
      (ölçüldü: taşma yok) — M17'deki "üst üste biniyor" izlenimi sayfanın 660px'e taşmasından geliyordu. */
@@ -1082,6 +1214,21 @@ main {
     content: "Kolon: ";
     color: var(--muted);
     font-weight: 600;
+  }
+
+  /* Konuşma akışı telefonda tek sütundur: soru balonu tüm genişliği alır - 85% payı ve sağa
+     yaslanması uzun bir soruyu kelimelerinden bölüyordu - ve katlanmış turun tablosu kartın
+     içinde yan kayar. nowrap hücreler 390px'de kartı aşıyor; akışın sağa taşması yerine tablo
+     kayar, kaydırma kartın dışına zincirlenmez. */
+  .turn-question {
+    justify-self: stretch;
+    max-width: none;
+  }
+
+  .turn-collapsed .turn-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
   }
 }
 
