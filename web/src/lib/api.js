@@ -14,6 +14,9 @@ const NETWORK_MESSAGE = "Sunucuya ulaşılamadı";
 // Giriş yolunu hem `login` hem 401 bekçisi okur: ikisi ayrışırsa oturum düşmesi sessizce kaybolur.
 const LOGIN_PATH = "/api/auth/login";
 
+// Veritabanı yoklaması tutmasa bile şablon iner; duyurusu percent-kodlu bu başlıkta taşınır (R6-17).
+const NOTE_HEADER = "X-Bilgin-Note";
+
 // Oturumun düştüğünü her ekranın kendi yakalaması yerine kök kapıya bildirir. Giriş isteğinin 401'i
 // ("kullanıcı adı veya parola hatalı") beklenen bir yanıttır, formda görünür; handler'a gitmez.
 let unauthorized = null;
@@ -108,6 +111,51 @@ export function exportUrl(id, format = "csv") {
   return `/api/export/${encodeURIComponent(id)}.${format}`;
 }
 
+// --- Veritabanı haritası ve veri kümeleri (R6-19): hepsi yönetici yolu, hepsi aynı kapıdan geçer.
+
+export function mapInfo() {
+  return request("/api/schema-map/info");
+}
+
+// Boş şablon düz bir bağlantıyla inebilir; veritabanından doldurulanın duyurusu başlıkta olduğu
+// için o fetch edilir — <a href> indirilen dosyanın yanıt başlıklarını okuyamaz.
+export function mapTemplateUrl(fromDb = false) {
+  return `/api/schema-map/template.xlsx${fromDb ? "?from_db=1" : ""}`;
+}
+
+export function mapTemplateDownload(fromDb = false) {
+  return requestBlob(mapTemplateUrl(fromDb));
+}
+
+export async function mapSampleBlob() {
+  const { blob } = await requestBlob("/api/schema-map/sample.xlsx");
+  return blob;
+}
+
+export function mapPreview({ filename, content_b64 }) {
+  return request("/api/schema-map/preview", { method: "POST", body: { filename, content_b64 } });
+}
+
+export function mapApply(previewId) {
+  return request("/api/schema-map/apply", { method: "POST", body: { preview_id: previewId } });
+}
+
+export function mapStatus(previewId) {
+  return request(`/api/schema-map/status/${encodeURIComponent(previewId)}`);
+}
+
+export function datasetsList() {
+  return request("/api/datasets");
+}
+
+export function datasetActivate(name) {
+  return request("/api/datasets/active", { method: "POST", body: { name } });
+}
+
+export function loginScriptUrl(name) {
+  return `/api/datasets/${encodeURIComponent(name)}/login-script.sql`;
+}
+
 async function request(path, { method = "GET", body } = {}) {
   const init = {
     method,
@@ -126,6 +174,32 @@ async function request(path, { method = "GET", body } = {}) {
     throw toApiError(response.status, data);
   }
   return data;
+}
+
+// İndirme iki şeyi birden döndürür: baytlar ve yoklamanın notu. Hata cümlesi JSON gövdede durduğu
+// için önce o okunur; kopan bağlantı `request` ile aynı şekilde status 0 olur.
+async function requestBlob(path) {
+  try {
+    const response = await fetch(path);
+    if (!response.ok) {
+      const error = toApiError(response.status, await readBody(response));
+      if (response.status === 401 && path !== LOGIN_PATH) unauthorized?.();
+      throw error;
+    }
+    return { blob: await response.blob(), note: readNote(response) };
+  } catch (error) {
+    throw error instanceof ApiError ? error : new ApiError(0, NETWORK_MESSAGE);
+  }
+}
+
+function readNote(response) {
+  const raw = response.headers?.get?.(NOTE_HEADER);
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw; // bozuk yüzde kaçışı olan bir başlık cümlesiz bırakılmaz
+  }
 }
 
 async function readBody(response) {
