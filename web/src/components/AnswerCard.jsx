@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import * as api from "../lib/api.js";
-import { formatSeconds } from "../lib/format.js";
+import { formatNumber, formatSeconds } from "../lib/format.js";
 import ChartView from "./ChartView.jsx";
 import Evidence from "./Evidence.jsx";
 import ResultTable from "./ResultTable.jsx";
@@ -14,6 +14,12 @@ const EXPORTS = [
 // Kartın kendi özetleri: kullanıcının tabloyu gözle toplamasını önleyen üç sayı. Olguların
 // tamamı kanıt panelinde durmaya devam eder; kart yalnız bunları cümlenin altına taşır.
 const CHIP_FACTS = ["total", "max", "mean"];
+
+// İndirme geri bildirimi neyin indiğini de söyler: dosyanın kaç satır taşıdığı, ekrandaki
+// tablonun satır sayısıdır. Satırı olmayan cevapta sayı uydurulmaz, bugünün adı okunur.
+function downloadedLabel(rows) {
+  return rows > 0 ? `${formatNumber(rows)} satır indirildi` : "İndirildi";
+}
 
 function headFacts(facts) {
   const picked = [];
@@ -49,8 +55,13 @@ export default function AnswerCard({ payload, onSave, choice }) {
     (Array.isArray(payload?.facts) ? payload.facts : []).filter((fact) => fact?.label && fact?.display),
   );
 
+  // ASSUMPTION: indirilen sayı kartın elindeki satırlardır — kesik bir sonuçta dosya daha
+  // fazlasını taşıyabilir, ama kartın bildiği ekrandaki satır sayısıdır.
+  const exportRows = Array.isArray(payload?.rows) ? payload.rows.length : 0;
+
   // İndirme bir <a>: sekme yer değiştirmediği için tek geri bildirim düğmenin kendisi. Ad 2 sn
-  // "İndirildi" kalır, sonra eski adına döner; kart kapanırsa bekleyen sayaç bırakılır.
+  // geri bildirimiyle (sayılıysa sayısıyla) kalır, sonra eski adına döner; kart kapanınca
+  // bekleyen sayaç bırakılır.
   useEffect(() => {
     if (!downloaded) return undefined;
     const timer = setTimeout(() => setDownloaded(""), 2000);
@@ -108,7 +119,7 @@ export default function AnswerCard({ payload, onSave, choice }) {
                 href={api.exportUrl(auditId, kind)}
                 onClick={() => setDownloaded(kind)}
               >
-                {downloaded === kind ? "İndirildi" : label}
+                {downloaded === kind ? downloadedLabel(exportRows) : label}
               </a>
             ))}
           </>
