@@ -37,8 +37,26 @@ export function logout() {
   return request("/api/auth/logout", { method: "POST" });
 }
 
-export function ask({ question, mode = null, choice = null }) {
-  return request("/api/ask", { method: "POST", body: { question, mode, choice } });
+// ``conversation_id`` yalnız bir konuşmaya soru sorulurken gider: anahtarı null yazmak yerine hiç
+// yazmamak, konuşmasız sorunun gövdesini Run 6'daki hâliyle sürdürür (Contracts "ask body (ext.)").
+export function ask({ question, mode = null, choice = null, conversation_id = null }) {
+  return request("/api/ask", {
+    method: "POST",
+    body: { question, mode, choice, ...(conversation_id ? { conversation_id } : {}) },
+  });
+}
+
+// Konuşmalar (R7-8): liste, turlarıyla tek konuşma, silme. Açmak yalnız depoda yazılı olanı okur.
+export function conversationsList() {
+  return request("/api/conversations");
+}
+
+export function conversationGet(id) {
+  return request(`/api/conversations/${encodeURIComponent(id)}`);
+}
+
+export function conversationDelete(id) {
+  return request(`/api/conversations/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 // Geçmişteki bir soru: kayıtlı SQL modelsiz yeniden çalışır, cevap /api/ask ile aynı biçimde gelir.
