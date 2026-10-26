@@ -10,7 +10,7 @@ kümesidir: ``ornek_fatura``nın veritabanı ve indeksi küme sözleşmesinin ve
 (``data/ornek_fatura.db``, ``index/ornek_fatura``), o yüzden akış onları kum havuzunun dışında kurar
 ve eski indeksi baştan siler.
 
-``VISUAL_PASSWORD`` bilinçli olarak depoda durur: tek kullanımlık bir kum havuzu parolasıdır, iki
+``VISUAL_PASSWORD`` bilinçli olarak depoda durur: tek kullanımlık bir kum havuzu parolasıdır, üç
 incelemeci hesabından başka bir şey korumaz ve ``.hybrid/visual.json`` da aynı değeri yazar. Ürünün
 kodu onu tanımaz; ``nl2sql/`` altında arandığında boş dönmesinin sebebi bu. Sunucu ``serve``ı alt
 süreç olarak açar, böylece inceleme de aynı komut satırı kapısından geçer.
@@ -38,6 +38,10 @@ VISUAL_DIR = ROOT / "data" / "visual"
 VISUAL_PASSWORD = "Gorsel-Dunya-2026"
 # İki hesap, iki rol: inceleme yöneticinin gördüğü ekranları da kullanıcınınkileri de koşabilir.
 USERS = (("admin", "admin"), ("analist", "user"))
+# Panonun kartları iş rolüne göre geliyor, o yüzden inceleme en az iki farklı rolün panosunu
+# görmeli: yönetici "Yönetim", analist "Satış" kartlarını koşar. ``satinalma`` üçüncü rolün
+# (Satın alma) panosunu ve yöneticinin kullanıcı tablosundaki üçüncü satırı taşır.
+BUSINESS_USERS = (("admin", "yonetim"), ("analist", "satis"), ("satinalma", "satin_alma"))
 
 
 class VisualError(Exception):
@@ -92,6 +96,23 @@ def seed_users(path) -> list[dict]:
     return [store.add_user(name, VISUAL_PASSWORD, role) for name, role in USERS]
 
 
+def seed_business_roles(path) -> list[dict]:
+    """``USERS``e iş rollerini verir, eksik rol hesabını aynı parolayla açar; hepsini döndürür.
+
+    ``seed_users``tan sonra çağrılır: sıfırlanmış tablo üç satırla kurulur. Yol denetimi aynı,
+    o yüzden reddedilen bir yol burada da kurulmuş olmaz.
+    """
+    db = _require_visual(path)
+    store = UserStore(db)
+    known = {user["username"]: user["id"] for user in store.list_users()}
+    for username, business_role in BUSINESS_USERS:
+        if username in known:
+            store.update_user(known[username], business_role=business_role)
+        else:
+            store.add_user(username, VISUAL_PASSWORD, "user", business_role)
+    return store.list_users()
+
+
 def _require_visual(path) -> Path:
     """``path`` kum havuzunun içindeyse çözümlenmiş hali; değilse ``VisualError``."""
     target = Path(path).resolve()
@@ -108,7 +129,8 @@ def main(argv: list[str] | None = None) -> int:
     real_datasets_dir().mkdir(parents=True, exist_ok=True)  # haritanın kuracağı küme bu köke doğar
     shutil.rmtree(sample_index(), ignore_errors=True)  # örnek kümenin indeksi her koşuda yeniden kurulur
     build_sample_db(sample_db())  # akışın geçeceği örnek kümenin sorgulanacak dosyası olsun
-    users = seed_users(app_db())
+    seed_users(app_db())
+    users = seed_business_roles(app_db())  # panonun iki rolü + yönetici tablosunun üçüncü satırı
     print(f"Görsel dünya: {VISUAL_DIR} · {', '.join(user['username'] for user in users)}")
     env = {
         **os.environ,

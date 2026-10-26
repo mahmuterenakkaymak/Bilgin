@@ -1244,6 +1244,24 @@ main {
     overflow-x: auto;
     overscroll-behavior-x: contain;
   }
+
+  /* Pano telefonda tek sütun: 260px'lik iki pay 390px'e sığmıyor (260 + 260 + 16 aralık) ve iki
+     kartın yükü — sayı, grafik, mini tablo — okunaksızlaşıyor. `#start` sınıfıyla derinleşiyor:
+     ızgaranın temeli bu bloğun altında duruyor, sırayı değil özgüllüğü kazanması gerekiyor. */
+  #start.start-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Hazır soru satırı yığılır, işlemler sözün altına geçer ve sola yaslanır (sağa yaslı düğme
+     sırası dar ekranda satırın sonunu bulamaz). `#ready-screen` ile derinleşiyor: satırın temeli
+     de bu bloğun altında duruyor. */
+  #ready-screen .ready-row {
+    grid-template-columns: 1fr;
+  }
+
+  #ready-screen .ready-row-actions {
+    justify-content: start;
+  }
 }
 
 .table-note {
@@ -2568,14 +2586,123 @@ main {
   gap: var(--space);
 }
 
-/* Telefon: satır yığılır, işlemler sözün altına geçer ve sola yaslanır (sağa yaslı düğme
-   sırası dar ekranda satırın sonunu bulamaz). */
-@media (max-width: 720px) {
-  .ready-row {
-    grid-template-columns: 1fr;
-  }
+/* --- başlangıç ekranı ------------------------------------------------------- */
 
-  .ready-row-actions {
-    justify-content: start;
-  }
+/* Pano: kartlar 260px'lik paylarla çoğalır ve satıra iner. Izgara maddesi olarak kartın esneme
+   payı sıfır — içindeki mini tablo panoyu sağa taşımaz, kendi kutusunda kalır. */
+#start {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: calc(var(--space) * 2);
+}
+
+/* Kart konuşma olarak açılıyor: tıklanabilirliği imleç ve sınırın vurguya dönmesi söylüyor. Zemin
+   değişmiyor — `.error-card` hatanın zeminini taşıyor, hover onu yutmasın. */
+.start-card {
+  display: grid;
+  gap: var(--space);
+  align-content: start;
+  min-width: 0;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.start-card:hover {
+  border-color: var(--accent);
+}
+
+.start-card-error:hover {
+  border-color: var(--err-text);
+}
+
+/* Kartın tonunu `.error-card` taşıyor; kartın kendi yazıları da o tona geçmeli, yoksa "az önce
+   yenilendi" soluk notu hatanın üstünde sıradan bir bilgi gibi okunuyor. */
+.start-card-error .start-card-meta,
+.start-card-error .start-card-empty {
+  color: var(--err-text);
+}
+
+/* Okunurken kartın yüksekliği kendisi: üç çubuğun panoyu çekip ızgarayı zıplatmaması için iskelet
+   yerinin boyunu önceden söylüyor. */
+.start-card.skeleton {
+  min-height: 116px;
+  cursor: default;
+}
+
+.start-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+/* Üç yük biçimi de kartı eşit boyda tutsun: sayı kendi bloğunda büyür, grafik ve mini tablo
+   kartın payını alan sabit bir kutudur (280px'lik cevap grafiği panoya uzun). */
+.start-card-value {
+  font-size: 30px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.start-card-chart {
+  height: 140px;
+  min-width: 0;
+}
+
+.start-card-chart .chart {
+  height: 100%;
+}
+
+/* Mini tablo kartın kutusu kadar: satırlar sunucuda kesilir (CARD_TABLE_ROWS), kaydırma kartın
+   içinden çıkmaz. */
+.start-card-table {
+  max-height: 140px;
+  overflow: auto;
+  font-size: 13px;
+}
+
+.start-card-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.start-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--space) * 0.5) var(--space);
+}
+
+.start-card-meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Yenilemenin reddi (429) ve açmanın cümlesi kartın altında okunur: ayrı bant değil, kartın kendi
+   sözü — o yüzden uyarının tonu, hatanın zeminiyle çarpışmaz. */
+.start-card-note {
+  margin: 0;
+  color: var(--warn-text);
+  font-size: 13px;
+}
+
+/* Yürütme hatası kartın cümlesidir: tonunu `.error-card` taşıyor, yazı da onunla aynı kalmalı. */
+.start-card-error-text {
+  margin: 0;
+  color: var(--err-text);
+  font-weight: 600;
+}
+
+.start-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+/* Rol grupları defterin bölümleri: üstteki çizgi bir rolün bittiğini ötekinin başladığını
+   söylüyor. `#ready-screen` ile derinleşiliyor — grubun kendi kuralı yukarıda duruyor. */
+#ready-screen .ready-group {
+  padding-top: calc(var(--space) * 2);
+  border-top: 1px solid var(--line);
 }
