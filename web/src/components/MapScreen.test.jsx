@@ -1,11 +1,30 @@
 // Ekran SSR ile kuruluyor: indirgeyicinin her hali sunucuya çıkmadan işaretine bakılarak
 // okunur. Ağın kendisi (yükleme, küme kurma, geçiş) sunucu tarafında tests/test_web_map_api.py
 // ve tests/test_web_datasets_api.py'de koşuluyor; burada yalnız o cevabın ekranda ne yazdığı var.
+// ASSUMPTION: "iş bitince liste tazelenir" etki + olay ister; SSR ikisini de çalıştırmaz, o yüzden
+// dosyanın ortamı jsdom ve akışın kurulduğu son blok orada gerçekten monte ediliyor.
+// @vitest-environment jsdom
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App.jsx";
+import * as api from "../lib/api.js";
 import { initialMapState, mapReducer } from "../lib/mapFlow.js";
 import MapScreen, { MapFlow } from "./MapScreen.jsx";
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+// Kümeleri okuyan akışta ağ sahte: yanıt sırasını testin kurduğu işin aşaması belirliyor.
+vi.mock("../lib/api.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  datasetsList: vi.fn(),
+  mapInfo: vi.fn(),
+  mapSampleBlob: vi.fn(),
+  mapPreview: vi.fn(),
+  mapApply: vi.fn(),
+  mapStatus: vi.fn(),
+}));
 
 function render(element) {
   return renderToStaticMarkup(element)
@@ -335,6 +354,104 @@ describe("MapFlow", () => {
     expect(html).toContain('id="map-screen"');
     expect(html).toContain("Kümeler okunuyor…");
     expect(html).not.toContain("map-template-db");
+  });
+});
+
+// İşin sonu listeye kendiliğinden yansımıyor: yoklama bittiğini söylüyor, liste ise yalnız açılışta
+// ve geçişte okunuyor. Akış burada gerçekten kuruluyor (örnek şablon → kontrol → Oluştur → yoklama);
+// ağın yanıtları sırayla veriliyor, yoklamanın saniyesi saate bakıyor.
+describe("MapFlow — işin sonu veri kümesi listesine yansır", () => {
+  const POLL_MS = 1000;
+
+  const BEFORE = {
+    active: "synthetic_erp",
+    datasets: [
+      {
+        name: "synthetic_erp",
+        display_name: "Sentetik ERP",
+        connection: "sqlite",
+        root: "datasets",
+        active: true,
+        index: { exists: true, fresh: true, reason: null },
+      },
+    ],
+  };
+
+  // Tazelenmiş liste kurulmakta olan kümeyi de taşıyor; "geç" düğmesine basmadan görünmeli.
+  const AFTER = {
+    active: "synthetic_erp",
+    datasets: [
+      ...BEFORE.datasets,
+      {
+        name: "ornek_fatura",
+        display_name: "Örnek Fatura",
+        connection: "sqlite",
+        root: "real_datasets",
+        active: false,
+        index: { exists: true, fresh: true, reason: null },
+      },
+    ],
+  };
+
+  let container;
+  let root;
+
+  // Zincirli promise'ların sırası: her devir bir sonraki `.then`'ın payı.
+  const settle = async () => {
+    await act(async () => {
+      for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+    });
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+    vi.useRealTimers();
+  });
+
+  // Örnek şablon denetimden geçer, Oluştur basar; yoklama `final` aşamasını döner.
+  async function buildDataset(final) {
+    api.mapInfo.mockResolvedValue({ db_connection: false });
+    api.datasetsList.mockResolvedValueOnce(BEFORE).mockResolvedValue(AFTER);
+    api.mapSampleBlob.mockResolvedValue({ arrayBuffer: () => Promise.resolve(new Uint8Array([1, 2, 3]).buffer) });
+    api.mapPreview.mockResolvedValue(previewResponse());
+    api.mapApply.mockResolvedValue(job("writing"));
+    api.mapStatus.mockResolvedValue(final);
+
+    await act(async () => root.render(<MapFlow />));
+    await settle();
+    await act(async () => container.querySelector("#map-try-sample").click());
+    await settle();
+    await act(async () => container.querySelector("#map-apply").click());
+    await settle();
+
+    expect(container.innerHTML).toContain('id="map-progress"');
+    expect(api.datasetsList).toHaveBeenCalledTimes(1); // açılışın okuması: küme henüz listede yok
+    expect(row(container.innerHTML, "ornek_fatura")).toBe("");
+
+    await act(async () => vi.advanceTimersByTime(POLL_MS));
+    await settle();
+  }
+
+  it("iş hazır deyince liste yeniden okunur ve yeni küme satırı gelir", async () => {
+    await buildDataset(job("done"));
+    expect(api.datasetsList).toHaveBeenCalledTimes(2);
+    expect(row(container.innerHTML, "ornek_fatura")).toContain(">Örnek Fatura<");
+    expect(row(container.innerHTML, "ornek_fatura")).toMatch(/data-dataset-activate="ornek_fatura"/);
+  });
+
+  it("iş düşünce de liste tazelenir, yarım küme sessizce eksik kalmaz", async () => {
+    await buildDataset(job("failed", "İndeks kurulumu çöktü."));
+    expect(container.innerHTML).toContain("İndeks kurulumu çöktü.");
+    expect(api.datasetsList).toHaveBeenCalledTimes(2);
   });
 });
 

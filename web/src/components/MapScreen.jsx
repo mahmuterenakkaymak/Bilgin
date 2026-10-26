@@ -345,6 +345,14 @@ export function MapFlow({ onSwitched }) {
     return () => clearInterval(timer);
   }, [state]);
 
+  // Liste işin sonunu kendi başına bilmez — yalnız açılışta ve geçişte okunur. Tazelenmezse yeni
+  // küme üstünde "✓ Hazır" yazarken 3. kartta hiç görünmez; düşen iş de yarım bir kümeyi sessizce
+  // eksik bırakır. Aşama tek yönlü ilerlediği için her iş bir kez tazelenir.
+  const jobPhase = state.job?.phase;
+  useEffect(() => {
+    if (jobPhase === "done" || jobPhase === "failed") refreshList();
+  }, [jobPhase]);
+
   const runPreview = (filename, content) => {
     dispatch({ type: "preview" });
     if (!filename) return; // indirgeyici noFile'a döndü; sunucuya gidecek bir şey yok
