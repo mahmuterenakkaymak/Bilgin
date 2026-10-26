@@ -31,8 +31,16 @@ def create_router() -> APIRouter:
 
     @router.get("/api/conversations/{id}", dependencies=user)
     def conversation_get(id: str, request: Request) -> dict:
-        """Konuşmanın kayıtlı turları (Contracts "StoredTurn"): okunan hiçbir şey SQL koşmaz."""
-        thread = request.app.state.conversations.get(id, username=_owner(request))
+        """Konuşmanın kayıtlı turları (Contracts "StoredTurn"): okunan hiçbir şey SQL koşmaz.
+
+        Küme de süzgeçtir (R7-2, R7-8): ``ask`` ve liste oturumun kümesinin dışındakini hiç görmez;
+        buradan süzülmeyince küme geçişinden sonra eski adres öteki kümenin turlarını okuyordu.
+        """
+        # ASSUMPTION: kümesiz oturumun konuşmaları depoda NULL kümeyle doğar (ask_payloadın datasetı
+        # None), o yüzden yalnızca kümesi olan oturum süzer - DEFAULT_DATASETe düşen ad onları da
+        # 404e çevirirdi.
+        dataset = _dataset(request) if request.app.state.session.dataset else None
+        thread = request.app.state.conversations.get(id, username=_owner(request), dataset=dataset)
         if thread is None:
             raise HTTPException(status_code=404, detail=NO_CONVERSATION)
         return thread
