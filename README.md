@@ -667,3 +667,140 @@ rate is a signal the guard is doing real work, not a failure.
 description, key columns, the rules that use it, its join neighbours) alongside the column documents,
 and reports recall@k with and without them. Whatever wins is kept; the eval is never tuned to
 manufacture a gain. The measured result on both datasets is recorded in **`eval/SUMMARIES.md`**.
+
+---
+
+# Run 6 — A login, a role, and a database you introduce yourself
+
+Run 6 puts the measurement box in front of a team: every page sits behind a login, an analyst sees the
+data but not the levers, and a customer's database is introduced to Bilgin **from the screen** instead of
+by hand. Nothing below changes the core rule — the LLM writes SQL and words, the executor runs it
+read-only with the PII mask on, and no data leaves the machine. What changes is *who* may ask and *which*
+database the answer runs against.
+
+## Users and roles
+
+Accounts live in the app's own SQLite file, **`data/bilgin.db`** — never in the analysed database — and
+the only way to make one is the CLI, which is also the recovery path when a password is lost:
+
+```bash
+python -m nl2sql user add eren --role admin    # ilk hesap yönetici olmak zorunda
+python -m nl2sql user list                     # Kullanıcı · Rol · Durum · Son giriş
+python -m nl2sql user passwd eren              # parolayı değiştirir, eski oturumlar düşer
+python -m nl2sql user set analist --role user  # rolü değiştirir
+python -m nl2sql user set analist --deactivate # hesabı kapatır, silmez
+```
+
+The password is asked with **`getpass`** — twice, never echoed, never passed on a command line, so it
+appears in no shell history and in no `ps` output. Two entries that disagree write nothing; a password
+shorter than 10 characters is refused with the reason. A username is `a-z 0-9 _ . -`, 3–32 characters.
+`user list` prints roles and last logins and **never a hash**. No CLI command asks you to log in first:
+whoever holds the keyboard already owns the machine, and the CLI is what you have when the UI is locked.
+
+`serve` refuses to listen while the user table is empty — it prints
+`python -m nl2sql user add <ad> --role admin` and exits before any address is bound, so a box can never
+be served open by accident.
+
+**What each role may do** (enforced on the server, per route — hiding a menu item is not a permission):
+
+| | Kullanıcı | Yönetici |
+|---|---|---|
+| Ask, replay, export, tables, examples | ✓ | ✓ |
+| Saved questions and history | own only | the whole dataset |
+| Rules screen | read-only ("İş kurallarını yalnız yönetici değiştirebilir.") | add / edit / delete, rebuild index |
+| Veritabanı haritası, veri kümesi geçişi | no | ✓ |
+| Kullanıcılar screen | no | ✓ |
+
+History and saved questions are filtered by the logged-in name, so an analyst's sidebar is their own
+questions; an admin sees everything the active dataset holds. The filter is on the read *and* the
+download: an export of someone else's audit id simply does not exist for the searcher.
+
+## Login and sessions
+
+`POST /api/auth/login` answers with the user's name and role and sets the session in the
+**`bilgin_oturum` cookie** — `HttpOnly`, `SameSite=Strict`, path `/`, **12 hours**
+(`SESSION_HOURS`). The session key itself goes nowhere else: not in a response body, not in a log line,
+not in the ask log.
+
+- An unknown username and a wrong password give **the same sentence** — the login form is not a way to
+  find out which accounts exist.
+- **5 failures inside 15 minutes lock the account for 15 minutes** (HTTP 429); the lock is a count of
+  recent attempts, so it expires on its own and no one has to reset it.
+- An expired cookie makes any call answer 401; the UI drops back to the login card with
+  "Oturumunuz sona erdi, lütfen yeniden giriş yapın." and returns to the page you were on after login.
+
+The address rule from Run 5 stands: **`127.0.0.1` only, no TLS.** The login protects against the other
+people who sit at this machine, not against the network — a `--host` outside loopback is still refused
+before anything listens. Bilgin is not a hosted service and does not pretend to be one.
+
+## The development bootstrap
+
+For a demo or a test run with no user table yet, one environment variable opens the first admin:
+
+```bash
+NL2SQL_DEV_ADMIN_PASSWORD=<parola> python -m nl2sql serve --llm fake
+```
+
+It is read **only when the users table is empty**: it then creates `admin` with that password and prints
+a warning that it happened. If any user exists it does nothing at all — it cannot overwrite a real
+admin's password, and it never runs twice. **Never set it on a real install**: it skips the password
+length check that `user add` applies, and a bootstrap admin with a variable-length password is not an
+account you want to keep. Open the real first account with `user add <ad> --role admin` and leave the
+variable unset.
+
+## Yeni bir veritabanını Bilgin'e tanıtmak
+
+**Veritabanı haritası** (`#/harita`, yöneticiye açık) is the screen where a new database becomes a dataset
+Bilgin can ask questions about. It is three cards: indir, doldur, yükle.
+
+**1 — Şablonu alın.** *Boş şablonu indir* gives `bilgin-veritabani-sablonu.xlsx`: *Nasıl doldurulur*,
+*Veri kümesi*, *Tablolar*, *Kolonlar*, *İş kuralları* and a filled *Örnek* page. Two shortcuts:
+
+- **Canlı veritabanından doldur** (shown only when the served box has an SQL Server connection) reads the
+  live catalogue and pre-fills *Tablolar* and *Kolonlar* with names, types, NULL-ability and references —
+  you then add the descriptions, which is the part a catalogue cannot tell anyone. If the read fails
+  (missing `VIEW DEFINITION` permission) you get the **blank** template and a one-line note, never a
+  second login attempt and never a half-filled file.
+- **Örnek dolu şablonla dene** downloads a complete example (`ornek_fatura`) so the whole flow can be
+  walked before a customer's data exists.
+
+**2 — Doldur.** Four columns decide what the model can do with a table:
+
+- **AÇIKLAMA matters most.** The model knows a table or a column *only* from the text you write there;
+  an empty description means the retrieval finds it by name alone and the agent guesses at its meaning.
+- **DEĞERLER** carries coded values (`G` giriş, `C` çıkış; `1` satış faturası …) — the difference between
+  a correct `WHERE` and a plausible wrong one.
+- **KİŞİSEL VERİ** picks one of the personal-data classes; a marked column's value is masked in every
+  answer, chart and export, because the mask is applied inside the executor.
+- **KAPALI = E** keeps the column in the schema but out of every query (passwords, internal notes), and
+  **REFERANS** is `Tablo.Kolon` or `Şema.Tablo.Kolon` — the join graph is built from it.
+
+**3 — Kontrol et** uploads the file and shows a report without writing anything else: counts (Tablo,
+Kolon, Kişisel veri, Kapalı, Referans, Kural), then **errors** with Sayfa / Satır / Kolon / Sorun, then
+warnings (the first 20, "ve N tane daha"). An error blocks **Oluştur** and says *Önce hataları düzeltin.*;
+a warning never does — a table with no description is worth asking about, not refusing the file.
+
+**4 — Oluştur** creates `real_datasets/<name>/` — `dataset.json`, `schema.json`, `rules.json`,
+`profile.json`, an empty `golden.jsonl`, a `real.py` stub and a generated `readonly_login.sql` — and
+indexes it; the progress line runs *Yazılıyor → İndeks kuruluyor → Hazır*. Then **Bu veri kümesine geç**
+switches the served session, and every screen that names a dataset follows it: the header chip, the
+examples, the tables, the rules, the saved list and the history.
+
+**5 — SQL Server tarafı.** A new SQL Server dataset needs a read-only login before it can answer. The
+generated script is downloadable per dataset (`GET /api/datasets/<name>/login-script.sql`); it contains
+**`__DEGISTIR__`** where the password goes — the file never carries a password, and the allowlist and the
+denied PII columns are already in it. Run it on the server, then start Bilgin with that connection
+string in **`NL2SQL_MSSQL_CONN`**. Switching to the dataset works without it and says so
+("Bu küme SQL Server'a bağlı: salt okunur girişi kurun ve sunucuyu `NL2SQL_MSSQL_CONN` ile başlatın.")
+rather than failing a question with a connection error.
+
+## An upload never touches an existing dataset
+
+Preview writes only under `data/map_previews/` and expires after 30 minutes; **apply creates a folder
+that does not exist yet** — a name already used by a dataset is refused with "Bu ad zaten bir veri
+kümesi" and no file anywhere is modified. The datasets under `datasets/` (the synthetic and WWI demo
+sets) are never written by an upload, so a bad map cannot break the eval you are measuring with.
+
+`real_datasets/*` is **git-ignored except `real_datasets/wwi_real/`**: a customer's schema, rules and
+generated login script stay on the machine that produced them, and the one real dataset used for public
+measurements stays in the repo.
