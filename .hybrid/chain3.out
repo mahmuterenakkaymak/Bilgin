@@ -230,3 +230,5 @@
 'vite' is not recognized as an internal or external command,
 operable program or batch file.
 2026-10-26 17:12:46 | HANDS  | T312 try 1: README Run 7 conversation section: README.md "Konuşma: ardışık sorular" (what a follow-up can lean on, Yeni konuşma, #/c/<id>, the evidence line, CLI --conversation/--new, eval --followups and its metrics, the manual wwi_real run with NL2SQL_BACKEND=mssql, what is stored: at most 5 masked rows per turn), no product/company names; add tests/test_readme_run7.py (new file: the heading and each named command/flag appear, no forbidden names list from tests/test_readme_run6.py reused)
+2026-10-26 17:17:36 | ORCH   | T312: PASSED (hands)
+2026-10-26 17:17:48 | HANDS  | T313 try 1: smoke --conversation (PLAN R6-22 pattern): scripts/smoke_serve.py --conversation logs in, asks F01 turn 1 without an id, turn 2 with the returned conversation_id (turn == 2, context.uses_turns == [1]), turn 3 "Grafiği pasta yap" (same sql, chart pie), GET /api/conversations/{id} has 3 turns, always stops the server; add tests/test_smoke_run7.py (new file: runs the script on a free port, exit 0)
