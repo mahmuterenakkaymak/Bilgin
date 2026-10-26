@@ -9,6 +9,7 @@ girmez.
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from decimal import Decimal
 
@@ -19,6 +20,10 @@ from nl2sql.index.text import fold, tokens
 HISTORY_HEADER = "## Önceki turlar"
 ROW_SEPARATOR = " | "
 ROW_INDENT = "  "
+
+EVIDENCE_PREFIX = "Önceki cevaptan: "
+NOTE_LABEL_FALLBACK = "değer"
+_LABEL_CUT = re.compile(r"[;,.:(\n]")
 
 FOLLOWUP_RULES = (
     "Kurallar:\n"
@@ -203,3 +208,136 @@ def _line(value) -> str:
 
 def _text(value) -> str:
     return "" if value is None else str(value)
+
+
+def _name(value) -> str:
+    """Teknik ad karşılaştırması: düz küçültme.
+
+    ``fold`` Türkçe katlar, o yüzden "ADI" "adı", "ID" "ıd" olur; büyük/küçük harf farkı aynı
+    kolonun adı olduğu için burada kaybolmalı, başka bir kolona dönüşmemeli.
+    """
+    return str(value or "").strip().lower()
+
+
+def validate_note(note: dict | None, turns: list[dict] | None) -> tuple[dict | None, str | None]:
+    """Modelin ``submit_sql.context`` notunu kanıtla doğrular (PLAN R7-5, Contracts "ContextNote").
+
+    Not ya olduğu gibi kalır ya da tamamı düşer: ``evidence_line``ın gösterdiği her değer konuşmanın
+    kendi satırlarında ya da SQL'inde bulunabilmeli, uydurma bir değer kullanıcıya kanıt diye
+    verilmemeli. Eksik ya da None not geçersiz değildir - kendi başına duran bir sorunun boş notudur.
+    """
+    note = note or {}
+    known = {turn.get("n"): turn for turn in turns or []}
+    uses = note.get("uses_turns") or []
+    entities = note.get("entities") or []
+    refines = note.get("refines_sql_of")
+    if not isinstance(uses, list) or not isinstance(entities, list):
+        return None, "uses_turns ve entities liste olmalı"
+    for number in uses:
+        if not isinstance(number, int) or number not in known:
+            return None, f"{number}. tur bu konuşmada yok"
+    if refines is not None and refines not in uses:
+        return None, "refines_sql_of kullanılan turlarda değil"
+    for entity in entities:
+        reason = _entity_reason(entity, [known[number] for number in uses])
+        if reason:
+            return None, reason
+    return {
+        "uses_turns": list(uses),
+        "entities": [{"column": _text(item.get("column")), "value": _text(item.get("value"))} for item in entities],
+        "refines_sql_of": refines,
+    }, None
+
+
+def evidence_line(note: dict | None, turns: list[dict] | None, schema: dict | None) -> str | None:
+    """Kullanıcıya gösterilen tek satırlık kanıt: hangi turun hangi değeri (PLAN R7-5).
+
+    Etiket şemadaki açıklamanın başıdır - teknik kolon adı ekrana çıkmaz, açıklama yoksa "değer"
+    kalır. Parantez değerin bulunduğu satırın diğer metin hücresi, yani kaydın adı; değer yalnız
+    SQL'de geçiyorsa parantez olmaz. Varlık yoksa kanıtın kendisi önceki sorgudur.
+    """
+    note = note or {}
+    entities = [item for item in (note.get("entities") or []) if isinstance(item, dict)]
+    if not entities:
+        number = note.get("refines_sql_of") or (note.get("uses_turns") or [None])[0]
+        if number is None:
+            return None
+        return f"{EVIDENCE_PREFIX}{number}. turun sorgusu temel alındı."
+    used = _used_turns(note, turns)
+    parts = []
+    for entity in entities:
+        value = _text(entity.get("value"))
+        part = f"{_column_label(schema, _text(entity.get('column')))} {value}"
+        other = _row_hint(used, value)
+        parts.append(f"{part} ({other})" if other else part)
+    return EVIDENCE_PREFIX + ", ".join(parts)
+
+
+def _entity_reason(entity, used_turns: list[dict]) -> str | None:
+    """Bir varlığın kanıtı: kolon kullanılan turun kolonlarında, değer onun satırlarında ya da SQL'inde."""
+    if not isinstance(entity, dict):
+        return "varlık bir nesne değil"
+    column = _text(entity.get("column")).strip()
+    value = _text(entity.get("value")).strip()
+    if not column or not value:
+        return "varlığın kolonu ya da değeri boş"
+    named = [turn for turn in used_turns if _has_column(turn, column)]
+    if not named:
+        return f"{column} kolonu kullanılan turlarda yok"
+    if not any(_shows(turn, fold(value)) for turn in named):
+        return f"{value} değeri kullanılan turun satırlarında ya da sorgusunda yok"
+    return None
+
+
+def _has_column(turn: dict, column: str) -> bool:
+    """Kolon turun başlıklarında mı - büyük/küçük harf farkı aynı kolonun adıdır."""
+    name = _name(column)
+    return any(_name(item) == name for item in (turn.get("summary") or {}).get("columns") or [])
+
+
+def _shows(turn: dict, folded_value: str) -> bool:
+    """Katlanmış değer turun gösterdiği satırlardan birinde ya da SQL'inde geçiyor mu."""
+    summary = turn.get("summary") or {}
+    rows = (summary.get("rows") or [])[: config.CONV_KEEP_ROWS]
+    if any(folded_value in fold(_text(cell)) for row in rows for cell in row):
+        return True
+    return folded_value in fold(_text(turn.get("sql")))
+
+
+def _used_turns(note: dict, turns: list[dict] | None) -> list[dict]:
+    """Notın kullandığını söylediği turlar; sayı verilmemişse gösterilen turların tümü."""
+    known = {turn.get("n"): turn for turn in turns or []}
+    used = [known[number] for number in (note.get("uses_turns") or []) if isinstance(number, int) and number in known]
+    return used or [turn for turn in turns or []]
+
+
+def _row_hint(turns: list[dict], value: str) -> str | None:
+    """Değerin bulunduğu satırın diğer metin hücresi: parantezdeki kayıt adı."""
+    folded = fold(value)
+    for turn in turns:
+        rows = ((turn.get("summary") or {}).get("rows") or [])[: config.CONV_KEEP_ROWS]
+        for row in rows:
+            if not any(folded in fold(_text(cell)) for cell in row):
+                continue
+            for cell in row:
+                if isinstance(cell, str) and cell.strip() and folded not in fold(cell):
+                    return cell
+    return None
+
+
+def _column_label(schema: dict | None, column: str) -> str:
+    """Kolonun ekrandaki adı: açıklamanın başı, cümle içinde küçükle başlar; teknik ad asla."""
+    name = _name(column)
+    for table in (schema or {}).get("tables", []):
+        for item in table.get("columns", []):
+            if _name(item.get("name")) != name:
+                continue
+            head = _description_head(item.get("description"))
+            # yalnız baş harf küçülür: İngilizce açıklamadaki "ID" "ıd" olmasın
+            return fold(head[:1]) + head[1:] if head else NOTE_LABEL_FALLBACK
+    return NOTE_LABEL_FALLBACK
+
+
+def _description_head(description) -> str:
+    """Açıklamanın etiket olarak duracak ilk bölümü: nokta, virgül, iki nokta ya da paranteze kadar."""
+    return _LABEL_CUT.split(str(description or "").strip(), maxsplit=1)[0].strip()
