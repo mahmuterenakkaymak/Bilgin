@@ -42,6 +42,11 @@ def record_ask(entry: dict, path: str | Path = config.ASK_LOG) -> None:
     # PLAN "ask record (ext.)": kullanıcı biliniyorsa adı yazılır, bilinmiyorsa anahtar hiç yoktur.
     if entry.get("username") is not None:
         record["username"] = entry["username"]
+    # PLAN "ask record (ext.)": konuşma alanları yalnız konuşmayla koşan kayıtta, gerekçe yalnız
+    # düşen notun satırında vardır (R7-7) - ötekilerin satırı Run 6 ile aynı kalsın diye burada.
+    for key in ("conversation_id", "turn", "context_dropped"):
+        if entry.get(key) is not None:
+            record[key] = entry[key]
     # ASSUMPTION: AskPayload'da ts yok, o yüzden boş ts burada üretilir (denetim günlüğüyle aynı biçim).
     if not record["ts"]:
         record["ts"] = datetime.now(timezone.utc).isoformat(timespec="milliseconds")

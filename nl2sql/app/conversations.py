@@ -66,6 +66,16 @@ CREATE TABLE IF NOT EXISTS turns (
 )
 
 
+class ConversationNotFound(Exception):
+    """Konuşma yok, başkasına ait ya da başka bir kümede (PLAN R7-2, R7-7).
+
+    Cümleyi istisnanın kendisi söyler ki API'nin ``detail``ı ile CLI'nin satırı aynı olsun.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("Konuşma bulunamadı.")
+
+
 class ConversationStore:
     """``conversations`` ve ``turns`` tablolarının tek kapısı: aç, tur ekle, oku, sil."""
 

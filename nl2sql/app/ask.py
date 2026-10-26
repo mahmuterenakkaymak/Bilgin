@@ -4,6 +4,10 @@
 kurulur, her durumda aynı kümeyle, böylece hiçbir alan ekranda ``undefined`` olmaz. Cevabın
 kendisi SQL ve satırlardır; olgular, grafik ve cümle onların üstüne kurulur (R5-6, R5-7, R5-9),
 netleştirme ise cevabın yerini alan sorudur (R5-2, R5-11).
+
+``conversations`` verildiği her çağrı bir konuşmanın turudur (R7-7): soru önceki turlarla koşar,
+tur özet olarak konuşmaya yazılır, payload ve günlük satırı tur numarasını taşır. Depo
+verilmeyen çağrı Run 6'dır - ne payload ne günlük bir konuşma alanı görür.
 """
 
 from __future__ import annotations
@@ -12,8 +16,10 @@ import time
 
 from nl2sql import config
 from nl2sql.agent.clarify import follow_up_text
+from nl2sql.agent.context import evidence_line, turn_summary, validate_note
 from nl2sql.agent.loop import run_agent
 from nl2sql.app import asklog
+from nl2sql.app.conversations import ConversationNotFound
 from nl2sql.engine import checks
 from nl2sql.engine.result import Budget
 from nl2sql.index.store import ForeignIndexError, MissingIndexError, StaleIndexError
@@ -30,7 +36,14 @@ INDEX_ERRORS = (MissingIndexError, StaleIndexError, ForeignIndexError)
 
 
 def ask_payload(
-    session, question: str, mode: str | None = None, choice=None, source: str = "web", username: str | None = None
+    session,
+    question: str,
+    mode: str | None = None,
+    choice=None,
+    source: str = "web",
+    username: str | None = None,
+    conversations=None,
+    conversation_id: str | None = None,
 ) -> dict:
     """Bir soruyu AskPayload'a çeviren tek fonksiyon (R5-1): modu çözer, ajanı koşurur, yürütür.
 
@@ -43,21 +56,62 @@ def ask_payload(
 
     İlk soru netleştirme sorabilir (R5-10); ``choice`` verilmişse soru seçilen anlamla koşar ve o
     tur soramaz, yani açıklama döngüsü kurulmaz (R5-11). Günlük soruyu ve seçimi ayrı taşır.
+
+    ``conversations`` verildiyse çağrı bir konuşmanın turudur (R7-7): ``conversation_id``
+    söylenmemişse konuşma yeni açılır, söylenmiş ve bulunamamışsa ``ConversationNotFound``dır -
+    yolun 404'ü oradan okunur. Soru son ``CONV_TURNS`` turla koşar, tur özetini konuşmaya
+    bırakır, payload ve günlük satırı ``conversation_id`` ile ``turn``i taşır; bekleyen bir
+    netleştirmenin aynı sorusuna verilen ``choice`` o turu tamamlar, üstüne yeni tur açmaz.
     """
     audit_id = asklog.new_audit_id()
     notes: list[str] = []
     started = time.perf_counter()
     payload = _skeleton(question, choice, mode or "auto", session, audit_id, notes)
     asked = follow_up_text(question, choice) if choice else question
+    conversation_id, pending, turns = _thread(
+        conversations, conversation_id, username, question, choice, payload["dataset"]
+    )
+    if conversation_id is not None:
+        # Contracts "AskPayload (ext.)": üç anahtar yalnız konuşmayla koşan payloadda vardır.
+        payload.update(conversation_id=conversation_id, turn=None, context=None)
+    dropped = None
     try:
         resolved, _ = session.resolve_mode(payload["mode"], notes)
         payload["mode"] = resolved
-        _run(session, asked, resolved, _audit_source(source, username, audit_id), payload, clarify=not choice)
+        dropped = _run(
+            session, asked, resolved, _audit_source(source, username, audit_id), payload,
+            clarify=not choice, history=turns,
+        )
     except INDEX_ERRORS as exc:
         _fail(payload, "index", str(exc))
+    if conversation_id is not None:
+        payload["turn"] = _store(conversations, payload, conversation_id, pending)
     payload["timings"]["total_s"] = round(time.perf_counter() - started, 3)
-    asklog.record_ask(_record(payload, source, username), session.ask_log)
+    asklog.record_ask(_record(payload, source, username, dropped), session.ask_log)
     return payload
+
+
+def _thread(conversations, conversation_id, username, question, choice, dataset) -> tuple:
+    """Konuşmanın hali: (kimlik, tamamlanacak bekleyen turun numarası, miras alınan turlar).
+
+    Depo yoksa üçü de None'dır ve koşum Run 6'dır. Sahiplik elle karşılaştırılır: tek
+    kullanıcılı modda konuşmanın sahibi NULL, ``get``in ``username`` süzgeci ise ``username = ?``
+    demek - NULL hiçbir şeyle eşitleşmediği için o süzgeç tek kullanıcılı modu hiç bulamazdı.
+    """
+    if conversations is None:
+        return None, None, None
+    if conversation_id is None:
+        return conversations.create(username=username, dataset=dataset, title=question), None, []
+    found = conversations.get(conversation_id, dataset=dataset)
+    if found is None or found["conversation"]["username"] != username:
+        raise ConversationNotFound()
+    last = found["turns"][-1] if found["turns"] else None
+    pending = (
+        last["n"]
+        if choice and last and last["status"] == "needs_clarification" and last["question"] == question
+        else None
+    )
+    return conversation_id, pending, conversations.last_turns(conversation_id, config.CONV_TURNS)
 
 
 def _audit_source(source: str, username: str | None, audit_id: str) -> str:
@@ -96,8 +150,14 @@ def _skeleton(question: str, choice, mode: str, session, audit_id: str, notes: l
     }
 
 
-def _run(session, question: str, mode: str, source: str, payload: dict, clarify: bool = True) -> None:
-    """Ajanın koşusu, gönderilen SQL'in arayüz bütçesiyle ikinci yürüyüşü ve cevabın doldurulması."""
+def _run(
+    session, question: str, mode: str, source: str, payload: dict, clarify: bool = True, history=None
+) -> str | None:
+    """Ajanın koşusu, gönderilen SQL'in arayüz bütçesiyle ikinci yürüyüşü ve cevabın doldurulması.
+
+    ``history`` konuşmanın miras alınan turlarıdır (R7-4); None Run 6'dır. Dönüş değeri düşürülen
+    bağlam notunun gerekçesidir (R7-5), not düştüyse günlük satırı onu taşır.
+    """
     run = run_agent(
         question,
         session.agent_llm(mode),
@@ -107,6 +167,7 @@ def _run(session, question: str, mode: str, source: str, payload: dict, clarify:
         mode=mode,
         context=session.context(mode, clarify),
         budget=session.budget,
+        history=history,
     )
     payload["steps"] = [
         {"tool": step.tool, "ok": step.ok, "summary": step.summary[:STEP_CHARS]}
@@ -115,13 +176,53 @@ def _run(session, question: str, mode: str, source: str, payload: dict, clarify:
     payload["timings"]["agent_s"] = run.elapsed_s
     if run.status == "needs_clarification":
         _clarify(payload, run.clarification)
-        return
+        return None
     if run.status != "submitted":
         # Durumun adı hatanın adıdır: modelin hiç göndermemesi de bir cevap hatasıdır (R5-2).
         _fail(payload, run.status, run.stop_reason)
-        return
+        return None
 
+    dropped = _note(session, payload, run.context_note, history)
     _answer(session, question, run.submitted_sql or "", source, payload)
+    return dropped
+
+
+def _note(session, payload: dict, note, turns) -> str | None:
+    """Modelin bağlam notu: doğrulanırsa kanıt satarıyla payload'a girer, doğrulanmazsa düşer (R7-5).
+
+    ``turns`` None konuşma deposu yok demektir - o zaman ne not ne kanıt satarı vardır. Boş not bir
+    başarısızlık değil, kendi başına duran bir sorunun halidir: payload'a hiçbir şey yazılmaz.
+    Düşen not cevaba dokunmaz; gerekçesi yalnız günlük satırına düşer.
+    """
+    if turns is None:
+        return None
+    valid, reason = validate_note(note, turns)
+    if reason:
+        return reason
+    if not (valid["uses_turns"] or valid["entities"] or valid["refines_sql_of"]):
+        return None
+    payload["context"] = {**valid, "line": evidence_line(valid, turns, session.schema)}
+    return None
+
+
+def _store(conversations, payload: dict, conversation_id: str, pending: int | None) -> int:
+    """Turun konuşmaya yazılışı: sonraki tura miras kalan kadarı özet, numara 1'den başlar (R7-3).
+
+    ``pending`` bekleyen bir netleştirmenin numarasıysa tur onun üstüne yazılır - seçim yeni tur
+    açmaz (R7-7); tamamlanacak bir şey kalmamışsa sıradaki tura geçilir.
+    """
+    turn = {
+        "question": payload["question"],
+        "choice": payload["choice"],
+        "status": payload["status"],
+        "sql": payload["sql"] or None,
+        "columns": payload["columns"],
+        "summary": turn_summary(payload),
+        "answer_text": payload["answer_text"],
+        "audit_id": payload["audit_id"],
+    }
+    n = conversations.complete_turn(conversation_id, pending, turn) if pending is not None else None
+    return n if n is not None else conversations.add_turn(conversation_id, turn)
 
 
 def replay_payload(
@@ -217,9 +318,11 @@ def _fail(payload: dict, kind: str, message: str) -> None:
     payload["answer_text"] = message
 
 
-def _record(payload: dict, source: str, username: str | None = None) -> dict:
+def _record(
+    payload: dict, source: str, username: str | None = None, context_dropped: str | None = None
+) -> dict:
     """Soru günlüğünün satırı: sözleşme alanları, satırlar asla (R5-4); adı olmayan satıra girmez (R6-9)."""
-    return {
+    record = {
         "audit_id": payload["audit_id"],
         "source": source,
         "dataset": payload["dataset"],
@@ -232,3 +335,11 @@ def _record(payload: dict, source: str, username: str | None = None) -> dict:
         "error": payload["error"]["kind"] if payload["error"] else None,
         "username": username,
     }
+    # Contracts "ask record (ext.)": konuşmayla koşan satır turunu, düşen notu gerekçesini taşır
+    # (R7-7); konuşmasız çağrı Run 6'nın satırıyla aynı anahtarlarla döner.
+    if payload.get("conversation_id") is not None:
+        record["conversation_id"] = payload["conversation_id"]
+        record["turn"] = payload["turn"]
+    if context_dropped:
+        record["context_dropped"] = context_dropped
+    return record
