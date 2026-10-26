@@ -41,11 +41,15 @@ ROUTE_ROLES: dict[tuple[str, str], str] = {
     ("PUT", "/api/rules/{rule_id}"): "admin",
     ("DELETE", "/api/rules/{rule_id}"): "admin",
     ("POST", "/api/index/rebuild"): "admin",
+    # R6-18: etkin kümeyi değiştirmek sunucunun hangi veritabanına baktığını değiştirmektir.
+    ("GET", "/api/datasets"): "admin",
+    ("POST", "/api/datasets/active"): "admin",
+    ("GET", "/api/datasets/{name}/login-script.sql"): "admin",
     ("GET", "/api/users"): "admin",
     ("POST", "/api/users"): "admin",
     ("PUT", "/api/users/{id}"): "admin",
-    # ASSUMPTION: brief'in ``/api/schema-map/*``, ``/api/datasets*`` satırları henüz
-    # ``create_app``te yol değil - satır, yolun doğduğu görevle birlikte buraya yazılır (R6-5).
+    # ASSUMPTION: brief'in ``/api/schema-map/*`` satırları henüz ``create_app``te yol değil -
+    # satır, yolun doğduğu görevle birlikte buraya yazılır (R6-5).
 }
 
 

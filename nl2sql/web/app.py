@@ -9,6 +9,7 @@ olduğunu kendi cümlesiyle söyler, node'a muhtaç kalmaz.
 from __future__ import annotations
 
 import json
+import threading
 import time
 from pathlib import Path
 
@@ -32,6 +33,7 @@ from nl2sql.schema_map.rules_edit import normalize_rule, save_rules, validate_ru
 from nl2sql.web.auth_api import create_router as create_auth_router
 from nl2sql.web.auth_api import create_users_router
 from nl2sql.web.authz import NO_SESSION, ROUTE_ROLES, current_user, require
+from nl2sql.web.datasets_api import create_router as create_datasets_router
 from nl2sql.web.saved import ALL as SAVED_ALL, SavedStore
 
 # R5-15: boş soru koşum açmaya değmez; cümle ekranın gösterdiği cümledir.
@@ -125,14 +127,17 @@ def create_app(
 
     ``users`` bir ``UserStore`` ise kimlik doğrulama açıktır; ``None`` Run 5'in tek kullanıcısıdır
     - hiçbir yol çevrilmez, oturumun kullanıcısı ``None``dır (R6-5).
+
+    R6-10: oturum burada bir daha anılmaz - her yol onu ``app.state``ten kendi okur, yani bir küme
+    geçişi hiçbir yolu yeniden kurmaz; kayıtlar ve dışa aktarım da süzgecini aynı yerden alır.
     """
     app = FastAPI(title="Bilgin")
     app.state.session = session
+    # R6-10: geçiş tek bir atamadır; kilit, iki geçişin birbirinin üstüne yazmasını engeller.
+    app.state.session_lock = threading.Lock()
     app.state.saved_path = Path(saved_path)
     app.state.users = users
     saved = SavedStore(saved_path)
-    # Kayıtlar küme başına: ekran başlığın söylediği kümenin dışına çıkmaz (R5-16).
-    dataset = _dataset_block(session)["name"]
     static = Path(static_dir)
 
     @app.exception_handler(RuleRejected)
@@ -142,6 +147,7 @@ def create_app(
 
     app.include_router(create_auth_router())
     app.include_router(create_users_router())
+    app.include_router(create_datasets_router())
 
     def guarded(method: str, path: str, **kwargs):
         """Yolun kapısını ``ROUTE_ROLES``tan okuyan süsleyici (R6-5, R6-6).
@@ -164,8 +170,8 @@ def create_app(
         question = body.question.strip()
         if not question:
             raise HTTPException(status_code=400, detail=BLANK_QUESTION)
-        return ask_payload(session, question, mode=body.mode, choice=body.choice, source="web",
-                           username=_asker(request))
+        return ask_payload(_session(request), question, mode=body.mode, choice=body.choice,
+                           source="web", username=_asker(request))
 
     @guarded("POST", "/api/replay/{audit_id}")
     def replay(audit_id: str, request: Request) -> dict:
@@ -176,15 +182,16 @@ def create_app(
         """
         # ASSUMPTION: süzgeç ile ad ayrıdır: yönetici başkasının kaydını da görür (süzgeç herkese
         # açık), ama yeniden sorduğunda satırı ve denetim satırları kendi adını taşır (R6-9).
-        payload = replay_payload(session, audit_id, source="web", username=_asker(request),
+        payload = replay_payload(_session(request), audit_id, source="web", username=_asker(request),
                                  scope=_scope(request, asklog._ALL))
         if (payload["error"] or {}).get("kind") == "not_found":
             raise HTTPException(status_code=404, detail=NO_ASK)
         return payload
 
     @guarded("GET", "/api/health")
-    def health() -> dict:
+    def health(request: Request) -> dict:
         """Başlığın çipleri: hangi küme, model sağ mı, indeks taze mi, auto eşiği ne."""
+        session = _session(request)
         return {
             "status": "ok",
             "dataset": _dataset_block(session),
@@ -197,8 +204,9 @@ def create_app(
         }
 
     @guarded("GET", "/api/examples")
-    def examples() -> dict:
+    def examples(request: Request) -> dict:
         """Boş ekrandaki çipler: altın soruların ilki, yani gerçekten cevaplanabilenler."""
+        session = _session(request)
         lines = runner.load_golden(
             session.dataset.golden_path if session.dataset else config.GOLDEN_PATH
         )
@@ -213,18 +221,20 @@ def create_app(
         return {"examples": examples}
 
     @guarded("GET", "/api/tables")
-    def tables() -> dict:
+    def tables(request: Request) -> dict:
         """Kural formunun tablo listesi: ölçülen şemanın adları, sırasıyla."""
-        return {"tables": [table["name"] for table in session.schema["tables"]]}
+        return {"tables": [table["name"] for table in _session(request).schema["tables"]]}
 
     @guarded("GET", "/api/rules")
-    def rules_list() -> dict:
+    def rules_list(request: Request) -> dict:
         """Kural ekranı: kümenin kuralları ve indeksin tazeliği (R5-16)."""
+        session = _session(request)
         return {"rules": session.rules, "index": _index_block(session)}
 
     @guarded("POST", "/api/rules")
-    def rules_add(rule: dict) -> dict:
+    def rules_add(rule: dict, request: Request) -> dict:
         """Yeni kural: çakışan kimlik 409, doğrulama hatası 422, sonra disk ve oturum tazelenir."""
+        session = _session(request)
         rid = str(rule.get("id", "")).strip()
         if any(existing.get("id") == rid for existing in session.rules):
             raise HTTPException(
@@ -234,8 +244,9 @@ def create_app(
         return _write_rules(session, session.rules + [normalize_rule(rule)])
 
     @guarded("PUT", "/api/rules/{rule_id}")
-    def rules_update(rule_id: str, rule: dict) -> dict:
+    def rules_update(rule_id: str, rule: dict, request: Request) -> dict:
         """Kimliğiyle bulunan kuralı gövdeyle değiştirir; olmayan kimlik 404 (R5-16)."""
+        session = _session(request)
         _find_rule(session, rule_id)
         rule = {**rule, "id": rule_id}
         _check_rule(session, rule, editing_id=rule_id)
@@ -245,18 +256,20 @@ def create_app(
         ])
 
     @guarded("DELETE", "/api/rules/{rule_id}")
-    def rules_delete(rule_id: str) -> dict:
+    def rules_delete(rule_id: str, request: Request) -> dict:
         """Kuralı hem diskten hem oturumdan çıkarır; olmayan kimlik 404 (R5-16)."""
+        session = _session(request)
         _find_rule(session, rule_id)
         return _write_rules(session, [r for r in session.rules if r.get("id") != rule_id])
 
     @guarded("POST", "/api/index/rebuild")
-    def index_rebuild() -> dict:
+    def index_rebuild(request: Request) -> dict:
         """İndeksi mevcut kurallarla yeniden kurar; bayatlık ancak böyle kalkar (R5-16).
 
         Embedder mevcut indeksin meta'sından alınır, yani aynı vektör uzayı korunur; indeks hiç
         yoksa ``--llm fake`` sahte uzayı, aksi halde OpenAI uyumlu uç noktayı kullanır.
         """
+        session = _session(request)
         embed = cli._index_embedder(session.index_dir)
         if not embed:
             embed = "fake" if session.llm_kind == "fake" else "openai"
@@ -280,7 +293,7 @@ def create_app(
     @guarded("GET", "/api/saved")
     def saved_list(request: Request) -> dict:
         """Kenar çubuğu: bu kümenin ve bu kullanıcının kayıtlı soruları, en yeni önce (R5-16, R6-9)."""
-        return {"saved": saved.list(dataset, username=_scope(request, SAVED_ALL))}
+        return {"saved": saved.list(_dataset_name(request), username=_scope(request, SAVED_ALL))}
 
     @guarded("POST", "/api/saved")
     def saved_add(body: SavedBody, request: Request) -> dict:
@@ -291,7 +304,8 @@ def create_app(
         # ASSUMPTION: POST tek kaydın kendisini döndürür; ekran istersen listeyi yeniden çeker.
         return {
             "saved": saved.add(
-                question, mode=body.mode, sql=body.sql, dataset=dataset, username=_asker(request)
+                question, mode=body.mode, sql=body.sql, dataset=_dataset_name(request),
+                username=_asker(request),
             )
         }
 
@@ -309,6 +323,7 @@ def create_app(
         R6-9: kullanıcı kendi sorularını görür, yönetici kümenin hepsini - adı olmayan eski
         satırlar da yalnız yöneticide görünür.
         """
+        session = _session(request)
         name = getattr(getattr(session, "dataset", None), "name", None)
         return {
             "history": asklog.history(
@@ -319,12 +334,16 @@ def create_app(
     @guarded("GET", "/api/export/{audit_id}.csv")
     def export_csv(audit_id: str, request: Request) -> Response:
         """Cevabın tamamı CSV: ``bilgin_<id>.csv`` adı ile iner (R5-16)."""
-        return _export(session, dataset, audit_id, "csv", _scope(request, asklog._ALL))
+        return _export(
+            _session(request), _dataset_name(request), audit_id, "csv", _scope(request, asklog._ALL)
+        )
 
     @guarded("GET", "/api/export/{audit_id}.xlsx")
     def export_xlsx(audit_id: str, request: Request) -> Response:
         """Cevabın tamamı Excel: sayı hücreleri sayı olarak kalır (R5-16)."""
-        return _export(session, dataset, audit_id, "xlsx", _scope(request, asklog._ALL))
+        return _export(
+            _session(request), _dataset_name(request), audit_id, "xlsx", _scope(request, asklog._ALL)
+        )
 
     assets = static / "assets"
     if assets.is_dir():
@@ -362,6 +381,20 @@ def create_app(
         return page()
 
     return app
+
+
+def _session(request: Request):
+    """Yolun oturumu: her istekte ``app.state``ten okunur (R6-10).
+
+    Kapanışa yakalansaydı bir küme geçişinden sonra ekran eskisini göstermeye devam ederdi;
+    geçişin kendisi de yalnız alanı değiştirir, hiçbir yol yeniden kurulmaz.
+    """
+    return request.app.state.session
+
+
+def _dataset_name(request: Request) -> str:
+    """Kayıt ve dışa aktarım süzgecinin kümesi: oturumun o anki kümesinin adı (R5-16, R6-10)."""
+    return _dataset_block(_session(request))["name"]
 
 
 def _asker(request: Request) -> str | None:

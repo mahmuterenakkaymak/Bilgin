@@ -53,6 +53,8 @@ class Session:
     audit_path: Path
     ask_log: Path
     client_factory: Callable | None = None
+    # R6-18: küme geçişi modeli kendi dosyasından yeniden okur, yani sunucuya söylenen dosya unutulmaz.
+    models_file: str | Path | None = None
 
     def agent_llm(self, mode: str):
         """Modun istemcisi: client_factory verildiyse o, değilse CLI'nin make_client'ı."""
@@ -156,6 +158,7 @@ def open_session(
         audit_path=Path(audit_path),
         ask_log=Path(ask_log),
         client_factory=client_factory,
+        models_file=models_file,
     )
 
 

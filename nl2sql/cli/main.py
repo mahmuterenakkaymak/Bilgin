@@ -105,6 +105,8 @@ JSON_OK = ("answered", "needs_clarification")
 LOOPBACK_HOSTS = (config.SERVE_HOST, "localhost")
 LOOPBACK_ONLY = "Bilgin yalnız 127.0.0.1 üzerinde çalışır (TLS ve ağ erişimi kapsam dışı)."
 SERVE_LINE = "Bilgin: {url}  (veri kümesi {dataset}, model {model}, llm {llm})"
+# R6-11: ayar artık yüklenmeyen bir küme söylüyorsa sunucu bunu tek satırda söyler ve düşer.
+STORED_LOST = "Not: kayıtlı veri kümesi {name} artık yüklenmiyor; varsayılan {default} sunuluyor."
 PROSE = "yanıt"
 SQL_TOOLS = ("run_sql", "submit_sql")
 NO_ANSWER = "Cevap gönderilmedi: {}"
@@ -1861,6 +1863,9 @@ def serve(
     R6-7: sunulan uygulama her zaman bir kullanıcı deposunun üstünde durur, yani oturum ister.
     Kullanıcı yoksa dinlemeye başlamaz: ya geliştirme yöneticisi açılır ya da ``user add`` cümlesi
     söylenir - ikisi de olmazsa hiçbir adres dinlenmemiş olur.
+
+    R6-11: ``--dataset`` söylenmemişse sunulan dünya ekranda yapılan son geçişin kümesidir, yani
+    ayardaki ``active_dataset``; ``--dataset`` her zaman onu da yener.
     """
     # R5-1: web ve app içe yalnız burada girilir; cli'yi çağıran katmanlar döngü kurmasın.
     from nl2sql.app.session import SessionError, open_session
@@ -1869,7 +1874,7 @@ def serve(
     _utf8_stdout()
     try:
         session = open_session(
-            dataset=dataset or config.DEFAULT_DATASET,
+            dataset=dataset or _served_dataset(),
             model=model,
             llm=llm_kind,
             models_file=models_file,
@@ -1900,6 +1905,25 @@ def serve(
     # ``config.APP_DB_PATH``ine düşer ve ``NL2SQL_APP_DB``i aşarak ``data/bilgin.db``yi açar.
     run_server(create_app(session, saved_path=users.path, users=users), host, port)
     return 0
+
+
+def _served_dataset() -> str:
+    """``--dataset`` söylenmediğinde sunulacak dünya: ayardaki etkin küme, yoksa varsayılan (R6-11).
+
+    Ayarın söylediği ad artık yüklenmiyorsa tek satırlık bir not düşer ve varsayılan sunulur:
+    çip tanımadığı bir kümenin adını taşımaz, ekran da olmayan bir şemayı listelemez.
+    """
+    from nl2sql.web.datasets_api import ACTIVE_SETTING
+
+    stored = UserStore(config.app_db_path()).get_setting(ACTIVE_SETTING)
+    if not stored:
+        return config.DEFAULT_DATASET
+    try:
+        datasets.load_dataset(stored)
+    except datasets.DatasetError:
+        print(STORED_LOST.format(name=stored, default=config.DEFAULT_DATASET))
+        return config.DEFAULT_DATASET
+    return stored
 
 
 def run_server(app, host: str, port: int) -> None:
