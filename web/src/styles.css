@@ -280,8 +280,15 @@ body {
   background: var(--surface);
 }
 
+/* Satır iki çizgiye iniyor: üstte zaman ve sayaçlar, altta sorunun kendisi (M23 görsel inceleme 6).
+   Tek çizgide .side-label ~18 karaktere kısalıyor, aynı soruyla açılan beş konuşma yan yana aynı
+   okunuyordu. Üst çizginin sütunları sınıflarla yazılıyor: geçmişin ✓'si ile turun/tekrarın yeri
+   içeriğin sırasına değil sınıflarına bağlı kalsın. Sütunlar max-content — başlığın nowrap'ı
+   boşluk payını kendiyle paylaştığı sütunlara yayıp zamanın yanına taşırmasın diye. */
 .side-text {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr) repeat(2, minmax(0, max-content));
+  grid-template-areas: "marker time turn count";
   flex: 1;
   min-width: 0;
   align-items: baseline;
@@ -302,13 +309,16 @@ body {
   color: var(--accent);
 }
 
+/* İkinci çizgi: 1 / -1 ızgaranın tüm sütunlarını, yani panelin tamamını başlığa verir. */
 .side-label {
+  grid-column: 1 / -1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .side-marker {
+  grid-area: marker;
   flex: none;
   font-weight: 700;
 }
@@ -325,9 +335,10 @@ body {
   color: var(--err-text);
 }
 
-/* Zaman ve tekrar sayısı ikincil bilgi: soluk ve küçük. Genişlik payı "12 sa önce"ye göre,
-   böylece soru metinleri satırın başında hizalı kalır ve liste günlüğe benzer. */
+/* Zaman ve tekrar sayısı ikincil bilgi: soluk ve küçük, üst çizgiyi onlar paylaşır. Genişlik payı
+   "12 sa önce"ye göre, böylece zamanın sağındaki boşluk aynı hizada başlar ve liste günlüğe benzer. */
 .side-time {
+  grid-area: time;
   flex: none;
   min-width: 3.5rem;
   color: var(--muted);
@@ -336,6 +347,7 @@ body {
 }
 
 .side-count {
+  grid-area: count;
   flex: none;
   color: var(--muted);
   font-size: 12px;
@@ -344,6 +356,7 @@ body {
 
 /* Konuşmayla koşan geçmiş sorusunun tur numarası: sayı kadar ikincil, ama sorunun üstüne binmesin. */
 .side-turn {
+  grid-area: turn;
   flex: none;
   color: var(--muted);
   font-size: 12px;
