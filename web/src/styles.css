@@ -1450,11 +1450,14 @@ main {
   gap: var(--space);
 }
 
-/* Ret cümlesi tek satır bile olsa kendi zemininde durur: ekranın geri kalanı onun rengi değil. */
+/* Ret cümlesi tek satır bile olsa kendi zemininde durur: ekranın geri kalanı onun rengi değil.
+   Vurgu, dört yanı saran ton çizgisinin kalınlaşmış solu (T268): yalın border-left yuvarlak
+   köşede kıvrılıp ilk harfin önüne parantez gibi düşüyordu. */
 .users-error {
   margin: 0;
   padding: calc(var(--space) * 0.75) var(--space);
-  border-left: 3px solid var(--err-text);
+  border: 1px solid var(--err-text);
+  border-left-width: 4px;
   border-radius: var(--radius);
   background: var(--err-bg);
   color: var(--err-text);
@@ -1602,21 +1605,24 @@ main {
   font-size: 14px;
 }
 
-/* Not ile hata aynı kartta iki ayrı durumu söyler: biri uyarı, diğeri reddedilen giriş. */
+/* Not ile hata aynı kartta iki ayrı durumu söyler: biri uyarı, diğeri reddedilen giriş.
+   Vurgu, dört yanı saran ton çizgisinin kalınlaşmış solu (T268): yalın border-left yuvarlak
+   köşede kıvrılıp "Kullanıcı adı ya da parola hatalı."nın önüne parantez gibi düşüyordu. */
 .login-note,
 .login-error,
 .route-note {
   margin: 0;
   padding: calc(var(--space) * 0.75) var(--space);
   border-radius: var(--radius);
-  border-left: 3px solid var(--warn-line);
+  border: 1px solid var(--warn-line);
+  border-left-width: 4px;
   background: var(--warn-bg);
   color: var(--warn-text);
   font-size: 13px;
 }
 
 .login-error {
-  border-left-color: var(--err-text);
+  border-color: var(--err-text);
   background: var(--err-bg);
   color: var(--err-text);
 }
