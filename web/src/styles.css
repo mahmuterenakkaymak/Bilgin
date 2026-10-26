@@ -971,17 +971,31 @@ main {
      başlığı dörde çıkarıyordu (landing-empty-state-390.png, users-screen-390.png). Satır tek
      olarak yazılır, taşan taraf kaydırılır; başlığın iki satırı bozulmaz. Kaydırma çubuğu satırı
      kabartmaz, ama devamı da söylemez: çubuk gizli, "Veritabanı harita" kesik ad yazım hatası
-     okunuyor (users-screen-users-table-390.png). Devamını taşan kenardaki maske söylüyor — son
-     bağlantı orada eriyor. Odak halkası kutunun 4px dışına çiziliyor: pay içeride, negatif pay
-     ile metnin başlangıcı yine sözcükle hizada. */
+     okunuyor (users-screen-users-table-390.png). Devamını uçtaki maske söylüyor — kesilen her
+     etiketin arkasında sönen bir kenar kalıyor. Hangi ucun kesik olduğunu satır kendisi bildiriyor
+     (MastheadNav.jsx data-overflow-start/end): soldan kayınca sol, sağda devam varken sağ ucu
+     yakıyoruz. Odak halkası kutunun 4px dışına çiziliyor: pay içeride, negatif pay ile metnin
+     başlangıcı yine sözcükle hizada. */
   .masthead-nav {
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
     padding: 4px;
     margin: -4px;
-    -webkit-mask-image: linear-gradient(to left, transparent 0, #000 1.75rem);
-    mask-image: linear-gradient(to left, transparent 0, #000 1.75rem);
+    /* İki uç tek degrade: her biri kendi payı kadar şeffaftan siyaha iner. Varsayılan satır başı
+       hâli — solda bir şey yok, devamı sağda — satır kendini ölçene dek sağ ucu korur. */
+    --fade-start: 0px;
+    --fade-end: 1.75rem;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+  }
+
+  .masthead-nav[data-overflow-start="true"] {
+    --fade-start: 1.75rem;
+  }
+
+  .masthead-nav[data-overflow-end="false"] {
+    --fade-end: 0px;
   }
 
   .masthead-nav::-webkit-scrollbar {

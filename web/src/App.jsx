@@ -6,6 +6,7 @@ import EmptyState from "./components/EmptyState.jsx";
 import ErrorCard from "./components/ErrorCard.jsx";
 import LoadingSteps from "./components/LoadingSteps.jsx";
 import { MapFlow } from "./components/MapScreen.jsx";
+import MastheadNav from "./components/MastheadNav.jsx";
 import RulesScreen from "./components/RulesScreen.jsx";
 import Sidebar from "./components/Sidebar.jsx";
 import UsersScreen from "./components/UsersScreen.jsx";
@@ -378,26 +379,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
             {chip.note && <span className="chip-note">{chip.note}</span>}
           </span>
         )}
-        <nav className="masthead-nav" aria-label="Bölümler">
-          <a className="nav-link" id="nav-ask" href="#/" aria-current={route === "ask" ? "page" : undefined}>
-            Sor
-          </a>
-          <a className="nav-link" id="nav-rules" href="#/kurallar" aria-current={route === "rules" ? "page" : undefined}>
-            Kurallar
-          </a>
-          {/* Harita ve kullanıcı defteri yalnız yöneticiye açık (R6-19): kök kapı rotayı da korur,
-              bağlantı gösterilmeyen bir adrese götürmesin. */}
-          {user?.role === "admin" && (
-            <a className="nav-link" id="nav-map" href="#/harita" aria-current={route === "map" ? "page" : undefined}>
-              Veritabanı haritası
-            </a>
-          )}
-          {user?.role === "admin" && (
-            <a className="nav-link" id="nav-users" href="#/kullanicilar" aria-current={route === "users" ? "page" : undefined}>
-              Kullanıcılar
-            </a>
-          )}
-        </nav>
+        <MastheadNav route={route} user={user} />
         <button
           type="button"
           id="theme-toggle"
