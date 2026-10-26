@@ -7,12 +7,15 @@ havuzunda ne kurulur, dışarıda ne reddedilir. Son iki test parolanın sınır
 ama akışın her sayfası da onu yazmak zorundadır, yoksa inceleme giriş kartında kalır.
 """
 
+import contextlib
 import json
+import sqlite3
 
 import pytest
 
 from nl2sql import config
 from nl2sql.auth.store import UserStore
+from nl2sql.schema_map import template
 from scripts import visual_serve
 
 # visual.json'ın yanlış parola denemesi; doğrusu modül sabitinden okunur, kopyalanmaz.
@@ -56,6 +59,29 @@ def test_seeding_starts_from_an_empty_user_table_every_run(sandbox):
     visual_serve.seed_users(sandbox / "bilgin.db")
 
     assert [u["username"] for u in UserStore(sandbox / "bilgin.db").list_users()] == ["admin", "analist"]
+
+
+# ------------------------------------------------------------------ haritanın örnek kümesi
+
+
+def test_the_sample_flow_gets_a_database_it_can_switch_to(tmp_path):
+    """Akışın son adımları örnek kümeye geçer; veritabanı olmayan kümeye geçiş 409'dur.
+
+    Küme uygulandığında veritabanı üretilmediği için dosyayı akışın kendisi kurar, ve yolu
+    parametredir: test ``data/ornek_fatura.db``ye değil ``tmp_path``e bakar.
+    """
+    db = visual_serve.build_sample_db(tmp_path / "ornek_fatura.db")
+
+    with contextlib.closing(sqlite3.connect(db)) as conn:
+        tables = [row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")]
+        columns = [row[1] for row in conn.execute(f'PRAGMA table_info("{template.EXAMPLE_TABLE}")')]
+
+    assert db.is_file()
+    # Okuyucu adları büyütür (R4-5): tablonun doğduğunu adının birebir kopyası değil, ölçüsü söyler.
+    assert [name.upper() for name in tables] == [template.EXAMPLE_TABLE.upper()], (
+        "örnek şablonun tek tablosu diskte doğmadı"
+    )
+    assert "FATURAID" in columns, "DDL şablonun kolonlarını taşımıyor"
 
 
 # ------------------------------------------------------------------ kum havuzunun dışı

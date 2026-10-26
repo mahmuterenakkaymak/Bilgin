@@ -181,6 +181,33 @@
         "wait:2",
         "shot:rules-as-user"
       ]
+    },
+    {
+      "name": "admin-map-onboard",
+      "path": "/#/harita",
+      "steps": [
+        {"fill": ["#login-username", "admin"]},
+        {"fill": ["#login-password", "Gorsel-Dunya-2026"]},
+        {"click": "#login-submit"},
+        "wait:2",
+        {"click": "#nav-map"},
+        "wait:1",
+        "shot:map-blank",
+        {"click": "#map-template"},
+        "wait:1",
+        {"click": "#map-try-sample"},
+        "wait:3",
+        "shot:map-report",
+        {"click": "#map-apply"},
+        "wait:4",
+        "shot:map-done",
+        {"click": "#map-activate"},
+        "wait:2",
+        "shot:map-switched-chip",
+        {"click": "#map-try-sample"},
+        "wait:3",
+        "shot:map-name-taken"
+      ]
     }
   ]
 }
