@@ -223,7 +223,7 @@ function RulesFlow({ onChanged, readOnly }) {
 
 // Kullanıcı ekranı: yöneticinin defteri tek istekten okunur; her ekme ve güncelleme sonrası
 // ekran aynı isteği yineler, böylece tablo sunucudaki halini gösterir (R6-19).
-function UsersFlow() {
+function UsersFlow({ currentUser }) {
   const [users, setUsers] = useState(null); // null: henüz okunmadı
   const [error, setError] = useState("");
 
@@ -236,12 +236,25 @@ function UsersFlow() {
 
   useEffect(refresh, []);
 
-  return <UsersScreen users={users ?? []} loading={!users} error={error} onRefresh={refresh} />;
+  // `currentUser` oturum sahibinin kendisi: kendi satırındaki düğmeler buna göre ayıklanır.
+  return (
+    <UsersScreen users={users ?? []} currentUser={currentUser} loading={!users} error={error} onRefresh={refresh} />
+  );
 }
 
-function Screen({ route, pending, onRefresh, onChanged, onRebuild, onSwitched, datasetKey, readOnly }) {
+function Screen({
+  route,
+  pending,
+  onRefresh,
+  onChanged,
+  onRebuild,
+  onSwitched,
+  datasetKey,
+  readOnly,
+  currentUser,
+}) {
   if (route === "rules") return <RulesFlow onChanged={onChanged} readOnly={readOnly} />;
-  if (route === "users") return <UsersFlow />;
+  if (route === "users") return <UsersFlow currentUser={currentUser} />;
   if (route === "map") return <MapFlow onSwitched={onSwitched} />;
   return (
     <AskScreen
@@ -430,6 +443,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
             onSwitched={switched}
             datasetKey={datasetKey}
             readOnly={Boolean(user && user.role !== "admin")}
+            currentUser={user}
           />
         </main>
       </div>

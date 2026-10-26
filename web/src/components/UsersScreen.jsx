@@ -8,6 +8,9 @@ import { PASSWORD_MESSAGE, PASSWORD_MIN_LEN, ROLES, clientErrors, toPayload } fr
 // #users-error'a düşer — son etkin yöneticiyi koruyan 409'un sözü de sunucunundur.
 const EMPTY_FORM = { username: "", password: "", password2: "", role: "user" };
 
+// Kendi rolü tek tıkla düşmez: değişince yönetici ekranları kapanır, o yüzden önce söz istenir.
+const SELF_ROLE_QUESTION = "Kendi rolünüzü değiştiriyorsunuz; yönetici ekranları kapanır. Değiştirilsin mi?";
+
 // ASSUMPTION: "Son giriş" tarayıcının yerel saatiyle okunur; sunucu UTC yazıyor, dilim yalnız gösterim.
 function lastLogin(value) {
   const date = new Date(typeof value === "string" ? value : Number.NaN);
@@ -58,7 +61,7 @@ export function UsersNote({ children }) {
   );
 }
 
-export default function UsersScreen({ users = [], loading = false, error = "", onRefresh }) {
+export default function UsersScreen({ users = [], currentUser = null, loading = false, error = "", onRefresh }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
   const [flagged, setFlagged] = useState(""); // sunucunun reddettiği alan: cümle bantta, işaret alanda
@@ -71,6 +74,9 @@ export default function UsersScreen({ users = [], loading = false, error = "", o
   const [resetError, setResetError] = useState("");
 
   const rows = (Array.isArray(users) ? users : []).filter((user) => user?.id !== undefined && user?.id !== null);
+  // ASSUMPTION: /api/auth/me yalnız {username, role} döndürüyor (id yok), o yüzden kendi satırı
+  // addan çözülür; sunucu adları küçük harfe çeviriyor, karşılaştırma da küçük harfle yapılıyor.
+  const selfName = String(currentUser?.username ?? "").toLowerCase();
   const problem = error || failure;
   // Okuma düşerse tablo "okunuyor…"da beklememeli: yukarıdaki cümle ne olduğunu söylüyor, hücre
   // de boş yere söz vermesin. Yazma reddi (`failure`) listeyi etkilemez.
@@ -246,6 +252,7 @@ export default function UsersScreen({ users = [], loading = false, error = "", o
             )}
             {rows.map((user) => {
               const busy = busyId === user.id;
+              const self = Boolean(selfName) && String(user.username ?? "").toLowerCase() === selfName;
               const login = lastLogin(user.last_login_at);
               return (
                 <tr key={user.id}>
@@ -260,9 +267,11 @@ export default function UsersScreen({ users = [], loading = false, error = "", o
                       data-user-role={user.id}
                       value={user.role}
                       disabled={busy}
-                      onChange={(event) =>
-                        update(user, { role: event.target.value }, `“${user.username}” rolü güncellendi.`)
-                      }
+                      onChange={(event) => {
+                        const role = event.target.value;
+                        if (self && !window.confirm(SELF_ROLE_QUESTION)) return;
+                        update(user, { role }, `“${user.username}” rolü güncellendi.`);
+                      }}
                     >
                       {ROLES.map((role) => (
                         <option value={role} key={role}>
@@ -280,23 +289,27 @@ export default function UsersScreen({ users = [], loading = false, error = "", o
                     {login || "—"}
                   </td>
                   <td className="users-actions">
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      data-user-toggle={user.id}
-                      disabled={busy}
-                      onClick={() =>
-                        update(
-                          user,
-                          { active: !user.active },
-                          user.active
-                            ? `“${user.username}” pasifleştirildi; oturumu kapandı.`
-                            : `“${user.username}” etkinleştirildi.`,
-                        )
-                      }
-                    >
-                      {user.active ? "Pasifleştir" : "Etkinleştir"}
-                    </button>
+                    {/* Kendi satırında pasifleştirme düğmesi durmaz: sunucu o işte oturumları
+                        siliyor, tek tık uygulamanın yöneticisini dışarı atardı (M21 review 4). */}
+                    {!self && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        data-user-toggle={user.id}
+                        disabled={busy}
+                        onClick={() =>
+                          update(
+                            user,
+                            { active: !user.active },
+                            user.active
+                              ? `“${user.username}” pasifleştirildi; oturumu kapandı.`
+                              : `“${user.username}” etkinleştirildi.`,
+                          )
+                        }
+                      >
+                        {user.active ? "Pasifleştir" : "Etkinleştir"}
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="btn btn-ghost"
