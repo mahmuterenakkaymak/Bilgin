@@ -67,14 +67,17 @@ def ask_payload(
     bırakır, payload ve günlük satırı ``conversation_id`` ile ``turn``i taşır; bekleyen bir
     netleştirmenin aynı sorusuna verilen ``choice`` o turu tamamlar, üstüne yeni tur açmaz.
     Yalnızca sunumu değiştiren bir soru (``refine.chart_only``, R7-10) modeli hiç koşurmaz: son
-    yanıtlanmış turun SQL'i aynıyla yeniden yürür, cümlesi koddan kurulur.
+    yanıtlanmış turun SQL'i aynıyla yeniden yürür, cümlesi koddan kurulur. Tekil bir işaretle
+    birden çok değerli bir kolona işaret eden soru (``refine.ambiguous_entity``, R7-12) da modeli
+    beklemez: şıkları konuşmanın kendi satırlarından kurulur ve bekleyen tur olarak yazılır;
+    seçilen şık o turun cevabını tamamlar ve bağlam notunun varlığı olur.
     """
     audit_id = asklog.new_audit_id()
     notes: list[str] = []
     started = time.perf_counter()
     payload = _skeleton(question, choice, mode or "auto", session, audit_id, notes)
     asked = follow_up_text(question, choice) if choice else question
-    conversation_id, pending, turns = _thread(
+    conversation_id, pending, turns, clarification = _thread(
         conversations, conversation_id, username, question, choice, payload["dataset"]
     )
     if conversation_id is not None:
@@ -82,16 +85,21 @@ def ask_payload(
         payload.update(conversation_id=conversation_id, turn=None, context=None)
     dropped = None
     wish = refine.chart_only(asked, turns)
+    entity = _chosen(clarification, choice)
+    ambiguous = None if choice or wish is not None else refine.ambiguous_entity(asked, turns, session.schema)
     try:
         resolved, _ = session.resolve_mode(payload["mode"], notes)
         payload["mode"] = resolved
         if wish is not None:
             # R7-10: soru yalnızca sunumu değiştiriyor - model hiç koşmaz, sayı riski doğmaz.
             _chart_only(session, asked, wish, turns, _audit_source(source, username, audit_id), payload)
+        elif ambiguous is not None:
+            # R7-12: hangisini kastettiğini yalnız kullanıcı bilir - uydurmayı model değil soru çözer.
+            _clarify(payload, ambiguous)
         else:
             dropped = _run(
                 session, asked, resolved, _audit_source(source, username, audit_id), payload,
-                clarify=not choice, history=turns,
+                clarify=not choice, history=turns, entity=entity,
             )
     except INDEX_ERRORS as exc:
         _fail(payload, "index", str(exc))
@@ -103,26 +111,46 @@ def ask_payload(
 
 
 def _thread(conversations, conversation_id, username, question, choice, dataset) -> tuple:
-    """Konuşmanın hali: (kimlik, tamamlanacak bekleyen turun numarası, miras alınan turlar).
+    """Konuşmanın hali: (kimlik, tamamlanacak bekleyen turun numarası, miras alınan turlar, bekleyen şıklar).
 
-    Depo yoksa üçü de None'dır ve koşum Run 6'dır. Sahiplik elle karşılaştırılır: tek
+    Depo yoksa dördü de None'dır ve koşum Run 6'dır. Sahiplik elle karşılaştırılır: tek
     kullanıcılı modda konuşmanın sahibi NULL, ``get``in ``username`` süzgeci ise ``username = ?``
     demek - NULL hiçbir şeyle eşitleşmediği için o süzgeç tek kullanıcılı modu hiç bulamazdı.
+    Bekleyen şıklar R7-12de kurulan netleştirmenin kolonunu da taşır; seçimin hangi varlık olduğunu
+    oradan okumak için tur olduğu gibi geri verilir.
     """
     if conversations is None:
-        return None, None, None
+        return None, None, None, None
     if conversation_id is None:
-        return conversations.create(username=username, dataset=dataset, title=question), None, []
+        created = conversations.create(username=username, dataset=dataset, title=question)
+        return created, None, [], None
     found = conversations.get(conversation_id, dataset=dataset)
     if found is None or found["conversation"]["username"] != username:
         raise ConversationNotFound()
     last = found["turns"][-1] if found["turns"] else None
-    pending = (
-        last["n"]
-        if choice and last and last["status"] == "needs_clarification" and last["question"] == question
-        else None
+    waiting = bool(
+        choice and last and last["status"] == "needs_clarification" and last["question"] == question
     )
-    return conversation_id, pending, conversations.last_turns(conversation_id, config.CONV_TURNS)
+    return (
+        conversation_id,
+        last["n"] if waiting else None,
+        conversations.last_turns(conversation_id, config.CONV_TURNS),
+        (last.get("summary") or {}).get("clarification") if waiting else None,
+    )
+
+
+def _chosen(clarification: dict | None, choice) -> dict | None:
+    """Seçilen şıkkın varlığı (R7-12): bekleyen netleştirme bir varlık sorusuyduysa kolon ve değer geri okunur.
+
+    Modelin kendi netleştirmesinin (R5-10) kolonu yoktur, o yüzden oradan hiçbir şey çıkmaz.
+    Şıkkın biçimi R7-12de sabittir - ``"<değer> (ad)"`` - yani değer ilk " ("e kadardır; yanlış
+    okunan bir değer zaten ``validate_note``ın kanıt kapısından geçemez, ekrana kanıt olamaz.
+    """
+    if not clarification or not clarification.get("column"):
+        return None
+    if choice not in (clarification.get("options") or []):
+        return None
+    return {"column": clarification["column"], "value": str(choice).split(" (", 1)[0]}
 
 
 def _audit_source(source: str, username: str | None, audit_id: str) -> str:
@@ -162,12 +190,15 @@ def _skeleton(question: str, choice, mode: str, session, audit_id: str, notes: l
 
 
 def _run(
-    session, question: str, mode: str, source: str, payload: dict, clarify: bool = True, history=None
+    session, question: str, mode: str, source: str, payload: dict, clarify: bool = True,
+    history=None, entity: dict | None = None,
 ) -> str | None:
     """Ajanın koşusu, gönderilen SQL'in arayüz bütçesiyle ikinci yürüyüşü ve cevabın doldurulması.
 
     ``history`` konuşmanın miras alınan turlarıdır (R7-4); None Run 6'dır. Dönüş değeri düşürülen
-    bağlam notunun gerekçesidir (R7-5), not düştüyse günlük satırı onu taşır.
+    bağlam notunun gerekçesidir (R7-5), not düştüyse günlük satırı onu taşır. ``entity`` kullanıcının
+    şıkkıyla seçtiği varlıktır (R7-12): notu modelin değil kodun kurduğu nottur, aynı konudaki
+    model notu fazlalık kalır.
     """
     run = run_agent(
         question,
@@ -193,9 +224,24 @@ def _run(
         _fail(payload, run.status, run.stop_reason)
         return None
 
-    dropped = _note(session, payload, run.context_note, history)
+    note = _entity_note(history, entity) if entity is not None else run.context_note
+    dropped = _note(session, payload, note, history)
     _answer(session, question, run.submitted_sql or "", source, payload)
     return dropped
+
+
+def _entity_note(turns, entity: dict) -> dict:
+    """Seçilen varlığın bağlam notu: işaret edilen son yanıtlanmış turun üstüne kurulur (R7-12).
+
+    Not ``validate_note``ın kanıt kapısından da geçer, yani şıkkın değeri o turun satırlarında
+    gerçekten duruyorsa ekrana kanıt olur; şık sonradan anlamsızlaştıysa not düşer, cevap durur.
+    """
+    turn = _refined(turns) if turns else None
+    return {
+        "uses_turns": [turn["n"]] if turn else [],
+        "entities": [entity],
+        "refines_sql_of": None,
+    }
 
 
 def _chart_only(session, question: str, wish: str, turns, source: str, payload: dict) -> None:
@@ -220,7 +266,7 @@ def _chart_only(session, question: str, wish: str, turns, source: str, payload: 
 
 
 def _refined(turns) -> dict:
-    """Sunumu değiştirilen tur: ``chart_only``ın kabul ettiği son yanıtlanmış tur."""
+    """Son yanıtlanmış tur: sunumu değiştirilen (R7-10) ya da varlığı seçilen (R7-12) tur."""
     return next(turn for turn in reversed(turns) if turn.get("sql"))
 
 
