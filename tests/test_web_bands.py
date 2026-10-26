@@ -135,3 +135,75 @@ def test_the_accent_stays_clear_of_the_text():
         assert left > width, (
             f"{selector}: padding-left {left}px, {width}px vurgunun altında kalıyor"
         )
+
+
+# M20 görsel inceleme 7'nin gördüğü bantlar: cümlesini kullanıcıya söyleyenler.
+BANDS = {
+    ".warnings",
+    ".rules-readonly",
+    ".login-note",
+    ".login-error",
+    ".route-note",
+    ".users-error",
+    ".map-error",
+    ".map-errors-wrap",
+    ".rule-errors",
+}
+
+
+def selector_classes(selector: str) -> set[str]:
+    """Kuralın seçiciler listesindeki sınıf adları: ``.gate > .login-error, .route-note``."""
+    return {
+        token for part in selector.split(",") for token in part.split() if token.startswith(".")
+    }
+
+
+def effective_decls(name: str) -> dict[str, str]:
+    """Bir bandın CSS'teki son hâli: onu listeleyen her kuralın bildirimleri sırayla üstüne
+    biner — şekli taşıyan ortak kural ile rengini taşıyan kendi kuralı birlikte okunur."""
+    decls: dict[str, str] = {}
+    for selector, rule in RULES:
+        if name in selector_classes(selector):
+            decls.update(rule)
+    return decls
+
+
+def corner(value: str) -> float:
+    """Köşe yarıçapı: ``0`` birimsiz de yazılıyor, ``px`` ondan önce ``0px`` istiyor."""
+    return px("0px" if value.strip() == "0" else value)
+
+
+def left_corner_radii(decls: dict[str, str]) -> tuple[float, float]:
+    """Kalın sol kenarlığın bastığı iki köşe: ``border-radius`` kısayolunun ilk ve son yanı
+    (dikey bileşen eğriyi değiştirmez); uzun biçimler tek başına da yazılabiliyor."""
+    raw = decls.get("border-radius")
+    if raw is None:
+        return (
+            corner(decls.get("border-top-left-radius", "0")),
+            corner(decls.get("border-bottom-left-radius", "0")),
+        )
+    parts = split_value(raw.split("/")[0])
+    assert parts, "border-radius boş yazılmış"
+    return corner(parts[0]), corner(parts[{1: 0, 2: 1, 3: 1, 4: 3}[len(parts)]])
+
+
+def test_the_accent_never_bends_around_a_corner():
+    """Kalın sol kenarlık yuvarlak köşeden inemez: tarayıcı 4px'lik vurguyu köşenin eğrisine
+    oturtunca bant, ilk harfin önüne düşen bir ``(``e dönüşüyor — dört yanı saran çizgi
+    (T268'in istediği) eğriyi taşımıyordu, ``login-deeplink-login-error-390.png`` ve
+    ``user-readonly-rules-rules-as-user-1366.png`` o yüzden hâlâ parantezliydi. Vurgu
+    köşeden çıkmak zorunda: kalın solun bastığı iki köşe kare kalır, ya da vurgu
+    kenarlık olmaktan çıkar."""
+    for name in sorted(BANDS):
+        decls = effective_decls(name)
+        assert decls, f"{name}: {STYLES.name} içinde kuralı yok"
+        width = accent_width(decls)
+        # ASSUMPTION: vurgu kenarlıktan çıkmışsa (iç gölge) köşe eğrisinin zararı kalmıyor;
+        # bu kural o durumda bakacak bir şey aramıyor.
+        if width is None or width <= 1.0:
+            continue
+        top, bottom = left_corner_radii(decls)
+        assert top == 0.0 and bottom == 0.0, (
+            f"{name}: {width}px sol vurgu yuvarlak köşeye değiyor (üst {top}px, alt "
+            f"{bottom}px) — köşeyi dolanıp ilk harfin önüne \"(\" gibi düşüyor"
+        )

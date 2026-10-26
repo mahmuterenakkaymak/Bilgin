@@ -644,6 +644,27 @@ main {
   line-height: 1.5;
 }
 
+/* Bantların ortak köşe şekli (M20 görsel inceleme 7): 4px'lik sol vurgu yuvarlak köşeyi
+   dolanınca ilk harfin önüne "(" gibi düşüyor — kalın solun bastığı iki köşe kare, kartın
+   sağı yumuşak kalır. Rengi ve iç boşluğu her bant kendi kuralında tutuyor. */
+.warnings,
+.rules-banner,
+.rules-readonly,
+.rule-errors,
+.users-error,
+.users-band,
+.map-note,
+.map-errors-wrap,
+.map-error,
+.map-done,
+.dataset-error,
+.dataset-notice,
+.login-note,
+.login-error,
+.route-note {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
 .warnings {
   display: grid;
   gap: calc(var(--space) * 0.5);
@@ -651,7 +672,6 @@ main {
   padding: calc(var(--space) * 1.25) calc(var(--space) * 1.5);
   border: 1px solid var(--warn-line);
   border-left-width: 4px;
-  border-radius: var(--radius);
   background: var(--warn-bg);
   color: var(--warn-text);
 }
@@ -1329,7 +1349,6 @@ main {
   padding: calc(var(--space) * 1.25) calc(var(--space) * 1.5);
   border: 1px solid var(--warn-line);
   border-left-width: 4px;
-  border-radius: var(--radius);
   background: var(--warn-bg);
   color: var(--warn-text);
 }
@@ -1357,7 +1376,6 @@ main {
   padding: calc(var(--space) * 1.25) calc(var(--space) * 1.5);
   border: 1px solid var(--line);
   border-left: 4px solid var(--muted);
-  border-radius: var(--radius);
   background: var(--surface);
   color: var(--muted);
   font-size: 15px;
@@ -1457,7 +1475,6 @@ main {
   padding: calc(var(--space) * 1.25) calc(var(--space) * 1.5);
   border: 1px solid var(--err-text);
   border-left-width: 4px;
-  border-radius: var(--radius);
   background: var(--err-bg);
   color: var(--err-text);
 }
@@ -1585,7 +1602,6 @@ main {
   padding: calc(var(--space) * 0.75) var(--space);
   border: 1px solid var(--err-text);
   border-left-width: 4px;
-  border-radius: var(--radius);
   background: var(--err-bg);
   color: var(--err-text);
   font-size: 14px;
@@ -1598,7 +1614,6 @@ main {
   padding: calc(var(--space) * 0.75) var(--space);
   border: 1px solid var(--line);
   border-left: 4px solid var(--muted);
-  border-radius: var(--radius);
   background: var(--bg);
   font-size: 14px;
   font-weight: 600;
@@ -1809,7 +1824,6 @@ main {
   padding: calc(var(--space) * 0.75) var(--space);
   border: 1px solid var(--warn-line);
   border-left-width: 4px;
-  border-radius: var(--radius);
   background: var(--warn-bg);
   color: var(--warn-text);
   font-size: 13px;
@@ -1876,7 +1890,6 @@ main {
   padding: calc(var(--space) * 0.75) var(--space);
   border: 1px solid var(--err-text);
   border-left-width: 4px;
-  border-radius: var(--radius);
   background: var(--err-bg);
 }
 
@@ -1995,7 +2008,6 @@ main {
   padding: calc(var(--space) * 0.75) var(--space);
   border: 1px solid var(--err-text);
   border-left-width: 4px;
-  border-radius: var(--radius);
   background: var(--err-bg);
   color: var(--err-text);
   font-size: 14px;
@@ -2006,7 +2018,6 @@ main {
   padding: calc(var(--space) * 0.75) var(--space);
   border: 1px solid var(--ok);
   border-left-width: 4px;
-  border-radius: var(--radius);
   background: var(--bg);
   color: var(--ok);
   font-size: 14px;
@@ -2029,7 +2040,6 @@ main {
   padding: calc(var(--space) * 0.75) var(--space);
   border: 1px solid var(--err-text);
   border-left-width: 4px;
-  border-radius: var(--radius);
   background: var(--err-bg);
   color: var(--err-text);
   font-size: 14px;
@@ -2042,7 +2052,6 @@ main {
   padding: calc(var(--space) * 0.75) var(--space);
   border: 1px solid var(--warn-line);
   border-left-width: 4px;
-  border-radius: var(--radius);
   background: var(--warn-bg);
   color: var(--warn-text);
   font-size: 13px;
@@ -2171,7 +2180,6 @@ main {
 .route-note {
   margin: 0;
   padding: calc(var(--space) * 0.75) var(--space);
-  border-radius: var(--radius);
   border: 1px solid var(--warn-line);
   border-left-width: 4px;
   background: var(--warn-bg);
