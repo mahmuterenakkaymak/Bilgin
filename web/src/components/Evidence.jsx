@@ -34,7 +34,12 @@ function summaryTail(stepCount, tables) {
 const TOOL_LIST = /\s*Kullan\p{L}*:\s*[^.]*\./u;
 
 function stepSummary(summary) {
-  return String(summary ?? "").replace(TOOL_LIST, "");
+  const text = String(summary ?? "").replace(TOOL_LIST, "");
+  // run_sql/submit_sql satırların tamamını bir sonraki turundaki modele anlatır; kart tabloyu zaten
+  // gösterdiği için panelde yalnız kaç satır döndüğü okunur. " | " yalnız bu dökümün hücre ayracıdır.
+  if (!text.includes(" | ")) return text;
+  const rows = text.split("\n").filter((line) => line.includes(" | ")).length;
+  return `${rows} satır döndü`;
 }
 
 // Süreler koşmayan aşamaları hiç yazmaz: 0, "koşmadı" demektir. Saniyenin tek ondalık basamağı
@@ -59,7 +64,6 @@ export default function Evidence({ payload }) {
   // yanıt (failed, needs_clarification, alanı olmayan) adımların işaretini olduğu gibi bırakır.
   const succeeded = payload?.status === "answered";
   const timings = timingsText(payload?.timings);
-  const facts = (Array.isArray(payload?.facts) ? payload.facts : []).filter((fact) => fact?.label);
   const steps = (Array.isArray(payload?.steps) ? payload.steps : []).filter(
     (step) => step && (step.tool || step.summary),
   );
@@ -130,16 +134,6 @@ export default function Evidence({ payload }) {
             <dd className="audit-id">{formatCell(payload?.audit_id)}</dd>
           </div>
         </dl>
-        {facts.length > 0 && (
-          <ul className="facts">
-            {facts.map((fact, index) => (
-              <li key={`${index}-${fact.name ?? ""}`}>
-                <span className="fact-label">{fact.label}</span>
-                <span className="fact-value">{fact.display || formatCell(fact.value)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
         {steps.length > 0 && (
           <ol className="steps">
             {steps.map((step, index) => {
