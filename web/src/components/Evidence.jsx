@@ -11,9 +11,22 @@ const TIMINGS = [
   { key: "total_s", label: "toplam", unit: "s" },
 ];
 
+function names(items) {
+  return (Array.isArray(items) ? items : []).map((item) => String(item ?? "").trim()).filter(Boolean);
+}
+
 function join(items) {
-  const values = (Array.isArray(items) ? items : []).map((item) => String(item ?? "").trim()).filter(Boolean);
+  const values = names(items);
   return values.length ? values.join(", ") : "–";
+}
+
+// Kapalı özet, panelde ne olduğunu baştan söyler: kaç araç adımı koştuğu ve sorgunun dokunduğu
+// tablolar. İkisi de yoksa — henüz koşmamış bir yanıtta — özet başlığın kendisi olarak kalır.
+function summaryTail(stepCount, tables) {
+  const parts = [];
+  if (stepCount > 0) parts.push(`${stepCount} adım`);
+  if (tables.length > 0) parts.push(tables.join(", "));
+  return parts.join(" · ");
 }
 
 // Süreler koşmayan aşamaları hiç yazmaz: 0, "koşmadı" demektir. Saniyenin tek ondalık basamağı
@@ -40,6 +53,7 @@ export default function Evidence({ payload }) {
     (step) => step && (step.tool || step.summary),
   );
   const notes = (Array.isArray(payload?.notes) ? payload.notes : []).filter((note) => String(note ?? "").trim());
+  const tail = summaryTail(steps.length, names(payload?.tables_used));
 
   const copy = async () => {
     try {
@@ -61,9 +75,12 @@ export default function Evidence({ payload }) {
         onClick={() => setOpen((value) => !value)}
       >
         <span className="evidence-caret" aria-hidden="true">
-          {open ? "▾" : "▸"}
+          ▸
         </span>
-        Nasıl hesapladım
+        <span>
+          Nasıl hesapladım
+          {tail && <span className="evidence-tail">{` · ${tail}`}</span>}
+        </span>
       </button>
       <div id="evidence" className="evidence-body" hidden={!open}>
         <div className="evidence-sql">

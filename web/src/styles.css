@@ -952,6 +952,17 @@ main {
 
 .evidence-caret {
   font-size: 12px;
+  transition: transform 160ms ease;
+}
+
+/* Ok tek glif; açılışını kendi hareketiyle söyler — kapalıyken sağa, açıkken aşağı bakar. */
+.evidence-toggle[aria-expanded="true"] .evidence-caret {
+  transform: rotate(90deg);
+}
+
+.evidence-tail {
+  color: var(--muted);
+  font-weight: 400;
 }
 
 .evidence-body {

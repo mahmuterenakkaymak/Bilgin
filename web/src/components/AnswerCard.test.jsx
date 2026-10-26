@@ -306,6 +306,23 @@ describe("Evidence", () => {
     expect(html).not.toContain("undefined");
     expect(html).not.toContain("NaN");
   });
+
+  it("kapalı özet panelde ne olduğunu söy: adım sayısı ve kullanılan tablolar", () => {
+    const html = render(<Evidence payload={masked} />);
+    const toggle = html.slice(html.indexOf('id="evidence-toggle"'), html.indexOf('id="evidence"'));
+    expect(toggle).toContain("Nasıl hesapladım");
+    expect(toggle).toContain('class="evidence-tail"');
+    expect(toggle).toContain("4 adım · TBLPERSONEL");
+    expect(render(<Evidence payload={answered} />)).toContain("3 adım · TBLSTHAR, TBLSTSABIT");
+  });
+
+  it("kanıtı olmayan yanıtta özet başlığın kendisi olarak kalır", () => {
+    for (const payload of [{}, { steps: [], tables_used: [] }]) {
+      const html = render(<Evidence payload={payload} />);
+      expect(html).toContain("<span>Nasıl hesapladım</span></button>");
+      expect(html).not.toContain("evidence-tail");
+    }
+  });
 });
 
 describe("durum örnekleri", () => {
