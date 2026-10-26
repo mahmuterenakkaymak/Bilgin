@@ -101,7 +101,10 @@ def create_router() -> APIRouter:
         if not _is_xlsx(data):
             raise HTTPException(status_code=422, detail=NOT_XLSX)
         read = _read_upload(data, request)
-        errors, warnings, db_check = template_import.validate(read)
+        skeleton, note = _live_skeleton(read)
+        errors, warnings, db_check = template_import.validate(read, skeleton)
+        if note:
+            db_check = {**db_check, "message": note}
         result = {
             "dataset": read["dataset"],
             "counts": read["counts"],
@@ -147,6 +150,20 @@ def create_router() -> APIRouter:
 def _db_connection() -> bool:
     """Canlı bir SQL Server yoklanabilir mi: ölçülen sunucu o ve bir bağlantı dizesi var."""
     return config.backend() == "mssql" and bool(os.environ.get(CONN_ENV, "").strip())
+
+
+def _live_skeleton(read: dict) -> tuple[dict | None, str | None]:
+    """Canlı iskelet, ya da sorulmadıysa tek cümlesi (R6-15, R6-16).
+
+    Yoklama yalnız sunucu yoklanabilir *ve* küme SQL Server diyorsa yapılır; tutmazsa
+    karşılaştırma sorulmamış sayılır - cümle hataya dönüşmez ve sunucu bir daha yoklanmaz.
+    """
+    if not (_db_connection() and read["dataset"].get("connection") == "mssql"):
+        return None, None
+    try:
+        return introspect.mssql_skeleton(), None
+    except introspect.IntrospectError as exc:
+        return None, str(exc)
 
 
 def _decode(content_b64: str) -> bytes:
