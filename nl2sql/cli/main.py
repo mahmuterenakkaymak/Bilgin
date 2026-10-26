@@ -213,6 +213,8 @@ CLARIFY_HEAD = "Netleştirme: {question}"
 CLARIFY_OPTION = "  {n}. {option}"
 CLARIFY_HINT = 'Seçmek için: ask "{question}" --choice "{option}"'
 CHOICE_LINE = "Seçilen anlam: {option}"
+# R7-9: ``--new``/``--conversation`` ekranın son satırı: hangi konuşmanın kaçıncı turu olduğu.
+CONV_LINE = "Konuşma: {id} · tur {n}"
 
 # R3-5: eval hangi şema dosyasıyla ölçtüğünü canlı satırlardan önce söyler (imzanın başı, yani iki
 # koşunun aynı şemayı ölçüp ölçmediği ekrandan okunur); merge-map birleşik şemanın nereye yazıldığını.
@@ -415,6 +417,8 @@ def ask(
     budget: int | None = None,
     profile: ModelProfile | None = None,
     choice: str | None = None,
+    conversations=None,
+    conversation_id: str | None = None,
 ) -> int:
     """Bir soru: modunu söyle, adımları işaretle ve gecikmesiyle dök, gönderilen SQL'i, tabloyu,
     uyarıları ve tek cümlelik cevabı göster.
@@ -444,6 +448,11 @@ def ask(
     İlk soru netleştirme sorabilir (R5-10): ekran soruyu ve şıklarını yazar ve kod 0 ile çıkar —
     cevap gelmedi, ama bir hata da olmadı. ``choice`` o şıklardan biridir (R5-11): soru seçilen
     anlamla koşar ve o tur yeniden sormaz.
+
+    ``conversations`` verildiğinde (R7-9) çağrı bir konuşmanın turudur: ``conversation_id`` yoksa
+    konuşma yeni açılır, varsa yüklenir (bulunamazsa ``ConversationNotFound``) ve son turlar
+    döngüye history olarak girer; tur konuşmaya yazılır ve ekranın son satırı ``Konuşma: <id> ·
+    tur <n>`` olur. Verilmediğinde koşum Run 1'in halidir, uygulamaya hiçbir şey yazılmaz.
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
@@ -483,6 +492,14 @@ def ask(
         context = _context(mode, executor, schema, rules, index_dir, ds, clarify=not choice)
     except (MissingIndexError, StaleIndexError) as exc:
         return _index_failed(str(exc))
+    # R7-9: ``--new``/``--conversation`` konuşmayı açar ya da yükler; miras turlar döngüye history
+    # olarak girer. Depo yoksa (düz ask) history None kalır, koşum Run 1'in halidir.
+    pending = None
+    history = None
+    if conversations is not None:
+        conversation_id, pending, history = _conversation_thread(
+            conversations, conversation_id, question, choice, ds.name if ds else None
+        )
     # Bütçe yalnız verildiğinde geçirilir (R4-11: ``budget=None`` = Run 3'ün koşumu olduğu gibi).
     asked = follow_up_text(question, choice) if choice else question
     # ASSUMPTION: ekran ``ask``ı ask_payload'dan geçmez - soru günlüğü satırı da audit_id'si de yoktur, yani
@@ -495,7 +512,7 @@ def ask(
         AUDIT_SOURCE,
         mode=mode,
         context=context,
-        **_given(budget=budget),
+        **_given(budget=budget, history=history),
     )
 
     if estimate is None:
@@ -520,10 +537,22 @@ def ask(
         for line in _clarify_lines(question, run.clarification):
             print(line)
         _cost(run)
+        if conversations is not None:
+            _conversation_line(
+                conversations, conversation_id, pending, question=question, choice=choice,
+                status="needs_clarification", sql=None, columns=[], rows=[], facts=[],
+                answer_text="", clarification=run.clarification,
+            )
         return 0
     if not run.submitted_sql:
         print(NO_ANSWER.format(run.stop_reason or "submit_sql hiç çağrılmadı."))
         _cost(run)
+        if conversations is not None:
+            _conversation_line(
+                conversations, conversation_id, pending, question=question, choice=choice,
+                status="failed", sql=None, columns=[], rows=[], facts=[], answer_text="",
+                clarification=None,
+            )
         return 1
 
     print("Cevap SQL:")
@@ -540,7 +569,80 @@ def ask(
     print(f"\n{ANSWER.format(text=sentence)}")
     print()
     _cost(run)
+    if conversations is not None:
+        _conversation_line(
+            conversations, conversation_id, pending, question=question, choice=choice,
+            status="answered", sql=run.submitted_sql, columns=result.columns, rows=result.rows,
+            facts=[fact.to_dict() for fact in facts], answer_text=sentence, clarification=None,
+        )
     return 0
+
+
+def _conversation(args) -> tuple:
+    """``--new``/``--conversation``: konuşma deposu ve kimliği; ikisi de yoksa ``(None, None)`` = düz ask.
+
+    Depo yalnız bayraklardan biri verildiğinde açılır, yani düz ``ask`` uygulamanın veritabanına
+    konuşma tablosunu bile yazmaz (R7-9).
+    """
+    if not (args.new or args.conversation):
+        return None, None
+    from nl2sql.app.conversations import ConversationStore
+
+    return ConversationStore(config.app_db_path()), args.conversation
+
+
+def _conversation_thread(conversations, conversation_id, question, choice, dataset) -> tuple:
+    """Ekran için konuşmanın hali (R7-9): ``(kimlik, tamamlanacak bekleyen tur, miras turlar)``.
+
+    ``conversation_id`` yoksa konuşma yeni açılır; varsa yüklenir ve bulunamazsa
+    ``ConversationNotFound``dır - CLI'nin kod 2'si oradan okunur. Sahiplik sorulmaz: ekran tek
+    kullanıcılıdır, konuşmanın sahibi NULL kalır.
+    """
+    from nl2sql.app.conversations import ConversationNotFound
+
+    if conversation_id is None:
+        return conversations.create(dataset=dataset, title=question), None, None
+    found = conversations.get(conversation_id, dataset=dataset)
+    if found is None:
+        raise ConversationNotFound()
+    last = found["turns"][-1] if found["turns"] else None
+    pending = (
+        last["n"]
+        if choice and last and last["status"] == "needs_clarification" and last["question"] == question
+        else None
+    )
+    return conversation_id, pending, conversations.last_turns(conversation_id, config.CONV_TURNS)
+
+
+def _conversation_turn(conversations, conversation_id, pending, **turn) -> int:
+    """Ekran turunun konuşmaya yazılışı (R7-9): bekleyen netleştirme varsa üstüne, yoksa yeni tur."""
+    from nl2sql.agent.context import turn_summary
+
+    row = {
+        "question": turn["question"],
+        "choice": turn["choice"],
+        "status": turn["status"],
+        "sql": turn["sql"] or None,
+        "columns": turn["columns"],
+        "summary": turn_summary(
+            {
+                "columns": turn["columns"],
+                "rows": turn["rows"],
+                "facts": turn["facts"],
+                "clarification": turn["clarification"],
+            }
+        ),
+        "answer_text": turn["answer_text"],
+        "audit_id": None,
+    }
+    n = conversations.complete_turn(conversation_id, pending, row) if pending is not None else None
+    return n if n is not None else conversations.add_turn(conversation_id, row)
+
+
+def _conversation_line(conversations, conversation_id, pending, **turn) -> None:
+    """Turu konuşmaya yazar ve son satırı basar: ``Konuşma: <id> · tur <n>`` (R7-9)."""
+    n = _conversation_turn(conversations, conversation_id, pending, **turn)
+    print(CONV_LINE.format(id=conversation_id, n=n))
 
 
 def evaluate(
@@ -1540,6 +1642,17 @@ def main(argv: list[str] | None = None) -> int:
         metavar="SEÇENEK",
         help="netleştirme şıkkı: soruyu seçilen anlamıyla koşar, yeniden sormaz",
     )
+    conversation = ask_cmd.add_mutually_exclusive_group()
+    conversation.add_argument(
+        "--conversation",
+        metavar="ID",
+        help="soruyu bu konuşmanın devamı olarak sor (önceki turlar bağlama girer)",
+    )
+    conversation.add_argument(
+        "--new",
+        action="store_true",
+        help="yeni bir konuşma aç ve kimliğini son satırda söyle",
+    )
     _add_model_options(ask_cmd)
     _add_dataset_option(ask_cmd)
 
@@ -1682,8 +1795,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "make-login-script":
         return make_login_script(login=args.login, **_given(dataset=args.dataset))
     if args.command == "ask":
+        from nl2sql.app.conversations import ConversationNotFound
+
         if args.json:
-            return _ask_json(args)
+            try:
+                return _ask_json(args)
+            except ConversationNotFound as exc:
+                print(exc)
+                return EXIT_BAD_INPUT
         ds, code = _dataset(args.dataset)
         if code:
             return code
@@ -1702,12 +1821,15 @@ def main(argv: list[str] | None = None) -> int:
                 mode, estimate = resolve_auto(
                     *_auto_inputs(ds), max_tokens=_auto_limit(profile)
                 )
+            store, conversation_id = _conversation(args)
             return ask(
                 question=args.question,
                 llm=make_client(args.llm, mode, ds, profile),
                 mode=mode,
                 estimate=estimate,
                 dataset_line=False,
+                conversations=store,
+                conversation_id=conversation_id,
                 **_given(dataset=args.dataset, profile=profile, choice=args.choice),
             )
         except ForeignIndexError as exc:
@@ -1716,6 +1838,11 @@ def main(argv: list[str] | None = None) -> int:
         except LLMError as exc:
             # R4-10: profilin gösterdiği anahtar değişkeni tanımsıysa koşacak bir uç nokta yoktur;
             # düzeltmesi kullanıcının elinde olduğu için iz dökümü değil tek satır ve kod 2.
+            print(exc)
+            return EXIT_BAD_INPUT
+        except ConversationNotFound as exc:
+            # R7-9: --conversation bilinmeyen bir kimlik söylüyorsa düzeltmesi kullanıcının elinde:
+            # konuşma yok, başkasının ya da başka bir kümede - tek cümle ve kod 2.
             print(exc)
             return EXIT_BAD_INPUT
     if args.command == "serve":
@@ -1823,6 +1950,8 @@ def _ask_json(args) -> int:
         print(exc)
         return exc.exit_code
     # R6-9: makinedeki oturumun sahibi soruyu sorandır; adı hem günlüğe hem denetim satırlarına karışır.
+    # R7-9: ``--new``/``--conversation`` verilmişse payload bir konuşmanın turudur (conversation_id/turn/context).
+    store, conversation_id = _conversation(args)
     payload = ask_payload(
         session,
         args.question,
@@ -1830,6 +1959,8 @@ def _ask_json(args) -> int:
         choice=args.choice,
         source=JSON_SOURCE,
         username=getpass.getuser(),
+        conversations=store,
+        conversation_id=conversation_id,
     )
     # SQL Server returns DECIMAL/MONEY as Decimal and dates as date objects (SQLite never did); the API
     # side gets the same conversion from FastAPI's encoder.
