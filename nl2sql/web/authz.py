@@ -73,6 +73,12 @@ ROUTE_ROLES: dict[tuple[str, str], str] = {
     # R7-20: öneri işini başlatan da yoklayan da yönetici - aday satırlar onaylanmadan kimse görmez.
     ("POST", "/api/ready-questions/suggest"): "admin",
     ("GET", "/api/ready-questions/suggest/{job_id}"): "admin",
+    # R7-22..R7-24: bağlantı yazmak, kümenin hangi veritabanına baktığını yazmaktır - sırrın
+    # içeri girdiği tek yollar bunlardır, o yüzden dördü de yalnız yöneticiye açıktır.
+    ("GET", "/api/connections"): "admin",
+    ("GET", "/api/connections/{dataset}"): "admin",
+    ("PUT", "/api/connections/{dataset}"): "admin",
+    ("POST", "/api/connections/{dataset}/test"): "admin",
 }
 
 

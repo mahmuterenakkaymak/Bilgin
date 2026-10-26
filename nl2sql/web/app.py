@@ -39,6 +39,7 @@ from nl2sql.start.suggest import SuggestJobs
 from nl2sql.web.auth_api import create_router as create_auth_router
 from nl2sql.web.auth_api import create_users_router
 from nl2sql.web.authz import NO_SESSION, ROUTE_ROLES, current_user, require
+from nl2sql.web.connections_api import create_router as create_connections_router
 from nl2sql.web.conversations_api import NO_CONVERSATION
 from nl2sql.web.conversations_api import create_router as create_conversations_router
 from nl2sql.web.datasets_api import create_router as create_datasets_router
@@ -181,6 +182,7 @@ def create_app(
     app.include_router(create_users_router())
     app.include_router(create_conversations_router())
     app.include_router(create_datasets_router())
+    app.include_router(create_connections_router())
     app.include_router(create_map_router())
     app.include_router(create_start_router())
 
