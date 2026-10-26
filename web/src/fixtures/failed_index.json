@@ -19,9 +19,26 @@
   "mode": "rag",
   "dataset": "synthetic_erp",
   "model": "strata",
-  "timings": { "agent_s": 0.034, "execute_ms": 0.0, "narrate_s": 0.0, "total_s": 0.041 },
+  "timings": {
+    "agent_s": 0.034,
+    "execute_ms": 0.0,
+    "narrate_s": 0.0,
+    "total_s": 0.041
+  },
   "audit_id": "c04e8b217a5f",
   "clarification": null,
-  "error": { "kind": "index", "message": "İndeks eski: `python -m nl2sql build-index` çalıştırın." },
-  "steps": [{ "tool": "search_schema", "ok": false, "summary": "İndeks eski: `python -m nl2sql build-index` çalıştırın." }]
+  "error": {
+    "kind": "index",
+    "message": "İndeks eski: `python -m nl2sql build-index` çalıştırın."
+  },
+  "steps": [
+    {
+      "tool": "search_schema",
+      "ok": false,
+      "summary": "İndeks eski: `python -m nl2sql build-index` çalıştırın."
+    }
+  ],
+  "conversation_id": "3f2a9c0d1e4b4a7f8c6d5e2b1a0f9e8d",
+  "turn": 1,
+  "context": null
 }

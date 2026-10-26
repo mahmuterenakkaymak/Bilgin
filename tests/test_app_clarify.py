@@ -108,7 +108,9 @@ def test_an_ambiguous_question_comes_back_with_its_options(api):
     assert body["sql"] == "" and body["rows"] == [] and body["row_count"] == 0
     assert body["error"] is None and body["answer_text"] == "" and body["chart"] is None
     assert [step["tool"] for step in body["steps"]] == ["ask_clarification"]
-    assert sorted(body) == sorted(PAYLOAD_KEYS)
+    # The API payload is a conversation turn since Run 7 (PLAN R7-8): conversation_id, turn and context come on top
+    # of the AskPayload keys. Updated 2026-10-26 with Eren's approval.
+    assert sorted(body) == sorted(PAYLOAD_KEYS | {"conversation_id", "turn", "context"})
 
 
 def test_a_choice_answers_with_that_readings_rows(api, session):

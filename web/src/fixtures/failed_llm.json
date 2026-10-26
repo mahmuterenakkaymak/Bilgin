@@ -19,12 +19,20 @@
   "mode": "full_rules",
   "dataset": "synthetic_erp",
   "model": "strata",
-  "timings": { "agent_s": 0.412, "execute_ms": 0.0, "narrate_s": 0.0, "total_s": 0.418 },
+  "timings": {
+    "agent_s": 0.412,
+    "execute_ms": 0.0,
+    "narrate_s": 0.0,
+    "total_s": 0.418
+  },
   "audit_id": "9f3c1a7b2d64",
   "clarification": null,
   "error": {
     "kind": "llm_error",
     "message": "Model endpoint'ine ulaşılamadı: http://127.0.0.1:8080/v1. Strata'nın açık olup olmadığına bakın, gerekirse NL2SQL_LLM_BASE_URL ile doğru adresi verin."
   },
-  "steps": []
+  "steps": [],
+  "conversation_id": "3f2a9c0d1e4b4a7f8c6d5e2b1a0f9e8d",
+  "turn": 1,
+  "context": null
 }

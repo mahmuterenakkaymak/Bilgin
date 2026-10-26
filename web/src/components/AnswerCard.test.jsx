@@ -51,6 +51,10 @@ const PAYLOAD_KEYS = [
   "clarification",
   "error",
   "steps",
+  // Run 7 (PLAN R7-8): every API payload is a conversation turn. Updated 2026-10-26 with Eren's approval.
+  "conversation_id",
+  "turn",
+  "context",
 ];
 
 // report/chart.chart_spec'in çıktısı: işlevi olmayan düz ECharts JSON'u + `bilgin` ipucu (R5-6).

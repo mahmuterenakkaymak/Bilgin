@@ -171,7 +171,12 @@ def test_ask_json_payload_equals_the_api_payload(name, world, capsys):
 
     assert code == 0
     assert payload["status"] == "answered"
-    strip = lambda p: {k: v for k, v in p.items() if k not in ("audit_id", "timings")}
+    # Updated 2026-10-26 with Eren's approval: Run 7 (PLAN R7-8) adds conversation_id, turn and context to every API payload.
+    # The API always runs a conversation turn; a CLI ask without --conversation does not, so those three keys
+    # (like audit_id, per-call values) are compared apart: present on the API, never on the plain CLI ask.
+    conv = ("conversation_id", "turn", "context")
+    assert all(k in api for k in conv) and not any(k in payload for k in conv)
+    strip = lambda p: {k: v for k, v in p.items() if k not in ("audit_id", "timings", *conv)}
     assert strip(payload) == strip(api)
 
 

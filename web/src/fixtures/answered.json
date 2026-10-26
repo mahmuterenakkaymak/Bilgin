@@ -63,18 +63,45 @@
       "percent": true
     }
   ],
-  "columns": ["STOK_KODU", "STOK_ADI", "SATIS_MIKTARI"],
+  "columns": [
+    "STOK_KODU",
+    "STOK_ADI",
+    "SATIS_MIKTARI"
+  ],
   "rows": [
-    ["STK0012", "Siyah Çay 500 g", 2480],
-    ["STK0003", "Buğday Unu 500 g", 2140],
-    ["STK0007", "Zeytinyağı 1 L", 1725],
-    ["STK0021", "Toz Şeker 5 kg", 1460],
-    ["STK0005", "Bulgur Pilavlık 1 kg", 1105]
+    [
+      "STK0012",
+      "Siyah Çay 500 g",
+      2480
+    ],
+    [
+      "STK0003",
+      "Buğday Unu 500 g",
+      2140
+    ],
+    [
+      "STK0007",
+      "Zeytinyağı 1 L",
+      1725
+    ],
+    [
+      "STK0021",
+      "Toz Şeker 5 kg",
+      1460
+    ],
+    [
+      "STK0005",
+      "Bulgur Pilavlık 1 kg",
+      1105
+    ]
   ],
   "row_count": 5,
   "truncated": false,
   "sql": "SELECT s.STOK_KODU, t.STOK_ADI, SUM(s.STHAR_GCMIK) AS SATIS_MIKTARI FROM TBLSTHAR s JOIN TBLSTSABIT t ON t.STOK_KODU = s.STOK_KODU WHERE s.STHAR_HTUR = 'S' AND s.STHAR_TARIH >= '2026-09-01' AND s.STHAR_TARIH < '2026-10-01' GROUP BY s.STOK_KODU, t.STOK_ADI ORDER BY SATIS_MIKTARI DESC, s.STOK_KODU",
-  "tables_used": ["TBLSTHAR", "TBLSTSABIT"],
+  "tables_used": [
+    "TBLSTHAR",
+    "TBLSTSABIT"
+  ],
   "rules_used": [],
   "masked_columns": [],
   "warnings": [],
@@ -82,7 +109,12 @@
   "mode": "full_rules",
   "dataset": "synthetic_erp",
   "model": "strata",
-  "timings": { "agent_s": 6.412, "execute_ms": 12.5, "narrate_s": 1.884, "total_s": 8.31 },
+  "timings": {
+    "agent_s": 6.412,
+    "execute_ms": 12.5,
+    "narrate_s": 1.884,
+    "total_s": 8.31
+  },
   "audit_id": "4c1d9e07a5b2",
   "clarification": null,
   "error": null,
@@ -97,6 +129,13 @@
       "ok": true,
       "summary": "Kolonlar: STOK_KODU, STOK_ADI, SATIS_MIKTARI. 5 satır."
     },
-    { "tool": "submit_sql", "ok": true, "summary": "Sorgu kabul edildi." }
-  ]
+    {
+      "tool": "submit_sql",
+      "ok": true,
+      "summary": "Sorgu kabul edildi."
+    }
+  ],
+  "conversation_id": "3f2a9c0d1e4b4a7f8c6d5e2b1a0f9e8d",
+  "turn": 1,
+  "context": null
 }

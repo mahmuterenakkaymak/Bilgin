@@ -15,18 +15,40 @@
       "percent": false
     }
   ],
-  "columns": ["AD_SOYAD", "TELEFON", "IBAN"],
+  "columns": [
+    "AD_SOYAD",
+    "TELEFON",
+    "IBAN"
+  ],
   "rows": [
-    ["A.Y.", "*** ** 456", "TR** **** **** **** 9876"],
-    ["M.K.", "*** ** 118", "TR** **** **** **** 4412"],
-    ["S.D.", "*** ** 902", "TR** **** **** **** 7350"]
+    [
+      "A.Y.",
+      "*** ** 456",
+      "TR** **** **** **** 9876"
+    ],
+    [
+      "M.K.",
+      "*** ** 118",
+      "TR** **** **** **** 4412"
+    ],
+    [
+      "S.D.",
+      "*** ** 902",
+      "TR** **** **** **** 7350"
+    ]
   ],
   "row_count": 3,
   "truncated": false,
   "sql": "SELECT AD_SOYAD, TELEFON, IBAN FROM TBLPERSONEL WHERE DEPARTMAN_KODU = 'SAT' AND AKTIF = 'E'",
-  "tables_used": ["TBLPERSONEL"],
+  "tables_used": [
+    "TBLPERSONEL"
+  ],
   "rules_used": [],
-  "masked_columns": ["AD_SOYAD", "TELEFON", "IBAN"],
+  "masked_columns": [
+    "AD_SOYAD",
+    "TELEFON",
+    "IBAN"
+  ],
   "warnings": [
     {
       "code": "masked",
@@ -34,22 +56,44 @@
       "column": null
     }
   ],
-  "notes": ["İndeks yok/eski; full modda çalışılıyor."],
+  "notes": [
+    "İndeks yok/eski; full modda çalışılıyor."
+  ],
   "mode": "full",
   "dataset": "synthetic_erp",
   "model": "strata",
-  "timings": { "agent_s": 5.221, "execute_ms": 3.9, "narrate_s": 0.003, "total_s": 5.23 },
+  "timings": {
+    "agent_s": 5.221,
+    "execute_ms": 3.9,
+    "narrate_s": 0.003,
+    "total_s": 5.23
+  },
   "audit_id": "e8a4117b6f03",
   "clarification": null,
   "error": null,
   "steps": [
-    { "tool": "get_schema", "ok": true, "summary": "TBLPERSONEL: kolonlar ve kişisel veri işaretleri okundu." },
+    {
+      "tool": "get_schema",
+      "ok": true,
+      "summary": "TBLPERSONEL: kolonlar ve kişisel veri işaretleri okundu."
+    },
     {
       "tool": "run_sql",
       "ok": false,
       "summary": "Hata: Invalid column name 'UNVAN'. Doğru ad GOREV_UNVANI."
     },
-    { "tool": "run_sql", "ok": true, "summary": "Kolonlar: AD_SOYAD, TELEFON, IBAN. 3 satır." },
-    { "tool": "submit_sql", "ok": true, "summary": "Sorgu kabul edildi." }
-  ]
+    {
+      "tool": "run_sql",
+      "ok": true,
+      "summary": "Kolonlar: AD_SOYAD, TELEFON, IBAN. 3 satır."
+    },
+    {
+      "tool": "submit_sql",
+      "ok": true,
+      "summary": "Sorgu kabul edildi."
+    }
+  ],
+  "conversation_id": "3f2a9c0d1e4b4a7f8c6d5e2b1a0f9e8d",
+  "turn": 1,
+  "context": null
 }

@@ -116,7 +116,8 @@ def test_dataset_json_files_are_the_moved_files():
     files = dataset_doc()["files"]
     # "ambiguous" came with T187 (Run 5, R5-12): a new file, not a moved one, so it has no config constant.
     # Updated 2026-10-24 with Eren's approval.
-    assert set(files) - {"ambiguous"} == set(CONFIG_PATHS)
+    # followups came with Run 7 (R7-13), a new file like ambiguous. Updated 2026-10-26 with Eren's approval.
+    assert set(files) - {"ambiguous", "followups"} == set(CONFIG_PATHS)
     for name, path in CONFIG_PATHS.items():
         assert path == config.ROOT / DATASET_DIR / files[name], name
 

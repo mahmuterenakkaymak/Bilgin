@@ -176,6 +176,10 @@ describe("bozuk durum örnekleri", () => {
     "clarification",
     "error",
     "steps",
+    // Run 7 (PLAN R7-8): every API payload is a conversation turn. Updated 2026-10-26 with Eren's approval.
+    "conversation_id",
+    "turn",
+    "context",
   ];
 
   it("her durumda aynı AskPayload anahtar kümesi taşınır", () => {
