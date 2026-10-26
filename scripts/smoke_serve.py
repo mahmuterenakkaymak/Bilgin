@@ -31,6 +31,15 @@ model hiç koşurmamalı, ikinci turun SQL'ini aynıyla yürütüp grafiği past
 ``GET /api/conversations/{id}`nin üç tur döndürdüğünü ölçer: konuşma depoda gerçekten duruyor. Zincir
 sunucunun ``/api/health``te söylediği kümeden okunur -- ``serve`` ``--dataset`` söylenmediğinde kendi
 sırasını açar, betiğin varsaydığı adı sunmayabilir.
+
+``--start`` Run 7'nin başlangıç ekranını aynı sunucuda koşar (R7-18, R7-19): yönetici ``/api/users``tan
+iş rolü ``satis`` olan bir hesap açar, o kullanıcı kendi çerez kavanozuyla girer ve ``GET /api/start``
+panoyu **yüküyle** döndürür -- hiçbir kartta hata satırı yoktur, sayının değeri, grafiğin seçeneği,
+tablonun satırı vardır. Bir kartı açmak modelsiz bir cevaptır: ``answered``, tur 1 ve doğduğu konuşmanın
+kimliği; aynı kimlikle sorulan takip sorusu tur 2 döner, yani kart bir daha sorulmayan bir cümle değil
+devam eden bir sohbettir. Ölçülen pano tohumlu bir kümenin panosudur, o yüzden ``--start`` ``--dataset``
+söylenmediğinde kümeyi kendisi söyler: ``serve``ın vitrin sırası hazır sorusu olmayan bir kümeye
+düşebilir ve boş bir pano dumanın geçmesi değildir.
 """
 
 from __future__ import annotations
@@ -64,6 +73,7 @@ POLL_S = 0.25
 HTTP_TIMEOUT_S = 60.0  # soru ajanı gerçekten koşuyor
 BOM = codecs.BOM_UTF8
 ASSET = re.compile(r"/assets/[^\s\"'<>]+")  # derlenmiş sayfanın yüklediği hashli dosyalar
+START_ROLE = "satis"  # --start panosunu süzer: tohum hazır soruların ilk rolü
 
 
 class SmokeError(Exception):
@@ -74,15 +84,18 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     dataset = args.dataset or config.DEFAULT_DATASET
     question = datasets.load_dataset(dataset).golden()[0]["question"]
+    # ASSUMPTION: --start tohumlu bir küme ölçer; --dataset söylenmemişse küme betikten söylenir, çünkü
+    # serve'ın kendi sırası hazır sorusu olmayan bir kümeye düşebilir ve boş pano dumanın geçmesi değildir.
+    served = dataset if args.start else args.dataset
 
     fd, app_db = tempfile.mkstemp(suffix=".db")  # sunucunun boş kullanıcı dosyası, sonda silinir
     os.close(fd)
     password = secrets.token_urlsafe(16)  # bir kez üretilir; hiçbir satıra, günlüğe, hataya düşmez
-    server = _start_server(args.port, args.dataset, app_db, password)
+    server = _start_server(args.port, served, app_db, password)
     try:
         code = _run_steps(
             args.port, question, server, password,
-            ui=args.ui, roles=args.roles, conversation=args.conversation,
+            ui=args.ui, roles=args.roles, conversation=args.conversation, start=args.start,
         )
     finally:
         log = _stop_server(server)
@@ -101,6 +114,9 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--conversation", action="store_true", help="ardışık soru zincirini de dener (R7-8, R7-10)"
     )
+    parser.add_argument(
+        "--start", action="store_true", help="başlangıç ekranını ve karttan açmayı da dener (R7-18)"
+    )
     return parser.parse_args(argv)
 
 
@@ -112,6 +128,7 @@ def _run_steps(
     ui: bool = False,
     roles: bool = False,
     conversation: bool = False,
+    start: bool = False,
 ) -> int:
     """Adımlar sırayla; ilki tökezlerse durur, geçeni tek ✓ satırı olarak basar."""
     state: dict = {}
@@ -141,6 +158,15 @@ def _run_steps(
             ("bağlamlı ikinci tur", lambda: _check_conversation_context(opener, port, state)),
             ("modelsiz sunum değişikliği", lambda: _check_conversation_refine(opener, port, state)),
             ("konuşmanın üç turu", lambda: _check_conversation_thread(opener, port, state)),
+        ]
+    if start:
+        # Pano iş rolünün süzgecinden okunur: ekran bir satış kullanıcısının gözünden denenir.
+        steps += [
+            ("satış kullanıcısı", lambda: _check_user_added(opener, port, state, START_ROLE)),
+            ("kullanıcı girişi", lambda: _check_user_login(port, state)),
+            ("başlangıç ekranı kartları", lambda: _check_start(port, state)),
+            ("karttan açılan konuşma", lambda: _check_card_open(port, state)),
+            ("kartın ikinci turu", lambda: _check_card_followup(port, state, question)),
         ]
     for name, step in steps:
         try:
@@ -239,15 +265,19 @@ def _check_export(opener, port: int, state: dict) -> str:
     return f"{audit_id}.csv · {lines[0] if lines else 'boş'}"
 
 
-def _check_user_added(opener, port: int, state: dict) -> str:
-    """Yönetici ekranın kendi yolundan bir hesap açar: parolası burada doğar, burada kalır."""
+def _check_user_added(opener, port: int, state: dict, business_role: str | None = None) -> str:
+    """Yönetici ekranın kendi yolundan bir hesap açar: parolası burada doğar, burada kalır.
+
+    ``business_role`` yalnız panoyu ölçen adım için söylenir -- kartların süzgeci iş rolüdür.
+    """
     state["username"] = f"duman{secrets.token_hex(3)}"
     state["password"] = secrets.token_urlsafe(16)
+    body = {"username": state["username"], "password": state["password"], "role": "user"}
+    if business_role:
+        body["business_role"] = business_role
     request = urllib.request.Request(
         f"http://{HOST}:{port}/api/users",
-        data=json.dumps(
-            {"username": state["username"], "password": state["password"], "role": "user"}
-        ).encode("utf-8"),
+        data=json.dumps(body).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST",
     )
@@ -342,6 +372,61 @@ def _check_conversation_thread(opener, port: int, state: dict) -> str:
     if len(stored) != 3:
         raise SmokeError(f"konuşma {len(stored)} tur döndürdü; 3 bekleniyor")
     return f"{len(stored)} tur"
+
+
+def _check_start(port: int, state: dict) -> str:
+    """Pano kartları yüküyle döner: yürümeyen ya da boş bir kart dumanın tökezlemesidir (R7-18)."""
+    payload = _get(state["user_opener"], f"http://{HOST}:{port}/api/start")
+    if payload.get("business_role") != START_ROLE:
+        raise SmokeError(
+            f"pano {payload.get('business_role')!r} rolünü söylüyor; {START_ROLE} bekleniyor"
+        )
+    cards = payload.get("cards") or []
+    if not cards:
+        raise SmokeError("pano kart döndürmedi; tohum hazır sorular yazılmamış")
+    for card in cards:
+        if card.get("error"):
+            raise SmokeError(f"{card.get('title')!r} kartı yürümedi: {card['error']}")
+        if not _loaded(card):
+            raise SmokeError(f"{card.get('title')!r} kartının yükü boş ({card.get('display')})")
+    state["card_id"] = cards[0]["id"]
+    return f"{len(cards)} kart · {cards[0]['title']}"
+
+
+def _loaded(card: dict) -> bool:
+    """Kartın yükü gerçekten dolu mu: sayının değeri, grafiğin seçeneği, tablonun satırları."""
+    if card.get("display") == "number":
+        return card.get("value") is not None
+    if card.get("display") == "chart":
+        return bool(card.get("chart"))
+    return bool(card.get("rows"))
+
+
+def _check_card_open(port: int, state: dict) -> str:
+    """Kartı açmak modelsiz bir cevaptır ve yeni bir konuşmanın 1. turudur (R7-18)."""
+    label = f"/api/start/cards/{state['card_id']}/open"
+    payload = _send(
+        state["user_opener"],
+        urllib.request.Request(f"http://{HOST}:{port}{label}", data=b"", method="POST"),
+        label,
+    )
+    if payload.get("status") != "answered":
+        error = payload.get("error") or {}
+        raise SmokeError(f"{payload.get('status')}: {error.get('message') or 'cevap alınamadı'}")
+    if payload.get("turn") != 1:
+        raise SmokeError(f"kartın açtığı turun numarası {payload.get('turn')}; 1 bekleniyor")
+    state["conversation_id"] = payload["conversation_id"]
+    return f"tur 1 · {state['conversation_id'][:8]}…"
+
+
+def _check_card_followup(port: int, state: dict, question: str) -> str:
+    """Kartın konuşması takip sorusunu da taşır: aynı kimlikle sorulan tur 2 olur (R7-8)."""
+    payload = _ask_turn(state["user_opener"], port, question, state)
+    if payload.get("turn") != 2:
+        raise SmokeError(
+            f"kartın konuşmasında ikinci turun numarası {payload.get('turn')}; 2 bekleniyor"
+        )
+    return "tur 2 · aynı konuşma"
 
 
 def _ask_turn(opener, port: int, question: str, state: dict) -> dict:

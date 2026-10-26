@@ -905,3 +905,52 @@ masked, so a masked cell stays masked in the next turn's context too. No chart o
 row 6 and beyond: a full table is re-run from its SQL, never read back out of a conversation. A failed
 turn stays in the thread but never enters a context block. Conversations live in the app's own SQLite
 file, `data/bilgin.db`, never in the analysed database.
+
+## Başlangıç ekranı ve hazır sorular
+
+`#/` is no longer an empty box: the screen is a board of cards, and a card is an **approved question
+with its saved SQL** showing its last result — a number, a chart, a short table. The model never writes
+a card: its SQL goes through the same policy and the same read-only executor as a typed question, the
+sentence over it is the narrator speaking *this* run's rows, and no answer on the board shows the SQL
+itself. Clicking a card opens that question as **turn 1 of a new conversation**, so the follow-up that
+leans on it is the same Run 7 door.
+
+**İş rolü.** A card belongs to one of the `BUSINESS_ROLES` (5) — Satış, Satın alma, Muhasebe, Yönetim,
+Genel — or to `*`, which every role sees. The role is a field on the account, set where accounts are
+made (`POST /api/users`, the users screen), and the board is the filter: an approved card of someone
+else's role is not greyed out on your screen, it is not in your list at all, and opening or refreshing
+it answers 404 — the same sentence as a card that does not exist, so the board is not a way to discover
+other roles' questions. A user with no role gets `*` and their own cards.
+
+**Cevaptan onay.** A card is born from an answer, never from typed SQL: **Hazır soru yap** on an
+answered card takes that question's own record and runs its SQL once more through the executor — if it
+does not run, nothing is saved and the reason stays on the form. The ready-questions screen
+(`#/hazir-sorular`, admin) is the same approval from the other side, on a row that is already waiting
+there. Approval is the only thing that makes a row visible: an **Onay bekliyor** row exists in the
+store and on that screen and is invisible on the board; an admin opening one there is a preview, and
+says so.
+
+**Kişisel kart.** **Panoma ekle** on any answer pins it to your own board: no business role, no
+approval, at most `PERSONAL_CARDS` (6) per dataset, and only you see or remove it. The filter is your
+own name, so a pin built on someone else's answer record is a 404 rather than their card.
+
+**Öneriler onaysız doğar.** `Öneri iste` starts a background job that asks the model — through the same
+agent, with the schema and the business rules in front of it — for questions this dataset answers well,
+`SUGGEST_PER_ROLE` (2–4) per role, and the screen shows the job's progress line. Every suggestion is
+stored **unapproved**: only the ones that actually answered got their SQL written, and none of them
+reaches a board before an admin has looked at it and approved it.
+
+**Oturmuş bir ekran.** A card's load is cached for `START_CACHE_S` (300) per dataset + card + SQL, so
+ten people opening the board run one query, and re-approving a card's SQL retires its old load.
+**Yenile** steps over the cache but not over the calendar: one card refreshes at most once per
+`CARD_REFRESH_MIN_S` (30), and the 429 names the seconds left. A card whose query fails is one error
+card in warning colours, and the other cards on the board are unaffected; on an admin's board that card
+carries `SQL'i yeniden onayla`, which puts the question in the ask box.
+
+**Tohum: `ready_questions.json`.** A dataset may ship its board. The file in the dataset folder is
+written to the store once, on the first `serve` that opens that dataset — the `ready_seeded` setting is
+why a second start, or a card an admin deleted, does not bring them back. Seeds are born approved (their
+SQL is a golden line or a hand-checked constant) but they are only *checked* against the policy at that
+moment, never run: a seed the guard refuses prints one line and drops, instead of becoming an error
+card. `wwi_real` ships 14 seeds across the five roles, so a fresh server pointed at the real database
+has something to show.

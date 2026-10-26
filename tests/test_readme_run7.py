@@ -1,5 +1,8 @@
 """Run 7 README'si: konuşma — ardışık sorular, kanıt satırı, CLI bayrakları ve `eval --followups`.
 
+Aynı denetim Run 7'nin öteki bölümü için de koşar: ``## Başlangıç ekranı ve hazır sorular``
+(R7-17..R7-20) -- kartın iş rolü, onayın doğumu, önerinin onaysız hâli, önbelleğin sınırı.
+
 ``test_readme_run6``ın Run 7 karşılığı: dokümanda yazılı olmayan bir bayrak ya da düğme kullanıcının
 elinde yok sayılır, o yüzden her işaret ayrı bir parametrik testte README.md'de aranıyor. Bölüm ayrıca
 üçüncü taraf bir ürün ya da şirket adı taşıyamaz: ölçüm kutusu kullanıcının kendi verisini anlatır, bir
@@ -75,3 +78,56 @@ def test_the_readme_documents_every_run7_mark(mark):
 @pytest.mark.parametrize("name", FORBIDDEN_NAMES)
 def test_the_section_names_no_third_party_product_or_company(name):
     assert name.lower() not in _section().lower(), f"{name} Run 7 konuşma bölümünde geçiyor"
+
+
+# Run 7'nin öteki yüzü: başlangıç ekranı ve hazır sorular (R7-17..R7-20). Aynı denetim, kendi
+# başlığının altında -- kartın rolü, onayın doğumu, önerinin onaysız hâli, önbelleğin sınırı.
+START_HEADING = "## Başlangıç ekranı ve hazır sorular"
+
+START_MARKS = (
+    "İş rolü",
+    "`BUSINESS_ROLES` (5)",
+    "`POST /api/users`",
+    "404",
+    "Cevaptan onay",
+    "Hazır soru yap",
+    "`#/hazir-sorular`",
+    "Onay bekliyor",
+    "Kişisel kart",
+    "Panoma ekle",
+    "`PERSONAL_CARDS` (6)",
+    "`Öneri iste`",
+    "onaysız",
+    "`START_CACHE_S` (300)",
+    "`CARD_REFRESH_MIN_S` (30)",
+    "429",
+    "`ready_questions.json`",
+    "wwi_real",
+)
+
+
+def _start_section() -> str:
+    """Başlangıç ekranı bölümü: kendi başlığından bir sonraki başlığa (ya da dosyanın sonuna) kadar."""
+    lines = _readme().splitlines()
+    if START_HEADING not in lines:
+        pytest.fail(f"{START_HEADING} README'de yok")
+    start = lines.index(START_HEADING)
+    end = next(
+        (i for i, line in enumerate(lines[start + 1:], start + 1) if re.match(r"#\s\S", line)),
+        len(lines),
+    )
+    return "\n".join(lines[start:end])
+
+
+def test_the_readme_has_the_start_screen_heading():
+    assert START_HEADING in _readme().splitlines(), f"{START_HEADING} README'de başlık olarak yok"
+
+
+@pytest.mark.parametrize("mark", START_MARKS)
+def test_the_readme_documents_every_start_screen_mark(mark):
+    assert mark in _start_section(), f"{mark} başlangıç ekranı bölümünde yok"
+
+
+@pytest.mark.parametrize("name", FORBIDDEN_NAMES)
+def test_the_start_section_names_no_third_party_product_or_company(name):
+    assert name.lower() not in _start_section().lower(), f"{name} başlangıç ekranı bölümünde geçiyor"
