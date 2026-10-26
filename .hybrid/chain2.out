@@ -12,3 +12,4 @@
 2026-10-26 08:10:25 | ORCH   | brain: cloud Claude (panel: cloud)
 2026-10-26 08:10:25 | BRAIN  | extending the plan from PROJECT_BRIEF_RUN7.md with opus
 2026-10-26 08:28:30 | BRAIN  | extend done: 62 new tasks
+2026-10-26 08:29:06 | HANDS  | T284 try 1: Run 7 config (PLAN R7-1): add to nl2sql/config.py, existing names unchanged, CONV_KEEP_ROWS=5, CONV_TURNS=3, CONV_TITLE_CHARS=80, FOLLOWUP_MARKERS (the R7-1 tuple), BUSINESS_ROLES (ordered dict satis/satin_alma/muhasebe/yonetim/genel -> Satış/Satın alma/Muhasebe/Yönetim/Genel), DEFAULT_BUSINESS_ROLE="genel", PERSONAL_CARDS=6, START_CACHE_S=300, CARD_REFRESH_MIN_S=30, CARD_TABLE_ROWS=10, SUGGEST_PER_ROLE=(2, 4), DB_CHECK_S=60, DB_CHECK_TIMEOUT_S=3, CONN_ENV_PREFIX="NL2SQL_MSSQL_CONN_", CONN_TABLE_SAMPLE=10; add tests/test_config_run7.py (new file: every name exists with its value, BUSINESS_ROLES keys in that order, DEFAULT_BUSINESS_ROLE in BUSINESS_ROLES, every marker is lower-case)
