@@ -13,6 +13,8 @@ from nl2sql.schema_map.excel import fallback_mapping, propose
 HEADERS = ["TABLO", "KOLON", "TİP", "AÇIKLAMA"]
 ROWS = [["TBLSTHAR", "STHAR_GCKOD", "VARCHAR", "Giriş/çıkış kodu"]]
 
+# ASSUMPTION: R6-13 ile eşleme kaydı üç alan daha taşıyor (pii/deny/keywords); öneri yine sekizini
+# iddia eder, ama kaydın anahtar kümesi _FIELDS'ın tamamıdır.
 FIELDS = (
     "table_name",
     "column_name",
@@ -22,6 +24,9 @@ FIELDS = (
     "values",
     "nullable",
     "module",
+    "pii",
+    "deny",
+    "keywords",
 )
 
 

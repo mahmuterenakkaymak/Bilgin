@@ -22,6 +22,9 @@ FIELDS = (
     "values",
     "nullable",
     "module",
+    "pii",
+    "deny",
+    "keywords",
 )
 
 

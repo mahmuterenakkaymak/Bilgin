@@ -17,6 +17,11 @@ Dönüşüm adımı (PLAN R3-2) eşlemeyi tüm çalışma kitabına koddan uygul
 Tablo adı ilk görünüm sırasıyla gruplanır, tipler şemanın T-SQL adlarına çevrilir, values hücreleri
 çözülür. Bozuk bir hücre sütunu düşürmez: satır olduğu gibi kalır, sorunu sheet + 1-tabanlı satır
 numarasıyla raporla kullanıcıya taşınır.
+
+Şablonun ek alanları (PLAN R6-13) aynı borunun devamıdır: KİŞİSEL VERİ ve KAPALI kolona, ANAHTAR
+KELİMELER tabloya yazılır - ama yalnızca sayfa o alanı eşliyorsa, böylece Run 3'ün haritaları ek
+alan anahtarı hiç görmez. Hücreyi ham hâliyle görmek isteyen (hücre düzeyinde doğrulama) satırları
+`sheet_rows` ile okur.
 """
 
 from __future__ import annotations
@@ -33,11 +38,13 @@ from openpyxl.worksheet.worksheet import Worksheet
 from nl2sql import config
 from nl2sql.agent.llm import LLMError
 from nl2sql.index import text
+from nl2sql.policy import pii
 
 # Sayı ile dolu bir satır başlık değildir; eşik metin hücreleri üzerinden sayılır.
 _HEADER_TEXT_CELLS = 3
 
 # Mapping kaydının taşıdığı alanlar (Contracts); sözlükte sırası olmayan alan eşlenemez.
+# İlk sekizi Run 3'ün haritasıdır; son üçü şablonun ek alanları (R6-13) - keywords tabloya gider.
 _FIELDS = (
     "table_name",
     "column_name",
@@ -47,6 +54,9 @@ _FIELDS = (
     "values",
     "nullable",
     "module",
+    "pii",
+    "deny",
+    "keywords",
 )
 
 
@@ -73,6 +83,23 @@ def _read_sheet(sheet: Worksheet) -> dict:
         "headers": [_text(value) for value in rows[number - 1]],
         "rows": [list(item) for item in rows[number : number + config.EXCEL_PREVIEW_ROWS]],
     }
+
+
+def sheet_rows(path: str | Path, sheet: str) -> tuple[int, list[str], list[tuple[int, tuple]]]:
+    """Bir sayfanın ham hâli: 1-tabanlı başlık satırı, başlıklar ve (satır numarası, hücreler).
+
+    Dönüşümün `skipped` notu yalnız kendi gördüğü arızayı söyler; hücre düzeyinde doğrulama
+    yapacak taraf (PLAN R6-14) satırları burada dönüştürülmemiş hâliyle ve Excel'de görünen
+    numaralarıyla bulur - boş satır da numarasını korur.
+    """
+    book = openpyxl.load_workbook(path, data_only=True)
+    try:
+        rows = list(book[sheet].iter_rows(values_only=True))
+    finally:
+        book.close()
+    number = _header_row(rows, sheet)
+    headers = [_text(value) for value in rows[number - 1]]
+    return number, headers, list(enumerate(rows[number:], start=number + 1))
 
 
 def _header_row(rows: list[tuple[Any, ...]], title: str) -> int:
@@ -319,7 +346,11 @@ _TYPE_DEFAULTS = {
     "nchar": _TEXT_TYPE,
 }
 
-_FK_RE = re.compile(r"^[A-Z0-9_]+\.[A-Z0-9_]+$")
+# REFERANS iki ya da üç parçalıdır: TABLE.COL ya da SCHEMA.TABLE.COL (PLAN R6-13).
+_FK_RE = re.compile(r"^(?:[A-Z0-9_]+\.){1,2}[A-Z0-9_]+$")
+
+# Şemanın kendi şeması adlarda taşınmaz (PLAN R4-6): dbo'nun tablosu şemasız yazılır.
+_DEFAULT_SCHEMA = "DBO"
 
 # "Dolu" yazımları; geri kalan her şey (boş hücre dahil) boş bırakılabilir sayılır.
 _FILLED_WORDS = frozenset({"h", "hayir", "false", "0", "dolu", "not null", "degil"})
@@ -406,13 +437,15 @@ def _convert_row(
     if not name:
         _note(state, sheet, number, "TABLO boş; satır atlandı")
         return last
-    table = state["tables"].setdefault(
-        name, {"name": name, "description": "", "module": "", "columns": []}
-    )
+    table = state["tables"].setdefault(name, _new_table(name, fields))
     description = _text(_cell(row, fields, "description"))
     module = _text(_cell(row, fields, "module"))
     if module and not table["module"]:
         table["module"] = module
+    if "keywords" in fields:
+        words = _keywords(_cell(row, fields, "keywords"))
+        if words and not table.get("keywords"):
+            table["keywords"] = words
     column = _cell(row, fields, "column_name").upper()
     if not column:
         # Kolonu olmayan satır tablonun kendi satırıdır; açıklama tabloya aittir.
@@ -431,7 +464,12 @@ def _convert_row(
     raw_fk = _cell(row, fields, "fk_target")
     fk = _fk(raw_fk)
     if raw_fk and fk is None:
-        _note(state, sheet, number, f"REFERANS '{raw_fk}' TABLE.COL biçiminde değil; referanssız kaldı")
+        _note(
+            state,
+            sheet,
+            number,
+            f"REFERANS '{raw_fk}' TABLE.COL ya da SCHEMA.TABLE.COL biçiminde değil; referanssız kaldı",
+        )
     raw_values = _cell(row, fields, "values")
     values = _values(raw_values)
     if values is None:
@@ -450,10 +488,40 @@ def _convert_row(
             "fk": fk,
             "values": values,
             "nullable": _nullable(_cell(row, fields, "nullable")),
+            **_column_extras(sheet, number, row, fields, state),
         }
     )
     state["columns"] += 1
     return name
+
+
+def _new_table(name: str, fields: dict[str, int]) -> dict:
+    """Yeni tablo kaydı; ANAHTAR KELİMELER anahtarı yalnız sayfa onu eşliyorsa baştan açılır."""
+    table = {"name": name, "description": "", "module": ""}
+    if "keywords" in fields:
+        table["keywords"] = []
+    table["columns"] = []
+    return table
+
+
+def _column_extras(
+    sheet: str, number: int, row: tuple[Any, ...], fields: dict[str, int], state: dict
+) -> dict:
+    """Şablonun ek kolon alanları (R6-13): sayfa onları eşlemiyorsa anahtar hiç açılmaz."""
+    extras: dict = {}
+    if "pii" in fields:
+        raw = _cell(row, fields, "pii")
+        extras["pii"] = _pii(raw)
+        if raw and extras["pii"] is None:
+            _note(
+                state,
+                sheet,
+                number,
+                f"KİŞİSEL VERİ '{raw}' bilinmeyen bir sınıf; pii bırakılmadı",
+            )
+    if "deny" in fields:
+        extras["deny"] = _deny(_cell(row, fields, "deny"))
+    return extras
 
 
 def _cell(row: tuple[Any, ...], fields: dict[str, int], field: str) -> str:
@@ -484,9 +552,15 @@ def _data_type(value: str) -> str | None:
 
 
 def _fk(value: str) -> str | None:
-    """REFERANS hücresi TABLE.COL biçimindeyse büyük harfle geçer; değilse None (satır notu kullanıcının)."""
+    """REFERANS hücresi TABLE.COL ya da SCHEMA.TABLE.COL biçimindeyse büyük harfle geçer; değilse None.
+
+    ASSUMPTION: üç parçalının şeması dbo olamaz - R4-6 dbo'nun tablosunu şemasız yazar, bu yüzden
+    `DBO.TBL.COL` şemada hiçbir ada çözülmez; kısaltılıp uydurulmak yerine reddedilir ve notu gider.
+    """
     upper = value.upper()
-    return upper if _FK_RE.match(upper) else None
+    if not _FK_RE.match(upper):
+        return None
+    return None if upper.startswith(f"{_DEFAULT_SCHEMA}.") else upper
 
 
 def _values(value: str) -> dict[str, str] | None:
@@ -501,6 +575,26 @@ def _values(value: str) -> dict[str, str] | None:
             return None
         result[code] = meaning
     return result
+
+
+def _pii(value: str) -> str | None:
+    """KİŞİSEL VERİ hücresi; sınıfların birinin adıysa o ad, değilse None (PLAN R6-13).
+
+    ASSUMPTION: tanınmayan yazım ("telefon") sınıf sanılmaz; boş bırakılmadığını kullanıcıya
+    söyleyecek olan hücre düzeyindeki doğrulama (R6-14), buradan uydurma bir sınıf geçmez.
+    """
+    folded = _plain(value)
+    return folded if folded in pii.CLASSES else None
+
+
+def _deny(value: str) -> bool:
+    """KAPALI hücresi: şablonun listesi E/H olduğu için yalnız E kolonu kapatır."""
+    return _plain(value) == "e"
+
+
+def _keywords(value: str) -> list[str]:
+    """'fiyat, zam; liste fiyatı' -> ['fiyat', 'zam', 'liste fiyatı']; boş hücre boş liste."""
+    return [word.strip() for word in re.split(r"[,;]+", value) if word.strip()]
 
 
 def _nullable(value: str) -> bool:

@@ -6,5 +6,8 @@
   "fk_target": ["REFERANS", "FK"],
   "values": ["DEĞER", "DEGER", "VALUES"],
   "nullable": ["NULL", "NULLABLE", "BOŞ", "BOS"],
-  "module": ["MODÜL", "MODUL", "MODULE"]
+  "module": ["MODÜL", "MODUL", "MODULE"],
+  "pii": ["KİŞİSEL VERİ", "KISISEL VERI", "PII"],
+  "deny": ["KAPALI", "DENY"],
+  "keywords": ["ANAHTAR KELİMELER", "ANAHTAR KELIMELER", "KEYWORDS"]
 }
