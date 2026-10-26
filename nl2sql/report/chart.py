@@ -27,6 +27,9 @@ _SCATTER_WORDS = ("iliski", "korelasyon", "sacilim", "scatter")
 # değer kolonunun adında ya da soruda geçiyorsa yüzde, değilse sayı.
 _PERCENT_WORDS = ("oran", "yuzde", "percent", "ratio")
 
+# Red cümlesi bu adla kurulur: "Bu sonuç çizgi grafiğe uygun değil: <neyin eksik olduğu>."
+_FORCED_LABELS = {"line": "çizgi", "bar": "sütun", "pie": "pasta"}
+
 # Izgara boşlukları plot'un kendi payıdır: containLabel True, dönen adları bottom'un İÇİNE
 # yerleştirip plot'u ezdiği için kapatıldı (M20 görsel inceleme 2). Sol boşluk o yüzden sayısal
 # eksenin Türkçe biçimli etiketini (123.456,78) de tek başına tutmak zorundadır.
@@ -47,8 +50,19 @@ _CATEGORY_LABEL = {
 _CATEGORY_BOTTOM = 116
 
 
-def chart_spec(columns: list[str], rows: list[tuple], question: str) -> dict | None:
-    """Sonucun grafiği: {"type", "option"} ya da çizilecek bir şey yoksa None."""
+def chart_spec(columns: list[str], rows: list[tuple], question: str, kind: str | None = None) -> dict | None:
+    """Sonucun grafiği: {"type", "option"} ya da çizilecek bir şey yoksa None.
+
+    ``kind`` kullanıcının istediği türdür (PLAN R7-10): sonuç biçimi onu kaldırıyorsa mevcut
+    üreticiyle o tür çizilir; kaldırmıyorsa kendiliğinden seçilen tür döner ve yanına neyin eksik
+    olduğunu söyleyen bir ``reason`` eklenir. "table" grafik değildir: None.
+    """
+    if kind is not None:
+        return _forced(columns, rows, question, kind)
+    return _auto(columns, rows, question)
+
+
+def _auto(columns, rows, question):
     if len(rows) <= 1:
         return None
     picked = shape.pick(columns, rows)
@@ -64,6 +78,51 @@ def chart_spec(columns: list[str], rows: list[tuple], question: str) -> dict | N
     if len(numbers) == 2 and not dates and _scatters(question):
         return _scatter(columns, rows, numbers, question)
     return None
+
+
+def _forced(columns, rows, question, kind):
+    """İstenen tür: biçim onu kaldırıyorsa mevcut üreticiyle çizilir, kaldırmıyorsa auto + reason."""
+    if kind == "table":
+        return None
+    spec, missing = _fit(kind, columns, rows, question)
+    if spec is not None:
+        return spec
+    # ASSUMPTION: kendiliğinden seçilen grafik de yoksa {"type": None, "option": None} döner; arayüz
+    # hiçbir şey çizmez, reason cümlesini gösterir (Contracts "chart_spec (ext.)" reason'ı taşır).
+    auto = _auto(columns, rows, question) or {"type": None, "option": None}
+    return dict(auto, reason=f"Bu sonuç {_FORCED_LABELS[kind]} grafiğe uygun değil: {missing}.")
+
+
+def _fit(kind, columns, rows, question):
+    """İstenen türün şartı: (çizilebiliyorsa spec, çizilemiyorsa neyin eksik olduğunun cümlesi)."""
+    picked = shape.pick(columns, rows)
+    dates, numbers, category = picked["date"], picked["number"], picked["category"]
+    # Etiket kategori yoksa tek tarih kolonudur: aylık bir sonuç hem sütun hem pasta olur.
+    label = category if category is not None else (dates[0] if len(dates) == 1 else None)
+
+    if len(rows) <= 1:
+        return None, "grafik için en az iki satır gerekir"
+    if kind == "line":
+        if not dates:
+            return None, "tarih ya da sıralı bir kolon yok"
+        if len(dates) > 1:
+            return None, "birden çok tarih kolonu var"
+        if not numbers:
+            return None, "sayısal kolon yok"
+        if len(numbers) > 3:
+            return None, "üçten çok sayısal kolon var"
+        return _line(columns, rows, dates[0], numbers, question), None
+    if not numbers:
+        return None, "sayısal kolon yok"
+    if label is None:
+        return None, "kategori ya da dönem kolonu yok"
+    if kind == "bar":
+        return _bar(columns, rows, label, numbers[0], question), None
+    if len(rows) > config.CHART_PIE_MAX_PARTS:
+        return None, "dilim sayısı çok fazla"
+    if not all(_positive(row[numbers[0]]) for row in rows):
+        return None, "dilimlerin değerleri pozitif olmalı"
+    return _pie(columns, rows, label, numbers[0], question), None
 
 
 def validate_option(option) -> list[str]:
