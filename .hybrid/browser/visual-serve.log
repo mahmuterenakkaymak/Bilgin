@@ -1,0 +1,95 @@
+INFO:     Started server process [18908]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8799 (Press CTRL+C to quit)
+Bilgin: http://127.0.0.1:8799  (veri kümesi synthetic_erp, model fake, llm fake)
+INFO:     127.0.0.1:57925 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56174 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56174 - "GET /assets/index-DB7SoD4_.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56220 - "GET /assets/index-B8hIiWQv.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56174 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56174 - "GET /assets/bilgin.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56174 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56174 - "GET /api/schema-map/info HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59808 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58381 - "GET /api/saved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54023 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56220 - "GET /api/datasets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56220 - "GET /api/schema-map/sample.xlsx HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56220 - "POST /api/schema-map/preview HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56220 - "POST /api/schema-map/apply HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 411, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\fastapi\applications.py", line 1194, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\starlette\applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\fastapi\telemetry\_asgi.py", line 151, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\starlette\routing.py", line 683, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\fastapi\routing.py", line 2811, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\fastapi\routing.py", line 1839, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\fastapi\routing.py", line 2894, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\fastapi\routing.py", line 1865, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\fastapi\routing.py", line 1328, in handle
+    await effective_context.app(scope, receive, send)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\fastapi\routing.py", line 166, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\fastapi\routing.py", line 152, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\fastapi\routing.py", line 745, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\fastapi\routing.py", line 374, in run_endpoint_function
+    return await run_in_threadpool(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PC\Documents\GitHub\nl2sql\.venv\Lib\site-packages\fastapi\telemetry\_api.py", line 244, in _run_sync_endpoint
+    return function(**arguments)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PC\Documents\GitHub\nl2sql\nl2sql\web\map_api.py", line 129, in apply
+    onboard.apply_preview(preview, _username(request))
+  File "C:\Users\PC\Documents\GitHub\nl2sql\nl2sql\schema_map\onboard.py", line 96, in apply_preview
+    folder.mkdir(exist_ok=False)
+  File "C:\Program Files\Python311\Lib\pathlib.py", line 1116, in mkdir
+    os.mkdir(self, mode)
+FileNotFoundError: [WinError 3] The system cannot find the path specified: 'C:\\Users\\PC\\Documents\\GitHub\\nl2sql\\data\\visual\\real_datasets\\ornek_fatura'

@@ -5,6 +5,7 @@ import ClarificationCard from "./components/ClarificationCard.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import ErrorCard from "./components/ErrorCard.jsx";
 import LoadingSteps from "./components/LoadingSteps.jsx";
+import { MapFlow } from "./components/MapScreen.jsx";
 import RulesScreen from "./components/RulesScreen.jsx";
 import Sidebar from "./components/Sidebar.jsx";
 import UsersScreen from "./components/UsersScreen.jsx";
@@ -64,11 +65,13 @@ function userLabel(user) {
 
 // Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Boş, bekleyen, cevap,
 // netleştirme ve hata yuvaları burada durur; cevabın grafiği kartın içindedir.
-function AskScreen({ pending = null, onRefresh, onRebuild }) {
+function AskScreen({ pending = null, onRefresh, onRebuild, datasetKey = 0 }) {
   const [state, dispatch] = useReducer(askReducer, initialState);
   const [text, setText] = useState("");
   const [examples, setExamples] = useState([]);
 
+  // `datasetKey` her küme değişiminde büyür: örnekler kümenin sorularıdır, eski kümenin çipleri
+  // yeni veritabanının üstünde kalırsa ekran yalan söylemiş olur.
   useEffect(() => {
     let mounted = true;
     api
@@ -80,7 +83,7 @@ function AskScreen({ pending = null, onRefresh, onRebuild }) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [datasetKey]);
 
   // auditId verilirse soru modele baştan sorulmaz: geçmişteki SQL yeniden çalışır (/api/replay).
   const send = (question, choice = null, auditId = null) => {
@@ -215,10 +218,11 @@ function UsersFlow() {
   return <UsersScreen users={users ?? []} loading={!users} error={error} onRefresh={refresh} />;
 }
 
-function Screen({ route, pending, onRefresh, onChanged, onRebuild, readOnly }) {
+function Screen({ route, pending, onRefresh, onChanged, onRebuild, onSwitched, datasetKey, readOnly }) {
   if (route === "rules") return <RulesFlow onChanged={onChanged} readOnly={readOnly} />;
   if (route === "users") return <UsersFlow />;
-  return <AskScreen pending={pending} onRefresh={onRefresh} onRebuild={onRebuild} />;
+  if (route === "map") return <MapFlow onSwitched={onSwitched} />;
+  return <AskScreen pending={pending} onRefresh={onRefresh} onRebuild={onRebuild} datasetKey={datasetKey} />;
 }
 
 // `user` ve `onLogout` oturum kapısı Root'tan gelir; ikisi de yoksa kabuk Run 5'teki gibi
@@ -230,6 +234,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
   const [saved, setSaved] = useState([]);
   const [history, setHistory] = useState([]);
   const [pending, setPending] = useState(null); // {question, n}: kenar çubuğundan gelen soru
+  const [datasetKey, setDatasetKey] = useState(0); // her küme değişiminde büyür, örnekler tazelenir
   const [theme, setTheme] = useState(() => readStored(themeStorage()));
   // Adres rolle çözülür: `#/kullanicilar` ile açan ya da yenileyen sıradan bir kullanıcı yönetici
   // defterini görmez, kapının girişte yaptığı gibi soru ekranına bir cümleyle düşer. Kullanıcı yoksa
@@ -287,6 +292,14 @@ export default function App({ user = null, onLogout = null, note = "" }) {
     refresh();
   }, []);
 
+  // Etkin küme değiştiği an, aynı gerçeği gösteren her yer baştan okunur: başlıktaki çip
+  // (health), kenar çubuğunun iki listesi ve soru ekranının örnekleri.
+  const switched = () => {
+    refreshHealth();
+    refresh();
+    setDatasetKey((key) => key + 1);
+  };
+
   // Satıra tıklayınca soru soru ekranında koşar; dar ekranda çekmece kapanır ki cevap görünsün.
   const askFromSidebar = (question, auditId = null) => {
     setPending((current) => ({ question, auditId, n: (current?.n ?? 0) + 1 }));
@@ -320,8 +333,13 @@ export default function App({ user = null, onLogout = null, note = "" }) {
           <a className="nav-link" id="nav-rules" href="#/kurallar" aria-current={route === "rules" ? "page" : undefined}>
             Kurallar
           </a>
-          {/* Kullanıcı defteri yalnız yöneticiye açık (R6-19): kök kapı rotayı da korur, bağlantı
-              gösterilmeyen bir adrese götürmesin. */}
+          {/* Harita ve kullanıcı defteri yalnız yöneticiye açık (R6-19): kök kapı rotayı da korur,
+              bağlantı gösterilmeyen bir adrese götürmesin. */}
+          {user?.role === "admin" && (
+            <a className="nav-link" id="nav-map" href="#/harita" aria-current={route === "map" ? "page" : undefined}>
+              Veritabanı haritası
+            </a>
+          )}
           {user?.role === "admin" && (
             <a className="nav-link" id="nav-users" href="#/kullanicilar" aria-current={route === "users" ? "page" : undefined}>
               Kullanıcılar
@@ -380,6 +398,8 @@ export default function App({ user = null, onLogout = null, note = "" }) {
             onRefresh={refresh}
             onChanged={refreshHealth}
             onRebuild={() => api.rebuild().then(refreshHealth)}
+            onSwitched={switched}
+            datasetKey={datasetKey}
             readOnly={Boolean(user && user.role !== "admin")}
           />
         </main>
