@@ -36,6 +36,7 @@ from nl2sql.agent import modes
 from nl2sql.agent.budget import estimate_prompt, trim_tool_answers
 from nl2sql.agent.context import context_block, fit_history, followup_hints
 from nl2sql.agent.llm import LLMError
+from nl2sql.agent.refine import refine_hint
 from nl2sql.agent.tools import answer_is_ok, clarify_request, dispatch, submit_sql_with_context
 
 # Sözleşmede adı geçen dördüncü bir sınır yok; bu yalnızca hiç araç çağırmayıp metin üreten bir
@@ -127,9 +128,12 @@ def run_agent(
         kept, rows_dropped, _ = fit_history(turns, messages, sent_tools, budget)
         run.history_turns, run.history_rows_dropped = kept, rows_dropped
         if kept:
-            # ASSUMPTION: ipucu satırını followup_hints doldurur (R7-11) - bloğun üretebileceği tek
-            # soru ile şema ikili burada, döngünün elinde; context_block kendi ipucusunu kurmuyor.
-            block = context_block(turns, followup_hints(question, ctx.schema))
+            # ASSUMPTION: ipucu satırlarını followup_hints ve refine_hint doldurur (R7-11) -
+            # bloğun üretebileceği soru ile şema ikili burada, döngünün elinde; context_block kendi
+            # ipucusunu kurmuyor.
+            block = context_block(
+                turns, followup_hints(question, ctx.schema), refine_hint(question)
+            )
             messages[0] = {"role": "system", "content": f"{messages[0]['content']}\n\n{block}"}
             sent_tools = [
                 submit_sql_with_context() if shown["function"]["name"] == "submit_sql" else shown

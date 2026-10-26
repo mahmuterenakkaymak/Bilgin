@@ -9,6 +9,10 @@ istenen türü döner, içinde yeni bir bilgi barındırıyorsa None.
 Modeli koşurmamanın ikinci yolu şık sormaktır (PLAN R7-12): "Bu müşteriye başka ne sattık?" tek
 başına çözülmez, cevabı da modelden değil kullanıcıdan gelir. ``ambiguous_entity`` bunu da
 deterministik olarak ayırt eder ve şıklarını kendisi kurar.
+
+Modelin koştuğu üçüncü yol ise yön göstermektir (PLAN R7-11): "Sadece Texas" yeni bir veri ister,
+ama işin yarı yolda başladığını söyleyecek olan anahtar kelime yine deterministiktir -
+``refine_hint`` tek satırı ondan kurar.
 """
 
 from __future__ import annotations
@@ -35,6 +39,28 @@ _NOTHING_LEFT = (
     | set(CHART_FILLERS)
     | set(config.FOLLOWUP_MARKERS)
 )
+
+# R7-11: takibat soruları agent'a kalır - ortada yeni bir veri isteği vardır - ama modelin önüne
+# tek satırlık bir yön düşer: cevap baştan kurulmaz, son turun SQL'i değiştirilir. Sıra, iki
+# kategori birden tutarsa hangisinin kazanacağını da söyler.
+REFINE_HINTS = (
+    (
+        ("sadece", "yalnız"),
+        "İpucu: bu soru önceki cevabı daraltıyor; son turun SQL'ini başlangıç al, filtreyi ekle, sıfırdan yazma.",
+    ),
+    (
+        ("karşılaştır", "geçen yıl", "önceki"),
+        "İpucu: bu soru önceki cevabı başka bir dönemle karşılaştırıyor; son turun SQL'ini başlangıç al, dönemi değiştir, sıfırdan yazma.",
+    ),
+    (
+        ("aylık", "çeyreklik", "haftalık", "yıllık"),
+        "İpucu: bu soru aynı cevabı daha farklı bir dönemsellikte istiyor; son turun SQL'ini başlangıç al, gruplamayı o döneme çevir, sıfırdan yazma.",
+    ),
+)
+
+# "ilk N|en çok N": sayı gelmeyen sıralama sözü listeyi değil dönemi söyleyebilir - "ilk üç ay".
+TOP_WORDS = ("ilk", "en çok", "en fazla")
+TOP_HINT = "İpucu: bu soru listenin başını istiyor; son turun SQL'ini başlangıç al, sıralamayı ve sınırı ekle, sıfırdan yazma."
 
 # R7-12: ardışık sorunun işaret edebildiği varlıklar. Anahtar Türkçe sözcük - soruda ve şıkkın
 # cümlesinde o geçer; değerler son turun kolon adlarında ve şemadaki açıklamalarında aranır.
@@ -79,6 +105,21 @@ def chart_only(question: str, turns: list[dict] | None) -> str | None:
     if kind is None or _last_answered(turns) is None:
         return None
     return kind if all(word in _NOTHING_LEFT for word in tokens(question)) else None
+
+
+def refine_hint(question: str) -> str | None:
+    """Takibat sorusunun modelin önüne düşecek tek satırı (PLAN R7-11), hiçbiri değilse None.
+
+    "Sadece Texas" model koşmayı hak eder - istenen yeni bir veri - ama model hangi yoldan
+    koşacağını bilmez: anahtar kelime, cevabı baştan kurmak yerine son turun SQL'inin değiştirilmesi
+    gerektiğini söyler. Satır bloğun içine düştüğü için "son turun" hangi tur olduğunu da görür;
+    bloğun son ``Tur n SQL`` satırı o turdur.
+    """
+    words = tokens(question or "")
+    for keywords, hint in REFINE_HINTS:
+        if any(_says(words, phrase) for phrase in keywords):
+            return hint
+    return TOP_HINT if _top_wanted(words) else None
 
 
 def ambiguous_entity(question: str, turns: list[dict] | None, schema: dict | None) -> dict | None:
@@ -193,3 +234,17 @@ def _last_answered(turns: list[dict] | None) -> dict | None:
 def _mentions(words: list[str], phrase: list[str]) -> bool:
     """İfadeli isteğin ("tablo olarak") bitişik geçtiği bir yer var mı."""
     return any(words[i : i + len(phrase)] == phrase for i in range(len(words) - len(phrase) + 1))
+
+
+def _says(words: list[str], phrase: str) -> bool:
+    """Kelime soruda mı: tek kelime kökle aranır - "karşılaştırma" da "karşılaştır"dır - çok kelimeli
+    ifade ise bitişik geçmelidir, yoksa "geçen" ile "yıl" ayrı cümlelerde buluşurdu."""
+    parts = tokens(phrase)
+    if len(parts) == 1:
+        return any(word.startswith(parts[0]) for word in words)
+    return _mentions(words, parts)
+
+
+def _top_wanted(words: list[str]) -> bool:
+    """Sayıyla gelen sıralama isteği: "ilk 10", "en çok 5 ürün"."""
+    return any(word.isdigit() for word in words) and any(_says(words, phrase) for phrase in TOP_WORDS)

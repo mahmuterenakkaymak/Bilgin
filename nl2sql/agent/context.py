@@ -92,18 +92,21 @@ def _table_words(schema: dict) -> set[str]:
     return words
 
 
-def context_block(turns: list[dict] | None, hints: dict | None) -> str:
+def context_block(turns: list[dict] | None, hints: dict | None, refine: str | None = None) -> str:
     """Önceki turların system mesajına düşen bölümü (PLAN R7-4, Contracts "history turn").
 
     Her tur kendi sorusu, SQL'i, kolon adları ve en fazla ``CONV_KEEP_ROWS`` maskeli satırı ile
-    yazılır; altındaki ipucu satırı ``followup_hints``ın sonucunu modelin diline çevirir, en altta
-    netleştirme kuralları durur. Satırlar özetten geldiği gibi basılır - ham pii burada yeniden
-    üretilmez, yürütücünün maskesi zaten özetin içindedir.
+    yazılır; altındaki iki ipucu satırı sırasıyla ``followup_hints``ın sonucunu modelin diline
+    çevirir ve ``refine_hint``ın tek satırını taşır (R7-11 - bloğun üretebileceği soru ikisinin de
+    elinde değildir), en altta netleştirme kuralları durur. Satırlar özetten geldiği gibi basılır -
+    ham pii burada yeniden üretilmez, yürütücünün maskesi zaten özetin içindedir.
     """
     lines = [HISTORY_HEADER]
     for turn in turns or []:
         lines += _turn_lines(turn)
     lines.append(_hint_line(hints))
+    if refine:
+        lines.append(refine)
     lines.append(FOLLOWUP_RULES)
     return "\n".join(lines)
 
@@ -164,6 +167,8 @@ def _hint_line(hints: dict | None) -> str:
     hints = hints or {}
     markers = hints.get("markers") or []
     if not markers:
+        if hints.get("table_noun"):
+            return "İpucu: soru tek başına da okunabilir; bir tabloyu adlandırıyor, önceki turlara bağlı olmak zorunda değil."
         return "İpucu: soru önceki turlardan birine bağlanıyor olabilir; öyleyse onu bu turlardan çöz."
     bound = "tablo adı da geçiyor." if hints.get("table_noun") else "tablo adı geçmiyor, soru tek başına okunmaz."
     return f"İpucu: soruda önceki tura bağlanan {', '.join(markers)} var; {bound}"
