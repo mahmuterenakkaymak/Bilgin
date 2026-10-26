@@ -6,7 +6,7 @@ export const ROLE_LABELS = { admin: "Yönetici", user: "Kullanıcı" };
 
 export const EXPIRED_NOTE = "Oturumunuz sona erdi, lütfen yeniden giriş yapın.";
 
-const NOT_ALLOWED_NOTE = "Bu sayfa yalnız yöneticiye açık.";
+export const NOT_ALLOWED_NOTE = "Bu sayfa yalnız yöneticiye açık.";
 
 // Harita ve kullanıcı listesi yöneticiye ait; soru ve kural ekranı her role açık
 // (kural ekranı kendi içinde salt okunura döner).
@@ -21,7 +21,10 @@ export function canSee(route, role) {
 export async function boot(api, hash = "#/") {
   try {
     const user = await api.me();
-    return { screen: "app", user, route: parseRoute(hash), requested: hash, note: null };
+    // Açılış ve yenileme girişle aynı kararı verir: role açık olmayan adres, ekran hiç boyanmadan
+    // soru ekranına düşer.
+    const { route, note } = afterLogin(user, hash);
+    return { screen: "app", user, route, requested: hash, note };
   } catch (error) {
     if (error?.status !== 401) throw error;
     return { screen: "login", user: null, requested: hash, note: null };

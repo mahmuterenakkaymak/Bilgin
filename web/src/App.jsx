@@ -10,7 +10,7 @@ import Sidebar from "./components/Sidebar.jsx";
 import UsersScreen from "./components/UsersScreen.jsx";
 import * as api from "./lib/api.js";
 import { askReducer, initialState } from "./lib/askState.js";
-import { ROLE_LABELS } from "./lib/auth.js";
+import { NOT_ALLOWED_NOTE, ROLE_LABELS, canSee } from "./lib/auth.js";
 import { parseRoute } from "./lib/route.js";
 import { applyTheme, nextTheme, readStored, store } from "./lib/theme.js";
 
@@ -231,7 +231,13 @@ export default function App({ user = null, onLogout = null, note = "" }) {
   const [history, setHistory] = useState([]);
   const [pending, setPending] = useState(null); // {question, n}: kenar çubuğundan gelen soru
   const [theme, setTheme] = useState(() => readStored(themeStorage()));
-  const route = parseRoute(hash);
+  // Adres rolle çözülür: `#/kullanicilar` ile açan ya da yenileyen sıradan bir kullanıcı yönetici
+  // defterini görmez, kapının girişte yaptığı gibi soru ekranına bir cümleyle düşer. Kullanıcı yoksa
+  // kabuk tek kullanıcılıdır ve Run 5'teki gibi her ekran açıktır.
+  const requested = parseRoute(hash);
+  const allowed = !user || canSee(requested, user.role);
+  const route = allowed ? requested : "ask";
+  const screenNote = note || (allowed ? "" : NOT_ALLOWED_NOTE);
 
   // Kök nitelik seçili temayı taşısın: açılışta bir kez, her değişimde yeniden. main.jsx ilk
   // boyamadan önce aynı işi yaptığı için koyu teması olan açılışta açık bir kare görmez.
@@ -363,9 +369,9 @@ export default function App({ user = null, onLogout = null, note = "" }) {
         </aside>
         <main id="main">
           {/* Cümle düşülen ekranın üstünde durur; başka bir ekrana geçince kendiliğinden kalkar. */}
-          {note && route === "ask" && (
+          {screenNote && route === "ask" && (
             <p className="route-note" id="route-note">
-              {note}
+              {screenNote}
             </p>
           )}
           <Screen
