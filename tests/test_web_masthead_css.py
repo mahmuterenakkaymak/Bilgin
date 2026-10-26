@@ -175,3 +175,28 @@ def test_the_dataset_chip_keeps_its_right_to_shrink():
     assert effective(f"{HEAD} .chip").get("min-width") == "0", (
         "çipin min-width'ı sıfıra inmiyor: uzun ad sütunu şişirir, satır taşar"
     )
+
+
+def test_the_nav_line_is_written_not_wrapped():
+    """Run 6 dördüncü bağlantıyı (Veritabanı haritası) ekleyince gezinme kendi alanında saraya
+    durdu: 390'da "Sor Kurallar", sonra "Veritabanı haritası", sonra "Kullanıcılar" tek başına —
+    başlık dört dağınık satır okunuyor (landing-empty-state-390.png, users-screen-390.png). Sarma
+    kırılacak yeri içeriğin genişliğine bırakır; satırın yazılmış sayılması için iki yol var:
+    ızgarada en az iki sütun ya da tek sıra kaydırılan bir satır. İkisi de dört bağlantının birer
+    birer alt alta inmesini engeller.
+    """
+    nav = effective(".masthead-nav")
+    tracks = split_tracks(nav["grid-template-columns"]) if nav.get("display") == "grid" else []
+    scrollable = nav.get("overflow-x") in ("auto", "scroll")
+    assert len(tracks) >= 2 or scrollable, (
+        f".masthead-nav satırı yazılmamış: sığmayan bağlantılar sarmaya kalıyor, bir bağlantı "
+        f"kendi satırında tek başına kalıyor: {nav}"
+    )
+    if scrollable:
+        assert nav.get("flex-wrap", "nowrap") != "wrap", (
+            "kaydırma ile sarma bir arada: sarma kazanıyor, bağlantılar yine alt alta iniyor"
+        )
+        # Esneyen bağlantı sığmayan adını kendi içinde kırıyor: satır yine ikinci kata çıkıyor.
+        assert effective(".nav-link").get("flex", "0 1 auto") in ("none", "0 0 auto"), (
+            "bağlantı esneyebiliyor: uzun ad kendi içinde kırılıp satırı kabartıyor"
+        )

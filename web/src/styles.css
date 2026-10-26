@@ -831,13 +831,14 @@ main {
 
   .masthead-nav {
     grid-area: nav;
-    margin-left: 0;
   }
 
-  /* Sütun payı: yöneticinin üç bağlantısı 207px, oysa gezinmenin yayıldığı iki sütun en dar
-     durumda ("Bilinmiyor" ile) 191px kalıyor — bağlantı iç boşluğu telefonda yarıya iner,
-     gezinme 183px'e düşer ve Çıkış'ın önüne sarkmaz. */
+  /* Sütun payı: yöneticinin dört bağlantısı (Sor, Kurallar, Veritabanı haritası, Kullanıcılar)
+     gezinmenin yayıldığı iki sütuna — en dar durumda "Bilinmiyor" ile 183px — sığmıyor. İç boşluk
+     telefonda yarıya iner ve bağlantı esnemez: sığmayan ad kendi içinde kırılıp satırı ikinci
+     kata çıkaramaz, sıra taşar ve aşağıdaki kural onu kaydırır. */
   .nav-link {
+    flex: none;
     padding-inline: calc(var(--space) * 0.5);
   }
 
@@ -920,9 +921,22 @@ main {
   }
 
   /* Yöneticinin dört bağlantısı (Veritabanı haritası ve Kullanıcılar) iki sütuna sığmıyor ve
-     Çıkış'ın önüne sarkıyordu: gezinme kendi içinde sarar, başlığın iki satırı bozulmaz. */
+     Çıkış'ın önüne sarkıyordu. Çözüm sarmak değildi: sarma kırılacak yeri içeriğin genişliğine
+     bırakıyor, 390'da "Sor Kurallar" / "Veritabanı haritası" / "Kullanıcılar" üç satıra dizilip
+     başlığı dörde çıkarıyordu (landing-empty-state-390.png, users-screen-390.png). Satır tek
+     olarak yazılır, taşan taraf kaydırılır; başlığın iki satırı bozulmaz. Kaydırma çubuğu satırı
+     kabartmaz — kenarda kesilen ad devamı olduğunu zaten söylüyor. Odak halkası kutunun 4px
+     dışına çiziliyor: pay içeride, negatif pay ile metnin başlangıcı yine sözcükle hizada. */
   .masthead-nav {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 4px;
+    margin: -4px;
+  }
+
+  .masthead-nav::-webkit-scrollbar {
+    display: none;
   }
 
   /* Raporun altı sayısı tek satırda kırka yakın piksele düşüyor: üç sütun, iki satır.
