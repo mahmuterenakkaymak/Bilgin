@@ -47,10 +47,24 @@ def selectors(step) -> list[str]:
     return found
 
 
+TASKS_PATH = config.ROOT / "TASKS.md"
+
+
+def delivered(page: dict) -> bool:
+    """A page planned ahead names its milestone in ``from``; until every task of that milestone is
+    ticked in TASKS.md the screen it walks does not exist yet, so its selectors are not held to it."""
+    milestone = page.get("from")
+    if not milestone:
+        return True
+    open_task = re.compile(rf"^- \[ \] T\d+ \| {re.escape(milestone)} \|", re.MULTILINE)
+    return not open_task.search(TASKS_PATH.read_text(encoding="utf-8"))
+
+
 def all_selectors() -> list[tuple[str, str]]:
     return [
         (page["name"], selector)
         for page in visual()["pages"]
+        if delivered(page)
         for step in page["steps"]
         for selector in selectors(step)
     ]

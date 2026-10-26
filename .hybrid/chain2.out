@@ -1,1 +1,13 @@
 2026-10-25 23:13:17 | CHAIN  | waiting for the running orchestrator (pid 12648), then: PROJECT_BRIEF_RUN6.md, PROJECT_BRIEF_RUN7.md, PROJECT_BRIEF_RUN8.md
+2026-10-26 07:48:07 | CHAIN  | pid 12648 finished
+2026-10-26 07:48:07 | CHAIN  | starting PROJECT_BRIEF_RUN6.md (build only, plan already made)
+2026-10-26 07:48:13 | ORCH   | brain: cloud Claude (panel: cloud)
+2026-10-26 07:48:13 | ORCH   | final: whole-project checks
+2026-10-26 07:55:04 | ORCH   | final: whole-project checks green (17 command(s))
+2026-10-26 07:55:04 | ORCH   | done: {"tasks": 0, "first_try": 0, "local_retries": 0, "rescues": 0, "failed": [], "reviews": 0, "checks": "green", "minutes": 6.8, "brain_calls": 5, "brain": "cloud"}
+2026-10-26 07:55:04 | CHAIN  | PROJECT_BRIEF_RUN6.md finished
+2026-10-26 07:55:04 | CHAIN  | pause 15 min before PROJECT_BRIEF_RUN7.md (cool-down)
+2026-10-26 08:10:20 | CHAIN  | cloud brain budget reset for PROJECT_BRIEF_RUN7.md
+2026-10-26 08:10:20 | CHAIN  | starting PROJECT_BRIEF_RUN7.md (plan + build)
+2026-10-26 08:10:25 | ORCH   | brain: cloud Claude (panel: cloud)
+2026-10-26 08:10:25 | BRAIN  | extending the plan from PROJECT_BRIEF_RUN7.md with opus

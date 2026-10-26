@@ -1279,3 +1279,295 @@ R6-23. **Test rules kept** (R5-22) plus: auth tests use tmp app DBs and an injec
   two roots, session holder + datasets API, preview/apply/index job, map API, map UI, README, visual + smoke
   onboarding. Integration: real template -> filled in code -> preview API -> apply -> real fake index -> switch ->
   `/api/ask` answered; existing datasets byte-identical; non-admin 403 on all of it.
+
+
+# PLAN - NL2SQL Run 7 (conversations, start screen per business role, database connections in the admin panel)
+
+Brief: `PROJECT_BRIEF_RUN7.md`. Product name Bilgin (package/CLI stay `nl2sql`). No commercial ERP product or company
+name in code, docs, UI text or test data. Milestones M21-M25 as the brief numbers them. No new dependency: DPAPI is
+`ctypes` over `crypt32`, everything else is stdlib + what pyproject already pins.
+
+## Run 7 architecture
+
+```
+POST /api/ask {question, mode?, choice?, conversation_id?}
+   -> web/app.py ask: db_status.state()=="down" ? ask.down_payload (no agent)  [M25]
+   -> app/ask.py ask_payload(session, q, ..., conversations=store, conversation_id=id|None, username)
+        conversations.get(id, username) -> 404 when not theirs / missing
+        turns = store.last_turns(id, CONV_TURNS)            (summary_json only: <= CONV_KEEP_ROWS masked rows)
+        refine.chart_only(q, turns) ----------------------> rerun previous SQL, chart by code, no LLM call   [M22]
+        refine.ambiguous_entity(q, turns, schema) -------> needs_clarification with kept-row options          [M22]
+        agent/loop.run_agent(q, ..., history=turns)
+             agent/context.fit_history -> "## Önceki turlar" section appended to the ONE system message
+             submit_sql gains optional `context` arg (only when history is given)
+        agent/context.validate_note(note, turns) -> payload.context (+ evidence line) | dropped + logged
+        app/ask._answer / _report (unchanged: guard sees only this turn's rows + this question)
+        store.add_turn / complete_turn(summary = context.turn_summary(payload))
+   -> payload + {conversation_id, turn, context}
+
+GET /api/start -> start/cards.StartCache(dataset, card) -> executor (approved stored SQL only, never the model)
+/api/ready-questions* (admin) -> start/ready.ReadyStore ; SQL always taken from an ask record (audit_id), never from the client
+POST /api/ready-questions/suggest -> start/suggest job: model writes texts -> ask_payload per text -> approved=false
+
+engine/connections.py ConnectionStore(app DB) + dpapi.py ; resolve(dataset) env_dataset > env(backend mssql) > stored > none
+   -> open_session(..., connections=store) -> LocalExecutor(backend, conn_str)       (switch = new session, no restart)
+engine/guard.py readonly_guard(conn_str, tables, connect=pyodbc.connect)   (before every save / "test")
+engine/dbstatus.py DbStatus thread: SELECT 1 (3 s) every DB_CHECK_S, kick() after a change or a connection error
+   -> /api/health.db -> header "Veritabanı" dot (every user), red banner, fail-fast ask
+```
+
+## Run 7 file layout additions
+
+```
+nl2sql/app/conversations.py      ConversationStore (conversations, turns) on the app DB
+nl2sql/agent/context.py          turn_summary, followup_hints, context_block, fit_history, validate_note, evidence_line
+nl2sql/agent/refine.py           CHART_WISHES table, chart_wish, chart_only, refine_hint, ambiguous_entity
+nl2sql/eval/followups.py         load_followups, run_followups, followup_metrics
+nl2sql/start/__init__.py ready.py (ReadyStore) cards.py (card_result, StartCache) seed.py suggest.py
+nl2sql/engine/dpapi.py connections.py (ConnectionStore, resolve, build_conn_str, scrub, newest_driver)
+nl2sql/engine/guard.py dbstatus.py
+nl2sql/web/conversations_api.py start_api.py connections_api.py
+datasets/synthetic_erp/followups.jsonl ready_questions.json          (fixtures for fake serve, smoke, visual)
+real_datasets/wwi_real/followups.jsonl ready_questions.json
+web/src/lib/{thread,startCards,connForm}.js
+web/src/components/{Thread,TurnCard,ConversationList,StartScreen,StartCard,ReadyQuestionForm,ReadyQuestionsScreen,
+                    ConnectionsScreen,DbStatus}.jsx
+```
+
+## Run 7 decisions
+
+R7-1. **Config** (`nl2sql/config.py`, existing names unchanged): `CONV_KEEP_ROWS=5`, `CONV_TURNS=3`,
+      `CONV_TITLE_CHARS=80`, `FOLLOWUP_MARKERS=("bu","bunlar","bunları","bunların","şu","şunlar","o","onlar","aynı",
+      "sadece","yalnız","bunu","peki","ya","bunlardan","onun","bunun")`, `BUSINESS_ROLES` (ordered dict `satis: Satış`,
+      `satin_alma: Satın alma`, `muhasebe: Muhasebe`, `yonetim: Yönetim`, `genel: Genel`), `DEFAULT_BUSINESS_ROLE="genel"`,
+      `PERSONAL_CARDS=6`, `START_CACHE_S=300`, `CARD_REFRESH_MIN_S=30`, `CARD_TABLE_ROWS=10`, `SUGGEST_PER_ROLE=(2, 4)`,
+      `DB_CHECK_S=60`, `DB_CHECK_TIMEOUT_S=3`, `CONN_ENV_PREFIX="NL2SQL_MSSQL_CONN_"`, `CONN_TABLE_SAMPLE=10`.
+R7-2. **ConversationStore** (`app/conversations.py`, same SQLite file as saved/users = `saved_path` in create_app,
+      `config.app_db_path()` on the CLI; short-lived connections like `SavedStore`; injectable clock). Tables exactly as
+      the brief; `conversations.id` = `uuid4().hex` (text: a URL `#/c/<id>` must not be guessable), `username` NULL in
+      single-user mode, `title` = first question cut to `CONV_TITLE_CHARS`. `turns.n` starts at 1. Methods: `create(username,
+      dataset, title) -> id`, `add_turn(id, turn) -> n`, `complete_turn(id, n, turn)` (only the pending clarification
+      turn), `get(id, username=ALL) -> {conversation, turns} | None`, `list(username, dataset)` newest `updated_at`
+      first, `delete(id, username) -> bool`, `last_turns(id, k)` (answered turns only, oldest first). A row of another
+      user, or of another dataset than the session's, is None -> API 404 "Konuşma bulunamadı." (never 403, as R6-9).
+R7-3. **Turn summary** (`context.turn_summary(payload)`): `{"columns", "row_count", "rows": payload.rows[:CONV_KEEP_ROWS]
+      (already masked by the executor - masked cells stay masked), "facts", "chart_kind": chart.type|null, "context":
+      payload.context, "clarification": payload.clarification}`. Nothing else of the result is stored: no chart option,
+      no row 6+. A failed turn is stored (status, answer_text = message) but never enters a context block.
+R7-4. **Context block.** `run_agent(..., history=None)`: None or [] -> prompt, messages and tools byte-identical to Run 6
+      (every pinned prompt test holds). With history: `context_block(turns, hints)` is appended to the single system
+      message as `## Önceki turlar` - per turn `Tur n sorusu: ...`, `Tur n SQL: ...`, `Tur n kolonlar: ...`, `Tur n
+      satırlar (k / toplam): ...` - then the hint line and the rules text: resolve "bu / bunlar / o müşteri / aynı dönem
+      / sadece X / bunu" from these turns, start from the earlier SQL when the user refines a report, never copy a
+      number from an earlier turn into the answer, fill `submit_sql.context`. The user message stays the bare question
+      (fake scripts key on it). `fit_history(turns, messages, tools, budget)`: if the estimate exceeds the budget, drop
+      the oldest turn, repeat; then drop rows (oldest kept turn first); the current question is never touched; still
+      over -> the loop's existing `context_overflow`. Run gains `history_turns` and `history_rows_dropped`.
+R7-5. **Context note.** With history, `submit_sql` takes an optional `context` object `{uses_turns: [int],
+      entities: [{column, value}], refines_sql_of: int|null}`; `AgentRun.context_note` keeps it raw.
+      `validate_note(note, turns, question) -> (note|None, reason|None)`: every turn number exists among the given turns,
+      `refines_sql_of` in `uses_turns`, each entity's `value` (compared as folded text) appears in a used turn's kept
+      rows or SQL, `column` is in that turn's columns. Invalid -> dropped, the answer stands, the ask record gets
+      `context_dropped: <reason>`. A missing note = `{uses_turns: [], ...}` (stood alone). `evidence_line(note, turns,
+      schema)` -> "Önceki cevaptan: müşteri 832 (Tailspin Toys (Head Office))" - the label is the column's schema
+      description head (never the technical name; fallback "değer"), the parenthesis is the first other text cell of
+      the kept row holding the value; no entity -> "Önceki cevaptan: 2. turun sorgusu temel alındı."
+R7-6. **Numbers.** The narrator's allowed set stays `allowed_values(columns, rows, facts, question)` of THIS turn -
+      earlier turns' values are never added (contract test in M21). Values the user typed are in `question` already.
+R7-7. **ask_payload(..., conversations=None, conversation_id=None).** Without `conversations` the payload and record
+      are exactly Run 6 (`tests/test_app_ask.py`, `test_app_clarify.py`, `test_cli_ask_json.py` PAYLOAD_KEYS hold).
+      With it: no id -> new conversation; unknown/foreign id -> `ConversationNotFound`; payload gains
+      `conversation_id`, `turn`, `context` (null when stood alone or dropped); the record gains `conversation_id`
+      and `turn`. A `choice` on a conversation whose last turn is `needs_clarification` with the same question
+      completes that turn (same n) instead of appending.
+R7-8. **API.** `POST /api/ask` always passes `app.state.conversations` (payload keys grow on the web; no web test pins
+      them). `GET /api/conversations` -> `{"conversations": [{id, title, dataset, created_at, updated_at, turns}]}`
+      (own, current dataset); `GET /api/conversations/{id}` -> `{conversation, turns: [StoredTurn]}` - no SQL runs;
+      `DELETE` -> `{"deleted": true}`; all `user` in ROUTE_ROLES. `GET /api/history` items gain `conversation_id`,
+      `turn` (null for old lines). Replay unchanged.
+R7-9. **CLI.** `ask "..." --conversation ID` continues, `ask "..." --new` starts one (both use
+      `ConversationStore(config.app_db_path())` and print a last line `Konuşma: <id> · tur <n>`); plain `ask` is Run 6
+      (no store write - so CLI tests never touch `data/bilgin.db`); `--json` with either flag carries the three keys.
+      Unknown id -> "Konuşma bulunamadı." exit 2.
+R7-10. **Chart-only refinement** (`agent/refine.py`). `CHART_WISHES = {"line": ("çizgi","line","trend"), "bar":
+      ("çubuk","sütun","bar"), "pie": ("pasta","dilim","pie"), "table": ("tablo","tablo olarak")}`; `chart_wish(q)`;
+      `chart_only(q, turns)` = a wish, the last answered turn exists, and after removing the wish, markers and
+      `grafik/grafiği/göster/yap/çevir/olarak/olsun/lütfen` nothing is left. Then ask_payload reruns the previous
+      turn's SQL through the executor (same SQL string, new audit line), `chart_spec(columns, rows, q, kind=wish)`,
+      facts by code, `answer_text` = code sentence ("Grafik çubuk olarak gösteriliyor." or the reason "Bu sonuç çizgi
+      grafiğe uygun değil: tarih ya da sıralı bir kolon yok."), `narration_source="template"`, steps
+      `[{tool: "chart", ...}]`, context `{uses_turns:[n], entities: [], refines_sql_of: n}`. Zero agent and zero narrator
+      calls. `chart_spec(..., kind=None)`: None = Run 5 behaviour; a kind the shape allows is forced; otherwise the
+      auto chart and `reason`.
+R7-11. **Other refinements** go through the agent with the block; `refine_hint(q)` adds one hint line by keyword
+      (`sadece|yalnız` filter, `karşılaştır|geçen yıl|önceki` compare, `aylık|çeyreklik|haftalık|yıllık` period,
+      `ilk N|en çok N` top) telling the model to rewrite turn n's SQL. Standalone hints: `followup_hints(q, schema)` ->
+      `{markers: [...], table_noun: bool}` (table noun = a folded word matching a table name/keyword/description head).
+R7-12. **Ambiguous follow-up** (deterministic, before the agent): `ambiguous_entity(q, turns, schema)` - a singular
+      demonstrative + an entity noun (`ENTITY_NOUNS = {"müşteri": ("customer","müşteri","cari"), "ürün":
+      ("stockitem","product","ürün","stok"), "tedarikçi": ("supplier","tedarikçi"), "fatura": ("invoice","fatura")}`
+      folded against the last answered turn's column names + descriptions) and that column has >= 2 distinct kept
+      values -> `needs_clarification` `{question: "Hangi müşteriyi kastediyorsunuz?", options: ["<value> (<name>)",
+      ...]}` from the kept rows. The choice runs the agent with `follow_up_text` and the chosen value is put into the
+      context note as the entity by code. One distinct value -> no question.
+R7-13. **Follow-up golden set.** Line = chain `{"id": "F01", "tags": [...], "turns": [{"question", "sql", "uses_turns":
+      [int], "tags": [...]}]}`; `dataset.json files.followups` (optional; `Dataset.followups()` -> [] when absent).
+      wwi_real: 8-12 chains (entity customer/product/supplier/invoice, set "bunlardan", period + filter refinements, one
+      chain standing alone in the middle, one chart-only turn whose `sql` equals the previous). Every SQL passes
+      `policy.check` against the wwi_real allowlist in a test; the run on the real SQL Server is Eren's manual step
+      (README: `NL2SQL_BACKEND=mssql ... eval --followups --dataset wwi_real --llm fake`), never a task accept.
+      synthetic_erp gets 3 chains (deviation from the brief: the fake-served app, smoke and visual flows need chains on
+      a dataset that builds locally). `fake.for_golden(..., followups=)` replays chains keyed by (question, previous
+      questions read from the `Tur n sorusu:` lines) and submits the golden `uses_turns` as the note;
+      `make_client("fake")` passes the dataset's followups.
+R7-14. **eval --followups** (`eval/followups.py`): each chain runs turn by turn through `ask_payload` with a tmp
+      `ConversationStore` under `eval_out/<ds>/followups/` (real producer, not a copy of the loop); turn correct = the
+      existing result-set verdict vs the turn's golden SQL; chain correct = all turns; context correct = set of note
+      `uses_turns` == golden (empty = stood alone). report.json `followups: {turns, turn_accuracy, chains,
+      chain_accuracy, context_accuracy, items: [...]}`, report.md section "Ardışık sorular", console one line per chain.
+      `--llm fake` = 100 %. Target (manual): Flash-Next `full_rules` >= 80 % of turns.
+R7-15. **Thread UI.** `#/c/<id>` route (route.js); `lib/thread.js` reducer (load stored turns, append pending, settle,
+      complete clarification, expand/collapse). `#thread` holds `.turn` per turn: `.turn-question` bubble + card; the
+      last turn's card is the full AnswerCard, earlier ones `.turn-collapsed` (sentence + kept rows) and expand on
+      click. A stored turn (after reload / from the list) shows its sentence and kept rows plus "Tam tablo ve grafik
+      için yeniden çalıştırın" with the replay button - opening never runs SQL. `#question` sits under the last turn;
+      `#new-conversation` "Yeni konuşma" clears the thread and goes to `#/`. Evidence gets `#context-line` (the R7-5
+      line). Sidebar: `#conversation-list` above history (title, time, `button[data-conversation-delete]`); history
+      items show "tur n" when they belong to a conversation. Phone: bubbles full width, collapsed tables scroll
+      inside their card; dark mode via tokens. All phone rules go inside the existing `@media (max-width: 720px)`.
+R7-16. **Business role.** `users.business_role TEXT NOT NULL DEFAULT 'genel'` added by `ALTER TABLE` when missing;
+      public User gains `business_role` (Run 6 pins in `tests/test_auth_store.py` and `tests/test_web_users_api.py`
+      FIELDS are edited by T316, named there - the brief's shape wins); `/api/auth/me` and login 200 gain it. Admin sets
+      it (POST/PUT `/api/users`); a PUT on one's own id with `business_role` -> 403 "Kendi iş rolünüzü
+      değiştiremezsiniz."; unknown value 422. CLI `user add ... --business-role R`, `user set NAME --business-role R`,
+      `user list` column "İş rolü". Header chip "<ad> · <İş rolü> · Yönetici|Kullanıcı".
+R7-17. **Ready questions** (`start/ready.py`, app DB): table per the brief + `audit_id` of the approving ask.
+      **The client never sends SQL**: admin `POST /api/ready-questions {audit_id, title, question?, display,
+      business_role, position?}` takes the SQL from the ask record the admin can see (`find_ask`), reruns it through
+      the executor - policy/exec error -> 422 with the sentence (a closed column is rejected here) - and stores
+      `approved=1`. `PUT {title?, question?, display?, business_role?, position?, approved?, audit_id?}` (audit_id =
+      "SQL'i yeniden onayla"). `DELETE`. `GET ?dataset=&pending=` lists all (admin). Personal: `POST /api/start/cards
+      {audit_id, title, display}` (own ask only, `business_role NULL`, `created_by` = user, max `PERSONAL_CARDS` ->
+      409 "En fazla 6 kişisel kart ekleyebilirsiniz."), `DELETE /api/start/cards/{id}` (own only, else 404).
+      `suggest_display(columns, rows, chart)`: 1x1 numeric -> number; a chart spec -> chart; else table.
+R7-18. **Start screen data.** `list_for(dataset, business_role, username)` = approved rows with role = theirs or `*`,
+      plus their personal rows, by `position`, then id. `card_result(executor, card)` -> number: `value` + `label`;
+      chart: `chart` (chart_spec); table: `columns`, `rows[:CARD_TABLE_ROWS]`; failure: `error` sentence (scrubbed),
+      the other cards unaffected. `StartCache` keyed (dataset, card id, sql hash), TTL `START_CACHE_S`, one lock per key
+      (single flight: two users in the TTL = one execute). `POST /api/start/cards/{id}/refresh` bypasses the TTL at most
+      once per `CARD_REFRESH_MIN_S` per card, else 429 "Bu kart az önce yenilendi; {n} sn sonra yeniden deneyin.".
+      `POST /api/start/cards/{id}/open` -> replay-shaped payload (stored SQL, narrator, no agent) recorded as turn 1 of a
+      new conversation. An unapproved row never appears and never runs (open/refresh -> 404 for it).
+R7-19. **Seeds.** `dataset.json files.ready_questions` (optional) -> `[{business_role, title, question, sql, display,
+      position}]`; `seed.ensure_seeded(store, dataset, executor)` once per dataset (settings key `ready_seeded:<name>`)
+      at serve start and after a dataset switch; rows whose SQL fails the policy are skipped with one log line.
+      wwi_real: 2-3 per business role from golden SQLs; synthetic_erp: 2 per role (visual + smoke).
+R7-20. **Suggestions.** `suggest.suggest_texts(schema, rules, llm) -> {role: [text]}` - one model call, JSON only,
+      2-4 per role, parsed and capped by code; the fake returns golden questions round-robin. A job (thread, status in
+      memory like R6-16: `asking` -> `done` | `failed`, counts) opens its own session for the dataset (no swap), runs
+      `ask_payload` per text and stores answered ones `approved=0` with the SQL of that ask. `POST
+      /api/ready-questions/suggest {dataset}` -> `{job_id}`; `GET /api/ready-questions/suggest/{job_id}`. Onboarding
+      (`onboard` index job) starts it when the index is done.
+R7-21. **Start screen UI.** `#/` renders `#start`: card grid (`.start-card[data-card-id]`, `data-display` number|chart|
+      table; title, big value / small chart / mini table, "x dk önce yenilendi", `button[data-card-refresh]`; error card
+      in err tokens + admin `button[data-card-reapprove]`), then the existing AskBox (`#question`, placeholder "Sorunuzu
+      yazın") and the example chips. No cards -> one muted line (admin: pointer to "Hazır sorular"). Card click ->
+      open -> `#/c/<id>`. AnswerCard: `#pin-card` "Panoma ekle" (everyone) and admin `#make-ready` "Hazır soru yap" ->
+      `ReadyQuestionForm` (`#ready-title`, `#ready-question`, `#ready-display`, `#ready-role`, `#ready-save`).
+      Admin screen `#/hazir-sorular` (`#nav-ready`, `#ready-screen`): per role groups, "Onay bekliyor" badge,
+      `button[data-ready-open|approve|edit|delete]`, `#ready-suggest` + job line. Phone: one card per row; desktop
+      auto-fill grid min 260px.
+R7-22. **Connections store** (`engine/connections.py`, app DB): table per the brief; `save(dataset, fields,
+      password|None, username)` (None/"" keeps the stored secret); `public(dataset)` -> R7 Contracts shape, never the
+      secret or a connection string; `dpapi.protect(bytes, entropy)` / `unprotect` with `CRYPTPROTECT_LOCAL_MACHINE`,
+      entropy `sha256("bilgin-conn:" + dataset)`; non-Windows -> `DpapiUnavailable` (API 409 "Bu sunucuda parola
+      saklanamaz; ortam değişkenini kullanın.", UI form disabled). `build_conn_str(row, password, driver)` (sql auth UID/
+      PWD, windows `Trusted_Connection=yes`, Encrypt / TrustServerCertificate yes|no, port as `SERVER=host,port`);
+      `ApplicationIntent=ReadOnly` still forced by `_mssql._read_only`. `newest_driver(drivers=pyodbc.drivers)`.
+      `scrub(text, secret=None)` removes `PWD=...`/`Password=...` values and the literal secret.
+R7-23. **Resolution order** `resolve(dataset, store, active) -> {"source": "env_dataset"|"env"|"stored"|"none",
+      "conn_str"}`: `NL2SQL_MSSQL_CONN_<NAME>` > `NL2SQL_MSSQL_CONN` (only for the active dataset and only when
+      `config.backend() == "mssql"` - that keeps every Run 1-6 test's backend unchanged although the variable is
+      ambient in the dev shell) > stored > none. `open_session(..., connections=None)`: with an `env_dataset` or
+      `stored` source and `dataset.connection == "mssql"` the executor is `LocalExecutor(backend="mssql",
+      conn_str=...)`; otherwise Run 6 exactly. `LocalExecutor(conn_str=None)` passes it to `_mssql.run`. The dataset
+      switch and a connection save rebuild the session (one assignment, R6-10). Env source -> form read-only, PUT 409
+      "Bu bağlantı ortam değişkeninden geliyor; ekrandan değiştirilemez.".
+R7-24. **Read-only guard** (`engine/guard.py`): `readonly_guard(conn_str, tables, connect)` runs the fixed checks of the
+      brief + `HAS_PERMS_BY_NAME(t, 'OBJECT', 'SELECT')` on up to `CONN_TABLE_SAMPLE` allowlist tables; result
+      `{"ok", "lines": [{"check", "ok", "message"}], "missing_tables"}` in Turkish; any power -> ok false with "Bu giriş
+      yazabiliyor ya da yönetebiliyor; salt okunur bir giriş kullanın." + login script URL. A connect failure is one
+      scrubbed line. `PUT` runs it and saves nothing unless ok; `POST /api/connections/{dataset}/test` only reports.
+R7-25. **Status** (`engine/dbstatus.py`): `DbStatus(resolver, ping, clock)`; `state(dataset) -> {state, checked_at,
+      message}`; "none" for a dataset with no connection to check (sqlite) or none configured; `check_now()`, `kick()`,
+      `start(interval)`/`stop()` (daemon thread; requests only read). `ping(conn_str, timeout)` = `SELECT 1` with
+      `DB_CHECK_TIMEOUT_S`. Health `db` block; message for users is the generic sentence, admins also get the scrubbed
+      driver text (`message_admin`). `tests/test_web_api.py` HEALTH_KEYS is edited by T339 (named). Ask when "down":
+      `down_payload` (status failed, error kind `db_down`, "Veritabanına şu an bağlanılamıyor; cevap üretilemiyor.
+      Yöneticinize haber verin.", recorded, no agent). An executor error whose text looks like a connection failure
+      (`08001`, `08S01`, `Login failed`, `TCP Provider`) calls `kick()`.
+R7-26. **Fake probe** (visual + smoke only): `serve --db-probe-file PATH` (hidden; exit 2 unless `--llm fake`) - JSON
+      `{"status": {"<dataset>": "ok"|"down"}, "guard": {"<server>": "readonly"|"sysadmin"|"db_owner"|"writer"}}`
+      re-read on each check; listed datasets count as connection-backed for the dot; the guard uses a fake connector
+      answering per server name. No other code path reads it.
+R7-27. **Connections UI** (`#/baglantilar`, `#nav-connections`, admin): table (dataset, `.db-dot` + state, server/
+      database, Son başarılı, Son hata, source "Ortam değişkeninden" badge, `button[data-conn-edit]`); form per R7
+      brief ids; password placeholder "değiştirmek için yazın"; `#conn-test` -> `#conn-result` lines (✓/✗ per check,
+      missing tables, login script link); `#conn-save` (same guard; error band). MapScreen after apply links "Şimdi
+      bağlantıyı girin" (`#map-connection-link`) for an mssql dataset. Header: `#db-dot` "Veritabanı" with tone
+      ok/down/none and the tooltip (user generic + time; admin + scrubbed message + link), `#db-banner` red band on
+      the ask/thread/start screens while down.
+R7-28. **Visual server** additions: users `analist` business role `satis`, new `satinalma` (`satin_alma`), `admin`
+      `yonetim`; synthetic_erp seeds; a probe file (`synthetic_erp: ok`, a second visual dataset `vitrin_kapali`:
+      the sample workbook applied + fake index, `down`); the flows that switch dataset switch back at their end.
+R7-29. **Test rules kept** (R5-22, R6-23) plus: conversation/start/connection tests use tmp app DBs; tests touching
+      connection resolution `delenv` `NL2SQL_MSSQL_CONN`, `NL2SQL_MSSQL_CONN_*` and `NL2SQL_BACKEND` first; no test
+      writes a real password (values from `secrets`); scripted fakes assert agent/narrator call counts.
+
+## Contracts (Run 7 additions)
+
+| Shape | Producer -> Consumer | Fields (optional = default) |
+|---|---|---|
+| ask body (ext.) | UI, smoke -> `/api/ask` | `{"question", "mode"=null, "choice"=null, "conversation_id"=null}` |
+| AskPayload (ext.) | ask_payload with a store -> API, CLI `--json`, Thread | + `"conversation_id": str`, `"turn": int`, `"context": null\|ContextNote+{"line": str}`; without a store none of the three keys |
+| ContextNote | model `submit_sql.context` -> validate_note -> payload, summary | `{"uses_turns": [int]=[], "entities": [{"column": str, "value": str}]=[], "refines_sql_of": int\|null=null}` |
+| TurnSummary | context.turn_summary -> turns.summary_json -> context block, StoredTurn | `{"columns": [str], "row_count": int, "rows": [[cell]] (<= CONV_KEEP_ROWS, masked), "facts": [fact], "chart_kind": str\|null, "context": ContextNote\|null, "clarification": null\|{"question","options"}}` |
+| history turn | store.last_turns -> run_agent(history), refine | `{"n", "question", "choice"=null, "sql", "summary": TurnSummary}` (answered only) |
+| StoredTurn | `GET /api/conversations/{id}` -> Thread | `{"n", "question", "choice", "status", "sql", "answer_text", "audit_id", "created_at", "summary": TurnSummary}` |
+| conversation item | `GET /api/conversations` -> ConversationList | `{"id", "title", "dataset", "created_at", "updated_at", "turns": int}` |
+| ask record (ext.) | ask_payload -> asklog, history | + `"conversation_id"`, `"turn"` only with a store; + `"context_dropped": str` only when a note was dropped |
+| history item (ext.) | `/api/history` -> Sidebar | + `"conversation_id": str\|null`, `"turn": int\|null` |
+| chart_spec (ext.) | chart_spec(..., kind) -> payload.chart | + `"reason": str` only when the wished kind did not fit |
+| followup chain | followups.jsonl -> fake, eval | `{"id", "tags"=[], "turns": [{"question", "sql", "uses_turns"=[], "tags"=[]}]}` |
+| followups report | eval --followups -> report.json/md | `{"turns", "turn_accuracy", "chains", "chain_accuracy", "context_accuracy", "items": [{"id", "turn", "outcome", "context_ok"}]}` |
+| User (ext.) | UserStore -> users API, me, CLI | + `"business_role": one of BUSINESS_ROLES` (default "genel") |
+| ready question | ReadyStore -> admin API, start | `{"id", "dataset", "business_role": str\|"*"\|null, "title", "question", "sql", "display": "number"\|"chart"\|"table", "position"=0, "created_by", "approved": bool, "audit_id", "created_at"}` |
+| ready create body | ReadyQuestionForm -> `POST /api/ready-questions` | `{"audit_id", "title", "question"=record.question, "display", "business_role", "position"=0}` - never `sql` |
+| start card | `GET /api/start` -> StartScreen | `{"id", "title", "question", "display", "personal": bool, "value"?, "label"?, "chart"?, "columns"?, "rows"?, "refreshed_at": ISO\|null, "error"?: str}`; body `{"cards": [card], "business_role"}` |
+| ready seed line | ready_questions.json -> seed | `{"business_role", "title", "question", "sql", "display", "position"=0}` |
+| suggest job | `/api/ready-questions/suggest*` -> ReadyQuestionsScreen | `{"job_id", "dataset", "phase": "asking"\|"done"\|"failed", "asked", "stored", "message"=null}` |
+| connection (public) | `GET /api/connections[/{ds}]` -> ConnectionsScreen | `{"dataset", "server", "database", "auth": "sql"\|"windows", "username", "options": {"encrypt": bool, "trust_server_certificate": bool, "port": int\|null, "driver": str}, "has_secret": bool, "source": "env_dataset"\|"env"\|"stored"\|"none", "read_only_form": bool, "last_ok_at", "last_error", "state"}` - never a password or connection string |
+| connection PUT body | form -> `PUT /api/connections/{ds}` | `{"server", "database", "auth", "username"="", "password"="" (empty = keep), "options"}` |
+| guard report | readonly_guard -> PUT/test -> `#conn-result` | `{"ok": bool, "lines": [{"check", "ok", "message"}], "missing_tables": [str], "login_script_url": str\|null}` |
+| health db | DbStatus -> `/api/health.db` -> `#db-dot`, `#db-banner` | `{"state": "ok"\|"down"\|"none"\|"unknown", "checked_at": ISO\|null, "message": str\|null, "message_admin"?: str (admins only), "connections_url"?: "#/baglantilar" (admins)}` |
+| probe file | visual_serve, smoke -> serve `--db-probe-file` | `{"status": {ds: "ok"\|"down"}, "guard": {server: "readonly"\|"sysadmin"\|"db_owner"\|"writer"}}` |
+
+## Run 7 milestones
+
+- **M21 - Conversation core** (T284-T295): config, store, turn summary, hints, context block + trimming, history in the
+  loop + note arg, note validation + evidence line, ask_payload with conversations, number-guard contract, conversations
+  API + history fields, CLI flags. Integration: real create_app + real store + real session (fake client from
+  make_client) -> 3 turns through `/api/ask`, `GET` the thread, another user 404.
+- **M22 - Refinements and clarification** (T296-T303): chart wishes, forced chart kind, chart-only path, ambiguous
+  entity, refinement hints, synthetic followups + loader, fake chain replay. Integration: a 4-turn report refinement
+  chain on synthetic_erp through ask_payload with the real fake and real store.
+- **M23 - UI, golden set, eval** (T304-T315): wwi_real followups, eval runner + CLI/report, web libs, Thread/TurnCard +
+  evidence line, App wiring + hash restore, conversation list, CSS, README, smoke `--conversation`, visual pages.
+  Integration: API conversation with TestClient + reload from store + replay of one turn; vitest + build.
+- **M24 - Start screen** (T316-T331): business role store/API/CLI, ready store, approval, card cache, start + ready
+  APIs, seeds, suggestions, web libs, StartScreen, answer-card actions, admin ready screen, users screen + chip, CSS +
+  visual pages, README + smoke `--start`. Integration: two roles + one admin on the real stack.
+- **M25 - Connections and status** (T332-T345): DPAPI, connection store, resolution, executor/session per dataset,
+  guard, status checker, connections API, health/fail-fast/serve wiring, secret scan, connections UI, header dot +
+  banner, visual pages, README + smoke `--connections`. Integration: real store + real resolution + real session swap
+  + injected connector/pinger through the API.

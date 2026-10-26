@@ -998,3 +998,20 @@
 2026-10-26 07:30:55 | HANDS  | T282 try 1: the upload report never compares with the live database (M20 review 1): `nl2sql/web/map_api.py` `preview` calls `template_import.validate(read)` without a skeleton, even when `_db_connection()` is true (R6-15, R6-16, brief "db_check (only with a configured connection)"), so a workbook that names a table or column missing from the live SQL Server gets 0 errors and `db_check` stays `{"checked": false, ...}`. Fix: in `preview`, when `_db_connection()` is true and the read dataset's `connection` is `mssql`, call `introspect.mssql_skeleton()` and pass it as `db_skeleton` to `validate`; an `introspect.IntrospectError` leaves the check unasked (`checked` false, the Turkish message, no error added, never another login); without a connection nothing changes. New tests/test_map_db_check.py (new file, real create_app + real store like tests/test_integration_m20.py, `introspect.mssql_skeleton` and `map_api._db_connection` monkeypatched to a fake skeleton): a workbook table absent from the skeleton comes back in `errors` and `db_check.missing_in_db`, apply on it is 409, a skeleton-only table is a warning, an IntrospectError still returns 200 with `checked` false, and a sqlite-connection workbook never asks the skeleton (hands)
 2026-10-26 07:34:48 | ORCH   | T282: PASSED (hands)
 2026-10-26 07:34:58 | HANDS  | T283 try 1: one unloadable dataset folder takes the whole datasets list down (M20 review 2): `nl2sql/datasets.py` `all_datasets` and `nl2sql/web/datasets_api.py` `datasets_list`/`_index_state` let a `DatasetError`, `JSONDecodeError` or `FileNotFoundError` from one folder under `real_datasets/` (a killed apply, a hand-edited `dataset.json`, a GET between the `dataset.json` and `schema.json` writes of `apply_preview`) escape, so `GET /api/datasets` is a 500 and the map screen cannot list, switch back or even show the report. Fix: `all_datasets` skips a folder that does not load; `datasets_list` lists a dataset whose index state cannot be read with `index: {"exists": false, "fresh": false, "reason": <sentence>}` instead of raising; `activate` and `login_script` on such a name still answer 404/409 sentences. tests/test_datasets_roots.py and tests/test_web_datasets_api.py must stay green (neither pins a raise today). New tests/test_datasets_broken_folder.py (new file): a real root holding a folder whose `dataset.json` is junk and another holding `dataset.json` without `schema.json` -> `GET /api/datasets` is 200 with the good datasets still listed and the active one marked, `datasets.all_datasets()` omits the junk folder, `datasets.name_taken` still returns True for both names (hands)
+2026-10-26 07:40:01 | ORCH   | T283: PASSED (hands)
+2026-10-26 07:40:01 | ORCH   | final: whole-project checks
+2026-10-26 07:46:54 | ORCH   | final: whole-project checks green (17 command(s))
+2026-10-26 07:46:54 | ORCH   | done: {"tasks": 61, "first_try": 59, "local_retries": 3, "rescues": 1, "failed": [], "reviews": 3, "checks": "green", "minutes": 548.3, "brain_calls": 5, "brain": "cloud"}
+2026-10-26 07:48:07 | CHAIN  | pid 12648 finished
+2026-10-26 07:48:07 | CHAIN  | starting PROJECT_BRIEF_RUN6.md (build only, plan already made)
+2026-10-26 07:48:13 | ORCH   | brain: cloud Claude (panel: cloud)
+2026-10-26 07:48:13 | ORCH   | final: whole-project checks
+2026-10-26 07:55:04 | ORCH   | final: whole-project checks green (17 command(s))
+2026-10-26 07:55:04 | ORCH   | done: {"tasks": 0, "first_try": 0, "local_retries": 0, "rescues": 0, "failed": [], "reviews": 0, "checks": "green", "minutes": 6.8, "brain_calls": 5, "brain": "cloud"}
+2026-10-26 07:55:04 | CHAIN  | PROJECT_BRIEF_RUN6.md finished
+2026-10-26 07:55:04 | CHAIN  | pause 15 min before PROJECT_BRIEF_RUN7.md (cool-down)
+2026-10-26 08:10:20 | CHAIN  | cloud brain budget reset for PROJECT_BRIEF_RUN7.md
+2026-10-26 08:10:20 | CHAIN  | starting PROJECT_BRIEF_RUN7.md (plan + build)
+2026-10-26 08:10:25 | ORCH   | brain: cloud Claude (panel: cloud)
+2026-10-26 08:10:25 | BRAIN  | extending the plan from PROJECT_BRIEF_RUN7.md with opus
+2026-10-26 08:28:30 | BRAIN  | extend done: 62 new tasks
