@@ -194,10 +194,15 @@ def _pie(columns, rows, category, number, question):
         {
             "type": "pie",
             "name": columns[number],
+            # Dış etiket kapalı: telefon genişliğinde ECharts onu dört karaktere kırpıyor ("Dom...").
+            "label": {"show": False},
+            "labelLine": {"show": False},
             "data": [{"name": _label(row[category]), "value": _value(row[number])} for row in rows],
         }
     ]
-    option = {"tooltip": {"trigger": "item"}, "series": series}
+    # Adı dilimin dışında değil, kutunun altında kaydırılabilir bir açıklamada oku; uzun kategori
+    # listesi de böylece kutunun içinde kalır (M23 görsel inceleme 3).
+    option = {"tooltip": {"trigger": "item"}, "legend": {"type": "scroll", "bottom": 0}, "series": series}
     return _spec("pie", option, columns[number], columns[category], question)
 
 
