@@ -36,7 +36,7 @@ değiştiremediği bir şekilde dakikalara indirmek.
 | H4 | Müşteri şemasını elle yazmadan almak | Excel haritası ve/veya canlı DB'den otomatik şema; fark raporu | 🔄 Run 3 |
 | H5 | Kişisel veriyi korumak | PII maskeleme; ≥ 20 atlatma denemesinin tamamı engelleniyor | 🔄 Run 3 |
 | H6 | Kullanıcıya rapor | Web arayüzü; yazılı Türkçe yorum (number guard'lı); grafik | ⏳ Run 4 |
-| H7 | Gerçek veride doğruluk | Netsis/Odoo kopyasında Eren'in 20-30 sorusu | ⏳ Run 3 sonrası |
+| H7 | Gerçek veride doğruluk | ERP/Odoo kopyasında Eren'in 20-30 sorusu | ⏳ Run 3 sonrası |
 
 ## 5. Kapsam
 
@@ -58,7 +58,7 @@ kuralları, salt-okunur çalıştırma, güvenlik politikası, PII maskeleme, ş
 3. **Sadece okuma.** Read-only login ve `ApplicationIntent=ReadOnly`. Asıl güvence DB seviyesindeki `DENY`'dir,
    sqlglot politikası ikinci katmandır.
 4. **ERP'den bağımsız.** ERP'ye özgü bilgi koda gömülmez. Şema haritası, iş kuralları ve ERP profili
-   (`profiles/netsis.json`) veri olarak yüklenir.
+   (`datasets/<veri kütesi>/profile.json`) veri olarak yüklenir.
 5. **Ölçmeden özellik yok.** Her değişiklik altın soru setinde ölçülür. RAG bile ancak sayıyla kazandığında kalır.
 
 ### 6.2 Mimari
@@ -93,7 +93,7 @@ Soru ─► Agent döngüsü ─► LLM (yerel, OpenAI uyumlu)                  
 
 ### 6.4 Ölçüm (eval) yöntemi
 
-- **Sentetik Netsis benzeri test DB'si:** 83 tablo (21'i veri içeriyor, 62'si şaşırtmaca). Veriye bilerek tuzaklar
+- **Sentetik ERP benzeri test DB'si:** 83 tablo (21'i veri içeriyor, 62'si şaşırtmaca). Veriye bilerek tuzaklar
   konmuştur: iade, iptal fatura, çok depo, fan-out yapan join, NULL'lar, arşiv tablosu.
 - **40 altın soru**, her biri iki yoldan doğrulanır: altın SQL'in sonucu bağımsız bir Python hesabıyla birebir
   tutmalıdır.
@@ -125,7 +125,7 @@ sonunda tüm proje kontrol ediliyor. Run 3'te bulut limiti dolunca beyin rolün�
 1. **Run 3 tamamlanır** → testler, PII ve politika kontrolü.
 2. **Altın soru incelemesi (Eren):** 40 sorunun niyeti ve iş tanımları.
 3. **27B karşılaştırması:** aynı A/B eval, Qwen3.8-27B ile 16-24K context'te (müşteri kutusu senaryosu).
-4. **Gerçek veri testi:** read-only login, Netsis/Odoo kopyası, Eren'in 20-30 sorusu.
+4. **Gerçek veri testi:** read-only login, ERP/Odoo kopyası, Eren'in 20-30 sorusu.
 5. **Run 4:** web arayüzü (soru → cevap → rapor), number guard'lı yazılı Türkçe yorum, grafik spec + ECharts,
    Excel/CSV dışa aktarma, iş kuralı tanımlama ekranı.
 6. **Odoo profili ve demosu:** public vitrin ve ilk pazar.
@@ -147,7 +147,7 @@ sonunda tüm proje kontrol ediliyor. Run 3'te bulut limiti dolunca beyin rolün�
 | Gerçek şemada doğruluk düşer | Excel açıklamaları + iş kuralları; `eval --schema skeleton` ile açıklamaların katkısı ölçülür |
 | Ağır sorgu ERP'yi yavaşlatır | Timeout, `TOP`, read-only replika / AG secondary önerisi, RCSI kontrolü |
 | Kişisel veri sızıntısı | DB `DENY` + lineage maskeleme + filtre yasağı + atlatma test seti |
-| İşveren sözleşmesi (rekabet / IP) | Netsis/Logo tarafında satıştan önce sözleşme okunur; ilk pazar Odoo |
+| İşveren sözleşmesi (rekabet / IP) | ERP/Logo tarafında satıştan önce sözleşme okunur; ilk pazar Odoo |
 | Marka | "BusAIness Bilgin" olarak ana marka altında tescil; TÜBİTAK "Bilge" ile karışma riski kontrol edilecek |
 | Donanım maliyeti | Mod otomatik seçimi; 16 / 24 / 32 GB kademeleri eval ile doğrulanır |
 

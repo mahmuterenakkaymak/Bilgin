@@ -1,7 +1,7 @@
 """R2-4 part 2: the Personel/Üretim/Servis/İthalat tables that exist only to be walked past.
 
 Same rule as part 1: a distractor is only worth its tokens if it reads like the real thing -
-Netsis-style name, the frequent columns, a foreign key into the real world. These tests hold
+ERP-style name, the frequent columns, a foreign key into the real world. These tests hold
 that shape; which tables the model picks is the eval's job.
 """
 

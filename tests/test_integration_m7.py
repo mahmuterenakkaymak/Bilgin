@@ -17,7 +17,7 @@ from nl2sql import config
 from nl2sql.schema_map.excel import convert, fallback_mapping, read_workbook
 
 FIXTURES = Path(__file__).parent / "fixtures"
-TIDY = str(FIXTURES / "map_netsis_style.xlsx")
+TIDY = str(FIXTURES / "map_erp_style.xlsx")
 MESSY = str(FIXTURES / "map_customer_map.xlsx")
 MESSY_REL = "tests/fixtures/map_customer_map.xlsx"
 

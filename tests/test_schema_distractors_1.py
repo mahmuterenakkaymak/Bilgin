@@ -1,6 +1,6 @@
 """R2-4 part 1: the Muhasebe/Banka/Çek-Senet tables that exist only to be walked past.
 
-A distractor has to look like the real thing - Netsis-style name, the frequent columns, a
+A distractor has to look like the real thing - ERP-style name, the frequent columns, a
 foreign key into the real world - otherwise it measures nothing. These tests hold that shape;
 they do not check which tables the model picks (that is the eval's job).
 """

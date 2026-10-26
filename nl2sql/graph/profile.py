@@ -1,6 +1,6 @@
 """Join profili: hangi kolon adlarının aynı işi söylediği dosyada durur (PLAN R2-10).
 
-Netsis'te bir tablo cari kodu CARI_KOD, öteki CARI_KODU yazar; bu eşleşme Python'a gömülmez, çünkü
+Bir ERP'de bir tablo cari kodu CARI_KOD, öteki CARI_KODU yazar; bu eşleşme Python'a gömülmez, çünkü
 Python'un ERP bilgisi olmaması gerekiyor. Dosya silinir veya boş kalırsa graph yalnızca fk'ları tanır.
 """
 

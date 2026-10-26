@@ -1,6 +1,6 @@
 {
   "name": "synthetic_erp",
-  "display_name": "Sentetik ERP (Netsis benzeri)",
+  "display_name": "Sentetik ERP",
   "dialect": "tsql",
   "connection": "sqlite",
   "default_schema": "dbo",

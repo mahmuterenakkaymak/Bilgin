@@ -22,7 +22,7 @@ from nl2sql.eval import runner
 GOLDEN = runner.load_golden()
 QUESTION = GOLDEN[0]["question"]
 GOLDEN_SQL = GOLDEN[0]["sql"]
-MAP = "tests/fixtures/map_netsis_style.xlsx"
+MAP = "tests/fixtures/map_erp_style.xlsx"
 
 # Bu dumanın koştuğu komutlar ve bayraklar: README'de her biri ayrı ayrı geçecek.
 SUBCOMMANDS = (

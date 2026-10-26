@@ -1,6 +1,6 @@
 """T83: iki Excel fixture'ı (PLAN R3-2).
 
-map_netsis_style.xlsx düzgün tek sayfalık harita; fallback_mapping + convert tam tur atıp
+map_erp_style.xlsx düzgün tek sayfalık harita; fallback_mapping + convert tam tur atıp
 schema/schema.json'u birebir vermeli. map_customer_map.xlsx dağınık müşteri haritası: iki sayfa,
 farklı başlık sırası, üstte başlık ve boş satır, boş TABLO hücreleri, karışık büyük/küçük harf
 tipler, bazı açıklamalar silinmiş; tablo ve kolon adları aynı kalmalı.
@@ -13,7 +13,7 @@ from nl2sql import config
 from nl2sql.schema_map.excel import convert, fallback_mapping, read_workbook
 
 FIXTURES = Path(__file__).parent / "fixtures"
-TIDY = str(FIXTURES / "map_netsis_style.xlsx")
+TIDY = str(FIXTURES / "map_erp_style.xlsx")
 MESSY = str(FIXTURES / "map_customer_map.xlsx")
 
 

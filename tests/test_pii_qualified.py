@@ -1,6 +1,6 @@
 """PII ve salt okunur giriş betiği şemalı tablo adlarında da çalışır (PLAN R4-7).
 
-Netsis'in her tablosu dbo'da durduğu için maske yolu şema adını hiç bilmiyordu; R4-5 tablo adını
+ERP'nin her tablosu dbo'da durduğu için maske yolu şema adını hiç bilmiyordu; R4-5 tablo adını
 `Sales.Customers` yapınca üç şey birlikte değişmeli: PII haritasının anahtarı tam ad olmalı, iz
 (trace) şemayı sqlglot'a iç içe vermiş olmalı ki takma ad ve CTE arkasından da gerçek kolona
 varsın, ve betiğin DENY'leri tabloyu kendi şemasında vurmalı. Dünya elle kurulur ve gerçek

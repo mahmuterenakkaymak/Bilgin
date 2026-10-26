@@ -209,7 +209,7 @@ class FakePyodbc(types.ModuleType):
 def install_pyodbc(monkeypatch, fail=None):
     fake = FakePyodbc(fail)
     monkeypatch.setitem(sys.modules, "pyodbc", fake)
-    monkeypatch.setenv("NL2SQL_MSSQL_CONN", "Server=.;Database=Netsis;ApplicationIntent=ReadWrite;")
+    monkeypatch.setenv("NL2SQL_MSSQL_CONN", "Server=.;Database=ERP;ApplicationIntent=ReadWrite;")
     return fake
 
 

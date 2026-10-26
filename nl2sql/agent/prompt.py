@@ -15,7 +15,7 @@ from nl2sql import config
 from nl2sql.schema_map import doc
 from nl2sql.schema_map.rules import rules_text
 
-_INTRO = """Sen doğal dilde sorulan iş sorularını Netsis veritabanının şeması üzerinde tek bir T-SQL \
+_INTRO = """Sen doğal dilde sorulan iş sorularını kodlanmış ERP kısaltmalarıyla dolu bir veritabanı şeması üzerinde tek bir T-SQL \
 SELECT sorgusuna çeviren bir veritabanı asistanısın.
 
 """

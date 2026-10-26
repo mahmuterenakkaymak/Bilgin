@@ -1,13 +1,13 @@
 # Parked: public release (make-public) - run when Eren decides to publish (after the employment-contract check)
 
 > Drafted 2026-10-24 from Eren's decisions: the public repository is AGPL-3.0, shows results on a Microsoft sample
-> database, and never names or ships anything Netsis-specific. Chained to start right after Run 4. Builds on Run 1-4.
+> database, and never names or ships anything ERP-specific. Chained to start right after Run 4. Builds on Run 1-4.
 
 ## 0. Input from earlier runs
 
 - Read `.hybrid/report.json`, `REVIEW.md` and the eval reports of Run 3 and Run 4 first.
-- Today one dataset is wired through everything: the synthetic Netsis-like world (`TBL...` tables, `profiles/netsis.json`,
-  40 golden questions, `rules.json`). It stays as the **private** development set. The public repo needs a dataset
+- Today one dataset is wired through everything: the synthetic ERP-like world (`TBL...` tables,
+  `datasets/synthetic_erp/profile.json`, 40 golden questions, `rules.json`). It stays as the **private** development set. The public repo needs a dataset
   anyone can download and reproduce.
 - Rule kept: tests over a growing or configurable set assert structure, never a fixed count; tests never call a real
   model or a real SQL Server.
@@ -16,7 +16,7 @@
 
 Make the dataset a configuration (schema, profile, rules, golden set, database), add **WideWorldImporters** (WWI,
 Microsoft's SQL Server sample: sales, purchasing, stock, invoices) as a second dataset with its own golden questions,
-measure Bilgin on it, and produce a clean public tree that contains no Netsis name or Netsis-like asset.
+measure Bilgin on it, and produce a clean public tree that contains no ERP name or ERP-like asset.
 
 "Done" =
 - `--dataset <name>` on build-db/build-index/ask/eval/serve selects everything that belongs to a dataset; the default

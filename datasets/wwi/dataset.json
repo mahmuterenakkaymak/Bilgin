@@ -10,7 +10,9 @@
     "rules": "rules.json",
     "profile": "profile.json",
     "golden": "golden.jsonl",
-    "traps": "traps.jsonl"
+    "traps": "traps.jsonl",
+    "ambiguous": "ambiguous.jsonl",
+    "followups": "followups.jsonl"
   },
   "builder": "builder.py:build_db",
   "generator": "builder.py:generate",

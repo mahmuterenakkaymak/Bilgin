@@ -1,6 +1,6 @@
 """R4-7 yan kanal kümesi WWI üzerinde: tests/data/pii_bypass_wwi.jsonl gerçek kapıdan geçirilir.
 
-R3-6 maskesi ve filtresi Netsis şemasında ölçülmüştü; R4-5 tablo adını `Sales.Customers` yapınca
+R3-6 maskesi ve filtresi ERP şemasında ölçülmüştü; R4-5 tablo adını `Sales.Customers` yapınca
 aynı iki kural şemalı adlarla yeniden sınanmalı: maske izi şemayı iç içe vererek takma ad, CTE,
 CAST/CONCAT, kesme, CASE, UNION, skaler alt sorgu ve türetilmiş tablo arkasından gerçek kolona
 varıyor mu; aynı kolon WHERE/JOIN/GROUP BY/ORDER BY'a girdiğinde satır hiç dönmüyor mu; `deny`

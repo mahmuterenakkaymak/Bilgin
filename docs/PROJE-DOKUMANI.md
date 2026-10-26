@@ -36,7 +36,7 @@ değiştiremediği bir şekilde dakikalara indirmek.
 | H4 | Müşteri şemasını elle yazmadan almak | Excel haritası ve/veya canlı DB'den otomatik şema; fark raporu | 🔄 Run 3 |
 | H5 | Kişisel veriyi korumak | PII maskeleme; ≥ 20 atlatma denemesinin tamamı engelleniyor | 🔄 Run 3 |
 | H6 | Kullanıcıya rapor | Web arayüzü; yazılı Türkçe yorum (number guard'lı); grafik | ⏳ Run 4 |
-| H7 | Gerçek veride doğruluk | Netsis/Odoo kopyasında Eren'in 20-30 sorusu | ⏳ Run 3 sonrası |
+| H7 | Gerçek veride doğruluk | ERP/Odoo kopyasında Eren'in 20-30 sorusu | ⏳ Run 3 sonrası |
 
 ## 5. Kapsam
 
@@ -58,7 +58,7 @@ kuralları, salt-okunur çalıştırma, güvenlik politikası, PII maskeleme, ş
 3. **Sadece okuma.** Read-only login ve `ApplicationIntent=ReadOnly`. Asıl güvence DB seviyesindeki `DENY`'dir,
    sqlglot politikası ikinci katmandır.
 4. **ERP'den bağımsız.** ERP'ye özgü bilgi koda gömülmez. Şema haritası, iş kuralları ve ERP profili
-   (`profiles/netsis.json`) veri olarak yüklenir.
+   (`datasets/<veri kütesi>/profile.json`) veri olarak yüklenir.
 5. **Ölçmeden özellik yok.** Her değişiklik altın soru setinde ölçülür. RAG bile ancak sayıyla kazandığında kalır.
 
 ### 6.2 Mimari
@@ -93,7 +93,7 @@ Soru ─► Agent döngüsü ─► LLM (yerel, OpenAI uyumlu)                  
 
 ### 6.4 Ölçüm (eval) yöntemi
 
-- **Sentetik Netsis benzeri test DB'si:** 83 tablo (21'i veri içeriyor, 62'si şaşırtmaca). Veriye bilerek tuzaklar
+- **Sentetik ERP benzeri test DB'si:** 83 tablo (21'i veri içeriyor, 62'si şaşırtmaca). Veriye bilerek tuzaklar
   konmuştur: iade, iptal fatura, çok depo, fan-out yapan join, NULL'lar, arşiv tablosu.
 - **40 altın soru**, her biri iki yoldan doğrulanır: altın SQL'in sonucu bağımsız bir Python hesabıyla birebir
   tutmalıdır.
@@ -179,7 +179,7 @@ Gerçek WWI boyutundaki şemada üç model de `full_rules`'da aynı skoru (24.0/
 veriyor; pencere farkı olmadığı için **27B + 16K + `full_rules`** savunulabilir varsayılan. Skor avantajı tek
 hücrede: Flash-Next `rag` 24.5/26, bedeli 9.9 sn/soru. 27B için "rag'a düşersem doğruluk korunur" varsayımı gerçek
 veride yanlış (24.0 → 23.0). Şema büyüyüp 9,1K'lık tablo baskısı artarsa rag geçişi kaçınılmaz olur — o geçişten
-önce 27B `rag`'ın Q10/Q25 kayıpları kapatılmalı. Kesin karar Eren'in demo veritabanı testiyle verilir (Netsis
+önce 27B `rag`'ın Q10/Q25 kayıpları kapatılmalı. Kesin karar Eren'in demo veritabanı testiyle verilir (ERP
 şeması WWI'ın birkaç katı; orada `full_rules` sığmayabilir).
 
 ### 7.2 Arayüzden örnekler (gerçek veritabanı)
@@ -262,14 +262,14 @@ ayrıntı `docs/GERCEK-WWI-TEST.md`. Sırada:
    Flash-Next'in netleştirme kartındaki iki seçenek kullanılabilir. Hedef: gerçek DB'de 26/26.
 2. **Cümle kalitesi:** kolon adı sızıntısı (TotalRevenue, CityCount, StateProvinceName) ve "Satır sayısı X. Toplam
    Y." jenerik kalıbı rapor prompt'unda toplanacak; kullanıcıya kolon adı değil Türkçe terim gösterilmeli.
-3. **Eren'in demo veritabanı testi (asıl sınav):** read-only login, dolu demo Netsis veritabanı, Eren'in 20-30
-   sorusu; Excel açıklamalarının katkısı `eval --schema skeleton` ile ölçülür. Netsis şeması WWI'ın birkaç katı —
+3. **Eren'in demo veritabanı testi (asıl sınav):** read-only login, dolu demo ERP veritabanı, Eren'in 20-30
+   sorusu; Excel açıklamalarının katkısı `eval --schema skeleton` ile ölçülür. ERP şeması WWI'ın birkaç katı —
    `full_rules` sığmazsa rag geçişinin gerçek testi bu olur.
 4. **Altın soru incelemesi (Eren):** 40 sentetik sorunun niyeti ve iş tanımları.
 5. **Retrieval:** tablo özetleri aramaya katıldı (ölçüm `eval/SUMMARIES.md`); recall@5 gerçek embedding ile yeniden
    ölçülür, embedding kararı (bge-m3) bu ölçümle verilir.
 6. **Public yayın:** iş sözleşmesi (rekabet/IP) kontrolü tamamlanana kadar bekliyor → AGPL-3.0, sonuçlar
-   WideWorldImporters üzerinde, Netsis'e ait hiçbir şey yok (`docs/PUBLIC-RELEASE-PLAN.md`).
+   WideWorldImporters üzerinde, ERP'e ait hiçbir şey yok (`docs/PUBLIC-RELEASE-PLAN.md`).
 7. **Odoo profili ve demosu (geri planda):** PostgreSQL desteği gerektirir; kod tarafında engel yok, sıra bekliyor.
 8. **Topoloji C (sonra):** LLM kutusu + müşteri tarafında read-only runner ("o kutu senin DB'ne bağlanamaz").
 
@@ -289,7 +289,7 @@ ayrıntı `docs/GERCEK-WWI-TEST.md`. Sırada:
 | Gerçek şemada doğruluk düşer | Excel açıklamaları + iş kuralları; `eval --schema skeleton` ile açıklamaların katkısı ölçülür |
 | Ağır sorgu ERP'yi yavaşlatır | Timeout, `TOP`, read-only replika / AG secondary önerisi, RCSI kontrolü |
 | Kişisel veri sızıntısı | DB `DENY` + lineage maskeleme + filtre yasağı + atlatma test seti |
-| İşveren sözleşmesi (rekabet / IP) | Netsis/Logo tarafında satıştan önce sözleşme okunur; ilk pazar Odoo |
+| İşveren sözleşmesi (rekabet / IP) | ERP/Logo tarafında satıştan önce sözleşme okunur; ilk pazar Odoo |
 | Marka | "BusAIness Bilgin" olarak ana marka altında tescil; TÜBİTAK "Bilge" ile karışma riski kontrol edilecek |
 | Donanım maliyeti | Mod otomatik seçimi; 16 / 24 / 32 GB kademeleri eval ile doğrulanır |
 
@@ -299,7 +299,7 @@ ayrıntı `docs/GERCEK-WWI-TEST.md`. Sırada:
 - İlk müşteri profili ve LLM kutusunun kimin olacağı (müşteri donanımı mı, Bilgin kutusu mu).
 - **Müşteri kutusunun varsayılanı (model + mod + pencere):** gerçek WWI ölçümü kararı basitleştirdi (7.1): üç
   modelin `full_rules` skoru aynı (24.0/26), pencere farkı yok (16K yeterli), rag'ın doğruluk bedeli 27B'de −1
-  soru. Öneri: **27B + 16K + `full_rules`**; kesin karar Eren'in demo veritabanı testiyle (Netsis şeması büyükse
+  soru. Öneri: **27B + 16K + `full_rules`**; kesin karar Eren'in demo veritabanı testiyle (ERP şeması büyükse
   `full_rules` sığmayabilir ve rag'ın 27B kaybı önce kapatılmalı).
 - **Public yayın zamanı:** iş sözleşmesi (rekabet/IP) kontrolü bitmeden yok (bkz. bölüm 8).
 - **Odoo'nun sırası:** geri planda bekliyor; PostgreSQL desteği işi ne zaman alınacak?

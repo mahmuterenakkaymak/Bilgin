@@ -1,4 +1,4 @@
-"""Synthetic Netsis-like dataset: master cards, then the documents (invoices, movements, orders) that point at them."""
+"""Synthetic ERP-style dataset: master cards, then the documents (invoices, movements, orders) that point at them."""
 
 from __future__ import annotations
 

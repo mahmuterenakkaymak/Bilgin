@@ -2,7 +2,7 @@
 
 Product name **Bilgin**; the package and the CLI stay `nl2sql`.
 
-A measurement tool for one question: **can a local LLM write correct T-SQL over a Netsis-like
+A measurement tool for one question: **can a local LLM write correct T-SQL over an ERP-like
 schema?** Ten golden Turkish questions run against a synthetic database through a read-only,
 policy-guarded executor and are scored against golden SQL. The number in `report.md` is the
 deliverable — this is the Phase 0 kill gate, not the product.
@@ -349,7 +349,7 @@ fooled, and the parser is what tells the model *why* its query was wrong.
 
 ## Real-data checklist
 
-Against a **copy** of the customer's Netsis database. Never the live one, and never with the account you use
+Against a **copy** of the customer's ERP database. Never the live one, and never with the account you use
 to administer it.
 
 1. Restore the copy, and create the read-only login **first**: `python -m nl2sql make-login-script`,
@@ -392,7 +392,7 @@ measures.
 
 # Run 4 — A public dataset, and what a 27B in a 16K window can still answer
 
-Run 4 makes the thing being measured swappable. Until now one dataset — the synthetic Netsis-like
+Run 4 makes the thing being measured swappable. Until now one dataset — the synthetic ERP-like
 world — and one endpoint were wired through every command, so "does a 27B dense model in a 16–24K
 context still answer?" could not be asked cleanly, and no number could be reproduced off this machine.
 Two things change: a **dataset** is now a folder selected by `--dataset`, and a **model** is a profile
@@ -418,7 +418,7 @@ beside `schema.json`, `rules.json`, `profile.json`, `golden.jsonl`, `traps.jsonl
 
 | `--dataset` | What it is | Outputs |
 | --- | --- | --- |
-| `synthetic_erp` (default) | the private Netsis-like development set — Run 1–3 content, moved by path only | `data/test.db`, `index/`, `eval_out/` |
+| `synthetic_erp` (default) | the private ERP-like development set — Run 1–3 content, moved by path only | `data/test.db`, `index/`, `eval_out/` |
 | `wwi` | WideWorldImporters, Microsoft's public sample (sales, purchasing, stock, invoices) | `data/wwi.db`, `index/wwi/`, `eval_out/wwi/` |
 
 `--dataset` is optional everywhere and defaults to `synthetic_erp`, so every Run 1–3 command runs

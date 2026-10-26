@@ -30,7 +30,7 @@ def _null(nullable: bool) -> str:
     return "" if nullable else "H"
 
 
-def make_netsis_style(schema: dict, path: Path) -> None:
+def make_erp_style(schema: dict, path: Path) -> None:
     book = openpyxl.Workbook()
     sheet = book.active
     sheet.title = "KOLONLAR"
@@ -84,9 +84,9 @@ def make_customer_map(schema: dict, path: Path) -> None:
 if __name__ == "__main__":
     with open(SCHEMA_PATH, encoding="utf-8") as handle:
         schema = json.load(handle)
-    tidy = FIXTURES / "map_netsis_style.xlsx"
+    tidy = FIXTURES / "map_erp_style.xlsx"
     messy = FIXTURES / "map_customer_map.xlsx"
-    make_netsis_style(schema, tidy)
+    make_erp_style(schema, tidy)
     make_customer_map(schema, messy)
     print(f"Üretildi: {tidy}")
     print(f"Üretildi: {messy}")

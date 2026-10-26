@@ -5,8 +5,12 @@ sahte istemci belirsiz kaydı hiç görmediği için A01 kart açacağı yerde `
 satırlarını döndürüyordu - README'nin model olmadan kurulan demosunda R5-11'in kartı hiç
 görünmüyordu. Burada dünya gerçek: db kümenin kendi builder'ı, indeks ``cli.build_index``in sahte
 embedder'ı, kapı ``cli.serve``in kurduğu kapı. Sunucu ayağa kalkmaz, ``run_server`` yerine geçilir.
+
+T357 (alttaki blok): ``--dataset`` söylenmemişse sıra ayardaki küme → vitrin kümesi → indeksi kurulu
+ilk küme → ``DEFAULT_DATASET``; vitrin kümesi ``wwi``, yani model olmadan koşan incelemenin dünyasıdır.
 """
 
+import json
 import shutil
 from pathlib import Path
 
@@ -15,9 +19,16 @@ from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
 from nl2sql import config, datasets
+from nl2sql.agent import fake
 from nl2sql.auth.store import UserStore
 from nl2sql.cli import main as cli
+from nl2sql.engine.executor import LocalExecutor
+from nl2sql.engine.result import Budget
+from nl2sql.index.store import META_FILE
+from nl2sql.policy import policy
+from nl2sql.schema_map import doc
 from nl2sql.web import app as web_app
+from nl2sql.web.datasets_api import ACTIVE_SETTING
 
 DATASET = "synthetic_erp"
 ROOT = Path(__file__).resolve().parent.parent
@@ -96,3 +107,164 @@ def test_the_ambiguous_question_asks_its_three_readings(world, dataset):
     assert body["dataset"] == DATASET
     assert body["status"] == "needs_clarification", "kart açılmadı, cevap düşmüş"
     assert body["clarification"]["options"] == [reading["label"] for reading in line["readings"]]
+
+
+# ------------------------------------------------------------------ T357: hangi dünya sunulur
+
+# Görsel akışın (.hybrid/visual.json) sorduğu iki soru ve zincirin devamı: vitrin kümesi bunların
+# hepsine model olmadan kurulmuş bir cevap vermek zorunda, yoksa inceleme boş ekran görüntüler.
+VISUAL_GOLDEN = "Eylül 2026'da en çok satan 5 ürün hangileri; kodu, adı ve toplam satış miktarı nedir?"
+VISUAL_FOLLOW_UP = "Bunlardan hangisi en çok ciro yaptı?"
+VISUAL_AMBIGUOUS = "Eylül 2026'da satışlarımız ne kadar?"
+
+# Okumalar karşılaştırılacağı için satır kesilmez (PLAN Decision 8).
+COMPARE = Budget(max_rows=config.COMPARE_MAX_ROWS)
+
+
+def write_datasets(root: Path, names, indexed=()):
+    """``root`` altına bir datasets kökü: her küme yalnız ``dataset.json``uyla, indeksi ``indexed`` söyler."""
+    for name in names:
+        folder = root / "datasets" / name
+        folder.mkdir(parents=True)
+        (folder / "dataset.json").write_text(
+            json.dumps(
+                {
+                    "name": name,
+                    "as_of": "2026-01-31",
+                    "builder": "builder.py:build_db",
+                    "generator": "builder.py:generate",
+                    "references": "reference.py:REFERENCES",
+                    "outputs": {"index_dir": f"index/{name}"},
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+    for name in indexed:
+        index = root / "index" / name
+        index.mkdir(parents=True, exist_ok=True)
+        (index / META_FILE).write_text("{}", encoding="utf-8")
+
+
+def remember(name: str) -> None:
+    """Ekranda yapılmış bir küme geçişinin ayara bıraktığı değer (R6-11)."""
+    UserStore(config.app_db_path()).set_setting(ACTIVE_SETTING, name)
+
+
+def asked(client, question: str, earlier=(), turns: int = 3):
+    """Sahte istemcinin bir soru için kurduğu tur dizisi: araç adları, gönderilen SQL, şıklar.
+
+    ``earlier`` konuşmanın önceki turlarının soruları: zincirin bir turu ancak onlarla tanınır,
+    yani history bloğunun yazdığı ``Tur n sorusu:`` satırları buradan geliyor.
+    """
+    messages = [
+        {
+            "role": "system",
+            "content": "\n".join(f"Tur {n} sorusu: {q}" for n, q in enumerate(earlier, 1)),
+        },
+        {"role": "user", "content": question},
+    ]
+    names, submitted, options = [], None, None
+    for _ in range(turns):
+        answer = client.chat(messages)
+        for call in answer.tool_calls:
+            names.append(call.name)
+            submitted = call.arguments.get("sql", submitted)
+            options = call.arguments.get("options", options)
+        messages.append({"role": "assistant", "content": answer.content})
+    return names, submitted, options
+
+
+@pytest.fixture
+def served(tmp_path, monkeypatch):
+    """Sunucunun küme sırasının baktığı dünya: tmp kök, tmp ayar dosyası, sunucu hiç yok."""
+    monkeypatch.setattr(config, "ROOT", tmp_path)
+    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path / "datasets"))
+    monkeypatch.setenv("NL2SQL_APP_DB", str(tmp_path / "bilgin.db"))
+    return tmp_path
+
+
+@pytest.fixture(scope="module")
+def demo_world(tmp_path_factory):
+    """Vitrin kümesi depodaki klasörüyle: kurulu db'si, kendi şeması, kendi okuma dosyaları."""
+    mp = MonkeyPatch()
+    mp.delenv("NL2SQL_DATASETS_DIR", raising=False)  # yukarıdaki ``world`` tmp kökünü işaret edebilir
+    folder = tmp_path_factory.mktemp("demo-visual")
+    ds = datasets.load_dataset(cli.DEMO_DATASET)
+    ds.build_db(db_path=folder / "wwi.db", sql_path=folder / "wwi.sql")
+    schema = doc.load_schema(ds.schema_path)
+    executor = LocalExecutor(
+        "sqlite",
+        folder / "wwi.db",
+        allowlist=doc.allowlist(schema),
+        pii_schema=schema,
+        audit_path=folder / "audit.jsonl",
+    )
+    yield ds, executor
+    mp.undo()
+
+
+def test_nothing_remembered_serves_the_demo_world(served):
+    write_datasets(served, [cli.DEMO_DATASET, DATASET], indexed=[cli.DEMO_DATASET])
+    assert cli._served_dataset() == cli.DEMO_DATASET
+
+
+def test_a_remembered_dataset_is_served_over_the_demo_world(served):
+    write_datasets(served, [cli.DEMO_DATASET, DATASET], indexed=[cli.DEMO_DATASET, DATASET])
+    remember(DATASET)
+    assert cli._served_dataset() == DATASET
+
+
+def test_a_remembered_dataset_that_no_longer_loads_falls_to_the_demo_world(served, capsys):
+    write_datasets(served, [cli.DEMO_DATASET, DATASET], indexed=[cli.DEMO_DATASET])
+    remember("kaybolmus")
+
+    assert cli._served_dataset() == cli.DEMO_DATASET
+    line = cli.STORED_LOST.format(name="kaybolmus", default=cli.DEMO_DATASET)
+    assert line in capsys.readouterr().out
+
+
+def test_without_the_demo_world_the_first_indexed_dataset_is_served(served):
+    write_datasets(served, [DATASET], indexed=[DATASET])
+    assert cli._served_dataset() == DATASET
+
+
+def test_the_visual_questions_are_answered_on_the_demo_world(demo_world):
+    """Akışın yazdığı sorular vitrin kümesinde karşılık bulur: cevap, devam, netleştirme."""
+    ds, _ = demo_world
+    client = fake.for_golden(
+        ds.golden(), ds.fake_fallback_sql, "full", ds.ambiguous(), ds.followups()
+    )
+    turns = ds.followups()[0]["turns"]
+
+    names, submitted, options = asked(client, VISUAL_GOLDEN)
+    assert names[:3] == ["get_schema", "run_sql", "submit_sql"], "golden replay açılmadı"
+    assert submitted == turns[0]["sql"] and options is None
+
+    names, submitted, options = asked(client, VISUAL_FOLLOW_UP, earlier=[VISUAL_GOLDEN])
+    assert submitted == turns[1]["sql"], "devam turu kendi SQL'ini göndermedi"
+
+    names, submitted, options = asked(client, VISUAL_AMBIGUOUS)
+    assert options == [reading["label"] for reading in ds.ambiguous()[0]["readings"]]
+    assert submitted is None, "netleştirme sorulacağı yerde cevap düşmüş"
+
+
+def test_every_visual_sql_passes_the_policy_and_measures_something(demo_world):
+    """Vitrin kümesinin yeni SQL'i koruyucudan geçer, kurulu dünyada çalışır ve boş dönmez."""
+    ds, executor = demo_world
+    tables = doc.allowlist(doc.load_schema(ds.schema_path))
+    readings = ds.ambiguous()[0]["readings"]
+    sqls = [reading["sql"] for reading in readings]
+    sqls += [turn["sql"] for chain in ds.followups() for turn in chain["turns"]]
+    assert sqls
+
+    answers = []
+    for sql in sqls:
+        verdict = policy.check(sql, tables)
+        assert verdict.ok, f"{verdict.reason}: {sql}"
+        result = executor.execute(sql, COMPARE, "visual")
+        assert result.error is None, f"{result.error.message}: {sql}"
+        assert result.rows, f"boş döndü: {sql}"
+        answers.append(str(result.rows))
+    # Şıklar aynı sayıya çıkıyorsa sorulan netleştirme boşuna sorulmuştur.
+    assert len(set(answers[: len(readings)])) == len(readings)

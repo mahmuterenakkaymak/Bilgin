@@ -75,7 +75,7 @@ veriyor; 24 GB'lık kutuda 27B + `full_rules` savunulabilir — ama doğruluk av
 Flash-Next `rag` 24.5/26, karşılığında 9.9 sn/soru. Rasyonel varsayılan: **27B (pencere farkı olmadığı için 16K
 yeterli) + `full_rules`**, şema büyüyüp 9,1K'lık tablo baskısı artarsa `rag`'a geç — ama geçmeden önce 27B `rag`'ın
 23.0'ını açıklayan Q10/Q25 kayıplarını kapatmak gerekir, yoksa doğruluktan 1 soru satın almış olursun. Kesin karar
-Eren'in demo veritabanı testiyle (Netsis şeması WWI'ın 4 katı; orada `full_rules` sığmayabilir).
+Eren'in demo veritabanı testiyle (ERP şeması WWI'ın 4 katı; orada `full_rules` sığmayabilir).
 
 ## 3. Arayüzden altın sorular (üç model, gerçek DB)
 

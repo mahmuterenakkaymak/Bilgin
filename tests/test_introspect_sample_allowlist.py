@@ -1,6 +1,6 @@
 """T113: ``--sample`` örnek sorguları yoklanan veritabanının kendi allowlist'i ile yürür (R3-14).
 
-Bir Netsis kopyasında ilk adım introspect'tir; o anda schema.json bu veritabanını henüz
+Bir ERP kopyasında ilk adım introspect'tir; o anda schema.json bu veritabanını henüz
 anlatmaz. Örnekleme varsayılan listeyi kullanırsa her sorgu politika reddine düşer, hiç ipucu
 toplanmaz ve CLI yine de "N tablo, M kolon" der. Burada dosya elle kurulur: tablo adı hiçbir
 şemada yoktur, yani red değil kabul beklenir.
@@ -21,7 +21,7 @@ ROWS = [("M001", "Kadıköy"), ("M002", "Beşiktaş"), ("M003", "Kadıköy")]
 
 @pytest.fixture
 def db(tmp_path):
-    path = tmp_path / "netsis-copy.db"
+    path = tmp_path / "erp-copy.db"
     conn = sqlite3.connect(path)
     conn.execute(f'CREATE TABLE "{TABLE}" ("{COLUMNS[0]}" TEXT, "{COLUMNS[1]}" TEXT)')
     conn.executemany(f'INSERT INTO "{TABLE}" VALUES (?, ?)', ROWS)

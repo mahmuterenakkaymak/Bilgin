@@ -107,6 +107,8 @@ LOOPBACK_ONLY = "Bilgin yalnız 127.0.0.1 üzerinde çalışır (TLS ve ağ eri�
 SERVE_LINE = "Bilgin: {url}  (veri kümesi {dataset}, model {model}, llm {llm})"
 # R6-11: ayar artık yüklenmeyen bir küme söylüyorsa sunucu bunu tek satırda söyler ve düşer.
 STORED_LOST = "Not: kayıtlı veri kümesi {name} artık yüklenmiyor; varsayılan {default} sunuluyor."
+# Run 8: ``--dataset`` söylenmemişse sunulan dünya vitrin kümesidir; sentetik küme testin dünyasıdır.
+DEMO_DATASET = "wwi"
 PROSE = "yanıt"
 SQL_TOOLS = ("run_sql", "submit_sql")
 NO_ANSWER = "Cevap gönderilmedi: {}"
@@ -1195,7 +1197,7 @@ def introspect_schema(
             return _no_db(db_path)
         skeleton = introspect.sqlite_skeleton(db_path)
     if sample:
-        # Allowlist yoklanan iskeletin kendisi: R3-14 gereği introspect bir Netsis kopyasında
+        # Allowlist yoklanan iskeletin kendisi: R3-14 gereği introspect bir ERP kopyasında
         # schema.json yazılmadan önce koşar, varsayılan liste o kopyanın tablolarını bilmez.
         executor = LocalExecutor(
             db_path=db_path,
@@ -2085,7 +2087,8 @@ def serve(
     söylenir - ikisi de olmazsa hiçbir adres dinlenmemiş olur.
 
     R6-11: ``--dataset`` söylenmemişse sunulan dünya ekranda yapılan son geçişin kümesidir, yani
-    ayardaki ``active_dataset``; ``--dataset`` her zaman onu da yener.
+    ayardaki ``active_dataset``; ``--dataset`` her zaman onu da yener. Ayar yoksa - taze bir kurulum,
+    model olmadan koşan inceleme - vitrin kümesi sunulur: ``_demo_dataset``.
     """
     # R5-1: web ve app içe yalnız burada girilir; cli'yi çağıran katmanlar döngü kurmasın.
     from nl2sql.app.session import SessionError, open_session
@@ -2128,22 +2131,41 @@ def serve(
 
 
 def _served_dataset() -> str:
-    """``--dataset`` söylenmediğinde sunulacak dünya: ayardaki etkin küme, yoksa varsayılan (R6-11).
+    """``--dataset`` söylenmediğinde sunulacak dünya: ayardaki etkin küme, yoksa vitrin (R6-11, Run 8).
 
-    Ayarın söylediği ad artık yüklenmiyorsa tek satırlık bir not düşer ve varsayılan sunulur:
+    Ayarın söylediği ad artık yüklenmiyorsa tek satırlık bir not düşer ve sıra aşağıdan devam eder:
     çip tanımadığı bir kümenin adını taşımaz, ekran da olmayan bir şemayı listelemez.
     """
     from nl2sql.web.datasets_api import ACTIVE_SETTING
 
     stored = UserStore(config.app_db_path()).get_setting(ACTIVE_SETTING)
     if not stored:
-        return config.DEFAULT_DATASET
+        return _demo_dataset()
     try:
         datasets.load_dataset(stored)
     except datasets.DatasetError:
-        print(STORED_LOST.format(name=stored, default=config.DEFAULT_DATASET))
-        return config.DEFAULT_DATASET
+        fallback = _demo_dataset()
+        print(STORED_LOST.format(name=stored, default=fallback))
+        return fallback
     return stored
+
+
+def _demo_dataset() -> str:
+    """Vitrin sırası (Run 8): ``wwi``, sonra indeksi kurulu ilk küme, en son ``DEFAULT_DATASET``.
+
+    Sıra sentetik kümeye düşmesin diye kuruldu: model olmadan koşan inceleme de taze bir kurulum
+    da gerçek tablo adlarını görsün. İndeksin varlığı sunulmanın koşuludur - indeksi olmayan bir
+    kümenin aranacak bir şeyi yoktur, ekrana yalnız boş bir şema listesi taşırdı.
+    """
+    names = [DEMO_DATASET, *(name for name in datasets.list_datasets() if name != DEMO_DATASET)]
+    for name in names:
+        try:
+            dataset = datasets.load_dataset(name)
+        except datasets.DatasetError:
+            continue
+        if (dataset.index_dir / META_FILE).is_file():
+            return name
+    return config.DEFAULT_DATASET
 
 
 def run_server(app, host: str, port: int) -> None:

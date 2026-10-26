@@ -10,7 +10,7 @@ from nl2sql import config
 from nl2sql.agent.budget import estimate_prompt
 from nl2sql.agent.context import context_block, fit_history
 
-SYSTEM = "Sen Netsis şeması üzerinde çalışan bir SQL asistanısın."
+SYSTEM = "Sen ERP şeması üzerinde çalışan bir SQL asistanısın."
 QUESTION = "Peki bu müşterinin toplamı ne kadar?"
 
 

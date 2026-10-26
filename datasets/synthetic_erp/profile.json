@@ -1,5 +1,5 @@
 {
-  "name": "netsis",
+  "name": "synthetic_erp",
   "pairs": [
     { "left": "STOK_KODU", "right": "STOK_KODU", "confidence": 0.9 },
     { "left": "DEPO_KODU", "right": "DEPO_KODU", "confidence": 0.9 },
