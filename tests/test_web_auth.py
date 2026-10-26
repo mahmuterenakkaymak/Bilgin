@@ -83,7 +83,7 @@ def test_login_answers_the_user_and_sets_the_session_cookie_with_every_flag(clie
     response = login(client)
 
     assert response.status_code == 200
-    assert response.json() == {"username": "eren", "role": "admin"}
+    assert response.json() == {"username": "eren", "role": "admin", "business_role": "genel"}
     cookie = response.headers["set-cookie"].lower()
     assert f"{config.SESSION_COOKIE}=" in cookie
     assert "httponly" in cookie
@@ -117,7 +117,11 @@ def test_five_failures_lock_the_username_even_with_the_right_password(client):
 def test_me_answers_for_the_session_and_401_after_logout(client):
     login(client)
 
-    assert client.get("/api/auth/me").json() == {"username": "eren", "role": "admin"}
+    assert client.get("/api/auth/me").json() == {
+        "username": "eren",
+        "role": "admin",
+        "business_role": "genel",
+    }
     assert client.post("/api/auth/logout").status_code == 200
 
     refused = client.get("/api/auth/me")

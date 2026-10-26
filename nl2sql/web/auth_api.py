@@ -1,8 +1,8 @@
 """Giriş, çıkış, "kimim" uçları ve yöneticinin kullanıcı defteri (PLAN R6-3, R6-5).
 
-Gövde sözleşme "me / login 200"dir: ``{username, role}``. Parola ve ham oturum anahtarı yalnız
-bu işlevlerin içinde ve çerezde dolaşır - ne bir gövdeye ne bir günlüğe düşürülürler.
-``users`` kurulmamış uygulama Run 5'tir: yolların açacağı bir oturum olmadığı için 404.
+Gövde sözleşme "me / login 200"dir: ``{username, role, business_role}``. Parola ve ham oturum
+anahtarı yalnız bu işlevlerin içinde ve çerezde dolaşır - ne bir gövdeye ne bir günlüğe
+düşürülürler. ``users`` kurulmamış uygulama Run 5'tir: yolların açacağı bir oturum olmadığı için 404.
 """
 
 from __future__ import annotations
@@ -13,6 +13,9 @@ from pydantic import BaseModel
 from nl2sql import config
 from nl2sql.auth.store import LoginError, UserError
 from nl2sql.web.authz import AUTH_OFF, require
+
+# R7-16: iş rolü başlangıç ekranını belirler, o yüzden kimseye kendi üstünde bırakılmaz.
+OWN_BUSINESS_ROLE = "Kendi iş rolünüzü değiştiremezsiniz."
 
 
 class LoginBody(BaseModel):
@@ -28,6 +31,7 @@ class UserCreateBody(BaseModel):
     username: str = ""
     password: str = ""
     role: str = "user"
+    business_role: str = config.DEFAULT_BUSINESS_ROLE
 
 
 class UserUpdateBody(BaseModel):
@@ -36,6 +40,7 @@ class UserUpdateBody(BaseModel):
     role: str | None = None
     active: bool | None = None
     password: str | None = None
+    business_role: str | None = None
 
 
 def create_router() -> APIRouter:
@@ -96,21 +101,35 @@ def create_users_router() -> APIRouter:
     def users_add(body: UserCreateBody, request: Request) -> dict:
         """Yeni hesap: reddin cümlesi ve durumu store'undur (çakışan ad 409, kısa parola 422)."""
         try:
-            user = _store(request).add_user(body.username, body.password, body.role)
+            user = _store(request).add_user(
+                body.username, body.password, body.role, business_role=body.business_role
+            )
         except UserError as exc:
             raise _refused(exc) from None
         return {"user": user}
 
     @router.put("/users/{id}", dependencies=admin)
-    def users_update(id: int, body: UserUpdateBody, request: Request) -> dict:
-        """Rol, etkinlik ve parola; son etkin yöneticiyi store'un kendisi korur (409).
+    def users_update(
+        id: int,
+        body: UserUpdateBody,
+        request: Request,
+        current: dict | None = Depends(require("admin")),
+    ) -> dict:
+        """Rol, etkinlik, parola ve iş rolü; son etkin yöneticiyi store'un kendisi korur (409).
 
         Parola değişimi ve pasifleştirme store'da oturumları da siler, yani kullanıcının çerezi o
-        anda geçersizdir: bir sonraki çağrısı 401.
+        anda geçersizdir: bir sonraki çağrısı 401. İş rolü kendi üstüne değişilemez (R7-16) -
+        reddedilen istek hiç işlenmez, yani aynı gövdedeki öteki alanlar da uygulanmaz.
         """
+        if body.business_role is not None and current and id == current["id"]:
+            raise HTTPException(status_code=403, detail=OWN_BUSINESS_ROLE)
         try:
             user = _store(request).update_user(
-                id, role=body.role, active=body.active, password=body.password
+                id,
+                role=body.role,
+                active=body.active,
+                password=body.password,
+                business_role=body.business_role,
             )
         except UserError as exc:
             raise _refused(exc) from None
@@ -133,5 +152,9 @@ def _store(request: Request):
 
 
 def _who(user: dict) -> dict:
-    """Sözleşme "me / login 200": arayüzün ihtiyaç duyduğu iki alan, fazlası değil."""
-    return {"username": user["username"], "role": user["role"]}
+    """Sözleşme "me / login 200": arayüzün ihtiyaç duyduğu üç alan, fazlası değil (R7-16)."""
+    return {
+        "username": user["username"],
+        "role": user["role"],
+        "business_role": user["business_role"],
+    }

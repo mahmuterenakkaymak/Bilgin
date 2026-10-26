@@ -239,10 +239,12 @@ FULL_SCHEMA = "full"
 # R6-8: ``user`` komutunun satırları. Parola hiçbir zaman argüman değildir, iki kez sorulur ve
 # uyuşmazsa hiçbir şey yazılmaz; ``list`` sözleşme "User (public)" alanlarını basar, yani karma
 # ekranın hiçbir yerine girmez.
-USER_COLUMNS = ("Kullanıcı", "Rol", "Durum", "Son giriş")
+USER_COLUMNS = ("Kullanıcı", "Rol", "İş rolü", "Durum", "Son giriş")
 USER_ADDED = "✓ {username} eklendi (rol {role})."
+USER_ADDED_BUSINESS = "İş rolü: {business}."
 USER_PASSWD = "✓ {username} parolası değişti."
 USER_SET = "✓ {username}: rol {role}, {status}."
+USER_SET_BUSINESS = "✓ {username}: iş rolü {business}."
 NO_USERS = (
     "Henüz kullanıcı yok: önce `python -m nl2sql user add <ad> --role admin` ile bir yönetici "
     "oluşturun."
@@ -1330,23 +1332,26 @@ def make_login_script(
     return 0
 
 
-def user_add(name: str, role: str) -> int:
+def user_add(name: str, role: str, business_role: str = config.DEFAULT_BUSINESS_ROLE) -> int:
     """Yeni kullanıcı: parolayı iki kez sorar, uyuşmazsa hiçbir şey yazmadan çıkar (R6-8)."""
     _utf8_stdout()
     password = _ask_password()
     if password is None:
         return EXIT_BAD_INPUT
     try:
-        user = UserStore(config.app_db_path()).add_user(name, password, role)
+        user = UserStore(config.app_db_path()).add_user(
+            name, password, role, business_role=business_role
+        )
     except UserError as exc:
         print(exc.message)
         return EXIT_BAD_INPUT
     print(USER_ADDED.format(username=user["username"], role=user["role"]))
+    print(USER_ADDED_BUSINESS.format(business=_business_label(user["business_role"])))
     return 0
 
 
 def user_list() -> int:
-    """Bütün kullanıcılar: ad, rol, durum, son giriş; hiç yoksa ne yapılacağı söylenir (R6-8)."""
+    """Bütün kullanıcılar: ad, rolleri, durum, son giriş; hiç yoksa ne yapılacağı söylenir (R6-8)."""
     _utf8_stdout()
     users = UserStore(config.app_db_path()).list_users()
     if not users:
@@ -1360,6 +1365,7 @@ def user_list() -> int:
                     (
                         user["username"],
                         user["role"],
+                        _business_label(user["business_role"]),
                         ACTIVE if user["active"] else INACTIVE,
                         user["last_login_at"],
                     )
@@ -1391,18 +1397,32 @@ def user_passwd(name: str) -> int:
     return 0
 
 
-def user_set(name: str, role: str | None = None, active: bool | None = None) -> int:
-    """Rolü ya da etkinliği değiştirir; son etkin yöneticiyi store'un kendisi korur (R6-8)."""
+def user_set(
+    name: str,
+    role: str | None = None,
+    active: bool | None = None,
+    business_role: str | None = None,
+) -> int:
+    """Rolü, etkinliği ya da iş rolünü değiştirir; son etkin yöneticiyi store korur (R6-8, R7-16)."""
     _utf8_stdout()
     store = UserStore(config.app_db_path())
     user = _user_by_name(store, name)
     if user is None:
         return EXIT_BAD_INPUT
     try:
-        updated = store.update_user(user["id"], **_given(role=role, active=active))
+        updated = store.update_user(
+            user["id"], **_given(role=role, active=active, business_role=business_role)
+        )
     except UserError as exc:
         print(exc.message)
         return EXIT_BAD_INPUT
+    if business_role is not None:
+        print(
+            USER_SET_BUSINESS.format(
+                username=updated["username"], business=_business_label(updated["business_role"])
+            )
+        )
+        return 0
     print(
         USER_SET.format(
             username=updated["username"],
@@ -1411,6 +1431,11 @@ def user_set(name: str, role: str | None = None, active: bool | None = None) -> 
         )
     )
     return 0
+
+
+def _business_label(value: str) -> str:
+    """İş rolünün ekrandaki adı (R7-16): config listesinde yoksa kendi değeri yazılır."""
+    return config.BUSINESS_ROLES.get(value, value)
 
 
 def _ask_password() -> str | None:
@@ -1766,10 +1791,16 @@ def main(argv: list[str] | None = None) -> int:
         default="user",
         help="rol (varsayılan %(default)s)",
     )
+    user_add_cmd.add_argument(
+        "--business-role",
+        choices=tuple(config.BUSINESS_ROLES),
+        default=config.DEFAULT_BUSINESS_ROLE,
+        help="iş rolü (varsayılan %(default)s)",
+    )
     user_sub.add_parser("list", help="kullanıcıları, rollerini ve son girişleri listeler")
     user_passwd_cmd = user_sub.add_parser("passwd", help="parolayı değiştirir")
     user_passwd_cmd.add_argument("name", metavar="AD")
-    user_set_cmd = user_sub.add_parser("set", help="rolü ya da etkinliği değiştirir")
+    user_set_cmd = user_sub.add_parser("set", help="rolü, etkinliği ya da iş rolünü değiştirir")
     user_set_cmd.add_argument("name", metavar="AD")
     user_change = user_set_cmd.add_mutually_exclusive_group(required=True)
     user_change.add_argument("--role", choices=("admin", "user"), help="yeni rol")
@@ -1777,6 +1808,9 @@ def main(argv: list[str] | None = None) -> int:
         "--deactivate", action="store_true", help="kullanıcıyı pasifleştirir"
     )
     user_change.add_argument("--activate", action="store_true", help="kullanıcıyı etkinleştirir")
+    user_change.add_argument(
+        "--business-role", choices=tuple(config.BUSINESS_ROLES), help="yeni iş rolü"
+    )
 
     eval_cmd = commands.add_parser("eval", help="altın soruları koşar ve raporu yazar")
     eval_cmd.add_argument(
@@ -1942,13 +1976,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.user_command == "list":
             return user_list()
         if args.user_command == "add":
-            return user_add(args.name, args.role)
+            return user_add(args.name, args.role, args.business_role)
         if args.user_command == "passwd":
             return user_passwd(args.name)
         return user_set(
             args.name,
             role=args.role,
             active=None if not (args.activate or args.deactivate) else args.activate,
+            business_role=args.business_role,
         )
     if args.modes and not args.models:
         print(MODES_WITHOUT_MODELS)
