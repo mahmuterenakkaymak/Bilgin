@@ -2602,10 +2602,13 @@ main {
 /* --- başlangıç ekranı ------------------------------------------------------- */
 
 /* Pano: kartlar 260px'lik paylarla çoğalır ve satıra iner. Izgara maddesi olarak kartın esneme
-   payı sıfır — içindeki mini tablo panoyu sağa taşımaz, kendi kutusunda kalır. */
+   payı sıfır — içindeki mini tablo panoyu sağa taşımaz, kendi kutusunda kalır. `align-items: start`
+   aynı satırdaki en yükseğin boyunun diğerlerine dayatılmasını keser: her kart kendi yüksekliğinde
+   durur, kısa kartın altında boş kart açılmaz. */
 #start {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  align-items: start;
   gap: calc(var(--space) * 2);
 }
 
