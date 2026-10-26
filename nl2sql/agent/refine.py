@@ -75,6 +75,14 @@ ENTITY_NOUNS = {
 # sorulamaz - çoğulları FOLLOWUP_MARKERSda kalır, burada yalnız tekilleri sayılır.
 ENTITY_MARKERS = ("bu", "şu", "o")
 
+# Hal eki kökü bırakır ("müşteriye", "ürünün"), çoğul ek soruyu tek bir varlıktan çıkarır
+# ("müşterilerin", "carilerin") - neyle devam ettiği fark etmez, çoğul bir varlık sorulmaz.
+ENTITY_PLURAL = ("ler", "lar")
+
+# "cari yıl / dönem / ay" dönemi söyler, cari kaydını değil: ardındaki sözcük bunlardan biri ise
+# orada varlık değil takvim geçiyor. Katlanmış halleri - sorunun kelimeleri de katlanmış gelir.
+ENTITY_PERIOD_WORDS = ("yil", "donem", "ay")
+
 # Şıkkın soracağı cümle: Türkçe hal eki kurala değil sözlüğe sığar.
 ENTITY_QUESTIONS = {
     "müşteri": "Hangi müşteriyi kastediyorsunuz?",
@@ -127,10 +135,11 @@ def ambiguous_entity(question: str, turns: list[dict] | None, schema: dict | Non
 
     "Bu müşteriye başka ne sattık?" tek başına çözülmez: son turun satırlarında beş farklı cari
     kodu varsa hangisinin kastedildiğini yalnız kullanıcı bilir, model tahmin ederse uydurur - o
-    yüzden soru modelden önce burada sorulur. Eşik üç koşulun kesişimi: soruda tekil zamir ve bir
-    varlık sözcüğü geçiyor, son yanıtlanmış turun kolonlarından biri o varlığın sözlüğüyle
-    eşleşiyor, o kolonun gösterilen satırlarda en az iki farklı değeri var. Tek değer bellidir,
-    çoğul zamir ("bunlar") tek bir varlığı sormayı gerektirmez - ikisinde de None.
+    yüzden soru modelden önce burada sorulur. Eşik üç koşulun kesişimi: soruda tekil zamir bir varlık
+    sözcüğünün hemen önünde duruyor ve o sözcük çoğul değil, son yanıtlanmış turun kolonlarından biri
+    o varlığın sözlüğüyle eşleşiyor, o kolonun gösterilen satırlarda en az iki farklı değeri var. Tek
+    değer bellidir; çoğul zamir ("bunlar") ve çoğul varlık ("bu carilerin") tek bir varlığı sormayı
+    gerektirmez - üçünde de None.
 
     Dönüş ``needs_clarification``ın kendisidir: ``{"question", "options", "column"}``. ``column``
     şıkkın hangi kolonun değeri olduğunu söyler ve turda dolaşır, böylece seçim bağlam notunun
@@ -156,13 +165,33 @@ def ambiguous_entity(question: str, turns: list[dict] | None, schema: dict | Non
 
 
 def _entity_noun(words: list[str]) -> str | None:
-    """Varlığın adı: tekil zamirle birlikte geçen varlık sözcüğü; ek almış hali de aynı sözcüktür."""
+    """Varlığın adı: hemen önünde tekil zamir duran varlık sözcüğü; hal eki almış hali de aynı sözcük.
+
+    Zamirin arada sıfat bırakmadan bitişiği işareti şart: "Bu ay hangi ürün en çok satıldı?"ndaki
+    "bu" döneme, "Bu yıl müşteri sayısı?"ndaki de yıla bakar - ikisi de tek bir varlık sormaz.
+    """
     words = [_loose(word) for word in words]
-    if not any(word in ENTITY_MARKERS for word in words):
-        return None
+    for n, word in enumerate(words):
+        if not n or words[n - 1] not in ENTITY_MARKERS:
+            continue
+        noun = _entity_word(word, words[n + 1] if n + 1 < len(words) else "")
+        if noun is not None:
+            return noun
+    return None
+
+
+def _entity_word(word: str, following: str) -> str | None:
+    """Kelime bir varlığın adı mı: kök + hal eki olur, çoğul ek olmaz; "cari yılı" dönemi söyler."""
     for noun, aliases in ENTITY_NOUNS.items():
-        prefixes = [prefix for prefix in (_loose(alias) for alias in aliases) if prefix]
-        if any(word.startswith(prefix) for word in words for prefix in prefixes):
+        for alias in aliases:
+            stem = _loose(alias)
+            if not word.startswith(stem):
+                continue
+            suffix = word[len(stem):]
+            if any(mark in suffix for mark in ENTITY_PLURAL):
+                continue
+            if stem == "cari" and following.startswith(ENTITY_PERIOD_WORDS):
+                continue
             return noun
     return None
 
