@@ -22,6 +22,15 @@ yanıtı derlenmiş arayüzün kendisi olmalı -- yedek sayfa değil -- ve sayfa
 yönetici ``/api/users``tan bir hesap açar, o kullanıcı kendi çerez kavanozuyla girer, kural
 yazamaz (403), yöneticinin dışa aktarımını indiremez (404) ve yöneticinin sorusunu geçmişinde
 görmez. Kullanıcının parolası da bir kez üretilir; ne bir satıra ne bir hataya düşmez.
+
+``--conversation`` Run 7'nin ardışık soru zincirini aynı sunucuda ve aynı yöneticinin oturumuyla koşar
+(M23, ``--roles``ın deseniyle): kümenin ilk zincirinin (F01) ilk turu ``conversation_id``siz sorulur ve
+konuşmanın kimliği cevabın içinden okunur -- kimlik soruda değil cevapta doğar. İkinci tur o kimlikle
+sorulur ve bağlam notunun birinci turu saydığı cevaptan okunur; üçüncü tur yalnız sunumu değiştirir, yani
+model hiç koşurmamalı, ikinci turun SQL'ini aynıyla yürütüp grafiği pasta yapmalıdır. Son adım
+``GET /api/conversations/{id}`nin üç tur döndürdüğünü ölçer: konuşma depoda gerçekten duruyor. Zincir
+sunucunun ``/api/health``te söylediği kümeden okunur -- ``serve`` ``--dataset`` söylenmediğinde kendi
+sırasını açar, betiğin varsaydığı adı sunmayabilir.
 """
 
 from __future__ import annotations
@@ -71,7 +80,10 @@ def main(argv: list[str] | None = None) -> int:
     password = secrets.token_urlsafe(16)  # bir kez üretilir; hiçbir satıra, günlüğe, hataya düşmez
     server = _start_server(args.port, args.dataset, app_db, password)
     try:
-        code = _run_steps(args.port, question, server, password, ui=args.ui, roles=args.roles)
+        code = _run_steps(
+            args.port, question, server, password,
+            ui=args.ui, roles=args.roles, conversation=args.conversation,
+        )
     finally:
         log = _stop_server(server)
         Path(app_db).unlink(missing_ok=True)
@@ -86,6 +98,9 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--dataset", default=None, help="kurulu veri kümesi (varsayılan: config)")
     parser.add_argument("--ui", action="store_true", help="derlenmiş arayüzü de dener")
     parser.add_argument("--roles", action="store_true", help="rol kapılarını da dener (R6-22)")
+    parser.add_argument(
+        "--conversation", action="store_true", help="ardışık soru zincirini de dener (R7-8, R7-10)"
+    )
     return parser.parse_args(argv)
 
 
@@ -96,6 +111,7 @@ def _run_steps(
     password: str,
     ui: bool = False,
     roles: bool = False,
+    conversation: bool = False,
 ) -> int:
     """Adımlar sırayla; ilki tökezlerse durur, geçeni tek ✓ satırı olarak basar."""
     state: dict = {}
@@ -103,7 +119,7 @@ def _run_steps(
     steps = [
         ("oturumsuz istek 401", lambda: _check_anonymous(port, server, question)),
         ("giriş", lambda: _check_login(opener, port, password)),
-        ("sunucu hazır", lambda: _check_health(opener, port)),
+        ("sunucu hazır", lambda: _check_health(opener, port, state)),
         ("soru cevaplandı", lambda: _check_ask(opener, port, question, state)),
         ("dışa aktarım", lambda: _check_export(opener, port, state)),
     ]
@@ -117,6 +133,14 @@ def _run_steps(
             ("kural yazımı 403", lambda: _check_rule_denied(port, state)),
             ("yönetici çıktısı 404", lambda: _check_export_denied(port, state)),
             ("geçmiş kişiye özel", lambda: _check_history_scoped(opener, port, question, state)),
+        ]
+    if conversation:
+        # Zincirin turları konuşmanın kimliğiyle çoğalır: ilki onu doğurur, ötekiler taşır.
+        steps += [
+            ("konuşmanın ilk turu", lambda: _check_conversation_open(opener, port, state)),
+            ("bağlamlı ikinci tur", lambda: _check_conversation_context(opener, port, state)),
+            ("modelsiz sunum değişikliği", lambda: _check_conversation_refine(opener, port, state)),
+            ("konuşmanın üç turu", lambda: _check_conversation_thread(opener, port, state)),
         ]
     for name, step in steps:
         try:
@@ -164,11 +188,16 @@ def _check_login(opener, port: int, password: str) -> str:
     return f"{payload['username']} · {payload['role']}"
 
 
-def _check_health(opener, port: int) -> str:
-    """Oturumla sağlık: hazır olduğundan artık emin olduğumuz sunucunun gördüğü dünya."""
+def _check_health(opener, port: int, state: dict) -> str:
+    """Oturumla sağlık: hazır olduğundan artık emin olduğumuz sunucunun gördüğü dünya.
+
+    Gördüğü küme ``state``e de yazılır: ``--conversation`` zinciri sunucunun gerçekten açtığı
+    kümeden okumalı, betiğin varsaydığından -- ``serve`` ``--dataset``sız kendi sırasını açar.
+    """
     payload = _get(opener, f"http://{HOST}:{port}/api/health")
     if payload.get("status") != "ok":
         raise SmokeError(f"/api/health status='ok' değil: {payload}")
+    state["dataset"] = payload["dataset"]["name"]
     return f"{payload['dataset']['name']} · {payload['llm']['kind']}"
 
 
@@ -272,11 +301,87 @@ def _check_history_scoped(opener, port: int, question: str, state: dict) -> str:
     return f"yönetici {len(mine)} satır · kullanıcı {len(theirs)} satır"
 
 
-def _ask_request(url: str, question: str) -> urllib.request.Request:
-    """Aynı istek gövdesi iki kez kurulmaz: oturumsuz denenenle cevaplanan soru birebir aynıdır."""
+def _check_conversation_open(opener, port: int, state: dict) -> str:
+    """İlk tur ``conversation_id``siz sorulur: konuşmanın kimliği cevapta doğar (R7-8)."""
+    payload = _ask_turn(opener, port, _chain(state)[0]["question"], state)
+    if payload.get("turn") != 1:
+        raise SmokeError(f"ilk turun tur numarası {payload.get('turn')}; 1 bekleniyor")
+    state["conversation_id"] = payload["conversation_id"]
+    return f"tur 1 · {state['conversation_id'][:8]}…"
+
+
+def _check_conversation_context(opener, port: int, state: dict) -> str:
+    """İkinci tur birincinin üstüne kurulur: bağlam notu ``uses_turns``ta 1'i sayar (R7-4, R7-5)."""
+    payload = _ask_turn(opener, port, _chain(state)[1]["question"], state)
+    if payload.get("turn") != 2:
+        raise SmokeError(f"ikinci turun tur numarası {payload.get('turn')}; 2 bekleniyor")
+    used = (payload.get("context") or {}).get("uses_turns")
+    if used != [1]:
+        raise SmokeError(f"ikinci turun bağlamı {used} turu kullandı; [1] bekleniyor")
+    state["sql"] = payload["sql"]
+    return "tur 2 · uses_turns [1]"
+
+
+def _check_conversation_refine(opener, port: int, state: dict) -> str:
+    """Sunum değişikliği modeli hiç koşurmaz: ikinci turun SQL'i aynıyla yürür, grafik pastadır (R7-10)."""
+    payload = _ask_turn(opener, port, _chain(state)[2]["question"], state)
+    if payload.get("turn") != 3:
+        raise SmokeError(f"üçüncü turun tur numarası {payload.get('turn')}; 3 bekleniyor")
+    if payload.get("sql") != state["sql"]:
+        raise SmokeError("sunum değişikliği başka bir SQL koştu; ikinci turun sorgusu aynıyla yürümeli")
+    chart = payload.get("chart") or {}
+    if chart.get("type") != "pie":
+        raise SmokeError(f"sunum değişikliğinin grafiği {chart.get('type')!r}; pasta bekleniyor")
+    return "tur 3 · pasta · SQL yineleyendi"
+
+
+def _check_conversation_thread(opener, port: int, state: dict) -> str:
+    """Konuşma depoda üç turdur: ``GET`` turların kendisini sahibine döner (R7-8)."""
+    thread = _get(opener, f"http://{HOST}:{port}/api/conversations/{state['conversation_id']}")
+    stored = thread.get("turns") or []
+    if len(stored) != 3:
+        raise SmokeError(f"konuşma {len(stored)} tur döndürdü; 3 bekleniyor")
+    return f"{len(stored)} tur"
+
+
+def _ask_turn(opener, port: int, question: str, state: dict) -> dict:
+    """Zincirin bir turu: kimlik doğduysa gövde o kimlikle gider, cevaplanmayan tur dumanın tökezlemesidir."""
+    payload = _send(
+        opener,
+        _ask_request(f"http://{HOST}:{port}/api/ask", question, state.get("conversation_id")),
+        "/api/ask",
+    )
+    if payload.get("status") != "answered":
+        error = payload.get("error") or {}
+        raise SmokeError(
+            f"{payload.get('status')}: {error.get('message') or 'cevap alınamadı'}"
+            f" (audit {payload.get('audit_id')})"
+        )
+    return payload
+
+
+def _chain(state: dict) -> list[dict]:
+    """Ölçülen zincir: sunucunun açtığı kümenin ilk ardışık soru zincirinin turları (F01, R7-14)."""
+    if "chain" not in state:
+        chains = datasets.load_dataset(state["dataset"]).followups()
+        turns = list((chains[0].get("turns") or []) if chains else [])
+        if len(turns) < 3:
+            raise SmokeError(f"{state['dataset']} zincirinde üç tur yok; --conversation koşamaz")
+        state["chain"] = turns
+    return state["chain"]
+
+
+def _ask_request(url: str, question: str, conversation_id: str | None = None) -> urllib.request.Request:
+    """Aynı istek gövdesi iki kez kurulmaz: oturumsuz denenenle cevaplanan soru birebir aynıdır.
+
+    ``conversation_id`` yalnız verildiğinde gövdeye girer -- verilmemesi yeni bir konuşma demek (R7-8).
+    """
+    body = {"question": question}
+    if conversation_id:
+        body["conversation_id"] = conversation_id
     return urllib.request.Request(
         url,
-        data=json.dumps({"question": question}).encode("utf-8"),
+        data=json.dumps(body).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST",
     )

@@ -220,3 +220,13 @@
 2026-10-26 16:56:39 | HANDS  | T310 try 1: conversation list in the sidebar (PLAN R7-15): web/src/components/ConversationList.jsx (`#conversation-list` above history in Sidebar.jsx: title, relative time, turn count, `button[data-conversation-delete]` with confirm; click -> `#/c/<id>`, no ask/replay call); history items show "tur n" when they carry a conversation; refreshed after every answer and after a dataset switch; add web/src/components/ConversationList.test.jsx (new file); Sidebar.test.jsx unchanged and green
 2026-10-26 17:01:04 | ORCH   | T310: PASSED (hands)
 2026-10-26 17:01:16 | HANDS  | T311 try 1: thread look, phone and dark (PLAN R7-15, R6-19): web/src/styles.css rules for #thread, .turn, .turn-question (right-aligned bubble, accent-soft token), .turn-collapsed (muted, max 5 rows, pointer), #context-line (muted line with the accent edge drawn like the T281 band rule), #new-conversation (secondary pill), #conversation-list; phone rules only inside the existing `@media (max-width: 720px)` block (bubbles full width, collapsed table scrolls in its card); colours only via tokens so dark mode follows; add tests/test_web_thread_css.py (new file: each selector exists, no second max-width block, no hex colour in the new rules); tests/test_web_bands.py green
+2026-10-26 17:11:48 | ORCH   | hands: changed memory note nl2sql-js-toolchain.md - npm is denied in the nl2sql shell — run the web build and vitest through node with these exact argument forms
+2026-10-26 17:12:29 | ORCH   | T311: ACCEPT COMMAND BROKEN, not retried: `.venv\Scripts\python -m pytest tests/test_web_thread_css.py tests/test_web_bands.py -q && npm --prefix web run build` ->                                           [100%]
+10 passed in 0.14s
+
+> bilgin-web@0.1.0 build
+> vite build
+
+'vite' is not recognized as an internal or external command,
+operable program or batch file.
+2026-10-26 17:12:46 | HANDS  | T312 try 1: README Run 7 conversation section: README.md "Konuşma: ardışık sorular" (what a follow-up can lean on, Yeni konuşma, #/c/<id>, the evidence line, CLI --conversation/--new, eval --followups and its metrics, the manual wwi_real run with NL2SQL_BACKEND=mssql, what is stored: at most 5 masked rows per turn), no product/company names; add tests/test_readme_run7.py (new file: the heading and each named command/flag appear, no forbidden names list from tests/test_readme_run6.py reused)
