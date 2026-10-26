@@ -20,6 +20,8 @@ from nl2sql.agent.llm import (
     key_missing_reason,
     ping as llm_ping,
 )
+from nl2sql.engine.connections import ConnectionStore
+from nl2sql.engine.connections import resolve as resolve_connection
 from nl2sql.engine.executor import LocalExecutor
 from nl2sql.index.store import dataset_arg
 from nl2sql.schema_map import doc
@@ -123,16 +125,26 @@ def open_session(
     audit_path: str | Path = config.AUDIT_LOG,
     ask_log: str | Path = config.ASK_LOG,
     client_factory: Callable | None = None,
+    connections: ConnectionStore | None = None,
+    active: bool = True,
 ) -> Session:
-    """CLI'nin cümleleriyle doğrulanan bir Session kurar; hata SessionError(exit_code=2)."""
+    """CLI'nin cümleleriyle doğrulanan bir Session kurar; hata SessionError(exit_code=2).
+
+    ``connections`` bağlantı deposudur (R7-23): küme SQL Server ilan etmiş ve kendi dizesi
+    çözülüyorsa yürütücü o sunucuya kurulur, ``active`` ise açılan kümenin etkin küme olup
+    olmadığıdır - genel ortam değişkeni yalnız ona aittir. Başka her durumda Run 6'ın hâli sürer.
+    """
     ds = _load_dataset(dataset)
     profile = _load_profile(model, models_file)
     if llm == "openai" and profile is not None:
         reason = key_missing_reason(profile.api_key_env)
         if reason:
             raise SessionError(reason, 2)
+    backend, conn_str = _connection(ds, connections, active)
     resolved_db = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
-    if _db_missing(resolved_db):
+    # Bağlantısı çözülmüş bir SQL Server kümesi ölçümünü sunucudan alır: klasördeki SQLite
+    # dosyası o oturumun koşulu değildir.
+    if conn_str is None and _db_missing(resolved_db):
         raise SessionError(
             NO_DB.format(path=resolved_db, ds=dataset_arg(ds.name if ds else None)), 2
         )
@@ -140,10 +152,12 @@ def open_session(
     schema = ds.schema() if ds else doc.load_schema()
     rules = ds.rules() if ds else load_rules()
     executor = LocalExecutor(
+        backend=backend,
         db_path=resolved_db,
         allowlist=doc.allowlist(schema),
         audit_path=audit_path,
         pii_schema=schema,
+        conn_str=conn_str,
     )
     return Session(
         dataset=ds,
@@ -178,6 +192,22 @@ def _load_profile(name: str | None, path: str | Path | None) -> ModelProfile | N
         return get_profile(name, path)
     except ProfileError as exc:
         raise SessionError(str(exc), 2) from exc
+
+
+def _connection(
+    ds, connections: ConnectionStore | None, active: bool
+) -> tuple[str | None, str | None]:
+    """R7-23: yürütücünün yedeği ve bağlantı dizesi; dize yoksa ``(None, None)``, yani Run 6.
+
+    ``env`` kaynağı bilinçli olarak Run 6'a bırakılır: genel ``NL2SQL_MSSQL_CONN``u ``_mssql.run``
+    kendisi okuyor, yani yürütücünün ona ihtiyacı yoktur; yedeği de config söylüyordur.
+    """
+    if ds is None or connections is None or ds.connection != "mssql":
+        return None, None
+    where = resolve_connection(ds.name, connections, ds.name if active else None)
+    if where["source"] not in ("env_dataset", "stored"):
+        return None, None
+    return "mssql", where["conn_str"]
 
 
 def _db_missing(db_path: str | Path) -> bool:

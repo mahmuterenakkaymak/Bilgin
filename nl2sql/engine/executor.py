@@ -198,11 +198,15 @@ class LocalExecutor:
         allowlist: set[str] | None = None,
         audit_path: str | Path = config.AUDIT_LOG,
         pii_schema: dict | None = None,
+        conn_str: str | None = None,
     ) -> None:
         self._backend = backend or config.backend()
         if self._backend not in config.BACKENDS:
             raise ValueError(f"Geçersiz yedek: {self._backend}; {list(config.BACKENDS)} olmalı.")
         self._db_path = db_path
+        # R7-23: kümenin kendi dizesi bağlantı deposundan kurulur ve ortam değişkeninin önüne
+        # geçer; None `_mssql.run`ın kendi ortam okumasına bırakır, yani Run 6'ın hâli sürer.
+        self._conn_str = conn_str
         # ASSUMPTION: allowlist verilmezse PLAN Decision 6 gereği schema.json tabloları alınır;
         # geç çözülür, böylece testler dosyaya dokunmadan kendi listesini verebilir.
         self._allowlist = allowlist if allowlist is not None else doc.allowlist(doc.load_schema())
@@ -239,7 +243,9 @@ class LocalExecutor:
         if not verdict.ok:
             return _error("policy", verdict.reason)
         if self._backend != "sqlite":
-            return _with_tables(self._masked(_mssql.run(verdict.sql, budget), verdict), verdict)
+            return _with_tables(
+                self._masked(_mssql.run(verdict.sql, budget, self._conn_str), verdict), verdict
+            )
         try:
             statements = transpile(verdict.sql)
         except SqlglotError as exc:

@@ -46,6 +46,7 @@ from nl2sql.auth.bootstrap import dev_admin
 from nl2sql.auth.store import NOT_FOUND_MESSAGE, UserError, UserStore
 from nl2sql.cli.table import format_table
 from nl2sql.engine import checks, login_script
+from nl2sql.engine.connections import ConnectionStore
 from nl2sql.engine.executor import LocalExecutor
 from nl2sql.engine.result import Budget, Result
 from nl2sql.eval import metrics, report, retrieval, runner
@@ -2132,6 +2133,9 @@ def serve(
     from nl2sql.web.app import create_app
 
     _utf8_stdout()
+    # R7-23: SQL Server kümesi sunuluyorsa yürütücü kullanıcı deposundaki kendi bağlantı satırına
+    # kurulur; depo ``serve``in birazdan açacağı kullanıcı dosyasıyla aynıdadır.
+    connections = ConnectionStore(config.app_db_path())
     try:
         session = open_session(
             dataset=dataset or _served_dataset(),
@@ -2140,6 +2144,7 @@ def serve(
             models_file=models_file,
             audit_path=config.AUDIT_LOG,
             ask_log=config.ASK_LOG,
+            connections=connections,
         )
     except SessionError as exc:
         print(exc)

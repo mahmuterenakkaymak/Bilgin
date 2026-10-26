@@ -25,6 +25,7 @@ from nl2sql.app.ask import ask_payload, replay_payload
 from nl2sql.app.conversations import ConversationNotFound, ConversationStore
 from nl2sql.app.session import open_session
 from nl2sql.cli import main as cli
+from nl2sql.engine.connections import ConnectionStore
 from nl2sql.engine.result import Budget
 from nl2sql.eval import runner
 from nl2sql.index.search import load_search
@@ -155,6 +156,9 @@ def create_app(
     app.state.session_lock = threading.Lock()
     app.state.saved_path = Path(saved_path)
     app.state.users = users
+    # R7-23: bağlantılar kullanıcıların ve kayıtların kendi dosyasındadır; her oturum kurulumu bu
+    # depoyu sorar, yani ekrandan kaydedilen bağlantı sunucuyu yeniden başlatmadan geçerli olur.
+    app.state.connections = ConnectionStore(saved_path)
     saved = SavedStore(saved_path)
     # R7-8: konuşmalar kayıtlarla aynı SQLite dosyasında; yollar depoyu app.state'ten okur.
     app.state.conversations = ConversationStore(saved_path)
@@ -442,6 +446,7 @@ def _suggest_opener(app):
             models_file=current.models_file,
             audit_path=current.audit_path,
             ask_log=current.ask_log,
+            connections=app.state.connections,
         )
 
     return open_for

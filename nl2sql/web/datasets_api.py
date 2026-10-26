@@ -67,6 +67,9 @@ def create_router() -> APIRouter:
         Model, model dosyası, llm kaynağı ve günlük yolları bugünkü oturumdan alınır - ekran
         yalnız dünyayı değiştirir, sunduğu modeli değiştirmez. Veritabanı olmayan bir küme
         ``open_session``ın kendi cümlesiyle 409 alır ve eski oturum yerinde kalır.
+
+        R7-23: geçilen küme SQL Server kümesiyse yürütücü bağlantı deposundaki kendi satırına
+        kurulur, yani geçiş için sunucu yeniden başlatılmaz.
         """
         name = body.name.strip()
         if not name:
@@ -81,6 +84,7 @@ def create_router() -> APIRouter:
                 models_file=current.models_file,
                 audit_path=current.audit_path,
                 ask_log=current.ask_log,
+                connections=request.app.state.connections,
             )
         except SessionError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from None
