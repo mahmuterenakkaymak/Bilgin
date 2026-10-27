@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { STEPS, STEP_MS, stepAt } from "../lib/steps.js";
+import { useT } from "../i18n/index.js";
+import { STEP_KEYS, STEP_MS, stepAt } from "../lib/steps.js";
 
 // Bekleme kartı: adım yazısı geçen süreden ilerler, sayım son adımda durur (R5-18).
 // Saat bileşende durur; her soru için yeniden kurulduğu için sıfırdan başlar.
 export default function LoadingSteps() {
+  const { t } = useT();
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -22,9 +24,9 @@ export default function LoadingSteps() {
         <span />
       </div>
       <p className="loading-step">
-        {STEPS[index]}
+        {t(STEP_KEYS[index])}
         <span className="loading-count">
-          {index + 1} / {STEPS.length}
+          {index + 1} / {STEP_KEYS.length}
         </span>
       </p>
     </section>

@@ -1,5 +1,14 @@
 // Soru akışının durumu: her alan bir AskPayload alanıdır, burada zaman/sayaç/tip yok; böylece
 // indirgeyici ekrandan bağımsız test edilebilir. Durum adları payload'ınkinden türetilir (R5-2).
+import { makeT } from "../i18n/index.js";
+
+// ASSUMPTION: indirgeyicinin dili yok — kendi cümlesi arayüzün varsayılan diliyle kurulur; kartın
+// başlığı ve ipucu kullanıcının dilinde zaten ErrorCard'dan okunuyor (R8-18).
+const t = makeT();
+
+// İndirgeyicinin tek kendi cümlesi: yük hata taşımadan geldiğinde okunur.
+const GENERIC_FAILURE = "ask.genericFailure";
+
 export const initialState = {
   status: "idle", // idle | loading | answered | clarifying | failed | network_error
   question: "",
@@ -47,9 +56,10 @@ function statusOf(payload) {
   return "failed";
 }
 
-// Cümlenin iki yeri var (error.message ve answer_text); hangisi doluysa o okunur.
+// Cümlenin iki yeri var (error.message ve answer_text); hangisi doluysa o okunur. İkisi de sunucunun
+// cümlesidir ve çevrilmeden taşınır; ikisi de boşsa indirgeyicinin kendi cümlesi düşer.
 function errorOf(payload) {
   const kind = payload?.error?.kind ?? "failed";
-  const message = payload?.error?.message || payload?.answer_text || "Cevap üretilemedi.";
+  const message = payload?.error?.message || payload?.answer_text || t(GENERIC_FAILURE);
   return { kind, message };
 }

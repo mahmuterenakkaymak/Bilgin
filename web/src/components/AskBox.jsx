@@ -1,6 +1,10 @@
 // Soru kutusu: Enter gönderir, Shift+Enter alt satıra iner; boş metin ve koşan bir soru
 // düğmeyi kilitler (R5-18). Çipler kutunun altında durur, böylece cevaptan sonra da erişilir.
+// Kutunun kendi cümleleri katalogdan (R8-18); örnek çiplerin sorusu verinin cümlesidir, çevrilmez.
+import { useT } from "../i18n/index.js";
+
 export default function AskBox({ value, onChange, onAsk, loading = false, examples = [] }) {
+  const { t } = useT();
   const text = typeof value === "string" ? value : "";
   const blank = !text.trim();
 
@@ -19,8 +23,8 @@ export default function AskBox({ value, onChange, onAsk, loading = false, exampl
       <textarea
         id="question"
         className="question"
-        aria-label="Soru"
-        placeholder="Sorunuzu yazın"
+        aria-label={t("ask.label")}
+        placeholder={t("ask.placeholder")}
         rows={2}
         value={text}
         onChange={(event) => onChange(event.target.value)}
@@ -33,9 +37,9 @@ export default function AskBox({ value, onChange, onAsk, loading = false, exampl
       />
       <div className="ask-actions">
         <button type="submit" id="ask-button" className="btn btn-primary" disabled={loading || blank}>
-          {loading ? "Cevaplanıyor…" : "Sor"}
+          {loading ? t("ask.answer") : t("ask.submit")}
         </button>
-        <span className="ask-hint">Enter ile gönder, Shift+Enter alt satır.</span>
+        <span className="ask-hint">{t("ask.hint")}</span>
       </div>
       {examples.length > 0 && (
         <div className="examples">
