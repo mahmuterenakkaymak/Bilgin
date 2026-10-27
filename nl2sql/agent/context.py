@@ -32,6 +32,36 @@ FOLLOWUP_RULES = (
     "- submit_sql'in context alanını doldur: hangi turları kullandığını ve gördüğün değerleri yaz."
 )
 
+# Modelin okuduğu tur satırları (R8-3 "Stay"): fake.py zincir anahtarını `Tur N sorusu:` satırından
+# okur, o yüzden blok Türkçe kalır; kullanıcıya çıkan tek satır `evidence_line`dır.
+TURN_LINES = (
+    "Tur {n} sorusu: {question}",
+    "Tur {n} SQL: {sql}",
+    "Tur {n} kolonlar: {columns}",
+    "Tur {n} satırlar ({kept} / {total}):",
+)
+# İşaretlerin modele yön veren cümleleri: bağlam bloğunun içinde kalır, ekrana hiç çıkmaz.
+HINTS = {
+    "standalone": (
+        "İpucu: soru tek başına da okunabilir; bir tabloyu adlandırıyor, önceki turlara bağlı olmak"
+        " zorunda değil."
+    ),
+    "maybe_bound": "İpucu: soru önceki turlardan birine bağlanıyor olabilir; öyleyse onu bu turlardan çöz.",
+    "bound": "İpucu: soruda önceki tura bağlanan {markers} var; {tail}",
+    "noun_here": "tablo adı da geçiyor.",
+    "noun_absent": "tablo adı geçmiyor, soru tek başına okunmaz.",
+}
+# Not düşme gerekçeleri: cevaba dokunmaz, yalnız günlük satırına düşer (app/ask.py `_note`).
+NOTE_REASONS = {
+    "not_a_list": "uses_turns ve entities liste olmalı",
+    "unknown_turn": "{n}. tur bu konuşmada yok",
+    "refines_unused": "refines_sql_of kullanılan turlarda değil",
+    "entity_not_dict": "varlık bir nesne değil",
+    "entity_blank": "varlığın kolonu ya da değeri boş",
+    "column_absent": "{column} kolonu kullanılan turlarda yok",
+    "value_absent": "{value} değeri kullanılan turun satırlarında ya da sorgusunda yok",
+}
+
 
 def turn_summary(payload: dict) -> dict:
     """AskPayload'ı ``summary_json``a yazılacak öze indirir (Contracts "TurnSummary").
@@ -154,14 +184,15 @@ def _turn_lines(turn: dict) -> list[str]:
     """Bir turun dört satırı ve altında örnek satırları; çok satırlı SQL tek satıra iner."""
     summary = turn.get("summary") or {}
     rows = (summary.get("rows") or [])[: config.CONV_KEEP_ROWS]
-    n = turn.get("n")
-    columns = ROW_SEPARATOR.join(_text(column) for column in summary.get("columns") or [])
-    lines = [
-        f"Tur {n} sorusu: {_line(turn.get('question'))}",
-        f"Tur {n} SQL: {_line(turn.get('sql'))}",
-        f"Tur {n} kolonlar: {columns}",
-        f"Tur {n} satırlar ({len(rows)} / {summary.get('row_count', 0)}):",
-    ]
+    fields = {
+        "n": turn.get("n"),
+        "question": _line(turn.get("question")),
+        "sql": _line(turn.get("sql")),
+        "columns": ROW_SEPARATOR.join(_text(column) for column in summary.get("columns") or []),
+        "kept": len(rows),
+        "total": summary.get("row_count", 0),
+    }
+    lines = [line.format(**fields) for line in TURN_LINES]
     lines += [ROW_INDENT + ROW_SEPARATOR.join(_text(cell) for cell in row) for row in rows]
     return lines
 
@@ -172,10 +203,10 @@ def _hint_line(hints: dict | None) -> str:
     markers = hints.get("markers") or []
     if not markers:
         if hints.get("table_noun"):
-            return "İpucu: soru tek başına da okunabilir; bir tabloyu adlandırıyor, önceki turlara bağlı olmak zorunda değil."
-        return "İpucu: soru önceki turlardan birine bağlanıyor olabilir; öyleyse onu bu turlardan çöz."
-    bound = "tablo adı da geçiyor." if hints.get("table_noun") else "tablo adı geçmiyor, soru tek başına okunmaz."
-    return f"İpucu: soruda önceki tura bağlanan {', '.join(markers)} var; {bound}"
+            return HINTS["standalone"]
+        return HINTS["maybe_bound"]
+    tail = HINTS["noun_here"] if hints.get("table_noun") else HINTS["noun_absent"]
+    return HINTS["bound"].format(markers=", ".join(markers), tail=tail)
 
 
 def _estimate(messages: list[dict], turns: list[dict], tools: list[dict] | None) -> int:
@@ -241,12 +272,12 @@ def validate_note(note: dict | None, turns: list[dict] | None) -> tuple[dict | N
     entities = note.get("entities") or []
     refines = note.get("refines_sql_of")
     if not isinstance(uses, list) or not isinstance(entities, list):
-        return None, "uses_turns ve entities liste olmalı"
+        return None, NOTE_REASONS["not_a_list"]
     for number in uses:
         if not isinstance(number, int) or number not in known:
-            return None, f"{number}. tur bu konuşmada yok"
+            return None, NOTE_REASONS["unknown_turn"].format(n=number)
     if refines is not None and refines not in uses:
-        return None, "refines_sql_of kullanılan turlarda değil"
+        return None, NOTE_REASONS["refines_unused"]
     for entity in entities:
         reason = _entity_reason(entity, [known[number] for number in uses])
         if reason:
@@ -288,16 +319,16 @@ def evidence_line(
 def _entity_reason(entity, used_turns: list[dict]) -> str | None:
     """Bir varlığın kanıtı: kolon kullanılan turun kolonlarında, değer onun satırlarında ya da SQL'inde."""
     if not isinstance(entity, dict):
-        return "varlık bir nesne değil"
+        return NOTE_REASONS["entity_not_dict"]
     column = _text(entity.get("column")).strip()
     value = _text(entity.get("value")).strip()
     if not column or not value:
-        return "varlığın kolonu ya da değeri boş"
+        return NOTE_REASONS["entity_blank"]
     named = [turn for turn in used_turns if _has_column(turn, column)]
     if not named:
-        return f"{column} kolonu kullanılan turlarda yok"
+        return NOTE_REASONS["column_absent"].format(column=column)
     if not any(_shows(turn, fold(value)) for turn in named):
-        return f"{value} değeri kullanılan turun satırlarında ya da sorgusunda yok"
+        return NOTE_REASONS["value_absent"].format(value=value)
     return None
 
 

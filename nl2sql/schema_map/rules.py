@@ -18,6 +18,16 @@ from nl2sql import config
 # Her kural bu yüzden en az bir işaretçi taşır; tests/test_rules_markers.py bunu zorlar.
 _LIST_FIELDS = ("synonyms", "tables", "markers")
 
+# Section labels of the rule block `rule_text` builds: the text goes to the prompt and to the index
+# doc, never to a screen, so it stays Turkish (R8-3 "Stay").
+RULE_LABELS = {
+    "synonyms": "  Eş anlamlıları: ",
+    "synonyms_en": "  Eş anlamlıları (İngilizce): ",
+    "definition": "  Tanım: ",
+    "sql_hint": "  SQL ipucu: ",
+    "tables": "  Tablolar: ",
+}
+
 
 def load_rules(path: str | Path = config.RULES_PATH) -> list[dict]:
     """The rules doc as a list; optional fields get their contract defaults."""
@@ -58,13 +68,13 @@ def rule_text(rule: dict) -> str:
     """
     lines = [rule["term"]]
     if rule.get("synonyms"):
-        lines.append("  Eş anlamlıları: " + ", ".join(rule["synonyms"]))
+        lines.append(RULE_LABELS["synonyms"] + ", ".join(rule["synonyms"]))
     if rule.get("synonyms_en"):
-        lines.append("  Eş anlamlıları (İngilizce): " + ", ".join(rule["synonyms_en"]))
+        lines.append(RULE_LABELS["synonyms_en"] + ", ".join(rule["synonyms_en"]))
     if rule.get("definition"):
-        lines.append("  Tanım: " + rule["definition"])
+        lines.append(RULE_LABELS["definition"] + rule["definition"])
     if rule.get("sql_hint"):
-        lines.append("  SQL ipucu: " + rule["sql_hint"])
+        lines.append(RULE_LABELS["sql_hint"] + rule["sql_hint"])
     if rule.get("tables"):
-        lines.append("  Tablolar: " + ", ".join(rule["tables"]))
+        lines.append(RULE_LABELS["tables"] + ", ".join(rule["tables"]))
     return "\n".join(lines)
