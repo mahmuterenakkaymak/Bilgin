@@ -90,6 +90,23 @@
   "app.no_ui.intro": "The API is running; build the interface once to see it:",
   "app.no_ui.health": "To read the status: ",
 
+  "auth.duplicate": "This username already exists.",
+  "auth.user_not_found": "The user was not found.",
+  "auth.last_admin": "The last active administrator cannot be deactivated or demoted.",
+  "auth.bad_name": "The username must be 3-32 characters and contain only lowercase letters, digits and . _ -.",
+  "auth.bad_role": "The role must be admin or user.",
+  "auth.bad_business_role": "Invalid business role.",
+  "auth.bad_lang": "The language must be tr or en.",
+  "auth.password_short": "The password must be at least {n} characters.",
+  "auth.login_failed": "The username or password is wrong.",
+  "auth.locked": "Too many failed attempts. Try again in {minutes} minutes.",
+  "auth.no_session": "You need to sign in.",
+  "auth.not_admin": "Only an administrator can do this.",
+  "auth.off": "Authentication is off.",
+  "auth.own_business_role": "You cannot change your own business role.",
+
+  "conversations.not_found": "The conversation was not found.",
+
   "export.sheet": "Results",
 
   "rules.id_pattern": "The id may contain only lowercase letters, digits and underscores (e.g. net_satis).",

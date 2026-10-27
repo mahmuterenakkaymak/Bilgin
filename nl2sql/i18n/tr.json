@@ -90,6 +90,23 @@
   "app.no_ui.intro": "API çalışıyor; ekranı görmek için arayüzü bir kez derleyin:",
   "app.no_ui.health": "Durumu okumak için: ",
 
+  "auth.duplicate": "Bu kullanıcı adı zaten var.",
+  "auth.user_not_found": "Kullanıcı bulunamadı.",
+  "auth.last_admin": "Son etkin yönetici pasifleştirilemez ya da rolü düşürülemez.",
+  "auth.bad_name": "Kullanıcı adı 3-32 karakter olmalı ve yalnız küçük harf, rakam, . _ - içerebilir.",
+  "auth.bad_role": "Rol admin ya da user olmalı.",
+  "auth.bad_business_role": "Geçersiz iş rolü.",
+  "auth.bad_lang": "Dil tr ya da en olmalı.",
+  "auth.password_short": "Parola en az {n} karakter olmalı.",
+  "auth.login_failed": "Kullanıcı adı ya da parola hatalı.",
+  "auth.locked": "Çok fazla hatalı deneme. {minutes} dakika sonra yeniden deneyin.",
+  "auth.no_session": "Oturum açmanız gerekiyor.",
+  "auth.not_admin": "Bu işlem yalnız yöneticiye açık.",
+  "auth.off": "Kimlik doğrulama kapalı.",
+  "auth.own_business_role": "Kendi iş rolünüzü değiştiremezsiniz.",
+
+  "conversations.not_found": "Konuşma bulunamadı.",
+
   "export.sheet": "Sonuç",
 
   "rules.id_pattern": "Kimlik yalnız küçük harf, rakam ve alt çizgiden oluşmalı (ör. net_satis).",

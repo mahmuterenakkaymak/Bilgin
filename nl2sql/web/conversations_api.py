@@ -12,10 +12,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from nl2sql import config
 from nl2sql.app.conversations import ALL as CONVERSATIONS_ALL
+from nl2sql.i18n import t
 from nl2sql.web.authz import current_user, require
+from nl2sql.web.lang import request_lang
 
 # Sözleşme cümlesi: olmayanla başkasınınki aynı şeyi söyler (ConversationNotFound'un kendi cümlesi).
-NO_CONVERSATION = "Konuşma bulunamadı."
+# ASSUMPTION: app.py bu adı import eder, o yüzden anahtarı değil program dilinin cümlesini taşır;
+# yolların kendisi R8-5'te isteğin dilini okur.
+NO_CONVERSATION = t("conversations.not_found")
 
 
 def create_router() -> APIRouter:
@@ -42,14 +46,18 @@ def create_router() -> APIRouter:
         dataset = _dataset(request) if request.app.state.session.dataset else None
         thread = request.app.state.conversations.get(id, username=_owner(request), dataset=dataset)
         if thread is None:
-            raise HTTPException(status_code=404, detail=NO_CONVERSATION)
+            raise HTTPException(
+                status_code=404, detail=t("conversations.not_found", _lang(request))
+            )
         return thread
 
     @router.delete("/api/conversations/{id}", dependencies=user)
     def conversation_delete(id: str, request: Request) -> dict:
         """Konuşmayı ve turlarını siler; olmayan ya da başkasınınkinde silinecek bir şey yok (404)."""
         if not request.app.state.conversations.delete(id, username=_owner(request)):
-            raise HTTPException(status_code=404, detail=NO_CONVERSATION)
+            raise HTTPException(
+                status_code=404, detail=t("conversations.not_found", _lang(request))
+            )
         return {"deleted": True}
 
     return router
@@ -70,3 +78,8 @@ def _dataset(request: Request) -> str:
     """Listenin kümesi: oturumun o anki kümesinin adı - bir geçiş listeyle birlikte değişir."""
     ds = request.app.state.session.dataset
     return ds.name if ds else config.DEFAULT_DATASET
+
+
+def _lang(request: Request) -> str:
+    """Yolun arayüz dili: kişinin tercihi, yoksa tarayıcının başlığı, o da yoksa programın dili (R8-5)."""
+    return request_lang(request, current_user(request))

@@ -10,11 +10,15 @@ from __future__ import annotations
 from fastapi import HTTPException, Request
 
 from nl2sql import config
+from nl2sql.i18n import t
+from nl2sql.web.lang import request_lang
 
-# Sözleşme "error body": Run 6'nın her reddi ``{"detail": str}``; cümleler ekranın gösterdikleri.
-NO_SESSION = "Oturum açmanız gerekiyor."
-NOT_ADMIN = "Bu işlem yalnız yöneticiye açık."
-AUTH_OFF = "Kimlik doğrulama kapalı."
+# Sözleşme "error body": Run 6'nın her reddi ``{"detail": str}``. R8-5: kapının cümleleri kataloğundur
+# ve reddeden yol onu isteğin diliyle okur; buradaki adlar başka modüllerin importıdır, o yüzden
+# anahtarları değil program dilinin cümlesini taşırlar.
+NO_SESSION = t("auth.no_session")
+NOT_ADMIN = t("auth.not_admin")
+AUTH_OFF = t("auth.off")
 
 # Brief "Roles enforced on the server" matrisi: yol başına gereken seviye, FastAPI'ın şablon
 # adlarıyla. Bir yol buradaysa kapı ondan haberdardır; yeni yol eklerken satırı da eklenir.
@@ -96,7 +100,8 @@ def require(level: str):
     """Seviyesinden geçen bağımlılık: kullanıcının public sözlüğü, ya 401 ya 403 (R6-5).
 
     Oturum hiç yoksa 401 - tanımıyorum, reddetmiyorum. Rol yetmiyorsa 403: kullanıcıyı
-    tanıyorum, işi değil. İkisinin gövdesi de sözleşme cümlesidir, ayrıntı sızdırmaz.
+    tanıyorum, işi değil. İkisinin gövdesi de sözleşme cümlesidir, ayrıntı sızdırmaz; R8-5'te
+    cümle isteğin dilinden okunur - çeviride oturamayan kişi reddi de kendi dilinde görür.
     """
 
     def dependency(request: Request) -> dict | None:
@@ -104,9 +109,13 @@ def require(level: str):
             return None  # Run 5: kapı yok, yol kullanıcısız koşar.
         user = current_user(request)
         if user is None:
-            raise HTTPException(status_code=401, detail=NO_SESSION)
+            raise HTTPException(
+                status_code=401, detail=t("auth.no_session", request_lang(request, None))
+            )
         if level == "admin" and user["role"] != "admin":
-            raise HTTPException(status_code=403, detail=NOT_ADMIN)
+            raise HTTPException(
+                status_code=403, detail=t("auth.not_admin", request_lang(request, user))
+            )
         return user
 
     return dependency

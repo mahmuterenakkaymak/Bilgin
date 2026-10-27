@@ -21,6 +21,7 @@ from pathlib import Path
 
 from nl2sql import config
 from nl2sql.auth.passwords import check_new_password, hash_password, verify_password
+from nl2sql.i18n import t
 
 USERNAME_RE = re.compile(r"^[a-z0-9_.-]{3,32}$")
 ROLES = ("admin", "user")
@@ -38,17 +39,12 @@ _COLUMNS = (
 )
 _SELECT = ", ".join(_COLUMNS)
 
-DUPLICATE_MESSAGE = "Bu kullanıcı adı zaten var."
-NOT_FOUND_MESSAGE = "Kullanıcı bulunamadı."
-LAST_ADMIN_MESSAGE = "Son etkin yönetici pasifleştirilemez ya da rolü düşürülemez."
-BAD_NAME_MESSAGE = (
-    "Kullanıcı adı 3-32 karakter olmalı ve yalnız küçük harf, rakam, . _ - içerebilir."
-)
-BAD_ROLE_MESSAGE = "Rol admin ya da user olmalı."
-BAD_BUSINESS_ROLE_MESSAGE = "Geçersiz iş rolü."
-BAD_LANG_MESSAGE = "Dil tr ya da en olmalı."
-BAD_LOGIN_MESSAGE = "Kullanıcı adı ya da parola hatalı."
-LOCKED_MESSAGE = "Çok fazla hatalı deneme. {n} dakika sonra yeniden deneyin."
+# R8-5: her reddin cümlesi kataloğun ``auth.*`` satırıdır ve bir red onu anahtarıyla taşır.
+# ASSUMPTION: bu üç adı cli/main.py ve testleri import eder, o yüzden anahtarlarını değil program
+# dilinin cümlesini taşırlar.
+DUPLICATE_MESSAGE = t("auth.duplicate")
+NOT_FOUND_MESSAGE = t("auth.user_not_found")
+LAST_ADMIN_MESSAGE = t("auth.last_admin")
 
 _CREATE = (
     f"""
@@ -88,12 +84,21 @@ CREATE TABLE IF NOT EXISTS settings (
 
 
 class UserError(Exception):
-    """Kullanıcı işleminin reddi: mesajı ve HTTP durumuyla birlikte taşınır (R6-3)."""
+    """Kullanıcı işleminin reddi: kataloğun anahtarı, parametreleri ve HTTP durumuyla birlikte (R6-3).
 
-    def __init__(self, message: str, status: int) -> None:
-        super().__init__(message)
-        self.message = message
+    ``message`` eski çağıranların okuduğu cümledir ve her zaman Türkçedir; HTTP yolu cümleyi isteğin
+    dilinden kendisi kurar, yani anahtarı ve parametrelerini olduğu gibi taşır (R8-5).
+    """
+
+    def __init__(self, key: str, status: int, **params) -> None:
+        super().__init__(t(key, config.DEFAULT_LANG, **params))
+        self.key = key
+        self.params = params
         self.status = status
+
+    @property
+    def message(self) -> str:
+        return t(self.key, config.DEFAULT_LANG, **self.params)
 
 
 class LoginError(UserError):
@@ -131,14 +136,15 @@ class UserStore:
         """Kullanıcıyı açar ve public sözlüğünü döndürür; ad küçük harfe katlanır."""
         name = str(username).lower()
         if not USERNAME_RE.match(name):
-            raise UserError(BAD_NAME_MESSAGE, 422)
+            raise UserError("auth.bad_name", 422)
         if role not in ROLES:
-            raise UserError(BAD_ROLE_MESSAGE, 422)
+            raise UserError("auth.bad_role", 422)
         if business_role not in config.BUSINESS_ROLES:
-            raise UserError(BAD_BUSINESS_ROLE_MESSAGE, 422)
-        refused = check_new_password(password)
-        if refused:
-            raise UserError(refused, 422)
+            raise UserError("auth.bad_business_role", 422)
+        if check_new_password(password):
+            # ASSUMPTION: passwords.py'nin tek reddi kısa parola, o yüzden tek anahtar; kataloğun
+            # satırı onun cümlesidir.
+            raise UserError("auth.password_short", 422, n=config.PASSWORD_MIN_LEN)
         with _connect(self.path) as conn:
             try:
                 conn.execute(
@@ -147,7 +153,7 @@ class UserStore:
                     (name, hash_password(password), role, self._now_iso(), business_role),
                 )
             except sqlite3.IntegrityError:
-                raise UserError(DUPLICATE_MESSAGE, 409) from None
+                raise UserError("auth.duplicate", 409) from None
         return self.get_user(name)
 
     def get_user(self, username: str) -> dict | None:
@@ -181,17 +187,16 @@ class UserStore:
         """Rolü, etkinliği, parolayı ve/veya iş rolünü değiştirir; son etkin yöneticiyi korur."""
         user = self.get_by_id(id)
         if user is None:
-            raise UserError(NOT_FOUND_MESSAGE, 404)
+            raise UserError("auth.user_not_found", 404)
         if role is not None and role not in ROLES:
-            raise UserError(BAD_ROLE_MESSAGE, 422)
+            raise UserError("auth.bad_role", 422)
         if business_role is not None and business_role not in config.BUSINESS_ROLES:
-            raise UserError(BAD_BUSINESS_ROLE_MESSAGE, 422)
-        refused = check_new_password(password) if password is not None else None
-        if refused:
-            raise UserError(refused, 422)
+            raise UserError("auth.bad_business_role", 422)
+        if password is not None and check_new_password(password):
+            raise UserError("auth.password_short", 422, n=config.PASSWORD_MIN_LEN)
         if user["role"] == "admin" and user["active"] and (role == "user" or active is False):
             if self._count_active_admins() <= 1:
-                raise UserError(LAST_ADMIN_MESSAGE, 409)
+                raise UserError("auth.last_admin", 409)
 
         sets, args = [], []
         if role is not None:
@@ -220,9 +225,9 @@ class UserStore:
         ``add_user``da doğar - buradan geri silinmez, kişinin dili hep bir dildir.
         """
         if lang not in config.LANGUAGES:
-            raise UserError(BAD_LANG_MESSAGE, 422)
+            raise UserError("auth.bad_lang", 422)
         if self.get_by_id(id) is None:
-            raise UserError(NOT_FOUND_MESSAGE, 404)
+            raise UserError("auth.user_not_found", 404)
         with _connect(self.path) as conn:
             conn.execute("UPDATE users SET lang = ? WHERE id = ?", (lang, id))
         return self.get_by_id(id)
@@ -239,13 +244,13 @@ class UserStore:
         name = str(username).lower()
         remaining = self._locked_for(name)
         if remaining is not None:
-            raise LoginError(LOCKED_MESSAGE.format(n=math.ceil(remaining / 60)), 429)
+            raise LoginError("auth.locked", 429, minutes=math.ceil(remaining / 60))
         row = self._credential(name)
         # ASSUMPTION: kilit eşiği dolunca onu dolduran denemenin kendisi 401 alır; 429 sonraki
         # denemelerdir (kilit, geçmiş denemelerin bir sonucudur ve giriş denemesinden önce sorgulanır).
         if row is None or not verify_password(password, row[1]) or not row[2]:
             self._record_failure(name)
-            raise LoginError(BAD_LOGIN_MESSAGE, 401)
+            raise LoginError("auth.login_failed", 401)
         with _connect(self.path) as conn:
             conn.execute("DELETE FROM login_failures WHERE username = ?", (name,))
             conn.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (self._now_iso(), row[0]))

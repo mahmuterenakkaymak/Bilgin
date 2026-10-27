@@ -12,10 +12,9 @@ from pydantic import BaseModel
 
 from nl2sql import config
 from nl2sql.auth.store import LoginError, UserError
-from nl2sql.web.authz import AUTH_OFF, require
-
-# R7-16: iş rolü başlangıç ekranını belirler, o yüzden kimseye kendi üstünde bırakılmaz.
-OWN_BUSINESS_ROLE = "Kendi iş rolünüzü değiştiremezsiniz."
+from nl2sql.i18n import t
+from nl2sql.web.authz import AUTH_OFF, current_user, require
+from nl2sql.web.lang import request_lang
 
 
 class LoginBody(BaseModel):
@@ -60,8 +59,8 @@ def create_router() -> APIRouter:
         try:
             user = users.authenticate(body.username, body.password)
         except LoginError as exc:
-            # Reddin cümlesi ve durumu store'un: bilinmeyen ad ile yanlış parola aynı satır.
-            raise HTTPException(status_code=exc.status, detail=exc.message) from None
+            # Durumu store'un, cümlesi kataloğun: bilinmeyen ad ile yanlış parola aynı satır.
+            raise _refused(exc, _lang(request)) from None
         response.set_cookie(
             config.SESSION_COOKIE,
             users.create_session(user),
@@ -98,7 +97,7 @@ def create_router() -> APIRouter:
         try:
             updated = _store(request).set_lang(user["id"], body.lang)
         except UserError as exc:
-            raise _refused(exc) from None
+            raise _refused(exc, _lang(request)) from None
         return _who(updated)
 
     return router
@@ -126,7 +125,7 @@ def create_users_router() -> APIRouter:
                 body.username, body.password, body.role, business_role=body.business_role
             )
         except UserError as exc:
-            raise _refused(exc) from None
+            raise _refused(exc, _lang(request)) from None
         return {"user": user}
 
     @router.put("/users/{id}", dependencies=admin)
@@ -143,7 +142,8 @@ def create_users_router() -> APIRouter:
         reddedilen istek hiç işlenmez, yani aynı gövdedeki öteki alanlar da uygulanmaz.
         """
         if body.business_role is not None and current and id == current["id"]:
-            raise HTTPException(status_code=403, detail=OWN_BUSINESS_ROLE)
+            # R7-16: iş rolü başlangıç ekranını belirler, o yüzden kimseye kendi üstünde bırakılmaz.
+            raise HTTPException(status_code=403, detail=t("auth.own_business_role", _lang(request)))
         try:
             user = _store(request).update_user(
                 id,
@@ -153,15 +153,20 @@ def create_users_router() -> APIRouter:
                 business_role=body.business_role,
             )
         except UserError as exc:
-            raise _refused(exc) from None
+            raise _refused(exc, _lang(request)) from None
         return {"user": user}
 
     return router
 
 
-def _refused(exc: UserError) -> HTTPException:
-    """Kullanıcı işleminin reddi HTTP'ye: durum ve cümle store'un, yol ikisini de değiştirmez."""
-    return HTTPException(status_code=exc.status, detail=exc.message)
+def _refused(exc: UserError, lang: str) -> HTTPException:
+    """Kullanıcı işleminin reddi HTTP'ye: durum store'un, cümle kataloğun o dildeki satırı."""
+    return HTTPException(status_code=exc.status, detail=t(exc.key, lang, **exc.params))
+
+
+def _lang(request: Request) -> str:
+    """Yolun arayüz dili: kişinin tercihi, yoksa tarayıcının başlığı, o da yoksa programın dili (R8-5)."""
+    return request_lang(request, current_user(request))
 
 
 def _store(request: Request):
