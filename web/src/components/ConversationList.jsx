@@ -21,6 +21,13 @@ function text(item) {
   return String(item?.title ?? "").trim();
 }
 
+// Satır en son sorulan soruyla adlanır (M26 review 4): birkaç konuşma aynı ilk soruyla açılıyor ve
+// defter birbirinin aynısı satırlara iniyordu. `last_question`u App birleştirir; gelmeyince satır
+// ilk sorusuyla kalır.
+function lastQuestion(item) {
+  return String(item?.last_question ?? "").trim();
+}
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -56,6 +63,7 @@ export default function ConversationList({ conversations = [], onRemoved }) {
     .map((item) => ({
       id: item.id,
       title: text(item),
+      last: lastQuestion(item),
       updated: typeof item?.updated_at === "string" ? item.updated_at : "",
       turns: Number.isFinite(item?.turns) ? item.turns : 0,
     }));
@@ -81,14 +89,15 @@ export default function ConversationList({ conversations = [], onRemoved }) {
     <section className="side-block">
       <h2 className="side-title">Konuşmalar</h2>
       {note && <p className="side-note">{note}</p>}
-      <ul id="conversation-list" className="side-list">
+      <ul id="conversation-list" className="side-list side-scroll">
         {rows.length === 0 && <li className="side-empty">{EMPTY}</li>}
         {rows.map((row) => {
           const time = relativeTime(row.updated, now);
-          const label = row.title || "Cevapsız konuşma";
+          const first = row.title || "Cevapsız konuşma";
+          const label = row.last || first;
           return (
             <li className="side-item" key={row.id}>
-              <button type="button" className="side-text" title={label} onClick={() => open(row.id)}>
+              <button type="button" className="side-text" title={first} onClick={() => open(row.id)}>
                 {time && <span className="side-time">{time}</span>}
                 <span className="side-label">{label}</span>
                 <span className="side-count">{turnLabel(row.turns)}</span>

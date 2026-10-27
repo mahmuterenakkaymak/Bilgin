@@ -120,4 +120,29 @@ describe("ConversationList", () => {
     expect(el.querySelector(".side-note")?.textContent).toContain("Sunucu hatası.");
     expect(onRemoved).not.toHaveBeenCalled();
   });
+
+  it("iki turlu konuşma satırı son sorusuyla adlanır, ilk soru titleda durur", () => {
+    const el = mount({
+      conversations: [
+        {
+          id: ID,
+          title: "Eylül satışı ne kadar?",
+          last_question: "Bunda Ankara'nın payı kaç?",
+          dataset: "wwi",
+          created_at: "",
+          updated_at: "",
+          turns: 2,
+        },
+      ],
+    });
+
+    const row = el.querySelector("#conversation-list .side-text");
+    expect(row.querySelector(".side-label")?.textContent).toBe("Bunda Ankara'nın payı kaç?");
+    expect(row.getAttribute("title")).toBe("Eylül satışı ne kadar?");
+  });
+
+  it("liste kendi içinde kayar: alt bölümler erişilebilir kalsın diye", () => {
+    const el = mount({ conversations: CONVERSATIONS });
+    expect(el.querySelector("#conversation-list").classList.contains("side-scroll")).toBe(true);
+  });
 });

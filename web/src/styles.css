@@ -921,6 +921,14 @@ main {
   border-top: 1px solid var(--line);
 }
 
+/* Konuşmalar kendi çizgisinde kayar (M26 review 4): defter uzayınca panelin kaydırma çubuğu
+   KONUŞMALAR'ı bitirmeden GEÇMİŞ'e ulaşmıyor, alt bölümler bir ekran aşağıda kalıyordu.
+   Liste birkaç satırda durur, fazlası onun içinde kayar. */
+.side-scroll {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
 @media (max-width: 720px) {
   /* ASSUMPTION: başlık 320/390'da flex-wrap ile zaten satırlara iniyor ve çip ellipsis'le kısalıyor
      (ölçüldü: taşma yok) — M17'deki "üst üste biniyor" izlenimi sayfanın 660px'e taşmasından geliyordu. */

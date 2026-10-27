@@ -79,6 +79,20 @@ function userLabel(user) {
   return [user?.username, business, ROLE_LABELS[user?.role]].filter(Boolean).join(" · ");
 }
 
+// Konuşmanın satırı en son sorulan soruyla adlanır (M26 review 4): /api/conversations'ın başlığı ilk
+// sorundur ve sözleşme öyle diyor; en son sorulanı GEÇMİŞ satırları biliyor — aynı sorunun iki yüzü.
+// Kayıtlar en yeni önce gelir, o yüzden ilk görülen en sondur. ASSUMPTION: geçmiş listesi HISTORY_N
+// ile sınırlı; dışına düşen konuşma satırı ilk sorusuyla kalır.
+function lastQuestions(history) {
+  const latest = new Map();
+  for (const row of Array.isArray(history) ? history : []) {
+    const id = typeof row?.conversation_id === "string" ? row.conversation_id : "";
+    const question = String(row?.question ?? "").trim();
+    if (id && question && !latest.has(id)) latest.set(id, question);
+  }
+  return latest;
+}
+
 // Soru ekranı: akışın halleri burada birbirine bağlanır (R5-18). Boş, bekleyen, cevap,
 // netleştirme ve hata yuvaları burada durur; cevabın grafiği kartın içindedir.
 // Boş ekran (R7-21): henüz soru yokken ekran panodur — StartScreen kartları, soru kutusunu ve
@@ -591,6 +605,13 @@ export default function App({ user = null, onLogout = null, note = "" }) {
   // durumları da ekrandan kalkar. Kapanış isteği başarısız olsa da kullanıcı içeride tutulmaz.
   const logout = () => api.logout().catch(() => null).then(() => onLogout());
 
+  // KONUŞMALAR satırları en son sorulan soruyla adlanır: listeye kendi sözleşmesinde olmayan alanı
+  // burada GEÇMİŞ'in en yeni kaydı ekliyor. Sonraki satır aynı listeyi okur, iki yüz ayrılmaz.
+  const asked = lastQuestions(history);
+  const sidebarConversations = conversations.map((item) =>
+    asked.has(item?.id) ? { ...item, last_question: asked.get(item.id) } : item,
+  );
+
   const dot = healthDot(health);
   const chip = chipParts(health);
   const who = userLabel(user);
@@ -670,7 +691,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
           <Sidebar
             saved={saved}
             history={history}
-            conversations={conversations}
+            conversations={sidebarConversations}
             onAsk={askFromSidebar}
             onRemoved={removed}
           />
