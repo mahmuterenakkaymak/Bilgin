@@ -209,7 +209,8 @@ def test_the_map_page_hands_the_dataset_it_found_back_to_the_next_page():
     steps = page["steps"]
 
     clicks = [i for i, step in enumerate(steps) if isinstance(step, dict) and "click" in step]
-    assert steps[clicks[-1]] == {"click": "button[data-dataset-activate='synthetic_erp']"}, steps
+    # Updated automatically: T370 changed this contract (the run opens on ``wwi``, so the map page hands back ``wwi``).
+    assert steps[clicks[-1]] == {"click": "button[data-dataset-activate='wwi']"}, steps
 
     # Son kare geri dönüşü kanıtlar; tık ondan önce gelir, yani inceleme karelerinin hepsinden sonra.
     shots = [i for i, step in enumerate(steps) if is_shot(step)]
