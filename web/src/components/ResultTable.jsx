@@ -25,7 +25,7 @@ export default function ResultTable({ columns = [], rows = [], rowCount = 0, tru
     return (
       <div className="result-block">
         <div id="result-single" className="result-single">
-          <span className="result-single-label">{names[0]}</span>
+          <span className="result-single-label">{columnLabel(names[0])}</span>
           <span className="result-single-value">{formatCell(list[0]?.[0])}</span>
         </div>
         {note}

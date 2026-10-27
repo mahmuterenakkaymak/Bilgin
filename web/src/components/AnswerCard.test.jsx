@@ -202,9 +202,17 @@ describe("ResultTable", () => {
   it("tek kolon tek satır tablo değil, tek bir sayıdır", () => {
     const html = card({ ...answered, columns: ["CIRO"], rows: [[191722.79]], row_count: 1 });
     expect(html).toContain('id="result-single"');
-    expect(html).toContain('<span class="result-single-label">CIRO</span>');
+    expect(html).toContain('<span class="result-single-label">Ciro</span>');
     expect(html).toContain('<span class="result-single-value">191.722,79</span>');
     expect(html).not.toContain('id="result-table"');
+  });
+
+  it("tek sayının etiketi elle yazılmış alias'ı olduğu gibi bırakır", () => {
+    // ASSUMPTION: columnLabel içinde küçük harf taşıyan alias'ı yeniden yazmaz (T379), o yüzden
+    // `Stok_Adı` tek sayının üstünde de tablo başlığında olduğu gibi tıpatıp aynı okunur.
+    const html = card({ ...answered, columns: ["Stok_Adı"], rows: [[12]], row_count: 1 });
+    expect(html).toContain('id="result-single"');
+    expect(html).toContain('<span class="result-single-label">Stok_Adı</span>');
   });
 
   it("tek kolon iki satır ve tek satır iki kolon tablo olarak kalır", () => {
