@@ -26,9 +26,11 @@ FILE_DEFAULTS = {
     "rules": "rules.json",
     "profile": "profile.json",
     "golden": "golden.jsonl",
+    "golden_en": None,
     "traps": None,
     "ambiguous": None,
     "followups": None,
+    "followups_en": None,
     "ready_questions": None,
 }
 
@@ -61,9 +63,11 @@ class Dataset:
     rules_path: Path
     profile_path: Path
     golden_path: Path
+    golden_en_path: Path | None
     traps_path: Path | None
     ambiguous_path: Path | None
     followups_path: Path | None
+    followups_en_path: Path | None
     ready_questions_path: Path | None
     db_path: Path
     mssql_script: Path
@@ -105,12 +109,17 @@ class Dataset:
         """The business rules of this dataset, with the contract defaults applied."""
         return load_rules(self.rules_path)
 
-    def golden(self) -> list[dict]:
-        """The golden questions, so the Run 2 list fields get their empty defaults."""
+    def golden(self, lang: str = "tr") -> list[dict]:
+        """The golden questions, so the Run 2 list fields get their empty defaults.
+
+        ``lang="en"`` reads the English set (PLAN R8-10); a dataset that declares no
+        ``files.golden_en`` answers an English question with the Turkish one.
+        """
         # Lazy: the loader stays light - the runner pulls in the agent loop and the executor.
         from nl2sql.eval import runner
 
-        return runner.load_golden(self.golden_path)
+        declared = lang == "en" and self.golden_en_path is not None
+        return runner.load_golden(self.golden_en_path if declared else self.golden_path)
 
     def ambiguous(self) -> list[dict]:
         """Belirsiz sorular (PLAN R5-12); kümenin böyle bir dosyası yoksa boş, yani soru sorulmaz.
@@ -125,16 +134,19 @@ class Dataset:
             if line.strip()
         ]
 
-    def followups(self) -> list[dict]:
+    def followups(self, lang: str = "tr") -> list[dict]:
         """Ardışık soru zincirleri (PLAN R7-13); kümenin böyle bir dosyası yoksa boş.
 
         Zincirlerin doğruluğu ölçümün işidir; burada yalnız okunur, boş satırlar atlanır ve
-        sözleşmenin liste alanları boş varsayılanlarını alır.
+        sözleşmenin liste alanları boş varsayılanlarını alır. ``lang="en"`` kümenin İngilizce
+        zincirlerini okur (R8-10); ``files.followups_en`` yoksa zincirler Türkçe halidir.
         """
-        if self.followups_path is None or not self.followups_path.is_file():
+        declared = lang == "en" and self.followups_en_path is not None
+        path = self.followups_en_path if declared else self.followups_path
+        if path is None or not path.is_file():
             return []
         chains = []
-        for line in self.followups_path.read_text(encoding="utf-8").splitlines():
+        for line in path.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
             chain = json.loads(line)
@@ -242,9 +254,11 @@ def _read(base: Path, name: str) -> Dataset:
         rules_path=folder / files["rules"],
         profile_path=folder / files["profile"],
         golden_path=golden_path,
+        golden_en_path=folder / files["golden_en"] if files["golden_en"] else None,
         traps_path=folder / files["traps"] if files["traps"] else None,
         ambiguous_path=folder / files["ambiguous"] if files["ambiguous"] else None,
         followups_path=folder / files["followups"] if files["followups"] else None,
+        followups_en_path=folder / files["followups_en"] if files["followups_en"] else None,
         ready_questions_path=folder / files["ready_questions"] if files["ready_questions"] else None,
         db_path=config.ROOT / outputs.get("db", f"data/{name}.db"),
         mssql_script=config.ROOT / outputs.get("mssql_script", f"db/mssql/build_{name}.sql"),

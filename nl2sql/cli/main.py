@@ -1471,14 +1471,19 @@ def make_client(kind: str, mode: str = config.DEFAULT_EVAL_MODE, dataset=None, p
     cevabı da kümenin kendi sorgusudur (R4-4) - başka bir kümenin tablosunu uydurmasın. Belirsiz
     soruları da küme taşır (R5-11); kümenin böyle bir dosyası yoksa sahte hiçbir soruyu sormaz.
     Ardışık soru zincirleri de kümenin dosyasıdır (R7-13); olmayan kümede sahte zincir tanımaz.
+    Küme İngilizce altın kümeyi de taşıyorsa (R8-10) sahte ikisini birden oynatır - eşleşme soru
+    metniyle olduğu için iki dilin kayıtları birbirinin üstüne yazmaz.
 
     ``profile`` ``--model``in profilidir (R4-10): openai istemcisi onun uç noktasından, model
     adından ve anahtar değişkeninden kurulur; anahtar tanımsızsa ``LLMError`` burada yükseltir.
     Sahte istemci profil tanımaz - oynatacağı kayıt hangisinin olduğuyla değişmez, bütçe değişir.
     """
     if kind == "fake":
+        golden = dataset.golden() if dataset else runner.load_golden()
+        if dataset and dataset.golden_en_path is not None:
+            golden = [*golden, *dataset.golden("en")]
         return fake.for_golden(
-            dataset.golden() if dataset else runner.load_golden(),
+            golden,
             dataset.fake_fallback_sql if dataset else fake.FALLBACK_SQL,
             mode=mode,
             ambiguous=dataset.ambiguous() if dataset else (),
