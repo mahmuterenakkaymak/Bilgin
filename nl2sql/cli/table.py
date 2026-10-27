@@ -11,19 +11,19 @@ from __future__ import annotations
 from decimal import Decimal
 
 from nl2sql.engine.result import Result
+from nl2sql.i18n import t
 
 NULL_TEXT = "-"
-EMPTY_NOTICE = "Sonuç boş (0 satır)"
 NUMERIC_TYPES = (int, float, Decimal)
 
 _SEPARATOR = " | "
 _SWAP = str.maketrans(",.", ".,")
 
 
-def format_table(result: Result) -> str:
+def format_table(result: Result, lang: str = "tr") -> str:
     """The rendered table, or the notice that replaces it when there is nothing to show."""
     if not result.rows:
-        return EMPTY_NOTICE
+        return t("cli.table.empty", lang)
 
     grid = [[_cell(cell) for cell in row] for row in result.rows]
     numeric = [_is_numeric(result.rows, i) for i in range(len(result.columns))]
@@ -42,7 +42,9 @@ def format_table(result: Result) -> str:
     lines += [line(row) for row in grid]
     text = "\n".join(lines)
     if result.truncated:
-        text += f"\nİlk {len(result.rows)} satır gösteriliyor (toplam {result.row_count})"
+        text += "\n" + t(
+            "cli.table.truncated", lang, rows=len(result.rows), total=result.row_count
+        )
     return text
 
 

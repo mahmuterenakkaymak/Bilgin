@@ -290,5 +290,60 @@
   "cli.user.password_repeat": "Password (repeat): ",
   "cli.user.password_mismatch": "Passwords do not match.",
   "cli.user.active": "active",
-  "cli.user.inactive": "inactive"
+  "cli.user.inactive": "inactive",
+
+  "cli.common.dataset_line": "Dataset: {display_name} ({name})",
+  "cli.common.error": "Error: {reason}",
+  "cli.common.bad_schema": "Could not read the schema file: {path}",
+  "cli.common.json_object": "It must be a top-level JSON object: {shape}.",
+
+  "cli.build.seed": "Seed: {seed}",
+  "cli.build.db": "Database: {path}",
+  "cli.build.sql": "T-SQL script: {path}",
+  "cli.build.tables": "Tables: {total} ({filled} with data, {schema_only} schema-only)",
+  "cli.build.schema_text": "Schema text (full mode): {chars} characters ≈ {tokens} tokens",
+  "cli.build.digest": "Checksum (sha256): {hash}",
+
+  "cli.index.schema": "Schema: {path} ({tables} tables)",
+  "cli.index.rules": "Rules: {path} ({rules} rules)",
+  "cli.index.docs": "Documents: {counts} (total {total})",
+  "cli.index.signature": "Signature: {hash}",
+  "cli.index.duration": "Time: {seconds} s",
+  "cli.index.dir": "Index: {path}",
+  "cli.index.bad_embed": "Could not read the embedder source: {value}\nValid are: fake, fake:<dim>, openai, openai:<model>; you can also give the model name with --embed-model.",
+  "cli.index.embed_hint": "Tip: check whether the embedding server is running; if the address differs, give the right one with {url}.",
+
+  "cli.import_map.no_file": "Excel file not found: {path}",
+  "cli.import_map.file": "File: {path}",
+  "cli.import_map.header_row": "{sheet} — header row {row}",
+  "cli.import_map.unmapped": "no field",
+  "cli.import_map.disagreement": "⚠ mismatch: {sheet}.{column} {field}: llm={llm} fallback={fallback}",
+  "cli.import_map.mapping": "Mapping: {path} ({by})",
+  "cli.import_map.by_file": "file",
+  "cli.import_map.bad_mapping": "Could not read the mapping file: {path}",
+  "cli.import_map.hint": "Next: write the schema with --accept; to fix the mapping by hand, give it back with --mapping.",
+  "cli.import_map.written": "Schema written: {path} ({tables} tables, {columns} columns, {skipped} skipped rows)",
+  "cli.import_map.skipped": "↳ {sheet} row {row}: {reason}",
+
+  "cli.introspect.written": "Skeleton: {tables} tables, {columns} columns -> {path}",
+
+  "cli.map.excel": "Excel: {path}",
+  "cli.map.database": "Database: {source}",
+  "cli.map.live": "live ({path})",
+
+  "cli.diff_map.no_diff": "No differences.",
+  "cli.merge_map.written": "Merged schema written: {path} ({tables} tables, {columns} columns)",
+
+  "cli.login.login": "Login: {login}",
+  "cli.login.allowlist": "Allowlist: {tables} tables",
+  "cli.login.pii": "PII columns denied: {columns}",
+  "cli.login.script": "Script: {path}",
+
+  "cli.serve.line": "Bilgin: {url}  (dataset {dataset}, model {model}, llm {llm})",
+  "cli.serve.loopback": "Bilgin runs on 127.0.0.1 only (TLS and network access are out of scope).",
+  "cli.serve.probe_needs_fake": "--db-probe-file works only with --llm fake (visual review and smoke test).",
+  "cli.serve.stored_lost": "Note: the stored dataset {name} no longer loads; serving the default {default}.",
+
+  "cli.table.empty": "Empty result (0 rows)",
+  "cli.table.truncated": "Showing the first {rows} rows (of {total} total)"
 }

@@ -13,6 +13,7 @@ uç nokta ya da embedding sunucusu hiç çalışmıyorsa kod 3 ve hangi adresin 
 from __future__ import annotations
 
 import argparse
+import functools
 import getpass
 import json
 import math
@@ -94,10 +95,6 @@ DEFAULT_EMBED = "openai"
 # R3-9: --embed artık choices değil, çünkü iki sonek de geçerli olmalı (fake:<dim>, openai:<model>);
 # biçimi bozuk olan argparse yerine burada, kullanıcının kendi cümlesiyle reddedilir.
 EMBED_ID = re.compile(r"(?:fake(?::[1-9]\d*)?|openai(?::\S+)?)\Z", re.IGNORECASE)
-BAD_EMBED = (
-    "Embedder kaynağı anlaşılmadı: {value}\nGeçerli olanlar: fake, fake:<dim>, openai, "
-    "openai:<model>; model adını --embed-model de verebilir."
-)
 
 AUDIT_SOURCE = "ask"
 # R5-14: ``ask --json`` soruyu web ile aynı kapıdan koşar; günlük ve denetim satırları bu ada
@@ -108,15 +105,11 @@ JSON_OK = ("answered", "needs_clarification")
 # hiçbir şey dinlemeye başlamaz. R6-7: kimlik doğrulama artık her zaman açık, yani cümlenin
 # gerekçesi tek kullanıcı değil, TLS ve ağ erişiminin kapsam dışı kalması.
 LOOPBACK_HOSTS = (config.SERVE_HOST, "localhost")
-LOOPBACK_ONLY = "Bilgin yalnız 127.0.0.1 üzerinde çalışır (TLS ve ağ erişimi kapsam dışı)."
-SERVE_LINE = "Bilgin: {url}  (veri kümesi {dataset}, model {model}, llm {llm})"
-# R7-26: sahte yoklama bir sunucunun yerine geçen bir dosyadır; gerçek bir modelle sunulursa
-# ekranda okunan durum uydurma olur, yani ancak model istemeyen bir yolla birlikte anlamlıdır.
-PROBE_NEEDS_FAKE = "--db-probe-file yalnız --llm fake ile kullanılır (görsel inceleme ve duman testi)."
 # Sahte yoklamanın bağlantı dizesi: sunucunun adı kümenin kendisidir, çözücü de yoklayıcı da oradan okur.
 PROBE_PREFIX = "PROBE:"
 # R6-11: ayar artık yüklenmeyen bir küme söylüyorsa sunucu bunu tek satırda söyler ve düşer.
-STORED_LOST = "Not: kayıtlı veri kümesi {name} artık yüklenmiyor; varsayılan {default} sunuluyor."
+# R8-11: cümle kataloğa taşındı, sabit yine durur - testler onu buradan okur, değeri tr'nindir.
+STORED_LOST = t("cli.serve.stored_lost", config.DEFAULT_LANG)
 # Run 8: ``--dataset`` söylenmemişse sunulan dünya vitrin kümesidir; sentetik küme testin dünyasıdır.
 DEMO_DATASET = "wwi"
 SQL_TOOLS = ("run_sql", "submit_sql")
@@ -168,10 +161,6 @@ EXIT_NO_CELLS = 3
 ENV_URL = "NL2SQL_LLM_BASE_URL"
 EMBED_ENV_URL = "NL2SQL_EMBED_BASE_URL"
 NO_TAG = "Bu etiketle soru yok: {tag}"
-EMBED_HINT = (
-    f"Öneri: embedding sunucusunun açık olup olmadığına bakın; "
-    f"adres farklıysa {EMBED_ENV_URL} ile doğruyu verin."
-)
 # ASSUMPTION: uç nokta hiçbir soruyu yanıtlamadıysa ortada ölçülen bir şey yoktur; koşu tamamlanmış
 # sayılmaz (PLAN Decision 13'deki crash hali), o yüzden rapor yazılmadan kod 3 ile çıkılır.
 EXIT_NO_DB = 2
@@ -186,37 +175,17 @@ EXIT_NO_TAG = 2
 # eksikliktir, yani veritabanı gibi kod 2 (R3-13).
 EXIT_BAD_INPUT = 2
 
-# R3-13: import-map'ın iki sabit satırı; ilki model ile sözlüğün çeliştiğini, ikincisi dönüşümün
-# ne yazdığını söyler. İkisi de kullanıcının denetleyeceği şeyi adıyla taşır.
-DISAGREEMENT = "⚠ uyuşmuyor: {sheet}.{column} {field}: llm={llm} fallback={fallback}"
-SCHEMA_WRITTEN = (
-    "Şema yazıldı: {path} ({tables} tablo, {columns} kolon, {skipped} atlanan satır)"
-)
-SKELETON_WRITTEN = "İskelet: {tables} tablo, {columns} kolon -> {path}"
-UNMAPPED = "hiçbir alan"
+# R3-13: import-map ve diff-map'ın satırları kataloğun ``cli.import_map.*``/``cli.map.*``
+# anahtarlarıdır; ikisi de kullanıcının denetleyeceği şeyi adıyla taşır.
 NONE = "-"
-NO_FILE = "Excel dosyası yok: {path}"
-BAD_MAPPING = "Eşleme dosyası okunamadı: {path}"
-IMPORT_HINT = (
-    "Devam: --accept ile şemayı yazdırın; "
-    "eşlemeyi elle düzeltmek isterseniz --mapping ile geri verin."
-)
-
-# R3-13: diff-map'ın satırları — boş fark tek cümleyle, dolu fark bölüm bölüm sayıyla söylenir.
-BAD_SCHEMA = "Şema dosyası okunamadı: {path}"
-NO_DIFF = "Fark yok."
 
 # R5-14: netleştirmenin numaralı şıkkı — şıkkın kendisi modelin verdiği metindir, yani çevrilmez.
 CLARIFY_OPTION = "  {n}. {option}"
 
 # R3-5: eval hangi şema dosyasıyla ölçtüğünü canlı satırlardan önce söyler (imzanın başı, yani iki
-# koşunun aynı şemayı ölçüp ölçmediği ekrandan okunur); merge-map birleşik şemanın nereye yazıldığını.
+# koşunun aynı şemayı ölçüp ölçmediği ekrandan okunur).
 SCHEMA_LINE = "Şema: {path} ({hash8})"
-MERGED_WRITTEN = "Birleşik şema yazıldı: {path} ({tables} tablo, {columns} kolon)"
 
-# R4-14: ``--dataset`` verildiği anda ekran hangi dünyanın ölçüldüğünü ilk satırda söyler; iki
-# kümenin tablo adları birbirine benzemediği için hangi klasörle çalışıldığı baştan okunmalı.
-DATASET_LINE = "Veri kümesi: {display_name} ({name})"
 # ``--schema``nın argparse varsayılanı: tek başına tam şemanın adı, ``--dataset`` ile birlikte
 # "şema söylenmedi" demek, yani kümenin kendi şemasının önüne geçmez (R4-4).
 FULL_SCHEMA = "full"
@@ -233,37 +202,57 @@ USER_COLUMN_KEYS = (
     "cli.user.col_last_login",
 )
 
+# R8-11: ``main``in argv'den çözdüğü ekran dili; ``--lang`` görmemiş bir çağrı tr'de kalır.
+_LANG = config.DEFAULT_LANG
+
 
 def build_database(
     seed: int | None = None,
     db_path: str | Path | None = None,
     sql_path: str | Path | None = None,
     dataset: str | None = None,
+    lang: str | None = None,
 ) -> int:
     """Sentetik veriyle SQLite dosyasını ve T-SQL kurulum betiğini üretir.
 
     Ekran ölçümün iki girdisini de söyler (R2-14): kaç tabloda gerçekten satır olduğu (distractor
     tabloların bir kısmı şemada öylece durur) ve ``full`` modun şema metninin bağlam maliyeti.
     ``dataset`` verildiğinde tohum, iki hedef yol ve şema metnine kadar her şey o kümenin
-    tanımıdır (R4-14); açıkça verilen yol ya da tohum onun önüne geçer.
+    tanımıdır (R4-14); açıkça verilen yol ya da tohum onun önüne geçer. ``lang`` ekranın dilidir
+    (R8-11): satırlar ``cli.build`` kataloğundan o dilde gelir.
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
     if code:
         return code
-    _dataset_line(ds)
+    _dataset_line(ds, lang)
     seed = _or(seed, ds.seed if ds else None, config.SEED)
     db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
     sql_path = _or(sql_path, ds.mssql_script if ds else None, config.MSSQL_SCRIPT)
     digest = ds.build_db(seed, db_path, sql_path) if ds else build.build_db(seed, db_path, sql_path)
-    print(f"Tohum: {seed}")
-    print(f"Veritabanı: {db_path}")
-    print(f"T-SQL betiği: {sql_path}")
+    print(_t("cli.build.seed", lang, seed=seed))
+    print(_t("cli.build.db", lang, path=db_path))
+    print(_t("cli.build.sql", lang, path=sql_path))
     toplam, dolu = _table_counts(db_path)
-    print(f"Tablolar: {toplam} (veri {dolu}, şema-yalnız {toplam - dolu})")
+    print(
+        _t(
+            "cli.build.tables",
+            lang,
+            total=toplam,
+            filled=dolu,
+            schema_only=toplam - dolu,
+        )
+    )
     schema_text = doc.full_text(ds.schema() if ds else doc.load_schema())
-    print(f"Şema metni (full mod): {len(schema_text)} karakter ≈ {doc.estimate_tokens(schema_text)} token")
-    print(f"Sağlama (sha256): {digest[:12]}")
+    print(
+        _t(
+            "cli.build.schema_text",
+            lang,
+            chars=len(schema_text),
+            tokens=doc.estimate_tokens(schema_text),
+        )
+    )
+    print(_t("cli.build.digest", lang, hash=digest[:12]))
     return 0
 
 
@@ -274,6 +263,7 @@ def build_index(
     rules_path: str | Path | None = None,
     dataset: str | None = None,
     dataset_name: str | None = None,
+    lang: str | None = None,
 ) -> int:
     """Şema ile kurallardan arama indeksini kurar: dokümanlar, vektörler, imza (R2-14).
 
@@ -286,13 +276,14 @@ def build_index(
     kendi koleksiyonuyla gösterir.
 
     ``dataset_name`` aynı satırın T131'deki adı: ikisi de ``meta.dataset``a yazılır, ikisi birden
-    verilirse ``dataset`` kazanır.
+    verilirse ``dataset`` kazanır. ``lang`` ekranın dilidir (R8-11): satırlar ``cli.index``
+    kataloğundan o dilde gelir.
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
     if code:
         return code
-    _dataset_line(ds)
+    _dataset_line(ds, lang)
     schema_path = _or(schema_path, ds.schema_path if ds else None, config.SCHEMA_PATH)
     rules_path = _or(rules_path, ds.rules_path if ds else None, config.RULES_PATH)
     index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
@@ -308,7 +299,7 @@ def build_index(
     try:
         vectors = embedder.embed([item.text for item in docs])
     except EmbedError as exc:
-        return _embed_failed(str(exc))
+        return _embed_failed(str(exc), lang)
     seconds = time.perf_counter() - started
     digest = content_hash(schema, rules)
     FileStore(index_dir).save(
@@ -321,19 +312,23 @@ def build_index(
             "dataset": _or(dataset, dataset_name, config.DEFAULT_DATASET),
         },
     )
-    print(f"Şema: {schema_path} ({len(schema['tables'])} tablo)")
-    print(f"Kurallar: {rules_path} ({len(rules)} kural)")
+    print(_t("cli.index.schema", lang, path=schema_path, tables=len(schema["tables"])))
+    print(_t("cli.index.rules", lang, path=rules_path, rules=len(rules)))
     print(
-        "Dokümanlar: "
-        + ", ".join(
-            f"{name} {sum(1 for item in docs if item.collection == name)}" for name in COLLECTIONS
+        _t(
+            "cli.index.docs",
+            lang,
+            counts=", ".join(
+                f"{name} {sum(1 for item in docs if item.collection == name)}"
+                for name in COLLECTIONS
+            ),
+            total=len(docs),
         )
-        + f" (toplam {len(docs)})"
     )
     print(f"Embedder: {embedder.id} (dim {embedder.dim})")
-    print(f"İmza: {digest[:12]}")
-    print(f"Süre: {seconds:.1f} sn")
-    print(f"İndeks: {index_dir}")
+    print(_t("cli.index.signature", lang, hash=digest[:12]))
+    print(_t("cli.index.duration", lang, seconds=f"{seconds:.1f}"))
+    print(_t("cli.index.dir", lang, path=index_dir))
     return 0
 
 
@@ -563,7 +558,7 @@ def ask(
     print(run.submitted_sql)
     print("\n" + t("cli.ask.result_head", lang))
     result = executor.execute(run.submitted_sql, Budget(), AUDIT_SOURCE)
-    print(format_table(result))
+    print(format_table(result, lang))
     if result.masked_columns:
         # R3-6: maskelenen kolonlar tablonun altında adlarıyla söylenir; hangi değerin maskeli
         # olduğu okunabilsin diye, değerin kendisi asla ekrana çıkmadığı için.
@@ -1113,8 +1108,12 @@ def import_map(
     mapping: str | Path | None = None,
     proposal_path: str | Path | None = None,
     out: str | Path = config.IMPORTED_PATH,
+    lang: str | None = None,
 ) -> int:
     """Excel haritasının eşlemesini önerir, diske yazar; ``--accept`` ile şemaya dönüştürür (R3-2).
+
+    ``lang`` ekranın dilidir (R8-11): çerçevenin satırları ``cli.import_map`` kataloğundan o dilde
+    gelir; sayfa ve sütun adları müşterinin haritasından geldiği için olduğu gibi kalır.
 
     Model eşlemeyi önerir ama satırları hiç görmez: dönüşümü tüm çalışma kitabına koddan
     ``convert`` uygular. Modelin sözlükle çeliştiği sütun sessizce çözülmez, ekrana uyuşmazlık
@@ -1124,42 +1123,50 @@ def import_map(
     _utf8_stdout()
     source = Path(path)
     if not source.is_file():
-        print(NO_FILE.format(path=path))
+        print(_t("cli.import_map.no_file", lang, path=path))
         return EXIT_BAD_INPUT
     try:
         preview = excel.read_workbook(source)
     # ASSUMPTION: openpyxl'in cümlesi verilen biçimi ve desteklenenleri sayar ama dosyayı saymaz;
     # kullanıcının neyi düzelteceği tek satırda anlaşılsın diye yolu da buraya ekliyoruz.
     except (OSError, zipfile.BadZipFile, excel.SheetError, InvalidFileException) as exc:
-        print(f"Hata: {source}: {exc}")
+        print(_t("cli.common.error", lang, reason=f"{source}: {exc}"))
         return EXIT_BAD_INPUT
 
     proposal = mapping or _proposal_file(source, proposal_path)
     if mapping:
-        chosen = _read_mapping(mapping)
+        chosen = _read_mapping(mapping, lang)
         if chosen is None:
             return EXIT_BAD_INPUT
-        by = "dosya"
+        by = _t("cli.import_map.by_file", lang)
     else:
         chosen = excel.propose(preview, llm_factory(preview))
         _write_json(proposal, chosen)
         by = str(chosen["generated_by"])
 
-    print(f"Dosya: {source}")
-    for line in _mapping_lines(chosen):
+    print(_t("cli.import_map.file", lang, path=source))
+    for line in _mapping_lines(chosen, lang):
         print(line)
     for note in chosen.get("disagreements") or []:
-        print(DISAGREEMENT.format(**{key: value or NONE for key, value in note.items()}))
-    print(f"\nEşleme: {proposal} ({by})")
+        print(
+            _t(
+                "cli.import_map.disagreement",
+                lang,
+                **{key: value or NONE for key, value in note.items()},
+            )
+        )
+    print("\n" + _t("cli.import_map.mapping", lang, path=proposal, by=by))
 
     if not accept:
-        print(IMPORT_HINT)
+        print(_t("cli.import_map.hint", lang))
         return 0
     report = excel.convert(source, chosen)
     _write_json(out, report["schema"])
     print(
         "\n"
-        + SCHEMA_WRITTEN.format(
+        + _t(
+            "cli.import_map.written",
+            lang,
             path=out,
             tables=report["tables"],
             columns=report["columns"],
@@ -1167,7 +1174,16 @@ def import_map(
         )
     )
     for note in report["skipped"]:
-        print(f"     ↳ {note['sheet']}.satır {note['row']}: {note['reason']}")
+        print(
+            "     "
+            + _t(
+                "cli.import_map.skipped",
+                lang,
+                sheet=note["sheet"],
+                row=note["row"],
+                reason=note["reason"],
+            )
+        )
     return 0
 
 
@@ -1176,23 +1192,25 @@ def introspect_schema(
     sample: bool = False,
     db_path: str | Path = config.DB_PATH,
     audit_path: str | Path = config.AUDIT_LOG,
+    lang: str | None = None,
 ) -> int:
     """Veritabanını yoklayıp iskelet şemayı yazar; ``--sample`` kısa metin kolonlarına değer ipucu ekler (R3-4).
 
     İpucu yoksa iskelet yalnız yapı taşır: ad, tip, nullability ve fk. Anlamı Excel haritası sonra
     ekler (R3-5), o yüzden burada boş açıklamalar bir eksik değil. ``--sample``ın sorguları da
     LocalExecutor'dan geçer, yani politika ve denetim kaydı model sorgularıyla aynı kapıdan yürür.
+    ``lang`` ekranın dilidir (R8-11): satır ``cli.introspect`` kataloğundan o dilde gelir.
     """
     _utf8_stdout()
     if config.backend() == "mssql":
         try:
             skeleton = introspect.mssql_skeleton()
         except introspect.IntrospectError as exc:
-            print(f"Hata: {exc}")
+            print(_t("cli.common.error", lang, reason=str(exc)))
             return EXIT_BAD_INPUT
     else:
         if _db_missing(db_path):
-            return _no_db(db_path)
+            return _no_db(db_path, lang=lang)
         skeleton = introspect.sqlite_skeleton(db_path)
     if sample:
         # Allowlist yoklanan iskeletin kendisi: R3-14 gereği introspect bir ERP kopyasında
@@ -1207,7 +1225,9 @@ def introspect_schema(
     _write_json(out, skeleton)
     tables = skeleton["tables"]
     print(
-        SKELETON_WRITTEN.format(
+        _t(
+            "cli.introspect.written",
+            lang,
             tables=len(tables),
             columns=sum(len(table["columns"]) for table in tables),
             path=out,
@@ -1222,36 +1242,38 @@ def diff_map(
     db_path: str | Path = config.DB_PATH,
     json_out: str | Path = config.DIFF_JSON_PATH,
     md_out: str | Path = config.DIFF_MD_PATH,
+    lang: str | None = None,
 ) -> int:
     """Excel haritası ile veritabanı iskeletini karşılaştırır; farkı diff.json + diff.md olarak yazar (R3-5).
 
     Veritabanı tarafı ya hazır bir iskelet dosyasından okunur (``db_schema``) ya da canlı yoklanır. Ekran
-    bölüm bölüm sayıları, sonra iki çıktı yolunu söyler; fark yoksa "Fark yok." (R3-13).
+    bölüm bölüm sayıları, sonra iki çıktı yolunu söyler; fark yoksa "Fark yok." (R3-13). ``lang``
+    ekranın dilidir (R8-11); bölüm başlıkları ``merge`` raporunun kendi satırlarıdır.
     """
     _utf8_stdout()
-    excel_doc = _read_schema(excel_path)
+    excel_doc = _read_schema(excel_path, lang)
     if excel_doc is None:
         return EXIT_BAD_INPUT
     if db_schema:
-        db_doc = _read_schema(db_schema)
+        db_doc = _read_schema(db_schema, lang)
         source = str(db_schema)
     else:
-        db_doc = _introspect_db(db_path)
-        source = f"canlı ({db_path})"
+        db_doc = _introspect_db(db_path, lang)
+        source = _t("cli.map.live", lang, path=db_path)
     if db_doc is None:
         return EXIT_BAD_INPUT
 
     report = merge.diff_map(excel_doc, db_doc)
     merge.save_diff(report, json_out, md_out)
 
-    print(f"Excel: {excel_path}")
-    print(f"Veritabanı: {source}\n")
+    print(_t("cli.map.excel", lang, path=excel_path))
+    print(_t("cli.map.database", lang, source=source) + "\n")
     counts = [(title, len(report[key])) for key, title, _ in merge.SECTIONS if report.get(key)]
     if counts:
         for title, count in counts:
             print(f"{title}: {count}")
     else:
-        print(NO_DIFF)
+        print(_t("cli.diff_map.no_diff", lang))
     print(f"\nJSON: {json_out}")
     print(f"Markdown: {md_out}")
     return 0
@@ -1262,34 +1284,38 @@ def merge_map(
     db_schema: str | Path | None = None,
     db_path: str | Path = config.DB_PATH,
     out: str | Path = config.MERGED_PATH,
+    lang: str | None = None,
 ) -> int:
     """Excel haritası ile veritabanı iskeletini tek şemada birleştirir ve ``out``a yazar (R3-5).
 
     Veritabanı tarafı varlığı, tipleri, nullability ve foreign keyleri taşır; Excel tarafı açıklamayı,
     değerleri ve modülü. Excel'in veritabanında olmayan tablosu buraya değil diff'in içine gider
     (R3-5), o yüzden merge-map diff-map'ın yerini almaz. Yazılan dosya ``eval --schema`` ile
-    koşulabilir: ölçüm artık hangi şemayla yapıldıysa onunla yapılır.
+    koşulabilir: ölçüm artık hangi şemayla yapıldıysa onunla yapılır. ``lang`` ekranın dilidir
+    (R8-11): satırlar ``cli.merge_map`` kataloğundan o dilde gelir.
     """
     _utf8_stdout()
-    excel_doc = _read_schema(excel_path)
+    excel_doc = _read_schema(excel_path, lang)
     if excel_doc is None:
         return EXIT_BAD_INPUT
     if db_schema:
-        db_doc = _read_schema(db_schema)
+        db_doc = _read_schema(db_schema, lang)
         source = str(db_schema)
     else:
-        db_doc = _introspect_db(db_path)
-        source = f"canlı ({db_path})"
+        db_doc = _introspect_db(db_path, lang)
+        source = _t("cli.map.live", lang, path=db_path)
     if db_doc is None:
         return EXIT_BAD_INPUT
 
     schema = merge.merge_map(excel_doc, db_doc)
     _write_json(out, schema)
     tables = schema["tables"]
-    print(f"Excel: {excel_path}")
-    print(f"Veritabanı: {source}\n")
+    print(_t("cli.map.excel", lang, path=excel_path))
+    print(_t("cli.map.database", lang, source=source) + "\n")
     print(
-        MERGED_WRITTEN.format(
+        _t(
+            "cli.merge_map.written",
+            lang,
             path=out,
             tables=len(tables),
             columns=sum(len(table["columns"]) for table in tables),
@@ -1303,28 +1329,30 @@ def make_login_script(
     schema_path: str | Path | None = None,
     out: str | Path = config.LOGIN_SCRIPT_PATH,
     dataset: str | None = None,
+    lang: str | None = None,
 ) -> int:
     """Salt okunur MSSQL giriş betiğini üretir ve ``out``a yazar (R3-8).
 
     Allowlist ve PII kolonları okunan şemadan gelir; betiğin kendisi ``readonly_login_sql``de
     kurulur. Ekran kaç tablonun allowlist'te, kaç PII kolonunun reddedildiğini ve nereye
     yazıldığını söyler — parolanın yer tutucusu olduğu için dosya repoda durabilir.
-    ``dataset`` sınırın hangi kümenin şemasından kurulacağını söyler (R4-14).
+    ``dataset`` sınırın hangi kümenin şemasından kurulacağını söyler (R4-14). ``lang`` ekranın
+    dilidir (R8-11): satırlar ``cli.login`` kataloğundan o dilde gelir.
     """
     _utf8_stdout()
     ds, code = _dataset(dataset)
     if code:
         return code
-    _dataset_line(ds)
+    _dataset_line(ds, lang)
     schema_path = _or(schema_path, ds.schema_path if ds else None, config.SCHEMA_PATH)
     schema = doc.load_schema(schema_path)
     target = Path(out)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(login_script.readonly_login_sql(schema, login), encoding="utf-8")
-    print(f"Giriş: {login}")
-    print(f"Allowlist: {len(doc.allowlist(schema))} tablo")
-    print(f"PII kolonu reddedildi: {len(pii.column_map(schema))}")
-    print(f"Betik: {out}")
+    print(_t("cli.login.login", lang, login=login))
+    print(_t("cli.login.allowlist", lang, tables=len(doc.allowlist(schema))))
+    print(_t("cli.login.pii", lang, columns=len(pii.column_map(schema))))
+    print(_t("cli.login.script", lang, path=out))
     return 0
 
 
@@ -1373,7 +1401,8 @@ def user_list(lang: str = "tr") -> int:
                     for user in users
                 ],
                 row_count=len(users),
-            )
+            ),
+            lang,
         )
     )
     return 0
@@ -1565,7 +1594,7 @@ def _add_embed_options(command: argparse.ArgumentParser, lang: str) -> None:
     )
 
 
-def _embed_arg(args) -> str | None:
+def _embed_arg(args, lang: str | None = None) -> str | None:
     """``--embed`` ile ``--embed-model`` tek embedder metnine döner: ``fake:64``, ``openai:bge-m3``.
 
     Model adı bir uç nokta kaynağı ister; ``fake``in soneki vektör genişliği olduğu için
@@ -1573,7 +1602,7 @@ def _embed_arg(args) -> str | None:
     """
     value = f"{args.embed}:{args.embed_model}" if args.embed_model else str(args.embed)
     if not EMBED_ID.match(value):
-        print(BAD_EMBED.format(value=value))
+        print(_t("cli.index.bad_embed", lang, value=value))
         return None
     return value
 
@@ -1595,10 +1624,10 @@ def _dataset(name: str | None) -> tuple[datasets.Dataset | None, int]:
         return None, EXIT_BAD_INPUT
 
 
-def _dataset_line(ds: datasets.Dataset | None) -> None:
-    """Kümeyi kendisi seçen komut hangi dünyayla çalıştığını ilk satırda söyler (R4-14)."""
+def _dataset_line(ds: datasets.Dataset | None, lang: str | None = None) -> None:
+    """Kümeyi kendisi seçen komut hangi dünyayla çalıştığını ilk satırda söyler (R4-14, R8-11)."""
     if ds:
-        print(DATASET_LINE.format(display_name=ds.display_name, name=ds.name))
+        print(_t("cli.common.dataset_line", lang, display_name=ds.display_name, name=ds.name))
 
 
 def _profile_arg(args) -> tuple[ModelProfile | None, int]:
@@ -1963,11 +1992,42 @@ def build_parser(lang: str) -> argparse.ArgumentParser:
     return parser
 
 
+def _t(key: str, lang: str | None = None, **params) -> str:
+    """Kataloğun satırı, komutun dilinde: ``lang`` None ise ``main``in çözdüğü dil okunur (R8-11).
+
+    Komutların kwargs sözleşmesi testlerde donuk (R8-5: ``main`` komuta yalnız kullanıcının
+    verdiği argümanları iletir), o yüzden ``--lang``ın yolu imza değil ``_LANG``dır; ``lang``
+    parametresi komutu doğrudan çağıranın (testler, betikler) açıkça verebildiği yerler için durur.
+    """
+    return t(key, lang or _LANG, **params)
+
+
+def _resolved_lang(command_line):
+    """``main``in argv'den çözdüğü dil, koşum boyunca komutların okuduğu modül hali (R8-11).
+
+    Çözüm ``main``in argümanı değil yan etkisidir: ``main``den çıkınca geri alınır, yani ``main``i
+    hiç çağırmayan bir koşan (web, onboard, testler) tr'de kalır.
+    """
+
+    @functools.wraps(command_line)
+    def wrapped(argv: list[str] | None = None) -> int:
+        global _LANG
+        previous, _LANG = _LANG, _scan_lang(list(sys.argv[1:] if argv is None else argv))
+        try:
+            return command_line(argv)
+        finally:
+            _LANG = previous
+
+    return wrapped
+
+
+@_resolved_lang
 def main(argv: list[str] | None = None) -> int:
     """argparse: ``build-db`` | ``ask`` | ``eval``; seçilen komutun işlevini çağırır.
 
     Dili argv'den önce tarar (``--lang`` > ``NL2SQL_LANG`` > tr), parserı o dilde kurar; çözülen dil
-    ``args.lang`` olarak komuta kalır (R8-5).
+    ``args.lang`` olarak kendisinin, ``_LANG`` olarak komutların ekran satırlarının dilidir (R8-5,
+    R8-11).
     """
     argv = list(sys.argv[1:] if argv is None else argv)
     lang = _scan_lang(argv)
@@ -1980,10 +2040,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "build-db":
         return build_database(**_given(seed=args.seed, dataset=args.dataset))
     if args.command == "build-index":
-        embed = _embed_arg(args)
-        return build_index(embed=embed, **_given(dataset=args.dataset)) if embed else EXIT_BAD_INPUT
+        embed = _embed_arg(args, args.lang)
+        if not embed:
+            return EXIT_BAD_INPUT
+        return build_index(embed=embed, **_given(dataset=args.dataset))
     if args.command == "eval-retrieval":
-        embed = _embed_arg(args)
+        embed = _embed_arg(args, args.lang)
         if not embed:
             return EXIT_BAD_INPUT
         return eval_retrieval(
@@ -2027,7 +2089,7 @@ def main(argv: list[str] | None = None) -> int:
             return code
         # R4-14: küme satırı her halükarda ilk satırdır; auto çözümü NO_INDEX_NOTE basabildiği için
         # buraya alındı ve ask() kendisinin basmadığını ``dataset_line`` ile öğreniyor.
-        _dataset_line(ds)
+        _dataset_line(ds, args.lang)
         # ASSUMPTION: "ask'ın varsayılanı auto" komutun varsayılanıdır (argparse default); buradaki
         # çözümleme istemciye de çözülmüş modu vermek için — sahte kayıt rag ile diğerlerinde farklı
         # oynar. ask() fonksiyonunun kendi varsayılanı "full" kalır, doğrudan çağıranı etkilemesin.
@@ -2213,6 +2275,7 @@ def serve(
     model: str | None = None,
     models_file: str | Path | None = None,
     db_probe_file: str | Path | None = None,
+    lang: str | None = None,
 ) -> int:
     """``serve``: oturumu bir kez kurar, API'yi loopback'e bağlar (R5-15).
 
@@ -2230,7 +2293,8 @@ def serve(
 
     R6-11: ``--dataset`` söylenmemişse sunulan dünya ekranda yapılan son geçişin kümesidir, yani
     ayardaki ``active_dataset``; ``--dataset`` her zaman onu da yener. Ayar yoksa - taze bir kurulum,
-    model olmadan koşan inceleme - vitrin kümesi sunulur: ``_demo_dataset``.
+    model olmadan koşan inceleme - vitrin kümesi sunulur: ``_demo_dataset``. R8-11: açılışın,
+    reddin ve düşen notun satırları ``cli.serve`` kataloğundan ``lang``da gelir.
 
     R7-25: sunucu ayrıca veritabanının bekçisini kurar - bağlantı deposu oturumla aynı dosyadadır,
     bekçi ``SELECT 1``i kendi iş parçacığında atar, hiçbir istek onun yoluna girmez.
@@ -2246,14 +2310,14 @@ def serve(
 
     _utf8_stdout()
     if db_probe_file and llm_kind != "fake":
-        print(PROBE_NEEDS_FAKE)
+        print(_t("cli.serve.probe_needs_fake", lang))
         return EXIT_BAD_INPUT
     # R7-23: SQL Server kümesi sunuluyorsa yürütücü kullanıcı deposundaki kendi bağlantı satırına
     # kurulur; depo ``serve``in birazdan açacağı kullanıcı dosyasıyla aynıdadır.
     connections = ConnectionStore(config.app_db_path())
     try:
         session = open_session(
-            dataset=dataset or _served_dataset(),
+            dataset=dataset or _served_dataset(lang),
             model=model,
             llm=llm_kind,
             models_file=models_file,
@@ -2265,16 +2329,18 @@ def serve(
         print(exc)
         return exc.exit_code
     if host not in LOOPBACK_HOSTS:
-        print(LOOPBACK_ONLY)
+        print(_t("cli.serve.loopback", lang))
         return EXIT_BAD_INPUT
     # R6-7: oturumun sorulacağı bir depo olmadan dinlenmez; boş tabloda sıra bootstrapte.
     users = UserStore(config.app_db_path())
     if not users.count_users() and not dev_admin(users, os.environ):
-        print(NO_USERS)
+        print(_t("cli.user.no_users", lang))
         return EXIT_BAD_INPUT
     ds = session.dataset
     print(
-        SERVE_LINE.format(
+        _t(
+            "cli.serve.line",
+            lang,
             url=f"http://{host}:{port}",
             dataset=ds.name if ds else config.DEFAULT_DATASET,
             model=session.profile.name if session.profile else session.llm_kind,
@@ -2412,7 +2478,7 @@ class _ProbeConnection:
         return False
 
 
-def _served_dataset() -> str:
+def _served_dataset(lang: str | None = None) -> str:
     """``--dataset`` söylenmediğinde sunulacak dünya: ayardaki etkin küme, yoksa vitrin (R6-11, Run 8).
 
     Ayarın söylediği ad artık yüklenmiyorsa tek satırlık bir not düşer ve sıra aşağıdan devam eder:
@@ -2427,7 +2493,7 @@ def _served_dataset() -> str:
         datasets.load_dataset(stored)
     except datasets.DatasetError:
         fallback = _demo_dataset()
-        print(STORED_LOST.format(name=stored, default=fallback))
+        print(_t("cli.serve.stored_lost", lang, name=stored, default=fallback))
         return fallback
     return stored
 
@@ -2534,7 +2600,7 @@ def _cost(run: AgentRun, lang: str = "tr") -> None:
     print(t("cli.ask.time", lang, seconds=f"{run.elapsed_s:.1f}"))
 
 
-def _mapping_lines(mapping: dict) -> list[str]:
+def _mapping_lines(mapping: dict, lang: str | None = None) -> list[str]:
     """R3-13: önerinin tablosu — sayfa ve başlık satırı başına her sütunun eşlenen alanları.
 
     Alan listesi kaydın kendi anahtarlarından gelir; eşlenmemiş sütun "hiçbir alan" ile görünür
@@ -2543,13 +2609,24 @@ def _mapping_lines(mapping: dict) -> list[str]:
     lines: list[str] = []
     for sheet in mapping.get("sheets") or []:
         columns = [item for item in sheet.get("columns") or [] if isinstance(item, dict)]
-        lines.append(f"\n{sheet.get('sheet')} — başlık satırı {sheet.get('header_row')}")
+        lines.append(
+            "\n"
+            + _t(
+                "cli.import_map.header_row",
+                lang,
+                sheet=sheet.get("sheet"),
+                row=sheet.get("header_row"),
+            )
+        )
         width = max((len(str(item.get("column"))) for item in columns), default=0)
         for item in columns:
             fields = [
                 name for name, value in item.items() if name != "column" and value is not None
             ]
-            lines.append(f"  {str(item.get('column')):<{width}}  {' · '.join(fields) or UNMAPPED}")
+            lines.append(
+                f"  {str(item.get('column')):<{width}}  "
+                f"{' · '.join(fields) or _t('cli.import_map.unmapped', lang)}"
+            )
     return lines
 
 
@@ -2558,32 +2635,34 @@ def _proposal_file(source: Path, proposal_path: str | Path | None) -> Path:
     return Path(proposal_path) if proposal_path else config.mapping_path(source.stem)
 
 
-def _read_mapping(path: str | Path) -> dict | None:
+def _read_mapping(path: str | Path, lang: str | None = None) -> dict | None:
     """Kullanıcının elle düzelttiği eşleme dosyası; okunamazsa ya da nesne değilse None."""
+    head = _t("cli.import_map.bad_mapping", lang, path=path)
     try:
         chosen = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        print(f"{BAD_MAPPING.format(path=path)}\n{exc}")
+        print(f"{head}\n{exc}")
         return None
     if not isinstance(chosen, dict):
-        print(f'{BAD_MAPPING.format(path=path)}\nÜst düzey bir JSON nesnesi olmalı: {{"sheets": [...]}}.')
+        print(f"{head}\n" + _t("cli.common.json_object", lang, shape='{"sheets": [...]}'))
         return None
     return chosen
 
 
-def _read_schema(path: str | Path) -> dict | None:
+def _read_schema(path: str | Path, lang: str | None = None) -> dict | None:
     """Şema/iskelet dosyası; okunamazsa ya da ``tables`` listesi taşımıyorsa None (yarı yolda düşmez).
 
     ``tables``sız bir dosya (yanlış yola verilmiş bir eşleme gibi) şema değildir: merge-map iskeleti
     tek başına birleştirip yazar, diff-map her tabloyu veritabanına özgü sayardı - ikisi de sessizce.
     """
+    head = _t("cli.common.bad_schema", lang, path=path)
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        print(f"{BAD_SCHEMA.format(path=path)}\n{exc}")
+        print(f"{head}\n{exc}")
         return None
     if not isinstance(data, dict) or not isinstance(data.get("tables"), list):
-        print(f'{BAD_SCHEMA.format(path=path)}\nÜst düzey bir JSON nesnesi olmalı: {{"tables": [...]}}.')
+        print(f"{head}\n" + _t("cli.common.json_object", lang, shape='{"tables": [...]}'))
         return None
     return data
 
@@ -2606,7 +2685,9 @@ def _load_schema(path: str | Path) -> dict | None:
     try:
         return doc.load_schema(path)
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
-        print(f"{BAD_SCHEMA.format(path=path)}\n{exc}")
+        # ASSUMPTION: eval ekranının dili T412'nin; cümle şimdilik tr'de kalır.
+        head = t("cli.common.bad_schema", config.DEFAULT_LANG, path=path)
+        print(f"{head}\n{exc}")
         return None
 
 
@@ -2927,25 +3008,25 @@ def _db_missing(db_path: str | Path) -> bool:
     return config.backend() == "sqlite" and not Path(db_path).exists()
 
 
-def _no_db(db_path: str | Path, dataset: str | None = None, lang: str = "tr") -> int:
+def _no_db(db_path: str | Path, dataset: str | None = None, lang: str | None = None) -> int:
     """Eksik veritabanı bir sorgu hatası gibi düşmesin: tek cümle, ne yapılacağı, kod 2.
 
     ``dataset`` verildiğinde cümlenin söylediği ``build-db`` de o kümeyi kurar (R4-14).
     """
-    print(t("cli.ask.no_db", lang, path=db_path, ds=dataset_arg(dataset)))
+    print(_t("cli.ask.no_db", lang, path=db_path, ds=dataset_arg(dataset)))
     return EXIT_NO_DB
 
 
-def _introspect_db(db_path: str | Path) -> dict | None:
+def _introspect_db(db_path: str | Path, lang: str | None = None) -> dict | None:
     """Canlı veritabanının iskeleti; yoklama yapılamıyorsa sebep ekrana, None döner (yarı yolda düşmez)."""
     if config.backend() == "mssql":
         try:
             return introspect.mssql_skeleton()
         except introspect.IntrospectError as exc:
-            print(f"Hata: {exc}")
+            print(_t("cli.common.error", lang, reason=str(exc)))
             return None
     if _db_missing(db_path):
-        _no_db(db_path)
+        _no_db(db_path, lang=lang)
         return None
     return introspect.sqlite_skeleton(db_path)
 
@@ -2964,11 +3045,11 @@ def _llm_failed(reason: str, lang: str = "tr") -> int:
     return EXIT_LLM
 
 
-def _embed_failed(reason: str) -> int:
+def _embed_failed(reason: str, lang: str | None = None) -> int:
     """Ölü embedding sunucusu: adresi ve çözümü embed.py söyler; indeks hiç yazılmadan çıkılır."""
-    print(f"Hata: {reason}")
+    print(_t("cli.common.error", lang, reason=reason))
     if EMBED_ENV_URL not in reason:
-        print(EMBED_HINT)
+        print(_t("cli.index.embed_hint", lang, url=EMBED_ENV_URL))
     return EXIT_EMBED
 
 

@@ -290,5 +290,60 @@
   "cli.user.password_repeat": "Parola (tekrar): ",
   "cli.user.password_mismatch": "Parolalar eşleşmiyor.",
   "cli.user.active": "etkin",
-  "cli.user.inactive": "pasif"
+  "cli.user.inactive": "pasif",
+
+  "cli.common.dataset_line": "Veri kümesi: {display_name} ({name})",
+  "cli.common.error": "Hata: {reason}",
+  "cli.common.bad_schema": "Şema dosyası okunamadı: {path}",
+  "cli.common.json_object": "Üst düzey bir JSON nesnesi olmalı: {shape}.",
+
+  "cli.build.seed": "Tohum: {seed}",
+  "cli.build.db": "Veritabanı: {path}",
+  "cli.build.sql": "T-SQL betiği: {path}",
+  "cli.build.tables": "Tablolar: {total} (veri {filled}, şema-yalnız {schema_only})",
+  "cli.build.schema_text": "Şema metni (full mod): {chars} karakter ≈ {tokens} token",
+  "cli.build.digest": "Sağlama (sha256): {hash}",
+
+  "cli.index.schema": "Şema: {path} ({tables} tablo)",
+  "cli.index.rules": "Kurallar: {path} ({rules} kural)",
+  "cli.index.docs": "Dokümanlar: {counts} (toplam {total})",
+  "cli.index.signature": "İmza: {hash}",
+  "cli.index.duration": "Süre: {seconds} sn",
+  "cli.index.dir": "İndeks: {path}",
+  "cli.index.bad_embed": "Embedder kaynağı anlaşılmadı: {value}\nGeçerli olanlar: fake, fake:<dim>, openai, openai:<model>; model adını --embed-model de verebilir.",
+  "cli.index.embed_hint": "Öneri: embedding sunucusunun açık olup olmadığına bakın; adres farklıysa {url} ile doğruyu verin.",
+
+  "cli.import_map.no_file": "Excel dosyası yok: {path}",
+  "cli.import_map.file": "Dosya: {path}",
+  "cli.import_map.header_row": "{sheet} — başlık satırı {row}",
+  "cli.import_map.unmapped": "hiçbir alan",
+  "cli.import_map.disagreement": "⚠ uyuşmuyor: {sheet}.{column} {field}: llm={llm} fallback={fallback}",
+  "cli.import_map.mapping": "Eşleme: {path} ({by})",
+  "cli.import_map.by_file": "dosya",
+  "cli.import_map.bad_mapping": "Eşleme dosyası okunamadı: {path}",
+  "cli.import_map.hint": "Devam: --accept ile şemayı yazdırın; eşlemeyi elle düzeltmek isterseniz --mapping ile geri verin.",
+  "cli.import_map.written": "Şema yazıldı: {path} ({tables} tablo, {columns} kolon, {skipped} atlanan satır)",
+  "cli.import_map.skipped": "↳ {sheet}.satır {row}: {reason}",
+
+  "cli.introspect.written": "İskelet: {tables} tablo, {columns} kolon -> {path}",
+
+  "cli.map.excel": "Excel: {path}",
+  "cli.map.database": "Veritabanı: {source}",
+  "cli.map.live": "canlı ({path})",
+
+  "cli.diff_map.no_diff": "Fark yok.",
+  "cli.merge_map.written": "Birleşik şema yazıldı: {path} ({tables} tablo, {columns} kolon)",
+
+  "cli.login.login": "Giriş: {login}",
+  "cli.login.allowlist": "Allowlist: {tables} tablo",
+  "cli.login.pii": "PII kolonu reddedildi: {columns}",
+  "cli.login.script": "Betik: {path}",
+
+  "cli.serve.line": "Bilgin: {url}  (veri kümesi {dataset}, model {model}, llm {llm})",
+  "cli.serve.loopback": "Bilgin yalnız 127.0.0.1 üzerinde çalışır (TLS ve ağ erişimi kapsam dışı).",
+  "cli.serve.probe_needs_fake": "--db-probe-file yalnız --llm fake ile kullanılır (görsel inceleme ve duman testi).",
+  "cli.serve.stored_lost": "Not: kayıtlı veri kümesi {name} artık yüklenmiyor; varsayılan {default} sunuluyor.",
+
+  "cli.table.empty": "Sonuç boş (0 satır)",
+  "cli.table.truncated": "İlk {rows} satır gösteriliyor (toplam {total})"
 }
