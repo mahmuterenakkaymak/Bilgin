@@ -1303,6 +1303,11 @@ main {
      yakıyoruz. Odak halkası kutunun 4px dışına çiziliyor: pay içeride, negatif pay ile metnin
      başlangıcı yine sözcükle hizada. */
   .masthead-nav {
+    /* ASSUMPTION: R8-17 taşmamayı istiyor, sarmayı değil — T272 gezinme satırını kaydırılan tek
+       sıra olarak yazdı (flex-wrap: nowrap), o yüzden burada verilen pay küçülme hakkı: İngilizce
+       adlar ızgaranın sütununu aşarsa taşan başlık değil sayfa olur, sığmayan bağlantı aşağıdaki
+       maskeyle kayar. */
+    min-width: 0;
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
@@ -1415,6 +1420,23 @@ main {
 
   #ready-screen .ready-row-actions {
     justify-content: start;
+  }
+
+  /* Uzun etiket iki dilde de satırı taşırabiliyor (R8-17): cevap kartının iş sırası ile haritanın
+     adım listesi kendi kutularından geniş sözü dışarı boyuyor — overflow-wrap sözü kırar, böylece
+     satırın kendisi uzamaz. Dil düğmesi ötekilerden farklı: iki seçenekli grup sarmaya kapalıysa
+     min-content'i iki seçeneğin toplamıdır ve başlığın sütununu o toplam şişirir; flex-wrap: wrap
+     ile taban tek seçeneğe iner, EN gerekirse alt kata düşer. T431'in görünümü (.lang-toggle'ın
+     çerçevesi, hap köşesi, zemini) olduğu gibi duruyor — burada yalnız dizilim yazılıyor ve id
+     seçicisi sınıfın temeline karşı sırayı değil özgüllüğü kazanıyor. */
+  .answer-actions,
+  .map-steps {
+    overflow-wrap: anywhere;
+  }
+
+  #lang-toggle {
+    flex-wrap: wrap;
+    min-width: 0;
   }
 }
 
