@@ -6,7 +6,7 @@ import { EXPIRED_NOTE, afterLogin, boot } from "./lib/auth.js";
 
 // route.js'in tersi: girişten sonra varılacak ekranın adresi. Yalnız burada gerekiyor, o yüzden
 // küçük bir tablo olarak kapının yanında duruyor.
-const HASHES = { ask: "#/", rules: "#/kurallar", map: "#/harita", users: "#/kullanicilar", ready: "#/hazir-sorular" };
+const HASHES = { ask: "#/", rules: "#/kurallar", map: "#/harita", connections: "#/baglantilar", users: "#/kullanicilar", ready: "#/hazir-sorular" };
 
 // Testler Root'u Node'da kuruyor: orada window yoktur, kapı kök adresteymiş gibi açılır.
 function currentHash() {
