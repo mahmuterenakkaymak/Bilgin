@@ -10,7 +10,9 @@
     "rules": "rules.json",
     "profile": "profile.json",
     "golden": "golden.jsonl",
+    "golden_en": "golden_en.jsonl",
     "followups": "followups.jsonl",
+    "followups_en": "followups_en.jsonl",
     "ready_questions": "ready_questions.json"
   },
   "builder": "real.py:build_db",

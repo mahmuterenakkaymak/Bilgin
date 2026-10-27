@@ -10,6 +10,11 @@
         "revenue",
         "satılan tutar"
       ],
+      "synonyms_en": [
+        "revenue",
+        "sales revenue",
+        "sales income"
+      ],
       "definition": "Faturalanan satışın KDV hariç tutarı. DİKKAT: Sales.InvoiceLines.ExtendedPrice KDV DAHİLDİR (= Quantity x UnitPrice + TaxAmount); KDV hariç tutar ExtendedPrice - TaxAmount (ya da Quantity x UnitPrice). Kredi notları (IsCreditNote = 1) cirodan çıkarılır. Hasılat fatura tarihinde (InvoiceDate) düşer.",
       "sql_hint": "SUM(il.ExtendedPrice - il.TaxAmount) FROM Sales.InvoiceLines il JOIN Sales.Invoices i ON i.InvoiceID = il.InvoiceID WHERE i.IsCreditNote = 0",
       "tables": [
@@ -29,6 +34,11 @@
         "iadeler düşülmüş satış",
         "iadeler netleştirilmiş",
         "net ciro"
+      ],
+      "synonyms_en": [
+        "net sales",
+        "net revenue",
+        "sales after returns"
       ],
       "definition": "Satışlardan kredi notlarının düşüldüğü hal: IsCreditNote filtresi KONMAZ (kredi notu satırları negatif). KDV hariç: ExtendedPrice - TaxAmount.",
       "sql_hint": "SUM(il.ExtendedPrice - il.TaxAmount) FROM Sales.InvoiceLines il JOIN Sales.Invoices i ON i.InvoiceID = il.InvoiceID (IsCreditNote filtrelenmez)",
@@ -50,6 +60,11 @@
         "brüt marj",
         "gross profit"
       ],
+      "synonyms_en": [
+        "gross profit",
+        "gross margin",
+        "profit"
+      ],
       "definition": "Fatura satırlarındaki LineProfit toplamı; LineProfit zaten çıkarılmış kârdır, alış fiyatıyla (BuyingPrice / LastCostPrice) yeniden hesaplanmaz. Kredi notu satırlarının kârı negatiftir, toplamdan kendiliğinden düşer; ayrıca bir IsCreditNote filtresi gerekmez.",
       "sql_hint": "SUM(il.LineProfit) FROM Sales.InvoiceLines il",
       "tables": [
@@ -69,6 +84,12 @@
         "kaç adet var",
         "on-hand"
       ],
+      "synonyms_en": [
+        "quantity on hand",
+        "stock on hand",
+        "on-hand quantity",
+        "in stock"
+      ],
       "definition": "Her stok kalemi için Warehouse.StockItemHoldings.QuantityOnHand: şu anda depoda fiziksel duran miktar, kalem başına tek satır. Stok hareketlerinin (Warehouse.StockItemTransactions) işaretle toplamı net değişimi verir, eldeki stoğu değil; CommittedForOrders ayrılan payı, BackorderQuantity ise stok bitince müşterilere borçlu kalınan miktardır.",
       "sql_hint": "SELECT h.StockItemID, h.QuantityOnHand FROM Warehouse.StockItemHoldings h",
       "tables": [
@@ -87,6 +108,12 @@
         "gecikmiş satın alma",
         "geç teslim",
         "late delivery"
+      ],
+      "synonyms_en": [
+        "late delivery",
+        "delivered late",
+        "late receipt",
+        "overdue delivery"
       ],
       "definition": "Faturanın onaylanmış teslim zamanı (Sales.Invoices.ConfirmedDeliveryTime, tarihe çevrilerek) siparişin beklenen teslim tarihinden (Sales.Orders.ExpectedDeliveryDate) sonraysa teslimat gecikmiştir. Teslimi onaylanmamış (NULL) faturalar gecikmiş sayılmaz.",
       "sql_hint": "FROM Sales.Invoices i JOIN Sales.Orders o ON o.OrderID = i.OrderID WHERE CAST(i.ConfirmedDeliveryTime AS date) > o.ExpectedDeliveryDate",
@@ -108,6 +135,12 @@
         "henüz faturalanmamış",
         "açık sipariş"
       ],
+      "synonyms_en": [
+        "uninvoiced order",
+        "order not invoiced",
+        "not invoiced yet",
+        "open order"
+      ],
       "definition": "Faturası kesilmemiş sipariş: Sales.Orders'ta fatura kolonu yoktur; fatura siparişi Sales.Invoices.OrderID ile gösterir. Eşleşen fatura satırı olmayan sipariş faturalanmamıştır.",
       "sql_hint": "SELECT COUNT(*) FROM Sales.Orders o WHERE NOT EXISTS (SELECT 1 FROM Sales.Invoices i WHERE i.OrderID = o.OrderID)",
       "tables": [
@@ -128,6 +161,11 @@
         "stok yetmeyen sipariş",
         "borçlu kalınan sipariş"
       ],
+      "synonyms_en": [
+        "backorder",
+        "back order",
+        "back-ordered order"
+      ],
       "definition": "Geri sipariş (back-order): stok yetmediği için asıl siparişten ayrılan sipariş. Asıl siparişin BackorderOrderID'si geri siparişi gösterir; geri sipariş, bir BackorderOrderID tarafından gösterilen siparişin kendisidir. IsBackorder diye bir kolon yoktur.",
       "sql_hint": "SELECT COUNT(*) FROM Sales.Orders o WHERE EXISTS (SELECT 1 FROM Sales.Orders x WHERE x.BackorderOrderID = o.OrderID)",
       "tables": [
@@ -147,6 +185,12 @@
         "hesap ekstresi",
         "ödenmemiş tutar"
       ],
+      "synonyms_en": [
+        "account balance",
+        "customer balance",
+        "outstanding balance",
+        "statement"
+      ],
       "definition": "Müşterinin bakiyesi bütün hesap hareketlerinin (Sales.CustomerTransactions.TransactionAmount, KDV dahil) toplamıdır.",
       "sql_hint": "SELECT ct.CustomerID, SUM(ct.TransactionAmount) FROM Sales.CustomerTransactions ct GROUP BY ct.CustomerID",
       "tables": [
@@ -164,6 +208,11 @@
         "önceki ay",
         "bir önceki ay",
         "son ay"
+      ],
+      "synonyms_en": [
+        "last month",
+        "previous month",
+        "the month before"
       ],
       "definition": "AS_OF = 2016-05-31 tarihinin bir önceki takvim ayı: 2016-04-01 dahil, 2016-05-01 hariç. Aralık her zaman yarım açık yazılır; gerçek saat hiçbir yerde kullanılmaz. Fatura tarafında sütun InvoiceDate, sipariş tarafında OrderDate'tir.",
       "sql_hint": "InvoiceDate >= '2016-04-01' AND InvoiceDate < '2016-05-01' (sipariş tarafında sütun OrderDate)",
@@ -183,6 +232,11 @@
         "bu sene",
         "yılbaşından beri",
         "2016 yılında"
+      ],
+      "synonyms_en": [
+        "this year",
+        "year to date",
+        "in 2016"
       ],
       "definition": "AS_OF = 2016-05-31 yılının başından bugüne kadar: 2016-01-01 dahil, 2017-01-01 hariç. Veri AS_OF'ta bittiği için aralığı yıl sonuna kadar açmak sonucu değiştirmez.",
       "sql_hint": "InvoiceDate >= '2016-01-01' AND InvoiceDate < '2017-01-01' (sipariş tarafında sütun OrderDate)",
