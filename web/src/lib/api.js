@@ -25,8 +25,29 @@ export function onUnauthorized(handler) {
   unauthorized = handler;
 }
 
+// Arayüz dili (R8-16): provider her değişimde buradan yazar, her istek de başlıkla taşır.
+// ASSUMPTION: henüz dil çözülmemişse başlık hiç gitmez — sunucunun varsayılanı zaten program dili.
+let uiLang = null;
+
+export function setApiLang(lang) {
+  uiLang = lang || null;
+}
+
+// Boş küme `init`e hiç yazılmaz: gövdesiz GET'in bugünkü başlıksız çağrısı değişmesin.
+function headersFor(withBody) {
+  const headers = {};
+  if (withBody) headers["Content-Type"] = "application/json";
+  if (uiLang) headers["Accept-Language"] = uiLang;
+  return Object.keys(headers).length ? headers : undefined;
+}
+
 export function me() {
   return request("/api/auth/me");
+}
+
+// Kişinin kendi tercihi (Contracts "me PUT"): dil düğmesi oturmuş kullanıcıda sunucuya da yazılır.
+export function setMyLang(lang) {
+  return request("/api/auth/me", { method: "PUT", body: { lang } });
 }
 
 export function login({ username, password }) {
@@ -136,9 +157,14 @@ export function mapInfo() {
 }
 
 // Boş şablon düz bir bağlantıyla inebilir; veritabanından doldurulanın duyurusu başlıkta olduğu
-// için o fetch edilir — <a href> indirilen dosyanın yanıt başlıklarını okuyamaz.
+// için o fetch edilir — <a href> indirilen dosyanın yanıt başlıklarını okuyamaz. Dil de o yüzden
+// bağlantıya yazılır: `<a>` kendi başlık gönderemez, yol `?lang=`ı okur (R8-12).
 export function mapTemplateUrl(fromDb = false) {
-  return `/api/schema-map/template.xlsx${fromDb ? "?from_db=1" : ""}`;
+  const query = new URLSearchParams();
+  if (fromDb) query.set("from_db", "1");
+  if (uiLang) query.set("lang", uiLang);
+  const search = query.toString();
+  return `/api/schema-map/template.xlsx${search ? `?${search}` : ""}`;
 }
 
 export function mapTemplateDownload(fromDb = false) {
@@ -249,9 +275,11 @@ export function connectionsTest(dataset, body) {
 }
 
 async function request(path, { method = "GET", body } = {}) {
+  const headers = headersFor(body !== undefined);
   const init = {
     method,
-    ...(body === undefined ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    ...(headers ? { headers } : {}),
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   };
   let response;
   let data;
@@ -271,8 +299,9 @@ async function request(path, { method = "GET", body } = {}) {
 // İndirme iki şeyi birden döndürür: baytlar ve yoklamanın notu. Hata cümlesi JSON gövdede durduğu
 // için önce o okunur; kopan bağlantı `request` ile aynı şekilde status 0 olur.
 async function requestBlob(path) {
+  const headers = headersFor(false);
   try {
-    const response = await fetch(path);
+    const response = await fetch(path, headers ? { headers } : undefined);
     if (!response.ok) {
       const error = toApiError(response.status, await readBody(response));
       if (response.status === 401 && path !== LOGIN_PATH) unauthorized?.();
