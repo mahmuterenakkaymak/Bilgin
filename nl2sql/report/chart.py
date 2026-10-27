@@ -34,20 +34,24 @@ _FORCED_LABELS = {"line": "çizgi", "bar": "sütun", "pie": "pasta"}
 # yerleştirip plot'u ezdiği için kapatıldı (M20 görsel inceleme 2). Sol boşluk o yüzden sayısal
 # eksenin Türkçe biçimli etiketini (123.456,78) de tek başına tutmak zorundadır.
 _GRID = {"left": 56, "right": 20, "top": 40, "bottom": 30, "containLabel": False}
-# ECharts'ın interval "auto"su çakışan adları sessizce düşürür: hepsi çizilir, 30° döner.
-# Kutu altın cevabın en uzun adının (21 karakter) üstünde: ad üç noktayla kesilmez, sığmazsa sarar.
+# ECharts'ın interval "auto"su çakışan adları sessizce düşürür: hepsi çizilir, 45° döner. Kutu en
+# dar telefon kartının payı kadardır (330px'lik .chart'ta beş kategori 66px paylaşır): 160px'lik
+# kutu dönünce yanındakinin üstüne basıyordu (M24 görsel inceleme 2). Taşan ad üç noktayla kesilir,
+# tüm adı tooltip taşır. Kutu küçülünce ad dikleşir — yatay izim payın altında kalır.
+_CATEGORY_SHARE_PX = 64
+_CATEGORY_ROTATE = 45
 _CATEGORY_LABEL = {
     "interval": 0,
-    "rotate": 30,
+    "rotate": _CATEGORY_ROTATE,
     "hideOverlap": False,
-    "width": 160,
-    "overflow": "break",
+    "width": _CATEGORY_SHARE_PX,
+    "overflow": "truncate",
     "lineHeight": 14,
 }
-# Adlar artık alt boşluğun dışında, onun içine çiziliyor: 160px'lik ad kutusunun 30° dönük düşey
-# izimi (160·sin30° = 80) + iki satır (2·14) + eksen payı (8). Pasta ve saçılımın düz ekseni bu
-# büyümeyi almaz.
-_CATEGORY_BOTTOM = 116
+# Adlar alt boşluğun dışında, onun içine çiziliyor: 64px'lik ad kutusunun 45° dönük düşey izimi
+# (64·sin45° = 46) + tek satır (14) + eksen payı (8). Pasta ve saçılımın düz ekseni bu büyümeyi
+# almaz.
+_CATEGORY_BOTTOM = 68
 
 
 def chart_spec(columns: list[str], rows: list[tuple], question: str, kind: str | None = None) -> dict | None:
@@ -190,19 +194,21 @@ def _bar(columns, rows, category, number, question):
 
 
 def _pie(columns, rows, category, number, question):
+    # Ad, dilimin kendi çizgisiyle dışında okunur: kaydırmalı açıklama telefon genişliğinde beş adın
+    # ikisini "1/5" sayfalayıcısının arkasına atıyordu (M24 görsel inceleme 2). Dilim küçülüp yerini
+    # etiketlere bırakır; uzun ad sarar.
     series = [
         {
             "type": "pie",
             "name": columns[number],
-            # Dış etiket kapalı: telefon genişliğinde ECharts onu dört karaktere kırpıyor ("Dom...").
-            "label": {"show": False},
-            "labelLine": {"show": False},
+            "radius": "40%",
+            "center": ["50%", "44%"],
+            "label": {"show": True, "width": 76, "overflow": "break", "lineHeight": 14},
+            "labelLine": {"show": True, "length": 10, "length2": 6},
             "data": [{"name": _label(row[category]), "value": _value(row[number])} for row in rows],
         }
     ]
-    # Adı dilimin dışında değil, kutunun altında kaydırılabilir bir açıklamada oku; uzun kategori
-    # listesi de böylece kutunun içinde kalır (M23 görsel inceleme 3).
-    option = {"tooltip": {"trigger": "item"}, "legend": {"type": "scroll", "bottom": 0}, "series": series}
+    option = {"tooltip": {"trigger": "item"}, "series": series}
     return _spec("pie", option, columns[number], columns[category], question)
 
 

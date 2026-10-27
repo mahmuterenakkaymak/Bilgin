@@ -112,8 +112,13 @@ class SuggestJobs:
         try:
             session = self.sessions(dataset)
             texts = suggest_texts(session.schema, session.rules, _client(session))
+            # Defterin taşıdığı cümle yeniden aday değildir: aynı düğmeye ikinci basmak onay
+            # bekleyenlerin üstüne ikiz satır yazmaz - satırın bir tek "Onayla"sı kalır (M24).
+            known = {_key(row["question"]) for row in self.store.list_all(dataset)}
             for role, questions in texts.items():
                 for question in questions:
+                    if _key(question) in known:
+                        continue
                     asked += 1
                     payload = ask_payload(session, question, source=SOURCE)
                     # Cevaplanmayan soru aday değildir: netleştirme de hata da satır yazmaz.
@@ -130,6 +135,7 @@ class SuggestJobs:
                             created_by=username,
                             approved=False,
                         )
+                        known.add(_key(question))
                         stored += 1
                     self._set(job_id, dataset, "asking", asked, stored, None)
         except Exception as exc:  # iş parçacığı buradan öte geçemez; cümle ekrana ulaşmalı
@@ -188,6 +194,11 @@ def _clean(value) -> list[str]:
     if len(texts) < config.SUGGEST_PER_ROLE[0]:
         return []
     return texts[: config.SUGGEST_PER_ROLE[1]]
+
+
+def _key(question: str) -> str:
+    """Adayla satırın aynı cümle olup olmadığı: boşluk ve büyük/küçük harf farkı sayılmaz."""
+    return " ".join(question.split()).casefold()
 
 
 def _json_object(text: str) -> dict | None:

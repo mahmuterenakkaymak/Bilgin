@@ -170,6 +170,20 @@ def test_a_fake_run_stores_two_unapproved_rows_per_role(world):
         assert len([row for row in rows if row["business_role"] == role]) >= 2
 
 
+def test_the_same_model_run_twice_writes_no_second_copy(world):
+    """Aynı düğmeye ikinci basış: defterin taşıdığı cümle yeniden aday değildir (M24)."""
+    first = run_fake_job(world)
+    pending = len(world.store.list_all(DATASET, pending=True))
+    assert first["stored"] == pending > 0
+
+    second = run_fake_job(world)
+
+    assert second["phase"] == "done"
+    assert second["message"] is None
+    assert second["stored"] == 0
+    assert len(world.store.list_all(DATASET, pending=True)) == pending
+
+
 def test_no_suggestion_ever_shows_on_the_start_screen(world):
     run_fake_job(world)
     satis = as_user(world.app, "satis1")
