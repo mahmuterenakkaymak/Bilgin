@@ -94,6 +94,7 @@ function AskScreen({
   canEditRules = false,
   datasetName = "",
   isAdmin = false,
+  resetToken = 0,
 }) {
   const [state, dispatch] = useReducer(threadReducer, initialThread);
   const [text, setText] = useState("");
@@ -270,6 +271,16 @@ function AskScreen({
     window.location.hash = "#/";
     document.getElementById("question")?.focus();
   };
+
+  // Silinen konuşma (M23 review 2): kenar çubuğu açık konuşmayı silince App `resetToken`ı büyütür;
+  // ekran "Yeni konuşma"nın yaptığı gibi boşalır. Başka bir konuşmanın silinmesi sayacı büyütmez,
+  // o yüzden ekranda hiçbir şey değişmez. İlk kurulum sayacı değiştirmez, yani açılış boşaltmaz.
+  const seenReset = useRef(resetToken);
+  useEffect(() => {
+    if (seenReset.current === resetToken) return;
+    seenReset.current = resetToken;
+    newConversation();
+  }, [resetToken]);
 
   // Konuşma açıkken ekran akıştır: turlar yukarıdan aşağı sıralanır, soru kutusu en alttaki
   // turun altına iner (R7-15). Kartın hali TurnCard'da çözülür.
@@ -449,6 +460,7 @@ function Screen({
   datasetName,
   readOnly,
   currentUser,
+  resetToken,
 }) {
   if (route === "rules") return <RulesFlow onChanged={onChanged} readOnly={readOnly} />;
   if (route === "users") return <UsersFlow currentUser={currentUser} />;
@@ -465,6 +477,7 @@ function Screen({
       datasetName={datasetName}
       canEditRules={!readOnly}
       isAdmin={!readOnly}
+      resetToken={resetToken}
     />
   );
 }
@@ -478,6 +491,8 @@ export default function App({ user = null, onLogout = null, note = "" }) {
   const [saved, setSaved] = useState([]);
   const [history, setHistory] = useState([]);
   const [conversations, setConversations] = useState([]);
+  // Silinen açık konuşma (M23 review 2): her artış soru ekranını "Yeni konuşma" gibi boşaltır.
+  const [resetToken, setResetToken] = useState(0);
   const [pending, setPending] = useState(null); // {question, n}: kenar çubuğundan gelen soru
   const [datasetKey, setDatasetKey] = useState(0); // her küme değişiminde büyür, örnekler tazelenir
   const [theme, setTheme] = useState(() => readStored(themeStorage()));
@@ -546,6 +561,13 @@ export default function App({ user = null, onLogout = null, note = "" }) {
   useEffect(() => {
     refresh();
   }, []);
+
+  // Kenar çubuğundan bir konuşma silindi (M23 review 2): silinen açık konuşmaysa ekran "Yeni
+  // konuşma" gibi boşanır; aksi hâlde (ya da kayıttan silmede, ki id gelmez) yalnız liste tazelenir.
+  const removed = (id) => {
+    if (id && id === conversation) setResetToken((token) => token + 1);
+    refresh();
+  };
 
   // Etkin küme değiştiği an, aynı gerçeği gösteren her yer baştan okunur: başlıktaki çip
   // (health), kenar çubuğunun iki listesi ve soru ekranının örnekleri.
@@ -643,7 +665,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
             history={history}
             conversations={conversations}
             onAsk={askFromSidebar}
-            onRemoved={refresh}
+            onRemoved={removed}
           />
         </aside>
         <main id="main">
@@ -666,6 +688,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
             datasetName={health?.dataset?.display_name ?? ""}
             readOnly={Boolean(user && user.role !== "admin")}
             currentUser={user}
+            resetToken={resetToken}
           />
         </main>
       </div>

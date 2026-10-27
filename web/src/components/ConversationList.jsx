@@ -66,7 +66,7 @@ export default function ConversationList({ conversations = [], onRemoved }) {
     try {
       await api.conversationDelete(id);
       setNote("");
-      onRemoved?.();
+      onRemoved?.(id);
     } catch (error) {
       setNote(error?.message || "Konuşma silinemedi.");
     }
