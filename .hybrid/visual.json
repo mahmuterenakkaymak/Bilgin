@@ -416,7 +416,17 @@
         {"fill": ["#login-password", "Gorsel-Dunya-2026"]},
         {"click": "#login-submit"},
         "wait:2",
-        "shot:header-db-green"
+        "shot:header-db-green",
+        {"click": "#logout"},
+        "wait:1",
+        {"fill": ["#login-username", "admin"]},
+        {"fill": ["#login-password", "Gorsel-Dunya-2026"]},
+        {"click": "#login-submit"},
+        "wait:2",
+        {"click": "#nav-map"},
+        "wait:1",
+        {"click": "button[data-dataset-activate='wwi']"},
+        "wait:2"
       ]
     },
     {
@@ -453,7 +463,9 @@
         "wait:1",
         {"click": "button[data-dataset-activate='synthetic_erp']"},
         "wait:2",
-        "shot:switched-back"
+        "shot:switched-back",
+        {"click": "button[data-dataset-activate='wwi']"},
+        "wait:2"
       ]
     }
   ]
