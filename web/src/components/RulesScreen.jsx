@@ -1,16 +1,18 @@
 import { useState } from "react";
+import { useT } from "../i18n/index.js";
 import * as api from "../lib/api.js";
 import RuleForm from "./RuleForm.jsx";
 
 // Kural ekranı (R5-16/R5-18): kümenin kuralları, indeksin tazeliği ve formun kendisi. Liste
 // verisi üstten gelir; her kayıt, silme ve yeniden kurma sonrası üst aynı iki isteği yineler.
-const STALE_MESSAGE = "Kurallar değişti, indeks eski.";
+// Cümleler kataloğunda (R8-20); terimler, eş anlamlılar ve tablo adları veridir, çevrilmez.
 
 function items(value) {
   return (Array.isArray(value) ? value : []).map((item) => String(item ?? "").trim()).filter(Boolean);
 }
 
 export default function RulesScreen({ rules = [], index = null, tables = [], loading = false, error = "", onRefresh, readOnly = false }) {
+  const { t } = useT();
   const [draft, setDraft] = useState(null); // null: form kapalı | {} yeni kural | {rule}: düzenleme
   const [confirmId, setConfirmId] = useState(null);
   const [rebuilding, setRebuilding] = useState(false);
@@ -27,10 +29,10 @@ export default function RulesScreen({ rules = [], index = null, tables = [], loa
   const remove = async (id) => {
     try {
       await api.rulesRemove(id);
-      setNote(`“${id}” silindi.`);
+      setNote(t("rules.deleted", { id }));
       refresh();
     } catch (failure) {
-      setNote(failure?.message || "Kural silinemedi.");
+      setNote(failure?.message || t("rules.deleteFailed"));
     }
   };
 
@@ -39,10 +41,10 @@ export default function RulesScreen({ rules = [], index = null, tables = [], loa
     setNote("");
     try {
       await api.rebuild();
-      setNote("İndeks güncel.");
+      setNote(t("rules.rebuilt"));
       refresh();
     } catch (failure) {
-      setNote(failure?.message || "İndeks yeniden kurulamadı.");
+      setNote(failure?.message || t("rules.rebuildFailed"));
     } finally {
       setRebuilding(false);
     }
@@ -52,8 +54,8 @@ export default function RulesScreen({ rules = [], index = null, tables = [], loa
     <section id="rules-screen" className="screen rules-screen">
       <div className="rules-head">
         <div>
-          <h1 className="screen-title">İş kuralları</h1>
-          <p className="screen-lead">Kurallar, Bilgin'in bir soruda hangi terimi ne anladığını belirler.</p>
+          <h1 className="screen-title">{t("rules.title")}</h1>
+          <p className="screen-lead">{t("rules.lead")}</p>
         </div>
         {!readOnly && (
           <button
@@ -65,26 +67,26 @@ export default function RulesScreen({ rules = [], index = null, tables = [], loa
               setDraft({});
             }}
           >
-            Yeni kural
+            {t("rules.add")}
           </button>
         )}
       </div>
 
       {readOnly && (
         <p className="rules-readonly" id="rules-readonly-note">
-          İş kurallarını yalnız yönetici değiştirebilir.
+          {t("rules.readonly")}
         </p>
       )}
 
       {stale && (
         <div id="index-stale" className="rules-banner" role="status">
           <p className="rules-banner-text">
-            {STALE_MESSAGE}
+            {t("rules.stale")}
             {index.reason ? ` ${index.reason}` : ""}
           </p>
           {!readOnly && (
             <button type="button" id="index-rebuild" className="btn" onClick={rebuild} disabled={rebuilding}>
-              {rebuilding ? "kuruluyor…" : "İndeksi yeniden kur"}
+              {rebuilding ? t("rules.rebuilding") : t("rules.rebuild")}
             </button>
           )}
         </div>
@@ -98,12 +100,12 @@ export default function RulesScreen({ rules = [], index = null, tables = [], loa
           <table className="rules-table">
             <thead>
               <tr>
-                <th scope="col">Terim</th>
-                <th scope="col">Eş anlamlılar</th>
-                <th scope="col">Tablolar</th>
+                <th scope="col">{t("rules.col.term")}</th>
+                <th scope="col">{t("rules.col.synonyms")}</th>
+                <th scope="col">{t("rules.col.tables")}</th>
                 {!readOnly && (
                   <th scope="col" className="rules-col-actions">
-                    İşlem
+                    {t("rules.col.actions")}
                   </th>
                 )}
               </tr>
@@ -112,55 +114,63 @@ export default function RulesScreen({ rules = [], index = null, tables = [], loa
               {rows.length === 0 && (
                 <tr>
                   <td className="rules-empty" colSpan={readOnly ? 3 : 4}>
-                    {loading
-                      ? "Kurallar okunuyor…"
-                      : readOnly
-                        ? "Henüz kural yok."
-                        : "Henüz kural yok. “Yeni kural” ile ekleyin."}
+                    {loading ? t("rules.empty.loading") : readOnly ? t("rules.empty.none") : t("rules.empty.noneAdmin")}
                   </td>
                 </tr>
               )}
-              {rows.map((rule) => (
-                <tr key={rule.id}>
-                  <th scope="row" className="rules-term">
-                    <span className="rules-term-name">{String(rule.term ?? "").trim() || rule.id}</span>
-                    <span className="rules-id">{rule.id}</span>
-                  </th>
-                  <td className="rules-list">{items(rule.synonyms).join(", ") || "—"}</td>
-                  <td className="rules-list">{items(rule.tables).join(", ") || "—"}</td>
-                  {!readOnly && (
-                    <td className="rules-actions">
-                      {confirmId === rule.id ? (
-                        <span className="rules-confirm">
-                          Silinsin mi?
-                          <button type="button" className="btn btn-ghost" onClick={() => remove(rule.id)}>
-                            Evet
-                          </button>
-                          <button type="button" className="btn btn-ghost" onClick={() => setConfirmId(null)}>
-                            Vazgeç
-                          </button>
+              {rows.map((rule) => {
+                const synonyms = items(rule.synonyms);
+                const synonymsEn = items(rule.synonyms_en);
+                return (
+                  <tr key={rule.id}>
+                    <th scope="row" className="rules-term">
+                      <span className="rules-term-name">{String(rule.term ?? "").trim() || rule.id}</span>
+                      <span className="rules-id">{rule.id}</span>
+                    </th>
+                    <td className="rules-list">
+                      {synonyms.join(", ") || (synonymsEn.length ? "" : "—")}
+                      {synonymsEn.length > 0 && (
+                        <span className="rules-synonyms-en" lang="en">
+                          <span className="rules-synonyms-en-tag">EN</span>
+                          {synonymsEn.join(", ")}
                         </span>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            className="btn btn-ghost"
-                            onClick={() => {
-                              setNote("");
-                              setDraft({ rule });
-                            }}
-                          >
-                            Düzenle
-                          </button>
-                          <button type="button" className="btn btn-ghost" onClick={() => setConfirmId(rule.id)}>
-                            Sil
-                          </button>
-                        </>
                       )}
                     </td>
-                  )}
-                </tr>
-              ))}
+                    <td className="rules-list">{items(rule.tables).join(", ") || "—"}</td>
+                    {!readOnly && (
+                      <td className="rules-actions">
+                        {confirmId === rule.id ? (
+                          <span className="rules-confirm">
+                            {t("rules.confirmDelete")}
+                            <button type="button" className="btn btn-ghost" onClick={() => remove(rule.id)}>
+                              {t("rules.confirmYes")}
+                            </button>
+                            <button type="button" className="btn btn-ghost" onClick={() => setConfirmId(null)}>
+                              {t("rules.cancel")}
+                            </button>
+                          </span>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              onClick={() => {
+                                setNote("");
+                                setDraft({ rule });
+                              }}
+                            >
+                              {t("rules.edit")}
+                            </button>
+                            <button type="button" className="btn btn-ghost" onClick={() => setConfirmId(rule.id)}>
+                              {t("rules.delete")}
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -172,7 +182,7 @@ export default function RulesScreen({ rules = [], index = null, tables = [], loa
           tables={tables}
           onSaved={() => {
             setDraft(null);
-            setNote("Kural kaydedildi. İndeksi yeniden kurmayı unutmayın.");
+            setNote(t("rules.saved"));
             refresh();
           }}
           onCancel={() => setDraft(null)}
