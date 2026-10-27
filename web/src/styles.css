@@ -1072,15 +1072,26 @@ main {
     grid-area: health;
   }
 
-  /* ASSUMPTION: veritabanı noktası dar ekranda adını taşımıyor — iki durum sözcüğü üst satırın
-     payını çipin üstüne çıkarıyor ("Veritabanı" + "Bilinmiyor"), oysa çip hangi veritabanından
-     söz edildiğini söyleyen tek yer. Ton ve ipucu aynı şeyi söylüyor; ad geniş ekranda duruyor. */
+  /* ASSUMPTION: dar ekranda noktanın sözcüğü kısaltmasıyla okunur. Ad tümüyle gizlenmişti, ama
+     M25'in göstermek istediği durum o sözcüktü: 10px'lik bir halka modelin yeşil noktasının
+     yanında tek başına bir şey söylemiyor ve her telefon ekranı "○ ● Hazır" okunuyor — iki nokta,
+     tek sözcük (landing-empty-state-390.png, users-screen-390.png). Tam ad da satıra sığmıyor:
+     "Veritabanı" + "Bilinmiyor" üst satırın payını çipin üstüne çıkarıyor (yukarıdaki ölçümde
+     çibe 130 kalıyor). "DB" iki durumu ayırt edilebilir kılıp o payı çipe bırakıyor; tam ad ve
+     cümle aynı öğenin title'ında duruyor. */
   .db-status {
     grid-area: db;
   }
 
+  /* Kısa hâl aynı öğede yazılır: `DbStatus.jsx`'in sözcüğü sıfıra iner, ardına iki harf gelir.
+     Ölçü temelin (13px) aynısı — `.db-status` satırı tek satırda kalıyor (nowrap). */
   .db-status .db-label {
-    display: none;
+    font-size: 0;
+  }
+
+  .db-status .db-label::after {
+    content: "DB";
+    font-size: 13px;
   }
 
   /* Çipin tavanı sütunun payı: 10rem bırakılınca çip kendi adı kadar yer kapıyor (ölçüldü 116px),
