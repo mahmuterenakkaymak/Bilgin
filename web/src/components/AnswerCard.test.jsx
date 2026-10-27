@@ -159,7 +159,7 @@ describe("AnswerCard", () => {
 describe("ResultTable", () => {
   it("sayılar Türkçe ve sağ yaslı, metin sütun yaslanmaz", () => {
     const html = card(answered);
-    expect(html).toContain('<th scope="col" class="num">SATIS_MIKTARI</th>');
+    expect(html).toContain('<th scope="col" class="num">Satis miktari</th>');
     expect(html).toContain('<td class="num">2.480</td>');
     expect(html).toContain("<td>STK0012</td>");
     expect(html).toContain("<td>Siyah Çay 500 g</td>");
