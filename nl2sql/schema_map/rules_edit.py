@@ -18,7 +18,7 @@ from nl2sql.i18n import t
 from nl2sql.schema_map import doc
 
 _ID = re.compile(r"[a-z0-9_]+")
-_LIST_FIELDS = ("synonyms", "tables", "markers")
+_LIST_FIELDS = ("synonyms", "synonyms_en", "tables", "markers")
 
 
 def validate_rule(
@@ -68,8 +68,12 @@ def validate_rule(
 
 def normalize_rule(rule: dict) -> dict:
     """Kuralı kayıt biçimine indirger: metinler kırpılır, boş liste öğeleri düşer, eksik alanlar
-    sözleşme varsayılanlarıyla tamamlanır (sql_hint "", listeler [])."""
-    return {
+    sözleşme varsayılanlarıyla tamamlanır (sql_hint "", listeler []).
+
+    ASSUMPTION: `synonyms_en` (R8-13) yalnız doluysa yazılır - alanı taşımayan bir kural diskte
+    bugünkü sözlüğünün ta kendisi olarak kalır; okuyan taraf anahtarı bulamayınca [] sayıyor.
+    """
+    normalized = {
         "id": str(rule.get("id", "")).strip(),
         "term": str(rule.get("term", "")).strip(),
         "synonyms": _clean_list(rule.get("synonyms")),
@@ -78,6 +82,10 @@ def normalize_rule(rule: dict) -> dict:
         "tables": _clean_list(rule.get("tables")),
         "markers": _clean_list(rule.get("markers")),
     }
+    english = _clean_list(rule.get("synonyms_en"))
+    if english:
+        normalized["synonyms_en"] = english
+    return normalized
 
 
 def save_rules(rules: list[dict], path: str | Path = config.RULES_PATH) -> None:

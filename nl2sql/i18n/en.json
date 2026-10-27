@@ -115,6 +115,7 @@
   "rules.definition_empty": "The definition cannot be empty.",
   "rules.list": "{label} must be a list of texts.",
   "rules.label.synonyms": "Synonyms",
+  "rules.label.synonyms_en": "Synonyms (English)",
   "rules.label.tables": "Tables",
   "rules.label.markers": "Markers",
   "rules.unknown_table": "Table not in the schema: {table}.",

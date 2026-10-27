@@ -115,6 +115,7 @@
   "rules.definition_empty": "Tanım boş olamaz.",
   "rules.list": "{label} metinlerden oluşan bir liste olmalı.",
   "rules.label.synonyms": "Eş anlamlılar",
+  "rules.label.synonyms_en": "Eş anlamlılar (İngilizce)",
   "rules.label.tables": "Tablolar",
   "rules.label.markers": "İşaretçiler",
   "rules.unknown_table": "Şemada olmayan tablo: {table}.",

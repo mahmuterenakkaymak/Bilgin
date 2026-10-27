@@ -284,8 +284,8 @@ def _rules(entry: dict, declared: str) -> list[dict]:
                     "definition": _cell(cells, headers, fields["definition"]),
                     "sql_hint": _cell(cells, headers, fields["sql_hint"]),
                     "tables": _list(_cell(cells, headers, fields["tables"])),
-                    # ASSUMPTION: EŞ ANLAMLILAR (EN)/SYNONYMS (EN) hücresi kuralın `synonyms_en`
-                    # alanıdır (R8-13); sözleşme o alanı taşıyana kadar normalize edene girer.
+                    # EŞ ANLAMLILAR (EN)/SYNONYMS (EN) hücresi kuralın `synonyms_en` alanıdır (R8-13);
+                    # doluysa normalize edene girer, boşken diskte hiç görünmez.
                     "synonyms_en": _list(_cell(cells, headers, fields["synonyms_en"])),
                 }
             )

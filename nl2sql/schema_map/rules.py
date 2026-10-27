@@ -52,10 +52,15 @@ def rules_text(rules: list[dict]) -> str:
 
 
 def rule_text(rule: dict) -> str:
-    """One rule as a block: term, synonyms, definition, SQL hint, tables."""
+    """One rule as a block: term, synonyms in both languages, definition, SQL hint, tables.
+
+    `synonyms_en` is optional (R8-13): a rule that does not carry it renders as it always did.
+    """
     lines = [rule["term"]]
     if rule.get("synonyms"):
         lines.append("  Eş anlamlıları: " + ", ".join(rule["synonyms"]))
+    if rule.get("synonyms_en"):
+        lines.append("  Eş anlamlıları (İngilizce): " + ", ".join(rule["synonyms_en"]))
     if rule.get("definition"):
         lines.append("  Tanım: " + rule["definition"])
     if rule.get("sql_hint"):

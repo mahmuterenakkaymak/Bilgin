@@ -80,12 +80,19 @@ def synonym_query(query: str, rules: Iterable[dict]) -> str:
     "cirosu"nu da yakalar; dört katlanmış harften kısa ifadeler tam bir sözcük olmak zorundadır
     (`_said`). Sorguda zaten geçen eş anlamlı yeniden eklenmez: BM25 tekrar eden sorgu
     kelimesini iki kez sayar, yani terimin kendi ağırlığını şişirirdi.
+
+    İki dil tek liste gibi sayılır (R8-13): İngilizce sorulan bir soru `synonyms_en` üzerinden
+    tutuşur, eklenen kelimeler arasında Türkçe karşılıkları da gördüğü için doküman tarafına ulaşır.
     """
     asked = fold(query)
     words = tokens(query)
     extra: list[str] = []
     for rule in rules:
-        synonyms = [word for word in rule.get("synonyms") or [] if word]
+        synonyms = [
+            word
+            for word in [*(rule.get("synonyms") or []), *(rule.get("synonyms_en") or [])]
+            if word
+        ]
         phrases = [rule.get("term") or "", *synonyms]
         if any(_said(phrase, asked, words) for phrase in phrases if phrase):
             extra.extend(word for word in synonyms if not _said(word, asked, words))
