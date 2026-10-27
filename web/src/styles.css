@@ -2775,6 +2775,27 @@ main {
   font-size: 12px;
 }
 
+/* Kartı panodan çıkarmak kartı siler: "Yenile"nin yanında çerçeveli bir ikinci düğme olmaz — sessiz
+   bir yazı düğmesidir, yok etmenin ağırlığını hover'daki kırmızı taşır. */
+.start-card-unpin {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.start-card-unpin:hover:not(:disabled) {
+  color: var(--err-text);
+  text-decoration: underline;
+}
+
+.start-card-unpin:disabled {
+  cursor: default;
+}
+
 /* Yenilemenin reddi (429) ve açmanın cümlesi kartın altında okunur: ayrı bant değil, kartın kendi
    sözü — o yüzden uyarının tonu, hatanın zeminiyle çarpışmaz. */
 .start-card-note {

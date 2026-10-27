@@ -132,6 +132,31 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+// "Panodan çıkar" ekranın kapısından gerçek `api.unpinCard`ı çağırır (mockta o yoktur), o yüzden
+// ağ burada stub'lanır: çağrının DELETE ve kartın adresinde olduğu da böylece okunur.
+const FETCH = globalThis.fetch;
+
+function fetchResponse(status, body) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => (body === undefined ? "" : JSON.stringify(body)),
+  };
+}
+
+function stubFetch(result) {
+  const calls = [];
+  globalThis.fetch = vi.fn(async (path, init) => {
+    calls.push({ path, init });
+    return result;
+  });
+  return calls;
+}
+
+afterEach(() => {
+  globalThis.fetch = FETCH;
+});
+
 describe("StartCard", () => {
   it("kart kendi kimliği ve yüküyle boyanır: sayı büyük, etiket altında", () => {
     const html = cardMarkup(NUMBER);
@@ -184,6 +209,17 @@ describe("StartCard", () => {
 
     expect(cardMarkup(BROKEN)).not.toContain("data-card-reapprove");
     expect(cardMarkup(NUMBER, { isAdmin: true })).not.toContain("data-card-reapprove");
+  });
+
+  it("kişisel kartın \"Panodan çıkar\"ı vardır; rol kartının ve kişisel olmayan kartın yoktur", () => {
+    const personal = cardMarkup(TABLE);
+    expect(personal).toContain('class="start-card-unpin"');
+    expect(personal).toContain('data-card-unpin="13"');
+    expect(personal).toContain(">Panodan çıkar</button>");
+
+    expect(cardMarkup(NUMBER)).not.toContain("data-card-unpin");
+    expect(cardMarkup({ ...NUMBER, personal: undefined })).not.toContain("data-card-unpin");
+    expect(cardMarkup(BROKEN, { isAdmin: true })).not.toContain("data-card-unpin");
   });
 });
 
@@ -320,5 +356,36 @@ describe("StartScreen", () => {
     expect(failed).toEqual([1]);
     expect(app.querySelector("#start .start-card[data-card-id]")).toBeNull();
     expect(app.querySelector("#question")).not.toBeNull();
+  });
+
+  it("kişisel kartı panodan çıkarmak DELETE eder ve kartı yerinden düşürür", async () => {
+    api.start.mockResolvedValue({ cards: [NUMBER, TABLE] });
+    const calls = stubFetch(fetchResponse(200, { deleted: 13 }));
+    const app = await mount();
+    await settle();
+
+    await click(app.querySelector("button[data-card-unpin]"));
+    await settle();
+
+    expect(calls[0].path).toBe("/api/start/cards/13");
+    expect(calls[0].init.method).toBe("DELETE");
+    expect(Array.from(app.querySelectorAll(".start-card"), (node) => node.dataset.cardId)).toEqual(["11"]);
+    expect(api.start).toHaveBeenCalledTimes(1); // liste baştan okunmaz
+    expect(api.startOpen).not.toHaveBeenCalled(); // konuşma açılmaz
+    expect(window.location.hash).toBe("#/");
+  });
+
+  it("reddedilen çıkarma kartı yerinde bırakır ve cümlesi kartın altında okunur", async () => {
+    api.start.mockResolvedValue({ cards: [TABLE] });
+    stubFetch(fetchResponse(404, { detail: "Böyle bir kartın yok." }));
+    const app = await mount();
+    await settle();
+
+    await click(app.querySelector("button[data-card-unpin]"));
+    await settle();
+
+    expect(app.querySelector('.start-card[data-card-id="13"]')).not.toBeNull();
+    expect(app.querySelector(".start-card-note").textContent).toBe("Böyle bir kartın yok.");
+    expect(app.querySelector("button[data-card-unpin]").disabled).toBe(false);
   });
 });

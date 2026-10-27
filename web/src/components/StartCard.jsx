@@ -4,9 +4,10 @@ import { cardValueText, refreshedText } from "../lib/startCards.js";
 import ChartView from "./ChartView.jsx";
 
 // Panonun tek kartı (PLAN R7-21): başlık, yükü (sayı / küçük grafik / mini tablo), yenilenme
-// yazısı ve "Yenile". Karta tıklamak hazır soruyu yeni bir konuşma olarak açar; kartın kendi
-// düğmeleri tıklamayı yuttuğu için yenilemek konuşma açmaz. Yürütme hatası kartın kendi
-// cümlesidir ve err tokenlarıyla boyanır — yönetici orada soruyu soru kutusuna alabilir.
+// yazısı, "Yenile" ve kişisel kartın "Panodan çıkar"ı. Karta tıklamak hazır soruyu yeni bir
+// konuşma olarak açar; kartın kendi düğmeleri tıklamayı yuttuğu için yenilemek konuşma açmaz.
+// Yürütme hatası kartın kendi cümlesidir ve err tokenlarıyla boyanır — yönetici orada soruyu
+// soru kutusuna alabilir.
 
 // Mini tablo: kartın kutusu kadar. Satırlar sunucuda kesilir (CARD_TABLE_ROWS); burada hiçbir
 // sayı yeniden hesaplanmaz, sütun yalnız Türkçe okunur.
@@ -68,8 +69,8 @@ function CardLoad({ card }) {
   return <MiniTable columns={card.columns} rows={card.rows} />;
 }
 
-export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, onReapprove }) {
-  const [busy, setBusy] = useState(""); // "" | "open" | "refresh"
+export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, onReapprove, onUnpin }) {
+  const [busy, setBusy] = useState(""); // "" | "open" | "refresh" | "unpin"
   const [note, setNote] = useState("");
 
   const title = String(card?.title ?? "").trim() || String(card?.question ?? "").trim();
@@ -99,6 +100,20 @@ export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, on
       setNote(error?.message || "Kart yenilenemedi.");
     }
     setBusy("");
+  };
+
+  // Kişisel kartı panodan çıkarmak kartı listeden düşürür: başarılı çağrıda kart zaten gider,
+  // o yüzden meşgul durumu geri alınmaz. Reddin cümlesi (404/409) sunucunundur.
+  const unpin = async () => {
+    if (busy) return;
+    setBusy("unpin");
+    setNote("");
+    try {
+      await onUnpin?.(card);
+    } catch (error) {
+      setBusy("");
+      setNote(error?.message || "Kart panodan çıkarılamadı.");
+    }
   };
 
   const click = (event) => {
@@ -139,6 +154,17 @@ export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, on
         >
           {busy === "refresh" ? "Yenileniyor…" : "Yenile"}
         </button>
+        {card?.personal && (
+          <button
+            type="button"
+            className="start-card-unpin"
+            data-card-unpin={card?.id}
+            disabled={Boolean(busy)}
+            onClick={unpin}
+          >
+            {busy === "unpin" ? "Çıkarılıyor…" : "Panodan çıkar"}
+          </button>
+        )}
         {error && isAdmin && (
           <button
             type="button"

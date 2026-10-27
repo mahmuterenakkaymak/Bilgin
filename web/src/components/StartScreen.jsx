@@ -44,6 +44,13 @@ export default function StartScreen({
     setCards((list) => (Array.isArray(list) ? list.map((item) => (item?.id === card.id ? data.card : item)) : list));
   };
 
+  // "Panodan çıkar" yalnız kişinin kendi kartındadır: silme kabul edilirse kart listeden yerinde
+  // düşer — ekran baştan okunmaz ve hiçbir konuşma açılmaz.
+  const unpin = async (card) => {
+    await api.unpinCard(card.id);
+    setCards((list) => (Array.isArray(list) ? list.filter((item) => item?.id !== card.id) : list));
+  };
+
   // Açma sunucuda kayıtlı SQL'i yürütür ve turu yeni bir konuşmanın 1. turu yazar; adres o
   // konuşmayı okur, yani kartın cevabı akışın kendisinden gelir.
   const open = async (card) => {
@@ -72,6 +79,7 @@ export default function StartScreen({
             onOpen={open}
             onRefresh={refresh}
             onReapprove={onReapprove}
+            onUnpin={unpin}
           />
         ))}
       </div>
