@@ -8,6 +8,11 @@ import * as api from "../lib/api.js";
 const EMPTY = "Henüz konuşma yok.";
 const DELETE_QUESTION = "Konuşma silinsin mi?";
 
+// Tur sayısını iki satır da okur (KONUŞMALAR ve GEÇMİŞ): cümle burada, iki satır aynı kaynaktan yazar.
+export function turnLabel(turns) {
+  return `${turns} tur`;
+}
+
 function list(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -86,7 +91,7 @@ export default function ConversationList({ conversations = [], onRemoved }) {
               <button type="button" className="side-text" title={label} onClick={() => open(row.id)}>
                 {time && <span className="side-time">{time}</span>}
                 <span className="side-label">{label}</span>
-                <span className="side-count">{row.turns} tur</span>
+                <span className="side-count">{turnLabel(row.turns)}</span>
               </button>
               <button
                 type="button"

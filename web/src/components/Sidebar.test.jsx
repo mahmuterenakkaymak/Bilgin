@@ -178,6 +178,14 @@ describe("Sidebar", () => {
     expect(html.match(/marker-err/g)).toHaveLength(1);
   });
 
+  it("geçmişin tur sayısı KONUŞMALAR satırıyla aynı cümleyi yazar: '1 tur', 'tur 1' değil", () => {
+    const html = render({
+      history: [{ ...historyItem("u1", "answered", "İlk soru"), conversation_id: "kon-1", turn: 1 }],
+    });
+    expect(html).toContain('<span class="side-turn">1 tur</span>');
+    expect(html).not.toContain("tur 1");
+  });
+
   it("sadece boş sorular elenince iki boş cümle yine kurulur", () => {
     const html = render({
       history: [{ audit_id: "z1", question: "" }, { audit_id: "z2", question: "   ", status: "answered" }],

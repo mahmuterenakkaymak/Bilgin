@@ -144,3 +144,17 @@ describe("withFormatters veriyi değiştirmez", () => {
     expect(withFormatters(null)).toBeNull();
   });
 });
+
+describe("withFormatters başlığın okunuşu", () => {
+  it("zaten kelime olan alias başlıkta yeniden yazılmaz", () => {
+    const option = barOption();
+    option.bilgin.value_column = "CountryName";
+    expect(withFormatters(option).title.text).toBe("CountryName");
+  });
+
+  it("büyük harfli alias başlıkta kelimeye döner", () => {
+    const option = barOption();
+    option.bilgin.value_column = "SEHIR_SAYISI";
+    expect(withFormatters(option).title.text).toBe("Sehir sayisi");
+  });
+});

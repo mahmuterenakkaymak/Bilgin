@@ -11,7 +11,7 @@ export function withFormatters(option) {
   if (!option || typeof option !== "object") return option;
   // ASSUMPTION: `bilgin` yoksa biçim "number"dır; seçenek yine de Türkçe okunur.
   const format = FORMATS[option.bilgin?.value_format] ?? formatNumber;
-  const measure = measureName(option.bilgin?.value_column);
+  const measure = columnLabel(option.bilgin?.value_column);
   const next = { ...option };
   if (next.tooltip) next.tooltip = { ...next.tooltip, formatter: tooltipFormatter(format, next.tooltip.trigger) };
   for (const key of ["xAxis", "yAxis"]) {
@@ -34,9 +34,14 @@ function withNames(option, measure) {
   return next;
 }
 
-// ASSUMPTION: kolon adı ERP'den ASCII gelir; başlık ondan türetilir, Türkçesi uydurulmaz.
-function measureName(column) {
-  const words = String(column ?? "").split("_").filter(Boolean);
+// Kartın tek etiketi: grafik başlığı ile tablonun başlık satırı aynı okunuşu okur (M24 review 4).
+// ASSUMPTION: kolon adı ERP'den ASCII gelir; başlık ondan türetilir, Türkçesi uydurulmaz. Büyük
+// harfli alias kelimeye döner; içinde küçük harf taşıyan alias zaten elle yazılmış bir addır ve
+// olduğundan farklı yazılmaz. Panonun mini tablosu ile katlanmış konuşma tablosu bu görevin dışında.
+export function columnLabel(column) {
+  const name = String(column ?? "");
+  if (!name || /[a-zçğıöşü]/.test(name)) return name;
+  const words = name.split("_").filter(Boolean);
   if (!words.length) return "";
   const text = words.join(" ").toLowerCase();
   return text.charAt(0).toUpperCase() + text.slice(1);

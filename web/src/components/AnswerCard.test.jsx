@@ -339,3 +339,19 @@ describe("durum örnekleri", () => {
     }
   });
 });
+
+describe("kolon adının okunuşu", () => {
+  it("büyük harfli alias kelimeye döner, zaten kelime olanı olduğu gibi kalır", () => {
+    const html = render(
+      <ResultTable columns={["SEHIR_SAYISI", "CountryName"]} rows={[[12, 3]]} rowCount={1} truncated={false} />,
+    );
+    expect(html).toContain('<th scope="col" class="num">Sehir sayisi</th>');
+    expect(html).toContain('<th scope="col" class="num">CountryName</th>');
+  });
+
+  it("kartın başlık satırı grafik başlığıyla aynı adlandırma okunur", () => {
+    const html = card({ ...answered, columns: ["URUN_ID", "ADET"], rows: [["TR-01", 12], ["TR-06", 9]] });
+    expect(html).toContain('<th scope="col">Urun id</th>');
+    expect(html).toContain('<th scope="col" class="num">Adet</th>');
+  });
+});

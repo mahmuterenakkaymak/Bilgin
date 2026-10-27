@@ -1,3 +1,4 @@
+import { columnLabel } from "../lib/chartFormat.js";
 import { formatCell, formatNumber, isNumericColumn } from "../lib/format.js";
 
 // Sonuç tablosu: başlık yapışkan, sayı sütunları sağda ve Türkçe, boş hücre "–". Alt yazı yalnız
@@ -42,7 +43,7 @@ export default function ResultTable({ columns = [], rows = [], rowCount = 0, tru
             <tr>
               {names.map((name, index) => (
                 <th key={`${index}-${name}`} scope="col" className={numeric[index] ? "num" : undefined}>
-                  {name}
+                  {columnLabel(name)}
                 </th>
               ))}
             </tr>
