@@ -13,12 +13,13 @@ import io
 import openpyxl
 from openpyxl.styles import Font
 
+from nl2sql.i18n import t
+
 # Contracts "export file": BOM + ``;`` + satır sonu, ondalık virgül, binlik ayıracı yok, NULL boş.
 # BOM'nin kendisi U+FEFF: Excel UTF-8'i ancak onu görünce tanır, o yüzden kaynakta karakter taşımıyoruz.
 CSV_BOM = chr(0xFEFF)
 CSV_DELIMITER = ";"
 CSV_LINE_END = "\r\n"
-SHEET_NAME = "Sonuç"
 
 # İndirme başlığının uzantıya göre türü: tarayıcı dosyayı bunlarla tanır (R5-15 yolu).
 MEDIA_TYPES = {
@@ -39,11 +40,14 @@ def to_csv_bytes(columns: list[str], rows: list[tuple]) -> bytes:
     return (CSV_BOM + text.getvalue()).encode("utf-8")
 
 
-def to_xlsx_bytes(columns: list[str], rows: list[tuple]) -> bytes:
-    """Tek sayfalık kitap: başlık kalın, sayılar sayı hücresi, None boş hücre."""
+def to_xlsx_bytes(columns: list[str], rows: list[tuple], lang: str = "tr") -> bytes:
+    """Tek sayfalık kitap: başlık kalın, sayılar sayı hücresi, None boş hücre.
+
+    Kolon satırı SQL'in adlarıdır, çevrilmez; yalnız sayfanın adı ``lang``ın kataloğudur (R8-5).
+    """
     book = openpyxl.Workbook()
     sheet = book.active
-    sheet.title = SHEET_NAME
+    sheet.title = t("export.sheet", lang)
     sheet.append([str(name) for name in columns])
     for cell in sheet[1]:
         cell.font = _HEADER_FONT

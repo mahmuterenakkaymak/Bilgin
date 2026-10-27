@@ -76,5 +76,30 @@
 
   "ask.replay.note": "Opened from history: the stored query was run again, the model wrote no SQL.",
   "ask.replay.step": "The stored question ({audit_id}) was run again.",
-  "ask.chart_only.step": "The query of turn {n} was run again, the model wrote no SQL."
+  "ask.chart_only.step": "The query of turn {n} was run again, the model wrote no SQL.",
+
+  "app.blank_question": "The question is empty.",
+  "app.no_saved": "The saved question was not found.",
+  "app.no_ask": "This question has no record.",
+  "app.not_answered": "Only an answered question can be exported.",
+  "app.other_dataset": "This record belongs to another dataset.",
+  "app.no_rule": "Rule not found: {id}.",
+  "app.duplicate_rule": "A rule with this id already exists: {id}.",
+  "app.rebuild_failed": "The index could not be rebuilt: the embedding endpoint may not be answering.",
+  "app.no_ui": "The interface is not built",
+  "app.no_ui.intro": "The API is running; build the interface once to see it:",
+  "app.no_ui.health": "To read the status: ",
+
+  "export.sheet": "Results",
+
+  "rules.id_pattern": "The id may contain only lowercase letters, digits and underscores (e.g. net_satis).",
+  "rules.duplicate": "A rule with this id already exists: {id}.",
+  "rules.term_empty": "The term cannot be empty.",
+  "rules.definition_empty": "The definition cannot be empty.",
+  "rules.list": "{label} must be a list of texts.",
+  "rules.label.synonyms": "Synonyms",
+  "rules.label.tables": "Tables",
+  "rules.label.markers": "Markers",
+  "rules.unknown_table": "Table not in the schema: {table}.",
+  "rules.marker_uncompiled": "The marker does not compile (invalid regular expression): {marker}"
 }

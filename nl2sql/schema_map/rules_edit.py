@@ -14,17 +14,17 @@ import tempfile
 from pathlib import Path
 
 from nl2sql import config
+from nl2sql.i18n import t
 from nl2sql.schema_map import doc
 
 _ID = re.compile(r"[a-z0-9_]+")
 _LIST_FIELDS = ("synonyms", "tables", "markers")
-_LIST_LABELS = {"synonyms": "Eş anlamlılar", "tables": "Tablolar", "markers": "İşaretçiler"}
 
 
 def validate_rule(
-    rule: dict, schema: dict, rules: list[dict], editing_id: str | None = None
+    rule: dict, schema: dict, rules: list[dict], editing_id: str | None = None, lang: str = "tr"
 ) -> list[dict]:
-    """Bir kuralın kusurları: [{"field","message"}] Türkçe; temiz kuralla boş liste.
+    """Bir kuralın kusurları: ``[{"field","message"}]`` ``lang``da; temiz kuralla boş liste.
 
     editing_id düzenlenmekte olan kuralın kimliğidir: kendi kimliğiyle çakışması benzersizlik ihlali
     sayılmaz. Kimlik kalıbı, boş terim/tanım, liste olmayan ya da metin olmayan alanlar, şemada
@@ -33,16 +33,13 @@ def validate_rule(
     errors: list[dict] = []
     rid = str(rule.get("id", "")).strip()
     if not _ID.fullmatch(rid):
-        errors.append({
-            "field": "id",
-            "message": "Kimlik yalnız küçük harf, rakam ve alt çizgiden oluşmalı (ör. net_satis).",
-        })
+        errors.append({"field": "id", "message": t("rules.id_pattern", lang)})
     if (editing_id is None or rid != editing_id) and any(other.get("id") == rid for other in rules):
-        errors.append({"field": "id", "message": f"Bu kimlikte bir kural zaten var: {rid}."})
+        errors.append({"field": "id", "message": t("rules.duplicate", lang, id=rid)})
     if not str(rule.get("term", "")).strip():
-        errors.append({"field": "term", "message": "Terim boş olamaz."})
+        errors.append({"field": "term", "message": t("rules.term_empty", lang)})
     if not str(rule.get("definition", "")).strip():
-        errors.append({"field": "definition", "message": "Tanım boş olamaz."})
+        errors.append({"field": "definition", "message": t("rules.definition_empty", lang)})
 
     names = [table["name"] for table in schema["tables"]]
     for field in _LIST_FIELDS:
@@ -50,13 +47,13 @@ def validate_rule(
         if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
             errors.append({
                 "field": field,
-                "message": f"{_LIST_LABELS[field]} metinlerden oluşan bir liste olmalı.",
+                "message": t("rules.list", lang, label=t(f"rules.label.{field}", lang)),
             })
             continue
         if field == "tables":
             for table in value:
                 if table.strip() and doc.resolve_table(table, names) is None:
-                    errors.append({"field": "tables", "message": f"Şemada olmayan tablo: {table}."})
+                    errors.append({"field": "tables", "message": t("rules.unknown_table", lang, table=table)})
         elif field == "markers":
             for marker in value:
                 try:
@@ -64,7 +61,7 @@ def validate_rule(
                 except re.error:
                     errors.append({
                         "field": "markers",
-                        "message": f"İşaretçi derlenmiyor (geçersiz düzenli ifade): {marker}",
+                        "message": t("rules.marker_uncompiled", lang, marker=marker),
                     })
     return errors
 

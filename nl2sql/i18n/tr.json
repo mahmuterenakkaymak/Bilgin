@@ -76,5 +76,30 @@
 
   "ask.replay.note": "Geçmişten açıldı: kayıtlı SQL yeniden çalıştırıldı, model SQL yazmadı.",
   "ask.replay.step": "Geçmişteki soru ({audit_id}) yeniden çalıştırıldı.",
-  "ask.chart_only.step": "Tur {n} sorgusu yeniden çalıştırıldı, model SQL yazmadı."
+  "ask.chart_only.step": "Tur {n} sorgusu yeniden çalıştırıldı, model SQL yazmadı.",
+
+  "app.blank_question": "Soru boş.",
+  "app.no_saved": "Kayıtlı soru bulunamadı.",
+  "app.no_ask": "Bu sorunun kaydı bulunamadı.",
+  "app.not_answered": "Yalnızca cevaplanmış bir soru dışa aktarılabilir.",
+  "app.other_dataset": "Bu kayıt başka bir veri kümesine ait.",
+  "app.no_rule": "Kural bulunamadı: {id}.",
+  "app.duplicate_rule": "Bu kimlikte bir kural zaten var: {id}.",
+  "app.rebuild_failed": "İndeks yeniden kurulamadı: embedding uç noktası yanıt vermiyor olabilir.",
+  "app.no_ui": "Arayüz derlenmemiş",
+  "app.no_ui.intro": "API çalışıyor; ekranı görmek için arayüzü bir kez derleyin:",
+  "app.no_ui.health": "Durumu okumak için: ",
+
+  "export.sheet": "Sonuç",
+
+  "rules.id_pattern": "Kimlik yalnız küçük harf, rakam ve alt çizgiden oluşmalı (ör. net_satis).",
+  "rules.duplicate": "Bu kimlikte bir kural zaten var: {id}.",
+  "rules.term_empty": "Terim boş olamaz.",
+  "rules.definition_empty": "Tanım boş olamaz.",
+  "rules.list": "{label} metinlerden oluşan bir liste olmalı.",
+  "rules.label.synonyms": "Eş anlamlılar",
+  "rules.label.tables": "Tablolar",
+  "rules.label.markers": "İşaretçiler",
+  "rules.unknown_table": "Şemada olmayan tablo: {table}.",
+  "rules.marker_uncompiled": "İşaretçi derlenmiyor (geçersiz düzenli ifade): {marker}"
 }

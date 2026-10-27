@@ -12,6 +12,7 @@ import json
 import threading
 import time
 from pathlib import Path
+from string import Template
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -29,6 +30,7 @@ from nl2sql.engine.connections import ConnectionStore
 from nl2sql.engine.dbstatus import looks_like_connection_error
 from nl2sql.engine.result import Budget
 from nl2sql.eval import runner
+from nl2sql.i18n import t
 from nl2sql.index.search import load_search
 from nl2sql.index.store import META_FILE, MissingIndexError, StaleIndexError, content_hash
 from nl2sql.report.export import MEDIA_TYPES, to_csv_bytes, to_xlsx_bytes
@@ -50,59 +52,64 @@ from nl2sql.web.saved import ALL as SAVED_ALL, SavedStore
 from nl2sql.web.start_api import SessionExecutor
 from nl2sql.web.start_api import create_router as create_start_router
 
-# R5-15: boş soru koşum açmaya değmez; cümle ekranın gösterdiği cümledir.
-BLANK_QUESTION = "Soru boş."
-# R5-16: silinmek istenen kayıt zaten yoksa ekranın okuyacağı cümle.
-NO_SAVED = "Kayıtlı soru bulunamadı."
-# R5-16: dışa aktarımın red cümleleri; 404 bilinmeyen soru, 409 dışa aktarılacak cevap değil.
-NO_ASK = "Bu sorunun kaydı bulunamadı."
-NOT_ANSWERED = "Yalnızca cevaplanmış bir soru dışa aktarılabilir."
-OTHER_DATASET = "Bu kayıt başka bir veri kümesine ait."
-# R5-16: kural API'sinin red cümleleri; 404 bilinmeyen kural, 409 çakışan kimlik, 500 kurulamayan indeks.
-NO_RULE = "Kural bulunamadı: {id}."
-DUPLICATE_RULE = "Bu kimlikte bir kural zaten var: {id}."
-REBUILD_FAILED = "İndeks yeniden kurulamadı: embedding uç noktası yanıt vermiyor olabilir."
-NO_UI = "Arayüz derlenmemiş"
+# R8-5: red cümlelerinin hepsi kataloğun ``app.*`` satırıdır ve her yol onu isteğin diliyle okur.
+# ASSUMPTION: adlardan duran üçü (R5-15, R5-16) testlerin ve smoke betiğinin importıdır; anahtarı
+# değil program dilinin metnini taşırlar - çağıran onları cevap gövdesiyle kıyaslıyor.
+NO_SAVED = t("app.no_saved")
+NO_ASK = t("app.no_ask")
+NO_UI = t("app.no_ui")
 BUILD_COMMAND = "npm --prefix web run build"
 # R7-25: kırmızı çipin yöneticiyi götürdüğü yer, yani bağlantıların düzenlendiği ekran (R7-27).
 CONNECTIONS_URL = "#/baglantilar"
 
-# Arayüzün yerine geçen sayfa: R5-18'in renkleri, tek kart, tek cümle ve tek komut.
-NO_UI_PAGE = f"""<!doctype html>
-<html lang="tr">
+# Arayüzün yerine geçen sayfa: R5-18'in renkleri, tek kart, tek cümle ve tek komut. Kalıbın kendi
+# çevrilecek bir sözü taşımaz - cümleler ``no_ui_page``de katalogdan gelir.
+NO_UI_PAGE = Template("""<!doctype html>
+<html lang="$lang">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bilgin</title>
 <style>
-  :root {{ color-scheme: light dark; --bg: #F6F5F1; --surface: #FFFFFF; --text: #1D1D1B;
-           --muted: #6A6963; --line: #E3E1DA; --accent: #1F5FAD; }}
-  @media (prefers-color-scheme: dark) {{ :root {{ --bg: #141413; --surface: #1D1D1B;
-           --text: #F6F5F1; --muted: #9A9891; --line: #33322E; --accent: #7FAEE8; }} }}
-  body {{ margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg);
-          color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }}
-  main {{ width: min(560px, calc(100% - 48px)); background: var(--surface); border: 1px solid var(--line);
-          border-radius: 10px; padding: 32px; }}
-  .mark {{ margin: 0 0 16px; color: var(--accent); font-weight: 650; letter-spacing: 0.02em; }}
-  h1 {{ margin: 0 0 8px; font-size: 22px; }}
-  p {{ margin: 0 0 16px; color: var(--muted); }}
-  code, pre {{ font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }}
-  code {{ background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }}
-  pre {{ margin: 0; padding: 12px; background: var(--bg); border: 1px solid var(--line);
-         border-radius: 10px; overflow-x: auto; }}
+  :root { color-scheme: light dark; --bg: #F6F5F1; --surface: #FFFFFF; --text: #1D1D1B;
+           --muted: #6A6963; --line: #E3E1DA; --accent: #1F5FAD; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #141413; --surface: #1D1D1B;
+           --text: #F6F5F1; --muted: #9A9891; --line: #33322E; --accent: #7FAEE8; } }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg);
+          color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { width: min(560px, calc(100% - 48px)); background: var(--surface); border: 1px solid var(--line);
+          border-radius: 10px; padding: 32px; }
+  .mark { margin: 0 0 16px; color: var(--accent); font-weight: 650; letter-spacing: 0.02em; }
+  h1 { margin: 0 0 8px; font-size: 22px; }
+  p { margin: 0 0 16px; color: var(--muted); }
+  code, pre { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+  code { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  pre { margin: 0; padding: 12px; background: var(--bg); border: 1px solid var(--line);
+         border-radius: 10px; overflow-x: auto; }
 </style>
 </head>
 <body>
 <main>
   <p class="mark">Bilgin</p>
-  <h1>{NO_UI}</h1>
-  <p>API çalışıyor; ekranı görmek için arayüzü bir kez derleyin:</p>
-  <pre>{BUILD_COMMAND}</pre>
-  <p>Durumu okumak için: <code>GET /api/health</code></p>
+  <h1>$heading</h1>
+  <p>$intro</p>
+  <pre>$command</pre>
+  <p>$health<code>GET /api/health</code></p>
 </main>
 </body>
 </html>
-"""
+""")
+
+
+def no_ui_page(lang: str) -> str:
+    """Arayüzü bekleyen adrese isteğin dilinin cümleleriyle açılan sayfa (R8-5)."""
+    return NO_UI_PAGE.substitute(
+        lang=lang,
+        heading=t("app.no_ui", lang),
+        intro=t("app.no_ui.intro", lang),
+        health=t("app.no_ui.health", lang),
+        command=BUILD_COMMAND,
+    )
 
 
 class AskBody(BaseModel):
@@ -228,12 +235,12 @@ def create_app(
         turudur: ``conversation_id`` yoksa konuşmayı o soru açar, varsa sıradaki tur arızanın
         cümlesiyle yazılır - yani ekranın adresi yokluktan doğar, numara boşluksuz sürer.
         """
-        question = body.question.strip()
-        if not question:
-            raise HTTPException(status_code=400, detail=BLANK_QUESTION)
         # R8-5: arayüz dili kişinin tercihinden, yoksa tarayıcının başlığından; cevabın dili
         # oradan sorulur (R8-6), yani İngilizce ekran Türkçe bir soruyu Türkçe yanıtlar.
         lang = request_lang(request, current_user(request))
+        question = body.question.strip()
+        if not question:
+            raise HTTPException(status_code=400, detail=t("app.blank_question", lang))
         status = getattr(request.app.state, "dbstatus", None)
         try:
             if status is not None and status.state(_dataset_name(request))["state"] == "down":
@@ -265,7 +272,7 @@ def create_app(
         payload = replay_payload(_session(request), audit_id, source="web", username=_asker(request),
                                  scope=_scope(request, asklog._ALL))
         if (payload["error"] or {}).get("kind") == "not_found":
-            raise HTTPException(status_code=404, detail=NO_ASK)
+            raise HTTPException(status_code=404, detail=t("app.no_ask", _lang(request)))
         return payload
 
     @guarded("GET", "/api/health")
@@ -316,21 +323,24 @@ def create_app(
     def rules_add(rule: dict, request: Request) -> dict:
         """Yeni kural: çakışan kimlik 409, doğrulama hatası 422, sonra disk ve oturum tazelenir."""
         session = _session(request)
+        lang = _lang(request)
         rid = str(rule.get("id", "")).strip()
         if any(existing.get("id") == rid for existing in session.rules):
             raise HTTPException(
-                status_code=409, detail=[{"field": "id", "message": DUPLICATE_RULE.format(id=rid)}]
+                status_code=409,
+                detail=[{"field": "id", "message": t("app.duplicate_rule", lang, id=rid)}],
             )
-        _check_rule(session, rule)
+        _check_rule(session, rule, lang)
         return _write_rules(session, session.rules + [normalize_rule(rule)])
 
     @guarded("PUT", "/api/rules/{rule_id}")
     def rules_update(rule_id: str, rule: dict, request: Request) -> dict:
         """Kimliğiyle bulunan kuralı gövdeyle değiştirir; olmayan kimlik 404 (R5-16)."""
         session = _session(request)
-        _find_rule(session, rule_id)
+        lang = _lang(request)
+        _find_rule(session, rule_id, lang)
         rule = {**rule, "id": rule_id}
-        _check_rule(session, rule, editing_id=rule_id)
+        _check_rule(session, rule, editing_id=rule_id, lang=lang)
         return _write_rules(session, [
             normalize_rule(rule) if existing.get("id") == rule_id else existing
             for existing in session.rules
@@ -340,7 +350,7 @@ def create_app(
     def rules_delete(rule_id: str, request: Request) -> dict:
         """Kuralı hem diskten hem oturumdan çıkarır; olmayan kimlik 404 (R5-16)."""
         session = _session(request)
-        _find_rule(session, rule_id)
+        _find_rule(session, rule_id, _lang(request))
         return _write_rules(session, [r for r in session.rules if r.get("id") != rule_id])
 
     @guarded("POST", "/api/index/rebuild")
@@ -364,7 +374,7 @@ def create_app(
             dataset=ds.name if ds else None,
         )
         if code != 0:
-            raise HTTPException(status_code=500, detail=REBUILD_FAILED)
+            raise HTTPException(status_code=500, detail=t("app.rebuild_failed", _lang(request)))
         return {
             "index": _index_block(session),
             "counts": _index_counts(session),
@@ -381,7 +391,7 @@ def create_app(
         """Soruyu kenar çubuğuna eklemek: saklanan cevabı değil, sorunun metni ve SQL'i."""
         question = body.question.strip()
         if not question:
-            raise HTTPException(status_code=400, detail=BLANK_QUESTION)
+            raise HTTPException(status_code=400, detail=t("app.blank_question", _lang(request)))
         # ASSUMPTION: POST tek kaydın kendisini döndürür; ekran istersen listeyi yeniden çeker.
         return {
             "saved": saved.add(
@@ -394,7 +404,7 @@ def create_app(
     def saved_delete(id: int, request: Request) -> dict:
         """Kaydı kenar çubuğundan çıkarır; olmayan ya da başkasının kaydının silinecek bir şeyi yok (404)."""
         if not saved.delete(id, username=_scope(request, SAVED_ALL)):
-            raise HTTPException(status_code=404, detail=NO_SAVED)
+            raise HTTPException(status_code=404, detail=t("app.no_saved", _lang(request)))
         return {"deleted": id}
 
     @guarded("GET", "/api/history")
@@ -419,32 +429,34 @@ def create_app(
     def export_csv(audit_id: str, request: Request) -> Response:
         """Cevabın tamamı CSV: ``bilgin_<id>.csv`` adı ile iner (R5-16)."""
         return _export(
-            _session(request), _dataset_name(request), audit_id, "csv", _scope(request, asklog._ALL)
+            _session(request), _dataset_name(request), audit_id, "csv",
+            _scope(request, asklog._ALL), _lang(request),
         )
 
     @guarded("GET", "/api/export/{audit_id}.xlsx")
     def export_xlsx(audit_id: str, request: Request) -> Response:
         """Cevabın tamamı Excel: sayı hücreleri sayı olarak kalır (R5-16)."""
         return _export(
-            _session(request), _dataset_name(request), audit_id, "xlsx", _scope(request, asklog._ALL)
+            _session(request), _dataset_name(request), audit_id, "xlsx",
+            _scope(request, asklog._ALL), _lang(request),
         )
 
     assets = static / "assets"
     if assets.is_dir():
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
-    def page() -> Response:
+    def page(request: Request) -> Response:
         """Derlenmiş arayüz varsa o, yoksa neyin eksik olduğunu söyleyen sayfa (200)."""
         built = static / "index.html"
         if built.is_file():
             # The page names the hashed bundle; a cached copy keeps loading the old one after a rebuild
             # (2026-10-25). The hashed /assets files themselves can stay cached.
             return FileResponse(built, media_type="text/html", headers={"Cache-Control": "no-cache"})
-        return HTMLResponse(NO_UI_PAGE)
+        return HTMLResponse(no_ui_page(_lang(request)))
 
     @guarded("GET", "/", response_class=HTMLResponse)
-    def index() -> Response:
-        return page()
+    def index(request: Request) -> Response:
+        return page(request)
 
     # ASSUMPTION: fallback tek bir yol değil, ROUTE_ROLES'ta satırı yok - sayfa publictir, kapı
     # yalnız /api altında kendiliğinden kurulur (M19 matris testi bu yolu public saymalı).
@@ -462,7 +474,7 @@ def create_app(
             raise HTTPException(status_code=404)
         if head == "assets":
             raise HTTPException(status_code=404)
-        return page()
+        return page(request)
 
     return app
 
@@ -496,6 +508,11 @@ def _session(request: Request):
     geçişin kendisi de yalnız alanı değiştirir, hiçbir yol yeniden kurulmaz.
     """
     return request.app.state.session
+
+
+def _lang(request: Request) -> str:
+    """Yolun arayüz dili: kişinin tercihi, yoksa tarayıcının başlığı, o da yoksa programın dili (R8-5)."""
+    return request_lang(request, current_user(request))
 
 
 def _dataset_name(request: Request) -> str:
@@ -536,7 +553,7 @@ def _kick_on_connection_error(status, payload: dict) -> None:
         status.kick()
 
 
-def _export(session, dataset: str, audit_id: str, ext: str, username) -> Response:
+def _export(session, dataset: str, audit_id: str, ext: str, username, lang: str) -> Response:
     """Günlükteki SQL'i dışa aktarım bütçesiyle bir kez daha koşar ve dosyayı hazırlar (R5-16).
 
     Satırlar yürütücünün döndürdükleridir: PII maskesi bu yürüyüşte de üstlerinden geçer, yani
@@ -545,16 +562,19 @@ def _export(session, dataset: str, audit_id: str, ext: str, username) -> Respons
 
     ``username`` arayanın süzgecidir (R6-9): başkasının kaydı bu arama için yoktur, yani indirme
     bilinmeyen bir kaydınkiyle aynı cümleyi alır - 404, 403 değil.
+
+    ``lang`` dosyanın dili değil red cümlelerinin ve Excel sayfasının adıdır (R8-5): kolon satırı
+    SQL'in adları olarak kalır.
     """
     record = asklog.find_ask(audit_id, session.ask_log, username=username)
     if record is None:
-        raise HTTPException(status_code=404, detail=NO_ASK)
+        raise HTTPException(status_code=404, detail=t("app.no_ask", lang))
     if record.get("status") != "answered":
-        raise HTTPException(status_code=409, detail=NOT_ANSWERED)
+        raise HTTPException(status_code=409, detail=t("app.not_answered", lang))
     # ASSUMPTION: günlüğü yazan oturum küme adı taşımıyorsa ölçülen config'in kümesidir, yani
     # adsız ``serve`` kendi indirmesini reddetmez.
     if record.get("dataset") not in (None, dataset):
-        raise HTTPException(status_code=409, detail=OTHER_DATASET)
+        raise HTTPException(status_code=409, detail=t("app.other_dataset", lang))
     # Tavan da dışa aktarım bütçesidir: TOP_N'de kalan bir TOP, bütçe geniş olsa bile 1000 satır
     # döndürür ve `truncated` False kalırdı - dosya eksik, uyarısız (R5-16).
     result = session.executor.execute(
@@ -566,9 +586,13 @@ def _export(session, dataset: str, audit_id: str, ext: str, username) -> Respons
     if result.error is not None:
         # ASSUMPTION: yeniden koşumun reddi bir çelişkidir; sebebi ekran okusun diye ayrıntıdadır.
         raise HTTPException(status_code=409, detail=result.error.message)
-    render = to_csv_bytes if ext == "csv" else to_xlsx_bytes
+    body = (
+        to_csv_bytes(result.columns, result.rows)
+        if ext == "csv"
+        else to_xlsx_bytes(result.columns, result.rows, lang)
+    )
     return Response(
-        content=render(result.columns, result.rows),
+        content=body,
         media_type=MEDIA_TYPES[ext],
         headers={"Content-Disposition": f'attachment; filename="bilgin_{audit_id}.{ext}"'},
     )
@@ -636,17 +660,17 @@ def _rules_path(session) -> Path:
     return session.dataset.rules_path if session.dataset else config.RULES_PATH
 
 
-def _find_rule(session, rule_id: str) -> dict:
+def _find_rule(session, rule_id: str, lang: str) -> dict:
     """Kimliğiyle kuralı bulur; yoksa ekranın okuyacağı 404 (R5-16)."""
     for rule in session.rules:
         if rule.get("id") == rule_id:
             return rule
-    raise HTTPException(status_code=404, detail=NO_RULE.format(id=rule_id))
+    raise HTTPException(status_code=404, detail=t("app.no_rule", lang, id=rule_id))
 
 
-def _check_rule(session, rule: dict, editing_id: str | None = None) -> None:
+def _check_rule(session, rule: dict, lang: str, editing_id: str | None = None) -> None:
     """Doğrulama hataları 422 olarak alanların hepsiyle birlikte yükselir (R5-16)."""
-    errors = validate_rule(rule, session.schema, session.rules, editing_id=editing_id)
+    errors = validate_rule(rule, session.schema, session.rules, editing_id=editing_id, lang=lang)
     if errors:
         raise RuleRejected(errors)
 
