@@ -126,6 +126,31 @@
   "datasets.index_unreadable": "Kümenin şeması okunamadığı için indeksi denetlenemedi.",
   "datasets.login_notice": "Bu küme SQL Server'a bağlı: salt okunur girişi kurun ve sunucuyu {env} ile başlatın.",
 
+  "conn.no_server": "Sunucu adı boş olamaz.",
+  "conn.no_database": "Veritabanı adı boş olamaz.",
+  "conn.bad_auth": "Kimlik doğrulama sql ya da windows olmalı.",
+  "conn.no_username": "SQL kimliği için kullanıcı adı zorunlu.",
+  "conn.no_password": "Parola zorunlu: bu bağlantı için henüz parola saklanmadı.",
+  "conn.bad_port": "Geçersiz port: 1-65535 arası bir sayı olmalı.",
+  "conn.env_source": "Bu bağlantı ortam değişkeninden geliyor; ekrandan değiştirilemez.",
+  "conn.dpapi_off": "Bu sunucuda parola saklanamaz; ortam değişkenini kullanın.",
+  "conn.guard_refused": "Bu giriş salt okunur değil; bağlantı kaydedilmedi.",
+  "conn.not_mssql": "Bu veri kümesi SQL Server'a bağlı değil; girilecek bir bağlantısı yok.",
+
+  "guard.power": "Bu giriş yazabiliyor ya da yönetebiliyor; salt okunur bir giriş kullanın.",
+  "guard.connect": "Bağlantı kurulamadı; sunucu, veritabanı ve giriş bilgilerini denetleyin.",
+  "guard.sysadmin": "Bu giriş bir sunucu yöneticisi (sysadmin) değil.",
+  "guard.db_owner": "Bu giriş veritabanı sahibi (db_owner) değil.",
+  "guard.permission": "Bu girişin {permission} yetkisi yok.",
+  "guard.table_ok": "{name} bu girişle okunabiliyor.",
+  "guard.table_unreadable": "{name} bu girişle okunamıyor: tablo yok ya da SELECT yetkisi yok.",
+
+  "dpapi.protect_failed": "Bu sunucuda sır şifrelenemedi",
+  "dpapi.unprotect_failed": "Bağlantı sırrı çözülemedi",
+  "dpapi.windows_only": "DPAPI yalnız Windows'ta vardır.",
+
+  "db.down": "Veritabanına bağlanılamıyor, yöneticinize haber verin.",
+
   "map.not_xlsx": "Yalnız .xlsx dosyası yüklenebilir.",
   "map.unreadable": "Dosya okunamadı; Excel'in .xlsx biçiminde olduğundan emin olun.",
   "map.too_large": "Dosya çok büyük; en fazla {mb} MB yüklenebilir.",

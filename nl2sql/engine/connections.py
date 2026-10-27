@@ -28,6 +28,7 @@ from pathlib import Path
 from nl2sql import config
 from nl2sql.engine import dpapi
 from nl2sql.engine._mssql import CONN_ENV
+from nl2sql.i18n import t
 
 AUTHS = ("sql", "windows")
 
@@ -41,12 +42,15 @@ OPTION_DEFAULTS = {"encrypt": True, "trust_server_certificate": True, "port": No
 # well-formed string and the driver's own "not installed" sentence instead of a broken one.
 FALLBACK_DRIVER = "SQL Server"
 
-NO_SERVER_MESSAGE = "Sunucu adı boş olamaz."
-NO_DATABASE_MESSAGE = "Veritabanı adı boş olamaz."
-BAD_AUTH_MESSAGE = "Kimlik doğrulama sql ya da windows olmalı."
-NO_USERNAME_MESSAGE = "SQL kimliği için kullanıcı adı zorunlu."
-NO_PASSWORD_MESSAGE = "Parola zorunlu: bu bağlantı için henüz parola saklanmadı."
-BAD_PORT_MESSAGE = "Geçersiz port: 1-65535 arası bir sayı olmalı."
+# The form's refusals are catalog lines (R8-5): the route reads them in the language of the request,
+# ``ConnError`` carries their key. These six names are imported by tests older than the catalogs, so
+# each holds the program language's own sentence.
+NO_SERVER_MESSAGE = t("conn.no_server")
+NO_DATABASE_MESSAGE = t("conn.no_database")
+BAD_AUTH_MESSAGE = t("conn.bad_auth")
+NO_USERNAME_MESSAGE = t("conn.no_username")
+NO_PASSWORD_MESSAGE = t("conn.no_password")
+BAD_PORT_MESSAGE = t("conn.bad_port")
 
 _CREATE = """
 CREATE TABLE IF NOT EXISTS connections (
@@ -100,12 +104,21 @@ _SECRET_RE = re.compile(r"(?i)\b(pwd|password)\s*=\s*[^;]*")
 
 
 class ConnError(Exception):
-    """Refusal of a connection operation: carries the message and the HTTP status (R6-3's shape)."""
+    """Refusal of a connection operation: catalog key, its parameters and the HTTP status (R6-3).
 
-    def __init__(self, message: str, status: int) -> None:
-        super().__init__(message)
-        self.message = message
+    ``message`` is the sentence the callers older than the catalogs read, and it is always Turkish;
+    an HTTP route builds the sentence itself from the key in the language of the request (R8-5).
+    """
+
+    def __init__(self, key: str, status: int, **params) -> None:
+        super().__init__(t(key, config.DEFAULT_LANG, **params))
+        self.key = key
+        self.params = params
         self.status = status
+
+    @property
+    def message(self) -> str:
+        return t(self.key, config.DEFAULT_LANG, **self.params)
 
 
 class ConnectionStore:
@@ -135,16 +148,16 @@ class ConnectionStore:
         login = str(data.get("username") or "").strip()
         options = _options(data.get("options"))
         if not server:
-            raise ConnError(NO_SERVER_MESSAGE, 422)
+            raise ConnError("conn.no_server", 422)
         if not database:
-            raise ConnError(NO_DATABASE_MESSAGE, 422)
+            raise ConnError("conn.no_database", 422)
         if auth not in AUTHS:
-            raise ConnError(BAD_AUTH_MESSAGE, 422)
+            raise ConnError("conn.bad_auth", 422)
         if auth == "sql" and not login:
-            raise ConnError(NO_USERNAME_MESSAGE, 422)
+            raise ConnError("conn.no_username", 422)
         secret = str(password) if password else ""
         if auth == "sql" and not secret and self._blob(dataset) is None:
-            raise ConnError(NO_PASSWORD_MESSAGE, 422)
+            raise ConnError("conn.no_password", 422)
         # Windows auth has no password of its own: the service account connects, so a typed
         # value is dropped rather than stored for a string that will never use it.
         blob = dpapi.protect(secret.encode("utf-8"), dpapi.entropy_for(dataset)) if secret and auth == "sql" else None
@@ -326,9 +339,9 @@ def _port(value: object) -> int | None:
     try:
         number = int(value)
     except (TypeError, ValueError):
-        raise ConnError(BAD_PORT_MESSAGE, 422) from None
+        raise ConnError("conn.bad_port", 422) from None
     if not 1 <= number <= 65535:
-        raise ConnError(BAD_PORT_MESSAGE, 422)
+        raise ConnError("conn.bad_port", 422)
     return number
 
 

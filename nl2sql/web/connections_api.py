@@ -21,14 +21,17 @@ from nl2sql import datasets
 from nl2sql.app.session import SessionError, open_session
 from nl2sql.engine import connections, dpapi, guard
 from nl2sql.engine.connections import ConnError
+from nl2sql.i18n import t
 from nl2sql.schema_map import doc
 from nl2sql.web.authz import current_user, require
+from nl2sql.web.lang import request_lang
 
-# Red cümleleri (PLAN R7-22, R7-23): ekranın gösterdikleri, sözleşmenin kendileri.
-ENV_SOURCE = "Bu bağlantı ortam değişkeninden geliyor; ekrandan değiştirilemez."
-DPAPI_OFF = "Bu sunucuda parola saklanamaz; ortam değişkenini kullanın."
-GUARD_REFUSED = "Bu giriş salt okunur değil; bağlantı kaydedilmedi."
-NOT_MSSQL = "Bu veri kümesi SQL Server'a bağlı değil; girilecek bir bağlantısı yok."
+# Red cümleleri (PLAN R7-22, R7-23): ekranın gösterdikleri, sözleşmenin kendileri. R8-5: yollar
+# bunları isteğin dilinde kataloğun anahtarlarıyla kurar; şu üç ad başka testlerin importıdır, o
+# yüzden anahtarları değil program dilinin cümlesini taşırlar.
+ENV_SOURCE = t("conn.env_source")
+GUARD_REFUSED = t("conn.guard_refused")
+NOT_MSSQL = t("conn.not_mssql")
 # R7-24: reddin gösterdiği yer kümenin kendi üretilmiş salt okunur giriş betiğidir (R6-18 yolu).
 LOGIN_SCRIPT_URL = "/api/datasets/{name}/login-script.sql"
 
@@ -58,7 +61,7 @@ def create_router() -> APIRouter:
     @router.get("/api/connections/{dataset}", dependencies=admin)
     def connection_get(dataset: str, request: Request) -> dict:
         """Formun açılacağı satır: Contracts "connection (public)"."""
-        ds = _mssql_dataset(dataset)
+        ds = _mssql_dataset(dataset, _lang(request))
         return _row(request, ds.name, _active_name(request))
 
     @router.put("/api/connections/{dataset}", dependencies=admin)
@@ -68,25 +71,31 @@ def create_router() -> APIRouter:
         Etkin kümenin oturumu yeniden kurulur - bağlantıyı yürütücü taşıyor, yani tek atama
         (R6-10) - ve durum yoklaması bekletilmez: nokta bir sonraki turda yeniden sorulur.
         """
-        ds = _mssql_dataset(dataset)
+        lang = _lang(request)
+        ds = _mssql_dataset(dataset, lang)
         active = _active_name(request)
         data = body or {}
         # Boş bir sunucuya bağlanmayı denemenin anlamı yok; cümleler de deponun kendi cümleleri.
         if not str(data.get("server") or "").strip():
-            raise HTTPException(status_code=422, detail=connections.NO_SERVER_MESSAGE)
+            raise HTTPException(status_code=422, detail=t("conn.no_server", lang))
         if not str(data.get("database") or "").strip():
-            raise HTTPException(status_code=422, detail=connections.NO_DATABASE_MESSAGE)
-        _refuse_env(request, ds.name, active)
+            raise HTTPException(status_code=422, detail=t("conn.no_database", lang))
+        _refuse_env(request, ds.name, active, lang)
         if str(data.get("password") or "") and not dpapi.available():
-            raise HTTPException(status_code=409, detail=DPAPI_OFF)
-        report = _report(request, ds, data)
+            raise HTTPException(status_code=409, detail=t("conn.dpapi_off", lang))
+        report = _report(request, ds, data, lang)
         if not report["ok"]:
-            return JSONResponse(status_code=409, content={"detail": GUARD_REFUSED, "guard": report})
+            return JSONResponse(
+                status_code=409,
+                content={"detail": t("conn.guard_refused", lang), "guard": report},
+            )
         store = request.app.state.connections
         try:
             store.save(ds.name, data, str(data.get("password") or ""), _saver(request))
         except ConnError as exc:
-            raise HTTPException(status_code=exc.status, detail=exc.message) from None
+            raise HTTPException(
+                status_code=exc.status, detail=t(exc.key, lang, **exc.params)
+            ) from None
         if ds.name == active:
             # ASSUMPTION: satır bu anda kayıtlıdır; oturum kurulamazsa reddeden oturumdur - ekran
             # bağlantıyı bir sonraki küme geçişinde ya da sunucu yeniden başladığında alır.
@@ -103,10 +112,16 @@ def create_router() -> APIRouter:
         Gövde formun o anki değerleridir; boş alanlar kayıtlı satırdan gelir, yani kaydedilmiş
         bir bağlantı da olduğu gibi sınanabilir. Hiçbir şey kaydedilmez, hiçbir oturum değişmez.
         """
-        ds = _mssql_dataset(dataset)
-        return _report(request, ds, body or {})
+        lang = _lang(request)
+        ds = _mssql_dataset(dataset, lang)
+        return _report(request, ds, body or {}, lang)
 
     return router
+
+
+def _lang(request: Request) -> str:
+    """Yolun arayüz dili: kişinin tercihi, yoksa tarayıcının başlığı, o da yoksa programın dili (R8-5)."""
+    return request_lang(request, current_user(request))
 
 
 def _row(request: Request, name: str, active: str | None) -> dict:
@@ -122,7 +137,7 @@ def _row(request: Request, name: str, active: str | None) -> dict:
     return row
 
 
-def _report(request: Request, ds: datasets.Dataset, body: dict) -> dict:
+def _report(request: Request, ds: datasets.Dataset, body: dict, lang: str) -> dict:
     """Aday değerlerin yoklaması: gövde ne kadar dolduysa onunla, kalanı kayıtlı satırla."""
     store = request.app.state.connections
     saved = store.public(ds.name)
@@ -134,31 +149,34 @@ def _report(request: Request, ds: datasets.Dataset, body: dict) -> dict:
         conn_str = connections.build_conn_str(row, password)
     except ConnError as exc:
         # Alanın kendisi bozuk: sunucuya sorulacak bir şey yok, cümle de deponun cümlesi (R7-22).
-        raise HTTPException(status_code=exc.status, detail=exc.message) from None
+        raise HTTPException(
+            status_code=exc.status, detail=t(exc.key, lang, **exc.params)
+        ) from None
     return guard.readonly_guard(
         conn_str,
         _tables(ds),
         connect=getattr(request.app.state, "conn_connect", None),
         login_script_url=LOGIN_SCRIPT_URL.format(name=ds.name),
+        lang=lang,
     )
 
 
-def _mssql_dataset(name: str) -> datasets.Dataset:
+def _mssql_dataset(name: str, lang: str) -> datasets.Dataset:
     """Kümenin kendisi: tanınmayan ad 404, SQL Server olmayan küme 409 (listede de olmaz)."""
     try:
         ds = datasets.load_dataset(name)
     except datasets.DatasetError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from None
     if ds.connection != "mssql":
-        raise HTTPException(status_code=409, detail=NOT_MSSQL)
+        raise HTTPException(status_code=409, detail=t("conn.not_mssql", lang))
     return ds
 
 
-def _refuse_env(request: Request, name: str, active: str | None) -> None:
+def _refuse_env(request: Request, name: str, active: str | None, lang: str) -> None:
     """Ortam değişkeninin kazandığı bir satıra ekrandan yazılmaz (R7-23)."""
     where = connections.resolve(name, request.app.state.connections, active)
     if where["source"] in ENV_SOURCES:
-        raise HTTPException(status_code=409, detail=ENV_SOURCE)
+        raise HTTPException(status_code=409, detail=t("conn.env_source", lang))
 
 
 def _rebuild(request: Request, name: str) -> None:

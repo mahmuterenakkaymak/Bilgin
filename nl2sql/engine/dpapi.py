@@ -17,6 +17,8 @@ import hashlib
 import sys
 from ctypes import wintypes
 
+from nl2sql.i18n import t
+
 ENTROPY_PREFIX = "bilgin-conn:"
 CRYPTPROTECT_UI_FORBIDDEN = 0x01
 CRYPTPROTECT_LOCAL_MACHINE = 0x04
@@ -50,18 +52,18 @@ def entropy_for(dataset: str) -> bytes:
 
 def protect(data: bytes, entropy: bytes) -> bytes:
     """DPAPI-encrypt ``data``; the result is safe to store in the app database."""
-    return _call(_api()[0], data, entropy, DpapiUnavailable, "Bu sunucuda sır şifrelenemedi")
+    return _call(_api()[0], data, entropy, DpapiUnavailable, "dpapi.protect_failed")
 
 
 def unprotect(blob: bytes, entropy: bytes) -> bytes:
     """The plaintext behind ``blob``, or ValueError when the entropy is not the one it sealed to."""
-    return _call(_api()[1], blob, entropy, ValueError, "Bağlantı sırrı çözülemedi")
+    return _call(_api()[1], blob, entropy, ValueError, "dpapi.unprotect_failed")
 
 
 @functools.lru_cache(maxsize=1)
 def _api():
     if sys.platform != "win32":
-        raise DpapiUnavailable("DPAPI yalnız Windows'ta vardır.")
+        raise DpapiUnavailable(t("dpapi.windows_only"))
     crypt32 = ctypes.windll.crypt32
     local_free = ctypes.windll.kernel32.LocalFree
     local_free.restype = wintypes.HANDLE
@@ -91,7 +93,7 @@ def _blob(data: bytes) -> tuple[_DataBlob, ctypes.Array]:
     return blob, buffer
 
 
-def _call(function, value: bytes, entropy: bytes, error: type, message: str) -> bytes:
+def _call(function, value: bytes, entropy: bytes, error: type, key: str) -> bytes:
     blob_in, keep_in = _blob(value)
     blob_entropy, keep_entropy = _blob(entropy)
     blob_out = _DataBlob()
@@ -108,7 +110,8 @@ def _call(function, value: bytes, entropy: bytes, error: type, message: str) -> 
     if not ok:
         # ASSUMPTION: koruma tarafındaki hata ortamın yeteneğidir (DpapiUnavailable -> API 409),
         # çözmedeki hata ise yanlış entropy / bozuk blob, yani çağıranın verdiği bir değer (ValueError).
-        raise error(f"{message} (WinError {ctypes.get_last_error()}).")
+        # Kutuya bir istek ulaşmaz: satır program dilinde okunur (R8-5).
+        raise error(f"{t(key)} (WinError {ctypes.get_last_error()}).")
     try:
         return ctypes.string_at(blob_out.pbData, blob_out.cbData)
     finally:

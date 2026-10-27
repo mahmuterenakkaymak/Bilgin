@@ -27,7 +27,7 @@ from nl2sql.app.conversations import ConversationNotFound, ConversationStore
 from nl2sql.app.session import open_session
 from nl2sql.cli import main as cli
 from nl2sql.engine.connections import ConnectionStore
-from nl2sql.engine.dbstatus import looks_like_connection_error
+from nl2sql.engine.dbstatus import down_message, looks_like_connection_error
 from nl2sql.engine.result import Budget
 from nl2sql.eval import runner
 from nl2sql.i18n import t
@@ -610,15 +610,17 @@ def _db_block(request: Request) -> dict:
     """Veritabanı çipi (R7-25): arka plan yoklamasının son cevabı, Contracts "health db".
 
     Okuma hiçbir zaman sunucuya sormaz - bekleyen bir ``SELECT 1``in yerinde olsa çip beklerdi.
-    Kullanıcının okuduğu tek cümle geneldir; yönetici sürücünün kendi cümlesini ve bağlantıyı
-    düzenlediği ekranın adresini de alır, çünkü "neden"i düzeltecek olan odur.
+    Kullanıcının okuduğu tek cümle geneldir ve isteğin dilindedir (R8-5); bekçi onu istekten habersiz
+    bir iş parçacığında yazdığı için çip burada yeniden kurar. Yönetici sürücünün kendi cümlesini ve
+    bağlantıyı düzenlediği ekranın adresini de alır, çünkü "neden"i düzeltecek olan odur.
     """
     status = getattr(request.app.state, "dbstatus", None)
     answer = status.state(_dataset_name(request)) if status is not None else {}
+    message = answer.get("message")  # bekçinin tek kullanıcı cümlesi: düşmüş kümenin geneli
     block = {
         "state": answer.get("state", "none"),
         "checked_at": answer.get("checked_at"),
-        "message": answer.get("message"),
+        "message": down_message(_lang(request)) if message else message,
     }
     # Tek kullanıcılı modda (Run 5) kapının tanıdığı tek kişi yöneticidir - ``_scope`` da böyle sayar.
     user = current_user(request)

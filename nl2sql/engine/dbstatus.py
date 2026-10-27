@@ -5,10 +5,10 @@ whether it answers - and no request can be the one that waits for it. A daemon t
 ``SELECT 1`` every ``DB_CHECK_S`` (and right after a connection is saved or a query fails with a
 connection error), while ``state`` only ever reads the last answer that check left behind.
 
-The answer is written for two readers: users get the one generic Turkish sentence, admins
-additionally get the driver's own text with its secrets out (``connections.scrub``), because "why"
-is what they need in order to fix it. ``resolve`` and ``ping`` are the seams a test uses instead of
-a live server.
+The answer is written for two readers: users get the one generic sentence, in the language of the
+request that reads it (R8-5), admins additionally get the driver's own text with its secrets out
+(``connections.scrub``), because "why" is what they need in order to fix it. ``resolve`` and
+``ping`` are the seams a test uses instead of a live server.
 """
 
 from __future__ import annotations
@@ -21,8 +21,18 @@ from datetime import datetime, timezone
 
 from nl2sql import config
 from nl2sql.engine import connections
+from nl2sql.i18n import t
 
-DOWN_MESSAGE = "Veritabanına bağlanılamıyor, yöneticinize haber verin."
+# The one sentence a user reads when the database does not answer (R7-25). The check runs in a
+# thread that knows no request, so the record keeps this program-language text and the route that
+# answers a request reads the sentence again through ``down_message``.
+DOWN_MESSAGE = t("db.down")
+
+
+def down_message(lang: str | None = None) -> str:
+    """The generic user sentence of a down database in ``lang``; the admin line stays the driver's."""
+    return t("db.down", lang)
+
 
 # R7-25: the driver sentences that mean "the database is not reachable", not "this SQL is wrong".
 _CONNECTION_MARKERS = ("08001", "08s01", "login failed", "tcp provider")
