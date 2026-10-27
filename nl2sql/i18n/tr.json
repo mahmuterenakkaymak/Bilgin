@@ -14,6 +14,17 @@
   "facts.change": "Değişim",
   "facts.change_pct": "Değişim oranı",
 
+  "narrate.input.question": "Soru: {question}",
+  "narrate.input.columns": "KOLONLAR: {columns}",
+  "narrate.input.rows": "SATIRLAR:",
+  "narrate.input.rows_partial": "SATIRLAR (ilk {shown} / {total}):",
+  "narrate.input.facts": "GERÇEKLER:",
+  "narrate.retry.numbers": "Şu sayılar sonuçta yok: {tokens}. Yalnız verilen sayılarla yeniden yaz.",
+  "narrate.retry.names": "Şu teknik kolon adlarını cümlede kullanma: {names}. Onları Türkçe söyleyerek yeniden yaz.",
+  "narrate.none": "Sonuçta anlatılacak sayısal özet yok.",
+  "narrate.template.item": "{label} {display}.",
+  "narrate.template.question": "Soru: {question}",
+
   "chart.reason": "Bu sonuç {kind} grafiğe uygun değil: {missing}.",
   "chart.kind.line": "çizgi",
   "chart.kind.bar": "sütun",

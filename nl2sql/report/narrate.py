@@ -5,6 +5,10 @@ bekçi de tam olarak bunu denetler. Bekçiyi geçmeyen cümle bir kez daha isten
 geçmezse ya da endpoint çalışmazsa koddan kurulan cümle konuşur — o cümle sayılarını olguların
 `display` alanından aldığı için bekçiyi her zaman geçer. Bekçiyi geçmeyen ya da boş bir metin
 kullanıcıya gitmez; şablonun arkasına saklandığı yer burasıdır.
+
+Anlatının dili cevabın dilidir (R8-8): `lang="en"` kural listesinin İngilizce ikizini, satırları
+İngilizce okunuşla ve bekçiyi İngilizce gramerle getirir; yeniden yazma ve şablon cümleleri
+catalog'dan gelir. Türkçe tarafın mesajları eskisiyle bayt bayttır.
 """
 
 from __future__ import annotations
@@ -16,6 +20,7 @@ from decimal import Decimal
 
 from nl2sql import config
 from nl2sql.agent.llm import LLMError
+from nl2sql.i18n import t
 from nl2sql.report import fmt, guard
 
 SYSTEM = """Sen bir sorgu sonucunu kullanıcıya Türkçe anlatan bir rapor asistanısın.
@@ -33,13 +38,25 @@ ne anlattıklarını sorunun dilinde Türkçe söyle ("eyalet", "toplam ciro", "
 başlamak zorunda değilsin.
 """
 
-_RETRY = "Şu sayılar sonuçta yok: {tokens}. Yalnız verilen sayılarla yeniden yaz."
-_RETRY_NAMES = "Şu teknik kolon adlarını cümlede kullanma: {names}. Onları Türkçe söyleyerek yeniden yaz."
+SYSTEM_EN = """You are a report assistant that explains a query result to the user in English.
+
+RULES
+1. Write 1-3 sentences of plain text: no heading, no bullet points and no table.
+2. Use only the numbers you see in the rows below and in FACTS. Do not compute anything: never \
+produce a total, a difference, a ratio, a percentage or an average yourself; never state something \
+that needs no number with a number.
+3. Write each number exactly as it is shown: comma as the thousands separator, dot as the decimal \
+mark, percent as `12.3%`. Do not add or drop digits; the Turkish spelling (`1.234,56`) is rejected \
+by the guard.
+4. NEVER write the technical names from the COLUMNS line (StateProvinceName, ToplamCiro, CIRO) in \
+the sentence; say what they mean in English ("state province", "total revenue", "supplier"). Write \
+the values in the rows (product, company and city names) exactly as they are.
+5. The sentence must answer the question directly and read as natural English, the way a person \
+would say it; you do not have to start the sentence with a number.
+"""
 
 # Şablon cümlenin anlattığı olgular; tuple sırası cümlenin akışını da verir (PLAN R5-9).
 _TEMPLATE_FACTS = ("row_count", "total", "top_item", "change")
-
-_NO_NUMBER = "Sonuçta anlatılacak sayısal özet yok."
 
 
 @dataclass(frozen=True)
@@ -51,13 +68,17 @@ class Narration:
     rejected: list[str] = field(default_factory=list)
 
 
-def narrate(question, columns, rows, facts, llm, max_rows=config.NARRATE_MAX_ROWS) -> Narration:
-    """Sonucu 1-3 cümleyle anlatır; bekçiyi geçmeyen cümle bir kez daha istenir, sonra şablon konuşur."""
+def narrate(question, columns, rows, facts, llm, max_rows=config.NARRATE_MAX_ROWS, lang: str = "tr") -> Narration:
+    """Sonucu 1-3 cümleyle anlatır; bekçiyi geçmeyen cümle bir kez daha istenir, sonra şablon konuşur.
+
+    `lang` cevabın dilidir: anlatıcıya o dilin kural listesi ve o dilin sayı yazımı gösterilir,
+    bekçi ve yeniden yazma cümlesi de o dili konuşur.
+    """
     if not rows:
-        return Narration(template_sentence(question, facts), "template")
+        return Narration(template_sentence(question, facts, lang), "template")
 
     allowed = guard.allowed_values(columns, rows, facts, question)
-    messages = _messages(question, columns, rows, facts, max_rows)
+    messages = _messages(question, columns, rows, facts, max_rows, lang)
     rejected: list[str] = []
     for source in ("llm", "llm_retry"):
         try:
@@ -66,20 +87,20 @@ def narrate(question, columns, rows, facts, llm, max_rows=config.NARRATE_MAX_ROW
             break
         if not text:
             break
-        result = guard.check_text(text, allowed)
+        result = guard.check_text(text, allowed, lang)
         leaked = _leaked_names(text, columns)
         if result.ok and not leaked:
             return Narration(text, source, rejected)
         rejected += result.offending + leaked
-        feedback = _RETRY.format(tokens=", ".join(result.offending)) if not result.ok else ""
+        feedback = t("narrate.retry.numbers", lang, tokens=", ".join(result.offending)) if not result.ok else ""
         if leaked:
-            feedback = (feedback + " " + _RETRY_NAMES.format(names=", ".join(leaked))).strip()
+            feedback = (feedback + " " + t("narrate.retry.names", lang, names=", ".join(leaked))).strip()
         messages = [
             *messages,
             {"role": "assistant", "content": text},
             {"role": "user", "content": feedback},
         ]
-    return Narration(template_sentence(question, facts), "template", rejected)
+    return Narration(template_sentence(question, facts, lang), "template", rejected)
 
 
 _IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
@@ -97,51 +118,60 @@ def _leaked_names(text: str, columns) -> list[str]:
     return [name for name in columns if _technical(str(name)) and str(name) in words]
 
 
-def template_sentence(question: str, facts) -> str:
-    """Koddan kurulan cümle: sayılar yalnız olguların Türkçe okunuşlarıdır, o yüzden bekçiyi geçer."""
+def template_sentence(question: str, facts, lang: str = "tr") -> str:
+    """Koddan kurulan cümle: sayılar yalnız olguların dildeki okunuşlarıdır, o yüzden bekçiyi geçer."""
     shown: dict[str, dict] = {}
     for fact in _fact_dicts(facts):
         name = str(fact.get("name") or "")
         if name in _TEMPLATE_FACTS and name not in shown:
             shown[name] = fact
-    parts = [f"{shown[name].get('label')} {shown[name].get('display')}." for name in _TEMPLATE_FACTS if name in shown]
+    parts = [
+        t("narrate.template.item", lang, label=shown[name].get("label"), display=shown[name].get("display"))
+        for name in _TEMPLATE_FACTS
+        if name in shown
+    ]
     if not parts:
-        return _NO_NUMBER
+        return t("narrate.none", lang)
     if len(parts) == 1:
         # ASSUMPTION: sayısal olgu yoksa şablon ne sorulduğunu gösterir; sorunun kendi sayıları
         # bekçinin izin listesinde zaten vardır (PLAN R5-8), o yüzden cümleye taşımak güvenlidir.
-        parts.append(f"Soru: {(question or '').strip()}")
+        parts.append(t("narrate.template.question", lang, question=(question or "").strip()))
     return " ".join(parts)
 
 
-def _messages(question, columns, rows, facts, max_rows) -> list[dict]:
+def _messages(question, columns, rows, facts, max_rows, lang) -> list[dict]:
     """Anlatıcıya verilen her şey tek kullanıcı mesajında: soru, kolonlar, satırlar ve olgular."""
     shown = list(rows[:max_rows])
-    header = f"SATIRLAR (ilk {len(shown)} / {len(rows)}):" if len(shown) < len(rows) else "SATIRLAR:"
+    header = (
+        t("narrate.input.rows_partial", lang, shown=len(shown), total=len(rows))
+        if len(shown) < len(rows)
+        else t("narrate.input.rows", lang)
+    )
     lines = [
-        f"Soru: {question}",
+        t("narrate.input.question", lang, question=question),
         "",
-        f"KOLONLAR: {', '.join(columns)}",
+        t("narrate.input.columns", lang, columns=", ".join(columns)),
         header,
-        *(_row_text(row) for row in shown),
+        *(_row_text(row, lang) for row in shown),
         "",
-        "GERÇEKLER:",
+        t("narrate.input.facts", lang),
         json.dumps(_fact_dicts(facts), ensure_ascii=False),
     ]
-    return [{"role": "system", "content": SYSTEM}, {"role": "user", "content": "\n".join(lines)}]
+    system = SYSTEM_EN if lang == "en" else SYSTEM
+    return [{"role": "system", "content": system}, {"role": "user", "content": "\n".join(lines)}]
 
 
-def _row_text(row) -> str:
-    return " | ".join(_cell_text(cell) for cell in row)
+def _row_text(row, lang) -> str:
+    return " | ".join(_cell_text(cell, lang) for cell in row)
 
 
-def _cell_text(value) -> str:
-    """Hücrenin anlatıcıya gösterimi: sayı Türkçe okunuşuyla ki kopyaladığı sayı bekçiyi geçsin."""
+def _cell_text(value, lang) -> str:
+    """Hücrenin anlatıcıya gösterimi: sayı dilin okunuşuyla ki kopyaladığı sayı bekçiyi geçsin."""
     if value is None:
         return fmt.NULL_TEXT
     if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
         return str(value)
-    return fmt.tr_number(value)
+    return fmt.format_number(value, lang)
 
 
 def _fact_dicts(facts) -> list[dict]:

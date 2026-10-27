@@ -14,6 +14,17 @@
   "facts.change": "Change",
   "facts.change_pct": "Change rate",
 
+  "narrate.input.question": "Question: {question}",
+  "narrate.input.columns": "COLUMNS: {columns}",
+  "narrate.input.rows": "ROWS:",
+  "narrate.input.rows_partial": "ROWS (first {shown} / {total}):",
+  "narrate.input.facts": "FACTS:",
+  "narrate.retry.numbers": "These numbers are not in the result: {tokens}. Rewrite using only the numbers given.",
+  "narrate.retry.names": "Do not use these technical column names in the sentence: {names}. Say what they mean in English and rewrite.",
+  "narrate.none": "There is no numeric summary to describe.",
+  "narrate.template.item": "{label} {display}.",
+  "narrate.template.question": "Question: {question}",
+
   "chart.reason": "This result does not fit a {kind} chart: {missing}.",
   "chart.kind.line": "line",
   "chart.kind.bar": "bar",
