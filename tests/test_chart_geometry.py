@@ -110,3 +110,43 @@ def test_the_bottom_margin_still_covers_the_rotated_label_box():
     bottom = cartesian_grid()["bottom"]
 
     assert bottom >= reach, f"dönük ad {reach:.0f}px'e iner, alt boşluk {bottom}px"
+
+
+# T458 (M25 görsel inceleme 3): board kartının .chart'ı 250px ölçer (1366'da ~275px'lik kartın
+# içi, 390'da ~330px'liğin duvarı). Option bundan fazlasını vaat ederse beş ürün adı yanındakinin
+# üstüne basıyor — telefonda değil, masaüstünde de.
+
+BOARD_CHART_INNER_PX = 250
+BOARD_CATEGORIES = 5
+# Ad bloğunun altına kalan eksen payı: ızgaranın altı, ad kutusunun dönük izimini tam bu payla
+# kapatır — ne fazlası (plot'a giren kayıp) ne eksiği (üst üste basan ad).
+AXIS_ALLOWANCE_PX = 8
+
+
+def board_q01_option() -> dict:
+    """wwi Q01'in beş kategorili sütun grafiği: board kartının çizdiği option."""
+    rows = list(WWI_Q01_ROWS) + [("United Kingdom", 4.0)]
+    spec = chart.chart_spec(WWI_Q01_COLUMNS, rows, WWI_Q01_QUESTION)
+
+    assert spec["type"] == "bar"
+    return spec["option"]
+
+
+def bottom_for(width: int, label: dict) -> int:
+    """width px'lik ad kutusunun 45° dönük düşey izimi + tek satır + eksen payı."""
+    reach = width * math.sin(math.radians(label["rotate"]))
+    return math.ceil(reach + label["lineHeight"] + AXIS_ALLOWANCE_PX)
+
+
+def test_the_board_card_option_never_promises_more_label_room_than_it_holds():
+    option = board_q01_option()
+    label = option["xAxis"]["axisLabel"]
+    count = len(option["xAxis"]["data"])
+
+    assert count == BOARD_CATEGORIES
+    assert label["width"] <= _const("_CATEGORY_SHARE_PX"), "pay tavanı aşılmaz"
+    assert label["width"] * count <= BOARD_CHART_INNER_PX, (
+        f"{count} ad {label['width']}px'lik kutu ister, board kartı {BOARD_CHART_INNER_PX}px"
+    )
+    assert option["grid"]["bottom"] == bottom_for(label["width"], label), "alt boşluk gerçek kutudan"
+    assert _const("_CATEGORY_BOTTOM") == bottom_for(_const("_CATEGORY_SHARE_PX"), label)

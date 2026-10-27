@@ -39,6 +39,10 @@ _GRID = {"left": 56, "right": 20, "top": 40, "bottom": 30, "containLabel": False
 # kutu dönünce yanındakinin üstüne basıyordu (M24 görsel inceleme 2). Taşan ad üç noktayla kesilir,
 # tüm adı tooltip taşır. Kutu küçülünce ad dikleşir — yatay izim payın altında kalır.
 _CATEGORY_SHARE_PX = 64
+# Payın üst sınırı en geniş kart değil en dar karttır: board kartının .chart'ı 250px ölçer
+# (1366'da ~275px'lik kartın içi), o yüzden beş kategori 320px'lik ad kutusu vaat edemez — adlar
+# yanındakinin üstüne basıyordu (M25 görsel inceleme 3).
+BOARD_CHART_PX = 250
 _CATEGORY_ROTATE = 45
 _CATEGORY_LABEL = {
     "interval": 0,
@@ -48,10 +52,22 @@ _CATEGORY_LABEL = {
     "overflow": "truncate",
     "lineHeight": 14,
 }
-# Adlar alt boşluğun dışında, onun içine çiziliyor: 64px'lik ad kutusunun 45° dönük düşey izimi
-# (64·sin45° = 46) + tek satır (14) + eksen payı (8). Pasta ve saçılımın düz ekseni bu büyümeyi
-# almaz.
+# Adlar alt boşluğun dışında, onun içine çiziliyor: ad kutusunun 45° dönük düşey izimi
+# (64·sin45° = 46) + tek satır (14) + eksen payı (8) — _category_bottom(64)'ün ürettiği değer.
+# Pasta ve saçılımın düz ekseni bu büyümeyi almaz; ızgaranın altı her option'da gerçekten
+# kullanılan ad kutusundan hesaplanır.
 _CATEGORY_BOTTOM = 68
+
+
+def _category_width(count: int) -> int:
+    """Kategori başına ad kutusu: kategori artınca kutu küçülür, en dar kartın payını hiç aşmaz."""
+    return min(_CATEGORY_SHARE_PX, BOARD_CHART_PX // count)
+
+
+def _category_bottom(width: int) -> int:
+    """width px'lik ad kutusunun 45° dönük düşey izimi + tek satır + eksen payı."""
+    reach = width * math.sin(math.radians(_CATEGORY_ROTATE))
+    return math.ceil(reach + _CATEGORY_LABEL["lineHeight"] + 8)
 
 
 def chart_spec(columns: list[str], rows: list[tuple], question: str, kind: str | None = None) -> dict | None:
@@ -232,10 +248,11 @@ def _scatter(columns, rows, numbers, question):
 
 
 def _cartesian(trigger, labels, series):
+    width = _category_width(len(labels))
     return {
         "tooltip": {"trigger": trigger},
-        "grid": dict(_GRID, bottom=_CATEGORY_BOTTOM),
-        "xAxis": {"type": "category", "data": labels, "axisLabel": dict(_CATEGORY_LABEL)},
+        "grid": dict(_GRID, bottom=_category_bottom(width)),
+        "xAxis": {"type": "category", "data": labels, "axisLabel": dict(_CATEGORY_LABEL, width=width)},
         "yAxis": {"type": "value"},
         "series": series,
     }
