@@ -223,17 +223,22 @@ def create_app(
 
         Etkin kümenin veritabanı düşmüşse soru hiç koşmaz: cevabın yerini arızanın cümlesi alır
         (``down_payload``, R7-25). Yoklama yalnız arka planda koşar, yani istek beklemez; bir
-        sorgunun bağlantı hatasına benzeyen hatası da bekçiyi bekletmez.
+        sorgunun bağlantı hatasına benzeyen hatası da bekçiyi bekletmez. Düşmüşkü de bir konuşmanın
+        turudur: ``conversation_id`` yoksa konuşmayı o soru açar, varsa sıradaki tur arızanın
+        cümlesiyle yazılır - yani ekranın adresi yokluktan doğar, numara boşluksuz sürer.
         """
         question = body.question.strip()
         if not question:
             raise HTTPException(status_code=400, detail=BLANK_QUESTION)
         status = getattr(request.app.state, "dbstatus", None)
-        if status is not None and status.state(_dataset_name(request))["state"] == "down":
-            # R7-25: veritabanı cevap vermiyor - koşacak bir yer yok, yani model de koşmaz.
-            return down_payload(_session(request), question, mode=body.mode, choice=body.choice,
-                                source="web", username=_asker(request))
         try:
+            if status is not None and status.state(_dataset_name(request))["state"] == "down":
+                # R7-25: veritabanı cevap vermiyor - koşacak bir yer yok, yani model de koşmaz.
+                # Soru yine de konuşmanın turudur (R7-8): ekran adresi açacak, numarayı sürecek.
+                return down_payload(_session(request), question, mode=body.mode, choice=body.choice,
+                                    source="web", username=_asker(request),
+                                    conversations=request.app.state.conversations,
+                                    conversation_id=body.conversation_id)
             payload = ask_payload(_session(request), question, mode=body.mode, choice=body.choice,
                                   source="web", username=_asker(request),
                                   conversations=request.app.state.conversations,

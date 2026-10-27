@@ -344,6 +344,8 @@ def down_payload(
     choice=None,
     source: str = "web",
     username: str | None = None,
+    conversations=None,
+    conversation_id: str | None = None,
 ) -> dict:
     """Düşmüş bir veritabanının cevabı: arızanın cümlesi, model hiç koşmaz (R7-25).
 
@@ -351,9 +353,22 @@ def down_payload(
     kurulur. Ne ajan ne yürütücü çağrılır - arızanın üstüne bir de sorgu yüklenmez, uydurulmuş
     bir sayı da çıkmaz. Soru yine de günlüğe düşer: hangi sorunun hangi arızaya denk geldiği
     oradan okunur, ekranın okuduğu anahtarlar da başka hiçbir koşumdan farklı değildir.
+
+    ``conversations`` verildiği çağrı bir konuşmanın turudur (R7-8, R7-25): arızanın cümlesi
+    cevap sayılmaz ama soru da havada kalmaz - tur aynı ``_thread``dan geçer, konuşmaya aynı
+    şekilde yazılır ve payload ``conversation_id`` ile ``turn``i taşır. Ekran yoklukta
+    ``#/c/<id>`` adresini açamaz, turların numarası da boşluksuz sürer; olmayan ya da başkasının
+    konuşması burada da ``ConversationNotFound``dır.
     """
     payload = _skeleton(question, choice, mode or "auto", session, asklog.new_audit_id(), [])
+    conversation_id, pending, _, _ = _thread(
+        conversations, conversation_id, username, question, choice, payload["dataset"]
+    )
+    if conversation_id is not None:
+        payload.update(conversation_id=conversation_id, turn=None, context=None)
     _fail(payload, "db_down", DB_DOWN_MESSAGE)
+    if conversation_id is not None:
+        payload["turn"] = _store(conversations, payload, conversation_id, pending)
     asklog.record_ask(_record(payload, source, username), session.ask_log)
     return payload
 
