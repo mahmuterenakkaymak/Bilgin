@@ -3247,10 +3247,14 @@ a.db-label:hover {
 
 /* Mini tablo kartın kutusu kadar: satırlar sunucuda kesilir (CARD_TABLE_ROWS), kaydırma kartın
    içinden çıkmaz. */
+/* 214px = ölçülen başlık (33px) + 390'da iki satıra sarayan üç satır (3 × 54px) + sönmenin payı
+   (18px): 140px üçüncü ürün adını gliflerin ortasından kesiyordu (M27 görsel inceleme 3). Alt
+   sönme sıradaki satırı hayalet gibi göstererek kutunun kaydırılabilir olduğunu söylüyor. */
 .start-card-table {
-  max-height: 140px;
+  max-height: 214px;
   overflow: auto;
   font-size: 13px;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent);
 }
 
 /* Dar kartta sığmayan başlık kelimenin ortasından kesilmesin ("QuantityC" değil "QuantityOn…"):
