@@ -205,6 +205,20 @@ function AskScreen({
       .finally(() => onRefresh?.());
   };
 
+  // Kayıtlı turun "Yeniden çalıştır"ı (R7-15, M23 review 1): soru modele baştan sorulmaz, kayıtlı
+  // SQL /api/replay'den geçer. Yeni tur açılmaz - cevap koşumun ait olduğu tura yerleşir: sunucu bu
+  // koşumu konuşmaya yazmadığı için eklenen bir tur sıradaki sorunun numarasını çalardı. Ne bir
+  // konuşma kimliği gönderilir ne de yükten kimlik benimsenir; adres olduğu gibi kalır.
+  const replay = (turn) => {
+    if (!turn?.audit_id) return;
+    dispatch({ type: "replay", n: turn.n });
+    api
+      .replay(turn.audit_id)
+      .then((payload) => dispatch({ type: "receive", payload }))
+      .catch((error) => dispatch({ type: "fail", message: error?.message ?? "" }))
+      .finally(() => onRefresh?.());
+  };
+
   // Kenar çubuğundan gelen soru, kutudan sorulmuş gibi koşar; sayaç aynı sorunun ikinci
   // tıklayışını da yeni bir istek yapar.
   // Soru kutuya da yazılır ve ekran kutuya kayar: yoksa kutuda eski metin kalır, bekleme adımları
@@ -268,7 +282,7 @@ function AskScreen({
         <Thread
           turns={turns}
           onExpand={(n) => dispatch({ type: "expand", n })}
-          onReplay={(turn) => send(turn.question, null, turn.audit_id)}
+          onReplay={replay}
           onChoose={choose}
           onChange={changeQuestion}
           onSave={save}

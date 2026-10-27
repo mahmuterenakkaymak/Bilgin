@@ -50,6 +50,16 @@ export function threadReducer(state = initialState, action = {}) {
       else turns.push(turn);
       return mark({ ...state, turns });
     }
+    case "replay": {
+      // Kayıtlı turun "Yeniden çalıştır"ı yeni tur açmaz (M23 review 1): /api/replay konuşmaya
+      // tur yazmaz, o yüzden bekleyen tur eklenmez - yük koşumun ait olduğu tura yerleşir ve
+      // numarası sabit kalır. Tur açılır ki cevap geldiğinde tam kart olduğu yerde belirsin.
+      const index = state.turns.findIndex((turn) => turn.n === action.n);
+      if (index < 0) return state;
+      const turns = [...state.turns];
+      turns[index] = { ...turns[index], status: "loading", pending: true, expanded: true };
+      return mark({ ...state, turns });
+    }
     case "receive": {
       const index = state.turns.findIndex((turn) => turn.pending);
       if (index < 0) return state; // gecikmiş yanıt: yerini kaybettiği listeye dokunmaz
@@ -67,6 +77,9 @@ export function threadReducer(state = initialState, action = {}) {
         audit_id: payload?.audit_id ?? null,
         summary: summaryOf(payload),
         payload,
+        // Yük geldi: tur artık kayıtlı özet değil, tam karttır (kayıtlı turda "Yeniden çalıştır"
+        // düğmesi kalmasın - R7-15).
+        stored: false,
         pending: false,
       };
       // İlk soru konuşmayı sunucuda açar: kimlik sonraki sorunun ve adresin kaynağıdır.
