@@ -109,7 +109,7 @@ def create_router() -> APIRouter:
             raise HTTPException(status_code=422, detail=t("map.not_xlsx", lang))
         read = _read_upload(data, request, lang)
         skeleton, note = _live_skeleton(read)
-        errors, warnings, db_check = template_import.validate(read, skeleton)
+        errors, warnings, db_check = template_import.validate(read, skeleton, lang)
         if note:
             db_check = {**db_check, "message": note}
         result = {
@@ -223,7 +223,7 @@ def _read_upload(data: bytes, request: Request, lang: str) -> dict:
         # kendi okuması LLM'sizdir, yani kapalı bir uç nokta şablon yüklemeyi durdurmaz.
         llm = None if template_import.is_bilgin_template(path) else _llm(request)
         try:
-            return template_import.read_template(path, llm=llm)
+            return template_import.read_template(path, llm=llm, lang=lang)
         except template_import.TemplateError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from None
         except (InvalidFileException, zipfile.BadZipFile, OSError, ValueError, KeyError):

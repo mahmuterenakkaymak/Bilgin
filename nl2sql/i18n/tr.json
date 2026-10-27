@@ -505,5 +505,24 @@
   "cli.compare.repeat_line": "Tekrar: her mod {repeat} kez koşuluyor (gürültü ölçümü)",
   "cli.compare.model_skipped": "uç nokta yanıt vermiyor ({url}) — bu blok atlandı; GPU'da bu modeli açıp yeniden koşun.",
   "cli.eval.compare_line": "{mode} {score}  bağlam {peak}/{median}  araç {tools}  {seconds} sn",
-  "cli.eval_retrieval.duration": "Süre: {seconds} sn"
+  "cli.eval_retrieval.duration": "Süre: {seconds} sn",
+
+  "template.issue.no_dataset_sheet": "Veri kümesi sayfası yok: Bilgin şablonunu kullanın.",
+  "template.issue.required_cell": "{header} boş; satır şemaya alınmadı.",
+  "template.issue.boolean_cell": "{header} '{value}'; {yes} ya da {no} olmalı.",
+  "template.issue.dataset_name_empty": "{header} boş; veri kümesinin klasör adını yazın.",
+  "template.issue.dataset_name_pattern": "{header} '{value}' geçersiz; küçük harfle başlayan 3-31 karakter (a-z, 0-9, _).",
+  "template.issue.dataset_connection": "{header} '{value}'; mssql ya da sqlite olmalı.",
+  "template.issue.dataset_as_of": "{header} '{value}'; ISO tarih (YYYY-AA-GG) olmalı.",
+  "template.issue.no_tables": "Şablonda hiç tablo yok.",
+  "template.issue.duplicate_table": "Tablo iki kez tanımlı: {name}.",
+  "template.issue.duplicate_column": "Kolon iki kez tanımlı: {name}.",
+  "template.issue.table_not_declared": "'{name}' {sheet} sayfasında yok; her tablonun orada bir satırı olmalı.",
+  "template.issue.unknown_reference": "{header} '{fk}' şablonda yok; hedef kolon {sheet} sayfasında olmalı.",
+  "template.issue.rule": "Kural '{id}': {message}",
+  "template.issue.table_no_description": "{name} açıklamasız; model tabloyu yalnız oraya yazılan metinden bilir.",
+  "template.issue.columns_no_description": "{count} kolon açıklamasız: {names}{tail}",
+  "template.issue.no_db": "Canlı veritabanı bağlantısı yok; karşılaştırma yapılmadı.",
+  "template.issue.db_missing": "{what} veritabanında yok: {name}.",
+  "template.issue.db_only": "{what} yalnız veritabanında: {name}."
 }

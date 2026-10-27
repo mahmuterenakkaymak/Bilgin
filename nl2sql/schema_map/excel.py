@@ -153,12 +153,14 @@ def _synonyms(path: str | Path) -> dict[str, set[str]]:
     """
     with open(path, encoding="utf-8") as handle:
         table = json.load(handle)
-    for field, words in table.items():
+    # "sheets" alan değil sayfa adı -> görev eşlemesidir (R8-12); başlık sözlüğüne karışmaz.
+    fields = {field: words for field, words in table.items() if isinstance(words, list)}
+    for field in fields:
         if field not in _FIELDS:
             raise ValueError(
                 f"excel_headers bilinmeyen alan '{field}'; bilinenler {list(_FIELDS)}."
             )
-    return {field: {text.fold(word) for word in words} for field, words in table.items()}
+    return {field: {text.fold(word) for word in words} for field, words in fields.items()}
 
 
 def _match(synonyms: dict[str, set[str]], header: str) -> str | None:
@@ -352,8 +354,10 @@ _FK_RE = re.compile(r"^(?:[A-Z0-9_]+\.){1,2}[A-Z0-9_]+$")
 # Şemanın kendi şeması adlarda taşınmaz (PLAN R4-6): dbo'nun tablosu şemasız yazılır.
 _DEFAULT_SCHEMA = "DBO"
 
-# "Dolu" yazımları; geri kalan her şey (boş hücre dahil) boş bırakılabilir sayılır.
-_FILLED_WORDS = frozenset({"h", "hayir", "false", "0", "dolu", "not null", "degil"})
+# "Dolu" yazımları; geri kalan her şey (boş hücre dahil) boş bırakılabilir sayılır. Şablonun iki
+# dilinin evet/hayır listesi de buraya iner: E/H ve Y/N aynı iki anlamın yazımıdır (R8-12).
+_FILLED_WORDS = frozenset({"h", "hayir", "false", "0", "dolu", "not null", "degil", "n", "no"})
+_YES_WORDS = frozenset({"e", "evet", "y", "yes"})
 
 # Katlama İ/I/ı üçünü aynı harfe indirir; tip ve boş/dolu sözcükleri iki yazımla da tanınır.
 _TURKISH_LETTERS = str.maketrans("çÇğĞıİöÖşŞüÜ", "cCgGiIoOSSuU")
@@ -588,8 +592,13 @@ def _pii(value: str) -> str | None:
 
 
 def _deny(value: str) -> bool:
-    """KAPALI hücresi: şablonun listesi E/H olduğu için yalnız E kolonu kapatır."""
-    return _plain(value) == "e"
+    """KAPALI hücresi: evet yazan kolonu kapatır - iki şablon dilinin listesi de okunur (R8-12)."""
+    return _plain(value) in _YES_WORDS
+
+
+def is_boolean(value: str, words: tuple[str, ...]) -> bool:
+    """Hücrenin yazımı bu evet/hayır sözcüklerinden biri mi; doğrulama kendi dilinin listesini ister."""
+    return _plain(value) in words
 
 
 def _keywords(value: str) -> list[str]:
