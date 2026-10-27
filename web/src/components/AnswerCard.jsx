@@ -23,8 +23,9 @@ const IDLE = { phase: "idle", note: "" };
 // nota düşer — ad değişirse ikinci düğmenin ne olduğunu kullanıcı hatırlamak zorunda kalıyor.
 // Dosyanın kaç satır taşıdığı ekrandaki tablonun satır sayısıdır; satırı olmayan cevapta sayı
 // uydurulmaz, "İndirildi" okunur.
-function downloadedNote(rows) {
-  return rows > 0 ? `${formatNumber(rows)} satır indirildi` : "İndirildi";
+function downloadedNote(rows, lang, t) {
+  if (rows <= 0) return t("answer.downloadedShort");
+  return t(rows === 1 ? "answer.downloaded.one" : "answer.downloaded", { count: formatNumber(rows, lang) });
 }
 
 // Cevap kartı: aynı AskPayload'ın her parçası burada durur — durum satırı, seçilen anlam, cümle,
@@ -35,7 +36,7 @@ function downloadedNote(rows) {
 // yöneticiye formu açar. `reapproveId` yalnız bir kartın "SQL'i yeniden onayla"sından gelmiştir
 // — yani yöneticinin yolundan — ve o zaman formun yerine geçen "Bu SQL ile güncelle" durur.
 export default function AnswerCard({ payload, onSave, choice, isAdmin = false, reapproveId = null }) {
-  const { lang } = useT();
+  const { lang, t } = useT();
   const [phase, setPhase] = useState("idle"); // idle | saving | saved | error
   const [note, setNote] = useState("");
   const [downloaded, setDownloaded] = useState(""); // "" | csv | xlsx
@@ -47,10 +48,10 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
   const mode = typeof payload?.mode === "string" ? payload.mode : "";
   const seconds = payload?.timings?.total_s;
   // Tek ondalık basamak 0,04 saniyeyi "0,0 sn" yapar; okunur bir süre değildir, yazılmaz.
-  const elapsed = typeof seconds === "number" && seconds >= 0.05 ? formatSeconds(seconds) : "";
+  const elapsed = typeof seconds === "number" && seconds >= 0.05 ? formatSeconds(seconds, lang) : "";
   const auditId = typeof payload?.audit_id === "string" ? payload.audit_id : "";
   const save = onSave ?? api.savedAdd;
-  const status = ["✓ Cevaplandı", mode, elapsed].filter(Boolean).join(" · ");
+  const status = [t("answer.answered"), mode, elapsed].filter(Boolean).join(" · ");
   // Seçilen anlam: sorunun birden çok okuması varsa hangisiyle koşulduğu cevapta da okunur.
   const chosen = typeof choice === "string" ? choice.trim() : "";
   // Kartın çip şeridi cevabın üç özeti; çipe girmeyen olgular kanıt panelinin altında listelenir.
@@ -84,7 +85,7 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
       setPhase("saved");
     } catch (error) {
       setPhase("error");
-      setNote(error?.message || "Soru kaydedilemedi.");
+      setNote(error?.message || t("answer.saveFailed"));
     }
   };
 
@@ -96,7 +97,7 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
       await api.pinCard({ audit_id: auditId });
       setPin({ phase: "done", note: "" });
     } catch (error) {
-      setPin({ phase: "error", note: error?.message || "Kart panoya eklenemedi." });
+      setPin({ phase: "error", note: error?.message || t("answer.pinFailed") });
     }
   };
 
@@ -108,7 +109,7 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
       await api.readyUpdate(reapproveId, { audit_id: auditId, display: suggestDisplay(payload) });
       setReapprove({ phase: "done", note: "" });
     } catch (error) {
-      setReapprove({ phase: "error", note: error?.message || "Kart güncellenemedi." });
+      setReapprove({ phase: "error", note: error?.message || t("answer.reapproveFailed") });
     }
   };
 
@@ -117,7 +118,7 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
       <p className="answer-status">{status}</p>
       {chosen && (
         <p id="answer-choice" className="answer-choice">
-          Anlam: {chosen}
+          {t("answer.choice", { choice: chosen })}
         </p>
       )}
       {answer && <p id="answer-text" className="answer-text">{answer}</p>}
@@ -142,7 +143,7 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
       <div className="answer-actions">
         {auditId && (
           <div className="answer-exports">
-            <span className="answer-actions-label">Tamamını indir:</span>
+            <span className="answer-actions-label">{t("answer.exportLabel")}</span>
             <span className="answer-export-pair">
               {EXPORTS.map(([kind, label]) => (
                 <a
@@ -158,7 +159,7 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
             </span>
             {downloaded && (
               <span id="export-note" className="answer-export-note">
-                {downloadedNote(exportRows)}
+                {downloadedNote(exportRows, lang, t)}
               </span>
             )}
           </div>
@@ -171,7 +172,7 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
             onClick={saveQuestion}
             disabled={phase === "saving" || phase === "saved"}
           >
-            {phase === "saving" ? "Kaydediliyor…" : phase === "saved" ? "Kaydedildi" : "Soruyu kaydet"}
+            {phase === "saving" ? t("answer.saving") : phase === "saved" ? t("answer.saved") : t("answer.save")}
           </button>
           {phase === "error" && <span className="answer-note">{note}</span>}
           {auditId && (
@@ -182,7 +183,7 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
               onClick={pinCard}
               disabled={pin.phase === "saving" || pin.phase === "done"}
             >
-              {pin.phase === "saving" ? "Ekleniyor…" : pin.phase === "done" ? "Panoya eklendi" : "Panoma ekle"}
+              {pin.phase === "saving" ? t("answer.pinning") : pin.phase === "done" ? t("answer.pinned") : t("answer.pin")}
             </button>
           )}
           {pin.phase === "error" && <span className="answer-note">{pin.note}</span>}
@@ -195,16 +196,16 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
               disabled={reapprove.phase === "saving" || reapprove.phase === "done"}
             >
               {reapprove.phase === "saving"
-                ? "Güncelleniyor…"
+                ? t("answer.reapproving")
                 : reapprove.phase === "done"
-                  ? "Kart güncellendi"
-                  : "Bu SQL ile güncelle"}
+                  ? t("answer.reapproved")
+                  : t("answer.reapprove")}
             </button>
           )}
           {reapprove.phase === "error" && <span className="answer-note">{reapprove.note}</span>}
           {isAdmin && auditId && !reapproveId && !readyOpen && (
             <button type="button" id="make-ready" className="answer-action" onClick={() => setReadyOpen(true)}>
-              Hazır soru yap
+              {t("answer.makeReady")}
             </button>
           )}
         </div>

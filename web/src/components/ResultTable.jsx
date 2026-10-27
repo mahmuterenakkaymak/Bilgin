@@ -7,16 +7,16 @@ import { formatCell, formatNumber, isNumericColumn } from "../lib/format.js";
 const VISIBLE_ROWS = 200;
 
 export default function ResultTable({ columns = [], rows = [], rowCount = 0, truncated = false }) {
-  const { lang } = useT();
+  const { lang, t } = useT();
   const names = Array.isArray(columns) ? columns : [];
   const list = Array.isArray(rows) ? rows : [];
-  if (!list.length) return <p className="table-empty">Bu soruya uyan kayıt yok.</p>;
+  if (!list.length) return <p className="table-empty">{t("table.empty")}</p>;
 
   const shown = list.slice(0, VISIBLE_ROWS);
   const total = Number.isFinite(rowCount) && rowCount > 0 ? rowCount : list.length;
   const note = truncated && (
     <p className="table-note">
-      İlk {formatNumber(shown.length, lang)} satır gösteriliyor (toplam {formatNumber(total, lang)}).
+      {t("table.truncated", { shown: formatNumber(shown.length, lang), total: formatNumber(total, lang) })}
     </p>
   );
 

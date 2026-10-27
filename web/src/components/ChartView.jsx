@@ -51,7 +51,7 @@ function themeSeries(series, colors) {
 // Grafiği kod seçer (R5-6): option düz JSON gelir, Türkçe sayı biçimi burada işlevle eklenir;
 // burada hiçbir sayı yeniden hesaplanmaz. `chart` yoksa kutu da açılmaz, yer bırakılmaz.
 export default function ChartView({ chart }) {
-  const { lang } = useT();
+  const { lang, t } = useT();
   const box = useRef(null);
 
   useEffect(() => {
@@ -77,6 +77,7 @@ export default function ChartView({ chart }) {
     };
   }, [chart, lang]);
 
+  // ASSUMPTION: çizilecek seçenek yoksa kutu da açılmaz — boş durumun sözü yoktur, yer bırakılmaz.
   if (!chart?.option) return null;
-  return <div id="chart" className="chart" ref={box} />;
+  return <div id="chart" className="chart" role="img" aria-label={t("chart.label")} ref={box} />;
 }

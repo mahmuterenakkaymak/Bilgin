@@ -93,16 +93,20 @@ export function formatDate(value, lang = "tr") {
   return formatter.format(date);
 }
 
+// Birim kelimeleri dilin: İngilizcede kısaltma noktasız ve boşluklu okunur ("8.3 s").
+const SECOND_UNITS = { tr: ["sn", "dk", "sa"], en: ["s", "min", "h"] };
+
 // ASSUMPTION: süre yoksa boş dize döner; durum satırı o zaman süreyi hiç göstermez, "– sn" yazmaz.
-export function formatSeconds(seconds) {
+export function formatSeconds(seconds, lang = "tr") {
   if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 0) return "";
+  const [second, minute, hour] = SECOND_UNITS[normalizeLang(lang)];
   const total = Math.round(seconds);
-  const oneDecimal = numberFormat(LOCALES.tr, 1, 1);
-  if (total < 60) return `${oneDecimal.format(seconds)} sn`;
+  const oneDecimal = numberFormat(LOCALES[normalizeLang(lang)], 1, 1);
+  if (total < 60) return `${oneDecimal.format(seconds)} ${second}`;
   const minutes = Math.floor(total / 60);
   const rest = total % 60;
-  if (minutes < 60) return rest ? `${minutes} dk ${rest} sn` : `${minutes} dk`;
+  if (minutes < 60) return rest ? `${minutes} ${minute} ${rest} ${second}` : `${minutes} ${minute}`;
   const hours = Math.floor(minutes / 60);
   const leftover = minutes % 60;
-  return leftover ? `${hours} sa ${leftover} dk` : `${hours} sa`;
+  return leftover ? `${hours} ${hour} ${leftover} ${minute}` : `${hours} ${hour}`;
 }
