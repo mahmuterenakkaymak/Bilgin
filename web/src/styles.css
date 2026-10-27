@@ -514,7 +514,9 @@ main {
 }
 
 /* Çip sorunun kendisi: kesik soru sorulamıyor. Telefon genişliğinde üç çip ellipsis'le yutuluyordu
-   (625px'lik metin 324px'te), o yüzden metin sarar; tavan yine kutunun genişliği. */
+   (625px'lik metin 324px'te), o yüzden metin sarar; tavan yine kutunun genişliği.
+   Kesik çizgi evde "henüz gerçek değil" kısayoluydu ve telefonun hover'ı yok: soru sorulabilir bir
+   şey olduğunu söylemek için ince tam çizgi + yüzey zemni taşıyor (T462'nin seçeneklerdeki noktası). */
 .example-chip {
   max-width: 100%;
   overflow: hidden;
@@ -522,9 +524,9 @@ main {
   white-space: normal;
   overflow-wrap: anywhere;
   padding: calc(var(--space) * 0.5) calc(var(--space) * 1.25);
-  border: 1px dashed var(--line);
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
   font-size: 14px;
@@ -533,7 +535,6 @@ main {
 
 .example-chip:hover:not(:disabled) {
   border-color: var(--accent);
-  border-style: solid;
   color: var(--accent);
 }
 
