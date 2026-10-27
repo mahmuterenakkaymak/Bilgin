@@ -15,5 +15,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Every test file starts with both catalogs registered, so a render without a provider stays Turkish.
+    setupFiles: ["src/test-setup.js"],
   },
 });
