@@ -2213,10 +2213,19 @@ def _db_status(store: ConnectionStore, ds, db_probe_file: str | Path | None = No
     duman testinin yeşil/kırmızı noktası bir SQL Server gerektirmez.
     """
     active = ds.name if ds else None
+
+    def record(dataset: str, ok: bool, error: str | None) -> None:
+        # Ekrandaki "Son başarılı"/"Son hata" satırları bağlantı satırında durur (R7-22): bekçinin
+        # her gerçek yoklaması buradan geçer, yoksa sütunlar hiç dolmaz.
+        if ok:
+            store.mark_ok(dataset)
+        else:
+            store.mark_error(dataset, error)
+
     if db_probe_file:
         path = Path(db_probe_file)
-        return DbStatus(_probe_resolve(path, store, active), ping=_probe_ping(path))
-    return DbStatus(lambda name: resolve_connection(name, store, active))
+        return DbStatus(_probe_resolve(path, store, active), ping=_probe_ping(path), record=record)
+    return DbStatus(lambda name: resolve_connection(name, store, active), record=record)
 
 
 def _probe_read(path: Path) -> dict:

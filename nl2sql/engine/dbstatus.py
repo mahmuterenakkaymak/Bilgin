@@ -32,13 +32,20 @@ class DbStatus:
     """The last known answer to "does the database answer?", kept fresh by a daemon thread."""
 
     def __init__(
-        self, resolve, ping=None, clock: Callable[[], float] = time.time
+        self,
+        resolve,
+        ping=None,
+        clock: Callable[[], float] = time.time,
+        record: Callable[[str, bool, str | None], None] | None = None,
     ) -> None:
         # ``resolve(dataset) -> {"source", "conn_str"}`` is ``connections.resolve``; ``ping`` is this
-        # module's own, replaceable so that no test has to reach a SQL Server.
+        # module's own, replaceable so that no test has to reach a SQL Server. ``record(dataset, ok,
+        # error)`` is the caller's ledger - the connection row's ``last_ok_at``/``last_error``, so
+        # the screen still says when the database last answered once the process has restarted.
         self._resolve = resolve
         self._ping = ping
         self._clock = clock
+        self._recorder = record
         self._lock = threading.Lock()
         self._wake = threading.Event()
         self._stopping = threading.Event()
@@ -106,21 +113,33 @@ class DbStatus:
     # ------------------------------------------------------------------ one check
 
     def _check(self, dataset: str) -> dict:
+        failure: str | None = None
         try:
             conn_str = self._conn_str(dataset)
             answer = _record("none") if conn_str is None else self._pinged(conn_str)
         except Exception as exc:  # the driver's sentence, scrubbed, is the line; the loop survives
+            failure = " ".join(str(exc).split())
             answer = _record(
                 "down",
                 checked_at=self._now_iso(),
                 message=DOWN_MESSAGE,
-                message_admin=connections.scrub(" ".join(str(exc).split())),
+                message_admin=connections.scrub(failure),
             )
         if answer["state"] != "none":  # a dataset with no connection has nothing to keep asking
             with self._lock:
                 self._asked.add(dataset)
                 self._answers[dataset] = answer
+            self._mark(dataset, answer["state"] == "ok", failure)
         return dict(answer)
+
+    def _mark(self, dataset: str, ok: bool, error: str | None) -> None:
+        """One check's mark on the caller's ledger; a ledger that raises never stops the loop."""
+        if self._recorder is None:
+            return
+        try:
+            self._recorder(dataset, ok, error)
+        except Exception:  # the mark is a line on a screen, not a reason to lose the answer
+            pass
 
     def _pinged(self, conn_str: str) -> dict:
         (self._ping or ping)(conn_str, config.DB_CHECK_TIMEOUT_S)
