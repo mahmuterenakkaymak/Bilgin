@@ -131,7 +131,7 @@ export default function Sidebar({ saved = [], history = [], conversations = [], 
       <ConversationList conversations={conversations} onRemoved={onRemoved} />
       <section className="side-block">
         <h2 className="side-title">Geçmiş</h2>
-        <ul id="history-list" className="side-list">
+        <ul id="history-list" className="side-list side-scroll">
           {historyRows.length === 0 && <li className="side-empty">{EMPTY_HISTORY}</li>}
           {historyRows.map((row) => {
             const { glyph, tone } = marker(row.status);

@@ -186,6 +186,12 @@ describe("Sidebar", () => {
     expect(html).not.toContain("tur 1");
   });
 
+  it("GEÇMİŞ listesi KONUŞMALAR gibi side-scroll ile kendi yüksekliğinde kayar", () => {
+    const html = render({});
+    expect(html).toContain('id="history-list" class="side-list side-scroll"');
+    expect(html).toContain('id="conversation-list" class="side-list side-scroll"');
+  });
+
   it("sadece boş sorular elenince iki boş cümle yine kurulur", () => {
     const html = render({
       history: [{ audit_id: "z1", question: "" }, { audit_id: "z2", question: "   ", status: "answered" }],
