@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useT } from "../i18n/index.js";
 import * as api from "../lib/api.js";
-import { BUSINESS_ROLES, EVERY_ROLE, groupByRole, roleLabel } from "../lib/startCards.js";
+import { BUSINESS_ROLE_CODES, EVERY_ROLE, groupByRole, roleLabel } from "../lib/startCards.js";
 
 // Yöneticinin hazır soru defteri (PLAN R7-21): kümenin bütün satırları burada durur, onaylıları
 // kullanıcının panosunda görünür. Satırın SQL'i hiçbir yerde gösterilmez — açma, onay, düzenleme
@@ -17,7 +17,7 @@ const DISPLAY_KEYS = new Map(DISPLAYS);
 // Rol seçenekleri "Hazır soru yap" formuyla aynı sıra ve aynı adlar: defter yeni bir rol uydurmaz
 // ve adı lib/startCards.js'in `roleLabel`ı söyler. Kişisel satır (business_role null) seçenekte
 // yoktur — onu sahibi panosundan kendisi ekler.
-const ROLES = [EVERY_ROLE, ...BUSINESS_ROLES.map((item) => item.role)];
+const ROLES = [EVERY_ROLE, ...BUSINESS_ROLE_CODES];
 
 // Öneri işi sunucuda koşar (R7-20); ekran işi bırakmaz, aşamasını iki saniyede bir sorar.
 const JOB_POLL_MS = 2000;

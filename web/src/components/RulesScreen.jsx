@@ -97,7 +97,12 @@ export default function RulesScreen({ rules = [], index = null, tables = [], loa
 
       {!draft && (
         <div className="table-wrap">
-          <table className="rules-table">
+          {/* Telefon kartında yazıyı CSS üretiyor (R8-18): sözü değişken olarak buradan alır ki
+              arayüz İngilizceyken Türkçe kalmasın. */}
+          <table
+            className="rules-table"
+            style={{ "--cell-synonyms": t("rules.col.synonyms"), "--cell-tables": t("rules.col.tables") }}
+          >
             <thead>
               <tr>
                 <th scope="col">{t("rules.col.term")}</th>

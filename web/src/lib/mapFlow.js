@@ -1,23 +1,20 @@
 // Harita ekranının akışı (R6-19): tek durum ağacının indirgeyicisi. Ağ çağrıları burada değildir —
 // bileşen api'yi çağırıp sonucu eylem olarak getirir, böylece akış sahte zamanlayıcı olmadan test edilir.
 
-export const NO_FILE_MESSAGE = "Önce doldurduğunuz şablonu seçin.";
-export const FAIL_MESSAGE = "İşlem tamamlanamadı.";
-export const INDEX_MESSAGE = "İndeks kurulamadı.";
-export const SWITCH_MESSAGE = "Veri kümesine geçilemedi.";
+import { makeT } from "../i18n/index.js";
 
-// Cümlelerin ekranı kataloğunda (R8-20): indirgeyicinin dili yok, o yüzden hâlde Türkçeleri durur
-// — mapFlow.test.js onları bu haliyle dondurmuştur. Ekran bir cümleyi bu kayıtta arar: bulunursa
-// kendi dilinin anahtarından, bulunamazsa sunucunun cümlesi olduğu gibi yazılır.
-export const MESSAGE_KEYS = new Map([
-  [FAIL_MESSAGE, "map.failed"],
-  [INDEX_MESSAGE, "map.indexFailed"],
-  [SWITCH_MESSAGE, "map.switchFailed"],
-]);
+// İndirgeyicinin dili yok: kendi cümlesi hâlde her zaman kataloğun Türkçesiyle durur (R8-18), ekran
+// onu `t()`den geçirir — t() tanımadığı cümleyi olduğu gibi bıraktığı için sunucunun cümlesi de aynı
+// yoldan geçer. mapFlow.test.js bu cümleleri Türkçe değerleriyle dondurmuştur; katalog onlardan
+// saparsa test kırılır.
+const tTr = makeT("tr");
+
+export const NO_FILE_MESSAGE = "Önce doldurduğunuz şablonu seçin.";
+export const INDEX_MESSAGE = "İndeks kurulamadı.";
 
 // Sözleşme "apply / status"un üç aşaması; başarısızlıkta ekran adımlar yerine cümleyi gösterir.
 // Adımların yazısı kataloğun anahtarlarıdır; PROGRESS_STEPS adım sayısının ve Türkçe yazının
-// kaydıdır — mapFlow.test.js onu bu haliyle dondurmuştur.
+// kaydıdır — mapFlow.test.js onu bu haliyle dondurmuştur, arayüz progressFlags'i okur.
 export const PROGRESS_STEPS = ["Yazılıyor", "İndeks kuruluyor", "Hazır"];
 export const PROGRESS_STEP_KEYS = ["map.step.writing", "map.step.indexing", "map.step.done"];
 const PHASE_STEP = { writing: 0, indexing: 1, done: 2 };
@@ -38,7 +35,7 @@ export function mapReducer(state = initialMapState, action = {}) {
       // Yeni dosya eski raporu geçersiz kılar: sayılar yüklenen dosyaya aittir.
       return { ...initialMapState, filename: text(action.filename) };
     case "nofile":
-      return { ...state, status: "noFile", error: { kind: "nofile", message: NO_FILE_MESSAGE } };
+      return { ...state, status: "noFile", error: { kind: "nofile", message: tTr("map.nofile") } };
     case "preview":
       if (!state.filename) return mapReducer(state, { type: "nofile" });
       return { ...state, status: "previewing", preview: null, job: null, error: null };
@@ -54,14 +51,14 @@ export function mapReducer(state = initialMapState, action = {}) {
         ...state,
         status,
         job,
-        error: status === "failed" ? { kind: "index", message: text(job.message) || INDEX_MESSAGE } : null,
+        error: status === "failed" ? { kind: "index", message: text(job.message) || tTr("map.indexFailed") } : null,
       };
     }
     case "fail":
       return {
         ...state,
         status: "failed",
-        error: { kind: text(action.kind) || "failed", message: text(action.message) || FAIL_MESSAGE },
+        error: { kind: text(action.kind) || "failed", message: text(action.message) || tTr("map.failed") },
       };
     case "activated":
       return { ...state, status: "activated", activated: text(action.name) || text(state.job?.name) };
@@ -69,7 +66,7 @@ export function mapReducer(state = initialMapState, action = {}) {
       return {
         ...state,
         status: "switchError",
-        error: { kind: "switch", message: text(action.message) || SWITCH_MESSAGE },
+        error: { kind: "switch", message: text(action.message) || tTr("map.switchFailed") },
       };
     case "reset":
       return { ...initialMapState };
@@ -89,13 +86,19 @@ export function shouldPoll(state) {
   return state?.status === "applying" || state?.status === "indexing";
 }
 
-export function progressSteps(phase) {
+// Adım bandının hâli: ekran yazıyı PROGRESS_STEP_KEYS'in kendi satırından okur, burada yalnız
+// sırası ve yanıp sönmesi duruyor.
+export function progressFlags(phase) {
   const current = PHASE_STEP[phase] ?? -1;
-  return PROGRESS_STEPS.map((label, index) => ({
-    label,
+  return PROGRESS_STEP_KEYS.map((_, index) => ({
     done: index < current || phase === "done",
     active: index === current && phase !== "done",
   }));
+}
+
+// mapFlow.test.js adım adlarını Türkçeleriyle dondurmuştur; arayüz progressFlags'i okur.
+export function progressSteps(phase) {
+  return progressFlags(phase).map((step, index) => ({ label: tTr(PROGRESS_STEP_KEYS[index]), ...step }));
 }
 
 function text(value) {

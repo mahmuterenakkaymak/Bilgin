@@ -1036,13 +1036,13 @@ main {
   }
 
   .rules-table .rules-list:nth-of-type(1)::before {
-    content: "Eş anlamlılar: ";
+    content: var(--cell-synonyms) ": ";
     color: var(--text);
     font-weight: 600;
   }
 
   .rules-table .rules-list:nth-of-type(2)::before {
-    content: "Tablolar: ";
+    content: var(--cell-tables) ": ";
     color: var(--text);
     font-weight: 600;
   }
@@ -1201,13 +1201,13 @@ main {
   }
 
   .users-table .users-status::before {
-    content: "Durum: ";
+    content: var(--cell-status) ": ";
     color: var(--text);
     font-weight: 600;
   }
 
   .users-table .users-login::before {
-    content: "Son giriş: ";
+    content: var(--cell-login) ": ";
     color: var(--text);
     font-weight: 600;
   }
@@ -1215,13 +1215,13 @@ main {
   /* Rol ile iş rolü alt alta inince iki çıplak select birbirine karışıyor — "Yönetici" mi iş rolü
      mü, telefon başlığı hiç göstermiyor. Adları hücrelerin kendisi taşır, Durum ve Son giriş gibi. */
   .users-table .users-role::before {
-    content: "Rol: ";
+    content: var(--cell-role) ": ";
     color: var(--text);
     font-weight: 600;
   }
 
   .users-table .users-business::before {
-    content: "İş rolü: ";
+    content: var(--cell-business) ": ";
     color: var(--text);
     font-weight: 600;
   }
@@ -1264,25 +1264,25 @@ main {
   }
 
   .conn-table .conn-status::before {
-    content: "Durum: ";
+    content: var(--cell-status) ": ";
     color: var(--text);
     font-weight: 600;
   }
 
   .conn-table .conn-target::before {
-    content: "Sunucu: ";
+    content: var(--cell-target) ": ";
     color: var(--text);
     font-weight: 600;
   }
 
   .conn-table .conn-success::before {
-    content: "Son başarılı: ";
+    content: var(--cell-success) ": ";
     color: var(--text);
     font-weight: 600;
   }
 
   .conn-table .conn-failure::before {
-    content: "Son hata: ";
+    content: var(--cell-failure) ": ";
     color: var(--text);
     font-weight: 600;
   }
@@ -1372,13 +1372,13 @@ main {
   }
 
   .map-errors .map-cell-row::before {
-    content: "Satır: ";
+    content: var(--cell-row) ": ";
     color: var(--muted);
     font-weight: 600;
   }
 
   .map-errors .map-cell-col::before {
-    content: "Kolon: ";
+    content: var(--cell-col) ": ";
     color: var(--muted);
     font-weight: 600;
   }

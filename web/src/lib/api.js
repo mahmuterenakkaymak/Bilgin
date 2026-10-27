@@ -1,4 +1,5 @@
 // Arayüzün tek ağ kapısı: her yol ya veri döner ya da ekranın okuyacağı ApiError yükseltir.
+import { makeT } from "../i18n/index.js";
 
 export class ApiError extends Error {
   constructor(status, message, errors = []) {
@@ -8,8 +9,6 @@ export class ApiError extends Error {
     this.errors = errors;
   }
 }
-
-const NETWORK_MESSAGE = "Sunucuya ulaşılamadı";
 
 // Giriş yolunu hem `login` hem 401 bekçisi okur: ikisi ayrışırsa oturum düşmesi sessizce kaybolur.
 const LOGIN_PATH = "/api/auth/login";
@@ -31,6 +30,12 @@ let uiLang = null;
 
 export function setApiLang(lang) {
   uiLang = lang || null;
+}
+
+// Kopan bağlantının cümlesi kataloğun arayüz dilinden okunur (R8-18): hata nesnesi ekranlara
+// yazılı bir söz taşıyor, o yüzden çeviri burada olmak zorunda.
+function networkMessage() {
+  return makeT(uiLang)("api.network");
 }
 
 // Boş küme `init`e hiç yazılmaz: gövdesiz GET'in bugünkü başlıksız çağrısı değişmesin.
@@ -287,7 +292,7 @@ async function request(path, { method = "GET", body } = {}) {
     response = await fetch(path, init);
     data = await readBody(response);
   } catch {
-    throw new ApiError(0, NETWORK_MESSAGE);
+    throw new ApiError(0, networkMessage());
   }
   if (!response.ok) {
     if (response.status === 401 && path !== LOGIN_PATH) unauthorized?.();
@@ -309,7 +314,7 @@ async function requestBlob(path) {
     }
     return { blob: await response.blob(), note: readNote(response) };
   } catch (error) {
-    throw error instanceof ApiError ? error : new ApiError(0, NETWORK_MESSAGE);
+    throw error instanceof ApiError ? error : new ApiError(0, networkMessage());
   }
 }
 
@@ -338,7 +343,7 @@ async function readBody(response) {
 function toApiError(status, data) {
   const errors = fieldErrors(data);
   const detail = typeof data?.detail === "string" && data.detail.trim() ? data.detail.trim() : null;
-  return new ApiError(status, errors[0]?.message ?? detail ?? `Sunucu hatası (${status}).`, errors);
+  return new ApiError(status, errors[0]?.message ?? detail ?? makeT(uiLang)("api.serverError", { status }), errors);
 }
 
 function fieldErrors(data) {

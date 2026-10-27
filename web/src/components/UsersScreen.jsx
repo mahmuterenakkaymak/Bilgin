@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useT } from "../i18n/index.js";
 import * as api from "../lib/api.js";
-import { BUSINESS_ROLES, roleLabel } from "../lib/startCards.js";
+import { BUSINESS_ROLE_CODES, roleLabel } from "../lib/startCards.js";
 import { MESSAGE_KEYS, PASSWORD_MIN_LEN, ROLES, clientErrors, toPayload } from "../lib/usersForm.js";
 
 // Kullanıcı ekranı (R6-19): yöneticinin defteri. Liste üstten okunur; her ekme ve güncelleme
@@ -244,9 +244,9 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
               aria-describedby="user-new-business-role-note"
               onChange={change("businessRole")}
             >
-              {BUSINESS_ROLES.map((item) => (
-                <option value={item.role} key={item.role}>
-                  {t(BUSINESS_ROLE_KEYS[item.role])}
+              {BUSINESS_ROLE_CODES.map((role) => (
+                <option value={role} key={role}>
+                  {t(BUSINESS_ROLE_KEYS[role])}
                 </option>
               ))}
             </select>
@@ -270,7 +270,17 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
       </form>
 
       <div className="table-wrap">
-        <table className="users-table">
+        {/* Telefon kartında yazıyı CSS üretiyor (R8-18): sözü değişken olarak buradan alır ki
+            arayüz İngilizceyken Türkçe kalmasın. */}
+        <table
+          className="users-table"
+          style={{
+            "--cell-status": t("users.col.status"),
+            "--cell-login": t("users.col.lastLogin"),
+            "--cell-role": t("users.col.role"),
+            "--cell-business": t("users.col.businessRole"),
+          }}
+        >
           <thead>
             <tr>
               <th scope="col">{t("users.col.user")}</th>
@@ -299,7 +309,7 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
               // varsayılanı okunur; listede olmayan kod ilk seçenek olarak düşmesin, kendi adıyla dursun.
               const listed = typeof user.business_role === "string" ? user.business_role : "";
               const business = listed || DEFAULT_BUSINESS_ROLE;
-              const extraRole = BUSINESS_ROLES.some((item) => item.role === business) ? [] : [business];
+              const extraRole = BUSINESS_ROLE_CODES.includes(business) ? [] : [business];
               return (
                 <tr key={user.id}>
                   <th scope="row" className="users-name">
@@ -344,9 +354,9 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
                         )
                       }
                     >
-                      {BUSINESS_ROLES.map((item) => (
-                        <option value={item.role} key={item.role}>
-                          {t(BUSINESS_ROLE_KEYS[item.role])}
+                      {BUSINESS_ROLE_CODES.map((role) => (
+                        <option value={role} key={role}>
+                          {t(BUSINESS_ROLE_KEYS[role])}
                         </option>
                       ))}
                       {extraRole.map((role) => (

@@ -4,7 +4,12 @@
 import { makeT } from "../i18n/index.js";
 import { formatNumber, isNumericColumn } from "./format.js";
 
-// config.BUSINESS_ROLES ile aynı sıra ve aynı etiketler: roller ekranlarda bu sırada listelenir.
+// config.BUSINESS_ROLES ile aynı sıra: roller ekranlarda bu sırada listelenir. Adı ekran kataloğun
+// `role.<kod>` satırından okur, o yüzden arayüzün gördüğü şey kodların kendisidir (R8-18).
+export const BUSINESS_ROLE_CODES = ["satis", "satin_alma", "muhasebe", "yonetim", "genel"];
+
+// Aynı beş rolün Türkçe adları — yalnız testlerin kaydı (startCards.test.js, UsersBusinessRole.test.jsx).
+// Sıra BUSINESS_ROLE_CODES ile aynıdır; o testi ayrılığı duyurur.
 export const BUSINESS_ROLES = [
   { role: "satis", label: "Satış" },
   { role: "satin_alma", label: "Satın alma" },
@@ -22,8 +27,8 @@ export const PERSONAL_ROLE = "";
 export const EVERY_ROLE_LABEL = "Herkes";
 export const PERSONAL_ROLE_LABEL = "Kişisel";
 
-// Rol kodlarının katalog anahtarları: sıra BUSINESS_ROLES'de, adı t() söyler.
-const ROLE_KEYS = new Map([...BUSINESS_ROLES.map((item) => [item.role, `role.${item.role}`]), [EVERY_ROLE, "start.role.every"]]);
+// Rol kodlarının katalog anahtarları: sıra BUSINESS_ROLE_CODES'da, adı t() söyler.
+const ROLE_KEYS = new Map([...BUSINESS_ROLE_CODES.map((role) => [role, `role.${role}`]), [EVERY_ROLE, "start.role.every"]]);
 
 export function roleLabel(role, lang = "tr") {
   const t = makeT(lang);
@@ -32,11 +37,11 @@ export function roleLabel(role, lang = "tr") {
   return key ? t(key) : role; // tanınmayan kod sessizce kaybolmasın, kendi adıyla görünsün
 }
 
-// Hazır soru defterinin grupları: rol sırası BUSINESS_ROLES, sonra "*", sonra kişiseller; boş
+// Hazır soru defterinin grupları: rol sırası BUSINESS_ROLE_CODES, sonra "*", sonra kişiseller; boş
 // grup yoktur, yani ekran hiç soru olmayan rol için başlık taşımaz.
 export function groupByRole(rows, lang = "tr") {
   const list = Array.isArray(rows) ? rows : [];
-  const order = [...BUSINESS_ROLES.map((item) => item.role), EVERY_ROLE, PERSONAL_ROLE];
+  const order = [...BUSINESS_ROLE_CODES, EVERY_ROLE, PERSONAL_ROLE];
   const groups = new Map();
   for (const row of list) {
     const role = row?.business_role ?? PERSONAL_ROLE;

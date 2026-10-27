@@ -18,7 +18,7 @@ import Thread from "./components/Thread.jsx";
 import UsersScreen from "./components/UsersScreen.jsx";
 import { makeT, useT } from "./i18n/index.js";
 import * as api from "./lib/api.js";
-import { NOT_ALLOWED_NOTE, canSee } from "./lib/auth.js";
+import { canSee } from "./lib/auth.js";
 import { parseRoute } from "./lib/route.js";
 import { applyTheme, nextTheme, readStored, store } from "./lib/theme.js";
 import { initialState as initialThread, threadReducer } from "./lib/thread.js";
@@ -551,7 +551,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
   const requestedRoute = conversation ? "conversation" : requested;
   const allowed = !user || canSee(requestedRoute, user.role);
   const route = allowed ? requestedRoute : "ask";
-  const screenNote = localNote || note || (allowed ? "" : NOT_ALLOWED_NOTE);
+  const screenNote = localNote || note || (allowed ? "" : t("auth.notAllowed"));
 
   // Kök nitelik seçili temayı taşısın: açılışta bir kez, her değişimde yeniden. main.jsx ilk
   // boyamadan önce aynı işi yaptığı için koyu teması olan açılışta açık bir kare görmez.

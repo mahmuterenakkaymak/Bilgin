@@ -47,7 +47,7 @@ function withNames(option, measure) {
 // olduğundan farklı yazılmaz. Panonun mini tablosu bu görevin dışında.
 export function columnLabel(column) {
   const name = String(column ?? "");
-  if (!name || /[a-zçğıöşü]/.test(name)) return name;
+  if (!name || /\p{Ll}/u.test(name)) return name;
   const words = name.split("_").filter(Boolean);
   if (!words.length) return "";
   const text = words.join(" ").toLowerCase();

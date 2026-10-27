@@ -189,7 +189,17 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
       </div>
 
       <div className="table-wrap">
-        <table className="conn-table">
+        {/* Telefon kartında yazıyı CSS üretiyor (R8-18): sözü değişken olarak buradan alır ki
+            arayüz İngilizceyken Türkçe kalmasın. */}
+        <table
+          className="conn-table"
+          style={{
+            "--cell-status": t("conn.col.status"),
+            "--cell-target": t("conn.col.target"),
+            "--cell-success": t("conn.col.success"),
+            "--cell-failure": t("conn.col.error"),
+          }}
+        >
           <thead>
             <tr>
               <th scope="col">{t("conn.col.dataset")}</th>

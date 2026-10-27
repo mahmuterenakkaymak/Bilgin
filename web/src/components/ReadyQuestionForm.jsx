@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useT } from "../i18n/index.js";
 import * as api from "../lib/api.js";
-import { BUSINESS_ROLES, EVERY_ROLE, roleLabel, suggestDisplay } from "../lib/startCards.js";
+import { BUSINESS_ROLE_CODES, EVERY_ROLE, roleLabel, suggestDisplay } from "../lib/startCards.js";
 
 // Hazır soru formu (PLAN R7-21): yönetici cevaplanmış bir soruyu panonun kartı yapar. Gövde
 // sözleşme "ready create body"dir: `sql` yoktur — sunucu onu `audit_id`nin kaydından alır ve
@@ -15,7 +15,7 @@ const DISPLAYS = [
 
 // "*" başta: kartın varsayılanı her rolün panosudur. Rol adları lib/startCards.js'in `roleLabel`ı
 // ile kataloğun anahtarlarından okunur, yani ekran ile defter aynı beş rolü söyler.
-const ROLES = [EVERY_ROLE, ...BUSINESS_ROLES.map((item) => item.role)];
+const ROLES = [EVERY_ROLE, ...BUSINESS_ROLE_CODES];
 
 export default function ReadyQuestionForm({ payload, onCancel }) {
   const { lang, t } = useT();

@@ -4,12 +4,11 @@ import DatasetList from "./DatasetList.jsx";
 import * as api from "../lib/api.js";
 import { arrayBufferToBase64 } from "../lib/fileB64.js";
 import {
-  MESSAGE_KEYS,
   PROGRESS_STEP_KEYS,
   canApply,
   initialMapState,
   mapReducer,
-  progressSteps,
+  progressFlags,
   shouldPoll,
 } from "../lib/mapFlow.js";
 
@@ -127,7 +126,13 @@ function Report({ preview }) {
       </p>
       {errors.length > 0 && (
         <div className="map-errors-wrap">
-          <table className="map-errors" id="map-errors">
+          {/* Telefon kartında yazıyı CSS üretiyor (R8-18): sözü değişken olarak buradan alır ki
+              arayüz İngilizceyken Türkçe kalmasın. */}
+          <table
+            className="map-errors"
+            id="map-errors"
+            style={{ "--cell-row": t("map.col.row"), "--cell-col": t("map.col.column") }}
+          >
             <thead>
               <tr>
                 <th scope="col">{t("map.col.sheet")}</th>
@@ -219,12 +224,9 @@ export default function MapScreen({
   // İş başladıysa adım bandı konuşur. Reddin cümlesi geçişte her zaman, işte yalnız iş
   // başlamadıysa bu kartın altında durur — başladıysa sözü adım bandının yanındaki cümle söyler.
   const running = state.status === "applying" || Boolean(state.job);
-  // İndirgeyicinin kendi cümlesi arayüz dilinin kataloğundan okunur; sunucunun cümlesi geldiği
-  // dilde kalır.
-  const own = (message) => {
-    const key = MESSAGE_KEYS.get(message);
-    return key ? t(key) : message;
-  };
+  // İndirgeyicinin kendi cümlesi bir katalog anahtarı ya da çevirisinin kendisidir; sunucunun
+  // cümlesi tanımadığı bir yazı olduğu için geldiği dilde kalır (t() onu olduğu gibi bırakır).
+  const own = (message) => t(message);
   const alert =
     state.status === "switchError" || (state.status === "failed" && !state.job) ? own(text(state.error?.message)) : "";
   // Üç kartın sırası ekranın zaten bildiğinden okunur: şablon alındıysa 1 biter, küme kurulduysa
@@ -340,7 +342,7 @@ export default function MapScreen({
               <p className="map-failure">{own(text(state.error?.message))}</p>
             ) : (
               <ol className="map-track">
-                {progressSteps(state.job?.phase).map((step, index) => (
+                {progressFlags(state.job?.phase).map((step, index) => (
                   <li className={step.done ? "is-done" : step.active ? "is-active" : ""} key={PROGRESS_STEP_KEYS[index]}>
                     <span className="map-track-mark" aria-hidden="true">
                       {step.done ? "✓" : step.active ? "●" : "○"}
