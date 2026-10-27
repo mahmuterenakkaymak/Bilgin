@@ -38,8 +38,10 @@ GOLDEN_NAMES = [
     "Yumuşatıcı 1 L",
     "Nohut 1 kg",
 ]
-# 12px yazıda bir karakter ~7px: kutu bu eşiğin altındaysa en uzun ad kesilir.
-GOLDEN_NAME_PX = max(len(name) for name in GOLDEN_NAMES) * 7
+# T377 (M24 görsel inceleme 2): 390px'lik telefonda .chart 330px ölçer; ad kutusu beş
+# kategorinin payını aşmaz, taşan ad üç noktayla kesilir ve tüm adı tooltip taşır.
+NARROW_CHART_PX = 330
+NARROW_CATEGORIES = 5
 
 
 @pytest.fixture
@@ -136,7 +138,8 @@ def test_the_bilgin_block_names_the_columns_and_the_number_format():
 def test_every_cartesian_chart_draws_every_category_name():
     """T258: ECharts'ın interval "auto"su çakışan adları sessizce düşürür — hiçbiri düşmemeli.
 
-    T266: aynı kusurun öteki yarısı — ad düşmüyordu ama 90px kutuda üç noktayla kesiliyordu.
+    T377: adın tamamı artık eksende değil tooltip'te — kutu en dar kartın payı kadar, taşan üç
+    noktayla kesiliyor (M24 görsel inceleme 2). Eksendeki ad yine tamadadır, kesilmez.
     """
     specs = [
         chart.chart_spec(BAR_COLUMNS, BAR_ROWS, "Ürüne göre satış miktarı ne?"),
@@ -149,9 +152,10 @@ def test_every_cartesian_chart_draws_every_category_name():
         assert label["interval"] == 0, "adlar çakışma uğruna silinmez"
         assert label["rotate"], "dönen ad yanındakine değmez"
         assert label["hideOverlap"] is False
-        assert label["overflow"] != "truncate", "uzun ad üç noktayla kesilmez"
+        assert label["overflow"] == "truncate", "taşan ad üç noktayla kesilir, tüm adı tooltip taşır"
         assert label["lineHeight"] > 0, "saran iki satır üst üste binmez"
-        assert label["width"] >= GOLDEN_NAME_PX, "kutu altın cevabın en uzun adını kesmeyecek kadar geniş"
+        assert label["width"] * NARROW_CATEGORIES <= NARROW_CHART_PX, "beş ad en dar kartta yan yana durur"
+        assert not any("…" in name or "..." in name for name in option["xAxis"]["data"]), "kesim çizimde, veride"
         assert option["grid"]["bottom"] > 30, "dönen ad eski alt boşluğa sığmaz"
         assert chart.validate_option(option) == []
 

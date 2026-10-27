@@ -26,18 +26,20 @@ def _pie_option():
     return spec["option"]
 
 
-def test_the_pie_names_its_slices_in_a_scrolled_legend_at_the_bottom():
-    legend = _pie_option()["legend"]
+def test_the_pie_has_no_legend_to_scroll():
+    """T377: kaydırmalı açıklama adları sayfalayıcının arkasına atıyordu — açıklama artık hiç yok."""
+    option = _pie_option()
 
-    assert legend["bottom"] is not None, "açıklama kutunun altında durur"
-    assert legend["type"] == "scroll", "uzun kategori listesi kutu içinde kayar"
+    assert "legend" not in option, "adlar açıklamada değil, dilimin yanında okunur"
+    assert option["tooltip"]["trigger"] == "item", "ad ve değer tooltip'te de durur"
 
 
-def test_the_pie_stops_drawing_the_outside_labels_the_legend_already_names():
+def test_the_pie_draws_every_slice_label_on_its_own_line():
+    """T377: dış etiket ve çizgesi geri geldi; dilimlerin ad + değer listesi olduğu gibi kalır."""
     series = _pie_option()["series"][0]
 
-    assert series["label"]["show"] is False
-    assert series["labelLine"]["show"] is False
+    assert series["label"]["show"] is True
+    assert series["labelLine"]["show"] is True
     assert series["data"] == [{"name": name, "value": value} for name, value in ROWS], "dilimler durur"
 
 
