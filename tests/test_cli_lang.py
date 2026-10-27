@@ -26,16 +26,17 @@ def _wide_terminal(monkeypatch):
     monkeypatch.setenv("COLUMNS", "100")
 
 
+# Updated automatically: T417 changed this contract (the `template` subcommand joins the top-level help).
 # Bugünün (R8-5 öncesi) yardımı: Türkçe yardımın değişmediğini kanıtlayan altın metin.
 TODAY_HELP = {
     "top": r"""usage: python -m nl2sql [-h]
-                        {build-db,build-index,eval-retrieval,import-map,introspect,diff-map,merge-map,make-login-script,ask,serve,user,eval}
+                        {build-db,build-index,eval-retrieval,import-map,introspect,diff-map,merge-map,make-login-script,template,ask,serve,user,eval}
                         ...
 
 NL -> T-SQL ölçüm aracı.
 
 positional arguments:
-  {build-db,build-index,eval-retrieval,import-map,introspect,diff-map,merge-map,make-login-script,ask,serve,user,eval}
+  {build-db,build-index,eval-retrieval,import-map,introspect,diff-map,merge-map,make-login-script,template,ask,serve,user,eval}
     build-db            sentetik veritabanını ve T-SQL betiğini kurar
     build-index         şema ve kurallardan arama indeksini kurar
     eval-retrieval      altın sorularında aramanın geri çağırmasını ölçer
@@ -44,6 +45,8 @@ positional arguments:
     diff-map            Excel haritası ile veritabanını karşılaştırır, farkı diff.json/md yazar
     merge-map           Excel haritası ile veritabanını birleştirir, şemayı --outa yazar
     make-login-script   salt okunur MSSQL giriş betiğini üretir ve yazar
+    template            doldurulacak boş şablonu yazar; --dataset iskeleti o kümenin şemasından
+                        doldurur
     ask                 tek bir soruyu modelden geçirip cevabı gösterir
     serve               web API'sini ve arayüzü kendi makinesine bağlı çalıştırır
     user                kullanıcı hesaplarını listeler, açar, değiştirir

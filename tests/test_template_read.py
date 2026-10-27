@@ -135,6 +135,7 @@ def test_the_rule_row_becomes_a_rule(tmp_path):
             "sql_hint": "SUM(Fatura.Tutar)",
             "tables": ["Satis.Fatura"],
             "markers": [],
+            "synonyms_en": ["invoice amount", "revenue"],  # Updated automatically: T415/R8-13 changed this contract.
         }
     ]
 

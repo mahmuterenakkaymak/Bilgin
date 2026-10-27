@@ -143,7 +143,9 @@ def test_every_sheet_is_mapped():
 def test_default_profile_covers_the_canonical_fields_without_ambiguity():
     with open(config.EXCEL_HEADERS_PATH, encoding="utf-8") as handle:
         table = json.load(handle)
-    assert set(table) == set(FIELDS)
+    # Updated automatically: T416 changed this contract (the profile also carries a `sheets` map).
+    assert set(table) == set(FIELDS) | {"sheets"}
+    table = {field: words for field, words in table.items() if field != "sheets"}
     folded = {field: {fold(word) for word in words} for field, words in table.items()}
     for field, words in folded.items():
         assert words, field
