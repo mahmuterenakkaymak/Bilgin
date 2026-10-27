@@ -1,30 +1,24 @@
 import { useEffect, useState } from "react";
+import { useT } from "../i18n/index.js";
 import * as api from "../lib/api.js";
-import {
-  AUTHS,
-  AUTH_LABELS,
-  DPAPI_MESSAGE,
-  EMPTY_FORM,
-  ENV_SOURCE_MESSAGE,
-  clientErrors,
-  toForm,
-  toPayload,
-} from "../lib/connForm.js";
+import { AUTHS, AUTH_KEYS, EMPTY_FORM, clientErrors, toForm, toPayload } from "../lib/connForm.js";
 
 // Veritabanı bağlantıları ekranı (R7-27): her SQL Server kümesinin kendi girişi burada doldurulur,
 // yani küme değişirken veritabanı da yeniden başlatmadan değişir. Parola hiçbir cevapta
 // dönmediği için alan hiç doldurulmaz — boş bırakılan parola sunucuda saklı olanı korur.
 // "Bağlantıyı test et" ile "Kaydet" aynı yoklamadan geçer: yazabilen bir giriş reddedilir ve
 // hiçbir satır yazılmaz, yönetici de hangi denetimin neden düştüğünü satır satır okur.
+// Kabuk R8-20'de kataloğa taşındı; denetimin ve sunucunun reddi veridir, kendi diliyle okunur.
 
 // Durum noktası arka plan yoklamasının cevabıdır (R7-25); istek hiçbir zaman onu beklemez.
-const STATE_LABELS = { ok: "Bağlı", down: "Erişilemiyor", unknown: "Denenmedi", none: "Kurulu değil" };
+const STATE_KEYS = { ok: "conn.state.ok", down: "conn.state.down", unknown: "conn.state.unknown", none: "conn.state.none" };
 
 // Denemenin kendi bütçesi (T466): erişilemeyen bir sunucu isteği hiç yanıtlamayabilir, ve o zaman
 // "Deneniyor…" ile kapalı Kaydet yöneticide kalır. Bütçe dolunca cümle sunucunun yerini tutar.
 // ASSUMPTION: bütçe yalnız denemeyi kapatır; Kaydet'in beklemesi sunucudaki login bağıyla sınırlıdır.
 const TEST_BUDGET_MS = 20000;
-const TEST_TIMEOUT_MESSAGE = `Sunucu ${TEST_BUDGET_MS / 1000} saniyede yanıt vermedi; bağlantıyı yeniden deneyin.`;
+
+const LOCALES = { tr: "tr-TR", en: "en-US" };
 
 function text(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -35,16 +29,16 @@ function cell(value) {
 }
 
 function dot(state) {
-  const tone = STATE_LABELS[state] ? state : "unknown";
-  return { tone, label: STATE_LABELS[tone] };
+  const tone = STATE_KEYS[state] ? state : "unknown";
+  return { tone, key: STATE_KEYS[tone] };
 }
 
-// "2026-10-27T09:15:00+00:00" → "27 Ekim 2026 12:15". ASSUMPTION: sunucu UTC yazıyor, dilim
-// yalnız gösterim; okunamayan tarih "—" okunur, hücre boş kalmaz.
-function stamp(value) {
+// "2026-10-27T09:15:00+00:00" → tr "27 Ekim 2026 12:15" / en "October 27, 2026 12:15 PM".
+// ASSUMPTION: sunucu UTC yazıyor, dilim yalnız gösterim; okunamayan tarih "—" okunur, hücre boş kalmaz.
+function stamp(value, lang) {
   const date = new Date(typeof value === "string" ? value : Number.NaN);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("tr-TR", {
+  return date.toLocaleString(LOCALES[lang] ?? LOCALES.tr, {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -80,6 +74,7 @@ function Field({ id, label, hint, error, value, type = "text", autoComplete = "o
 }
 
 export default function ConnectionsScreen({ connections = [], loading = false, error = "", onRefresh }) {
+  const { t, lang } = useT();
   const [row, setRow] = useState(null); // açılan satır: sözleşme "connection (public)"
   const [form, setForm] = useState(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -97,11 +92,7 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
   const readOnly = Boolean(row?.read_only_form) || secretOff;
   const pending = busy !== "" || loadingName !== "";
   const problem = error || failure;
-  const emptyText = error
-    ? "Bağlantılar okunamadı."
-    : loading
-      ? "Bağlantılar okunuyor…"
-      : "SQL Server'a bağlı veri kümesi yok; yeni bir küme kurunca burada listelenir.";
+  const emptyText = error ? t("conn.empty.error") : loading ? t("conn.empty.loading") : t("conn.empty.none");
   const lines = (Array.isArray(report?.lines) ? report.lines : []).filter((line) => text(line?.message));
   const missing = (Array.isArray(report?.missing_tables) ? report.missing_tables : [])
     .map((name) => text(name))
@@ -129,12 +120,12 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
         setForm(toForm(payload));
         setSecretOff(false);
       })
-      .catch((rejected) => setFailure(rejected?.message || "Bağlantı okunamadı."))
+      .catch((rejected) => setFailure(rejected?.message || t("conn.error.read")))
       .finally(() => setLoadingName(""));
   };
 
   const invalid = () => {
-    const errors = clientErrors(form, { hasSecret: Boolean(row?.has_secret) });
+    const errors = clientErrors(form, { hasSecret: Boolean(row?.has_secret), lang });
     setFieldErrors(errors);
     return Object.keys(errors).length > 0;
   };
@@ -150,7 +141,7 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
     const timer = setTimeout(() => {
       givenUp = true;
       setBusy("");
-      setFailure(TEST_TIMEOUT_MESSAGE);
+      setFailure(t("conn.test.timeout", { seconds: TEST_BUDGET_MS / 1000 }));
     }, TEST_BUDGET_MS);
     api
       .connectionsTest(dataset, toPayload(form))
@@ -158,7 +149,7 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
         if (!givenUp) setReport(payload ?? null);
       })
       .catch((rejected) => {
-        if (!givenUp) setFailure(rejected?.message || "Bağlantı denenemedi.");
+        if (!givenUp) setFailure(rejected?.message || t("conn.error.test"));
       })
       .finally(() => {
         clearTimeout(timer);
@@ -179,12 +170,13 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
         if (payload?.connection) setRow(payload.connection);
         setForm((current) => ({ ...current, password: "" }));
         setReport(payload?.guard ?? null);
-        setNote("Bağlantı kaydedildi.");
+        setNote(t("conn.note.saved"));
         onRefresh?.();
       })
       .catch((rejected) => {
-        if (rejected?.message === DPAPI_MESSAGE) setSecretOff(true);
-        setFailure(rejected?.message || "Bağlantı kaydedilemedi.");
+        // Sunucu 409'u arayüzün dilinde veriyor: cümle kataloğun kendi satırıyla tanınır.
+        if (rejected?.message === t("conn.dpapiOff")) setSecretOff(true);
+        setFailure(rejected?.message || t("conn.error.save"));
       })
       .finally(() => setBusy(""));
   };
@@ -192,24 +184,21 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
   return (
     <section id="conn-screen" className="screen conn-screen">
       <div>
-        <h1 className="screen-title">Veritabanı bağlantıları</h1>
-        <p className="screen-lead">
-          Her SQL Server kümesinin kendi girişi; kaydedildiği an geçerlidir. Parola sunucuda
-          şifreli durur ve ekrana hiç dönmez.
-        </p>
+        <h1 className="screen-title">{t("conn.title")}</h1>
+        <p className="screen-lead">{t("conn.lead")}</p>
       </div>
 
       <div className="table-wrap">
         <table className="conn-table">
           <thead>
             <tr>
-              <th scope="col">Veri kümesi</th>
-              <th scope="col">Durum</th>
-              <th scope="col">Sunucu / veritabanı</th>
-              <th scope="col">Son başarılı</th>
-              <th scope="col">Son hata</th>
+              <th scope="col">{t("conn.col.dataset")}</th>
+              <th scope="col">{t("conn.col.status")}</th>
+              <th scope="col">{t("conn.col.target")}</th>
+              <th scope="col">{t("conn.col.success")}</th>
+              <th scope="col">{t("conn.col.error")}</th>
               <th scope="col" className="conn-col-actions">
-                İşlemler
+                {t("conn.col.actions")}
               </th>
             </tr>
           </thead>
@@ -224,21 +213,22 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
             {rows.map((item) => {
               const name = text(item?.dataset);
               const status = dot(item?.state);
-              const ok = stamp(item?.last_ok_at);
+              const ok = stamp(item?.last_ok_at, lang);
               const failureLine = text(item?.last_error);
+              const state = t(status.key);
               return (
                 <tr key={name}>
                   <th scope="row" className="conn-name">
                     {name}
                     {item?.read_only_form && (
-                      <span className="conn-env" title="Bağlantı ortam değişkeninden geliyor; ekrandan değiştirilemez.">
-                        Ortam değişkeninden
+                      <span className="conn-env" title={t("conn.env.title")}>
+                        {t("conn.env")}
                       </span>
                     )}
                   </th>
                   <td className="conn-status">
-                    <span className={`db-dot db-dot-${status.tone}`} role="img" aria-label={status.label} />
-                    {status.label}
+                    <span className={`db-dot db-dot-${status.tone}`} role="img" aria-label={state} />
+                    {state}
                   </td>
                   <td className="conn-target">
                     <span className="conn-server">{cell(item?.server)}</span>
@@ -256,7 +246,7 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
                       disabled={loadingName !== ""}
                       onClick={() => edit(name)}
                     >
-                      {loadingName === name ? "Okunuyor…" : "Düzenle"}
+                      {loadingName === name ? t("conn.editing") : t("conn.edit")}
                     </button>
                   </td>
                 </tr>
@@ -274,15 +264,17 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
           save();
         }}
       >
-        <h2 className="rule-form-title">{dataset ? `Bağlantı · ${dataset}` : "Bağlantı"}</h2>
+        <h2 className="rule-form-title">
+          {dataset ? t("conn.form.title", { dataset }) : t("conn.form.titleEmpty")}
+        </h2>
         {!dataset && (
           <p className="field-hint" id="conn-hint">
-            Düzenlemek için yukarıdaki bir satırdan “Düzenle”yi seçin.
+            {t("conn.hint.pick")}
           </p>
         )}
         {row?.read_only_form && (
           <p className="conn-readonly" id="conn-readonly" role="status">
-            {ENV_SOURCE_MESSAGE}
+            {t("conn.readonly")}
           </p>
         )}
         {problem && (
@@ -298,8 +290,8 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
         <div className="conn-fields">
           <Field
             id="conn-server"
-            label="Sunucu"
-            hint="Sunucu adı ya da IP adresi; örnek: 10.0.0.5"
+            label={t("conn.field.server")}
+            hint={t("conn.hint.server")}
             error={fieldErrors.server}
             value={form.server}
             disabled={readOnly}
@@ -307,8 +299,8 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
           />
           <Field
             id="conn-database"
-            label="Veritabanı"
-            hint="Kümenin baktığı veritabanının adı."
+            label={t("conn.field.database")}
+            hint={t("conn.hint.database")}
             error={fieldErrors.database}
             value={form.database}
             disabled={readOnly}
@@ -316,7 +308,7 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
           />
           <div className="field">
             <label className="field-label" htmlFor="conn-auth">
-              Kimlik doğrulama
+              {t("conn.field.auth")}
             </label>
             <select
               id="conn-auth"
@@ -328,22 +320,18 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
             >
               {AUTHS.map((auth) => (
                 <option value={auth} key={auth}>
-                  {AUTH_LABELS[auth] ?? auth}
+                  {AUTH_KEYS[auth] ? t(AUTH_KEYS[auth]) : auth}
                 </option>
               ))}
             </select>
             <p className="field-hint" id="conn-auth-note">
-              Windows kimliği sunucu sürecinin kendi hesabıyla bağlanır.
+              {t("conn.hint.auth")}
             </p>
           </div>
           <Field
             id="conn-username"
-            label="Kullanıcı adı"
-            hint={
-              form.auth === "windows"
-                ? "Windows kimliğinde kullanıcı adı istenmez."
-                : "Sunucudaki salt okunur girişin adı."
-            }
+            label={t("conn.field.username")}
+            hint={form.auth === "windows" ? t("conn.hint.usernameWindows") : t("conn.hint.username")}
             error={fieldErrors.username}
             value={form.username}
             disabled={readOnly || form.auth === "windows"}
@@ -351,12 +339,12 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
           />
           <Field
             id="conn-password"
-            label="Parola"
-            hint={row?.has_secret ? "Boş bırakılırsa saklı parola korunur." : "Sunucuda şifrelenerek saklanır."}
+            label={t("conn.field.password")}
+            hint={row?.has_secret ? t("conn.hint.passwordKept") : t("conn.hint.password")}
             error={fieldErrors.password}
             value={form.password}
             type="password"
-            placeholder="değiştirmek için yazın"
+            placeholder={t("conn.field.passwordPlaceholder")}
             autoComplete="new-password"
             disabled={readOnly}
             onChange={change("password")}
@@ -370,7 +358,7 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
                 disabled={readOnly}
                 onChange={change("encrypt")}
               />
-              Bağlantıyı şifrele (Encrypt)
+              {t("conn.check.encrypt")}
             </label>
             <label className="conn-check" htmlFor="conn-trust">
               <input
@@ -380,22 +368,22 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
                 disabled={readOnly}
                 onChange={change("trust")}
               />
-              Sunucu sertifikasına güven (TrustServerCertificate)
+              {t("conn.check.trust")}
             </label>
           </div>
         </div>
         <div className="conn-buttons">
           <button type="button" id="conn-test" className="btn" onClick={runTest} disabled={readOnly || pending || !dataset}>
-            {busy === "test" ? "Deneniyor…" : "Bağlantıyı test et"}
+            {busy === "test" ? t("conn.test.testing") : t("conn.test")}
           </button>
           <button type="submit" id="conn-save" className="btn btn-primary" disabled={readOnly || pending || !dataset}>
-            {busy === "save" ? "Kaydediliyor…" : "Kaydet"}
+            {busy === "save" ? t("conn.saving") : t("conn.save")}
           </button>
         </div>
         {report && (
           <div className="conn-result" id="conn-result" role="status">
             <p className={report.ok ? "conn-result-head is-ok" : "conn-result-head is-err"}>
-              {report.ok ? "Bu giriş salt okunur: kaydedilebilir." : "Bu giriş kaydedilemez — aşağıdaki denetimler düştü."}
+              {report.ok ? t("conn.report.ok") : t("conn.report.refused")}
             </p>
             <ul className="conn-lines">
               {lines.map((line, index) => (
@@ -407,12 +395,12 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
             </ul>
             {missing.length > 0 && (
               <p className="conn-missing" id="conn-missing">
-                Bu girişle okunamayan tablolar: {missing.join(", ")}.
+                {t("conn.missing", { tables: missing.join(", ") })}
               </p>
             )}
             {script && (
               <a className="conn-script" id="conn-login-script" href={script} download>
-                Salt okunur giriş betiğini indir
+                {t("conn.script")}
               </a>
             )}
           </div>
@@ -425,6 +413,7 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
 // Ekranın akışı: liste tek istekten okunur ve her kayıt sonrası aynı istek yinelenir ki tablo
 // sunucudaki halini — yoklamanın yeni noktasıyla birlikte — göstersin.
 export function ConnectionsFlow() {
+  const { t } = useT();
   const [rows, setRows] = useState(null); // null: henüz okunmadı
   const [error, setError] = useState("");
 
@@ -432,7 +421,7 @@ export function ConnectionsFlow() {
     api
       .connectionsList()
       .then((payload) => setRows(Array.isArray(payload?.connections) ? payload.connections : []))
-      .catch((failure) => setError(failure?.message || "Bağlantılar okunamadı."));
+      .catch((failure) => setError(failure?.message || t("conn.empty.error")));
   };
 
   useEffect(refresh, []);

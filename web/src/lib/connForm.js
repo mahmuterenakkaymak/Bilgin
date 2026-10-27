@@ -6,10 +6,17 @@
 // Boş parola "koru"dur: depo yeni sır blobunu NULL bırakıp saklı olanı taşıyor (COALESCE), o
 // yüzden alan boşsa parola yalnız hiç saklanmamışsa zorunludur — sunucunun bildiği bu tek gerçeği
 // form `has_secret` alanından okur.
+//
+// Red cümleleri R8-20'de kataloğa taşındı; aşağıdaki sabitler Türkçe katalog değerlerinin
+// kendisidir — sunucunun tr cümleleriyle de aynı olduğu için testler bu sabitleri beklemeye devam
+// ediyor. Formun dili `clientErrors`ın `lang`ı: arayüz hangi dildeyse eksik alanın cümlesi de o
+// dilde okunur, tıpkı sunucunun kendi cevabı gibi.
+import { makeT } from "../i18n/index.js";
 
 export const AUTHS = ["sql", "windows"];
 
-export const AUTH_LABELS = { sql: "SQL kimliği (kullanıcı adı ve parola)", windows: "Windows kimliği (sunucunun kendi hesabı)" };
+// Şıkların adı katalogdan; `AUTHS` sırasıyla okunur, tanımadığı bir değer kendiyle kalır.
+export const AUTH_KEYS = { sql: "conn.auth.sql", windows: "conn.auth.windows" };
 
 export const NO_SERVER_MESSAGE = "Sunucu adı boş olamaz.";
 export const NO_DATABASE_MESSAGE = "Veritabanı adı boş olamaz.";
@@ -22,6 +29,16 @@ export const BAD_PORT_MESSAGE = "Geçersiz port: 1-65535 arası bir sayı olmal�
 // parolanın saklanamadığı ise ilk kayıt denemesinde anlaşılır — ekran cümleyi tanır.
 export const ENV_SOURCE_MESSAGE = "Bu bağlantı ortam değişkeninden geliyor; ekrandan değiştirilemez.";
 export const DPAPI_MESSAGE = "Bu sunucuda parola saklanamaz; ortam değişkenini kullanın.";
+
+// Reddin cümlesi kataloğun anahtarı: formun dili değişince eksik alanın cümlesi de değişir.
+const MESSAGE_KEYS = {
+  server: "conn.form.server",
+  database: "conn.form.database",
+  auth: "conn.form.auth",
+  username: "conn.form.username",
+  password: "conn.form.password",
+  port: "conn.form.port",
+};
 
 // Sözleşme "connection (public)"ın alanları + parola. Port ve sürücü formda değildir (R7-27'in
 // formu onları istemiyor) ama formla birlikte dolaşır, yoksa her kayıt varsayılanlarına dönerdi.
@@ -74,16 +91,18 @@ export function toPayload(form) {
 }
 
 // `hasSecret` açılan satırın `has_secret`ı: saklı sır varsa boş parola bir eksik değildir.
-export function clientErrors(form, { hasSecret = false } = {}) {
+// `lang` arayüzün dili: boş formun reddi sunucuya varmadan yöneticinin dilinde okunur.
+export function clientErrors(form, { hasSecret = false, lang = "tr" } = {}) {
+  const t = makeT(lang);
   const payload = toPayload(form);
   const sql = payload.auth === "sql";
   const errors = {};
-  if (!payload.server) errors.server = NO_SERVER_MESSAGE;
-  if (!payload.database) errors.database = NO_DATABASE_MESSAGE;
-  if (!AUTHS.includes(payload.auth)) errors.auth = BAD_AUTH_MESSAGE;
-  if (sql && !payload.username) errors.username = NO_USERNAME_MESSAGE;
-  if (sql && !payload.password && !hasSecret) errors.password = NO_PASSWORD_MESSAGE;
-  if (badPort(payload.options.port)) errors.port = BAD_PORT_MESSAGE;
+  if (!payload.server) errors.server = t(MESSAGE_KEYS.server);
+  if (!payload.database) errors.database = t(MESSAGE_KEYS.database);
+  if (!AUTHS.includes(payload.auth)) errors.auth = t(MESSAGE_KEYS.auth);
+  if (sql && !payload.username) errors.username = t(MESSAGE_KEYS.username);
+  if (sql && !payload.password && !hasSecret) errors.password = t(MESSAGE_KEYS.password);
+  if (badPort(payload.options.port)) errors.port = t(MESSAGE_KEYS.port);
   return errors;
 }
 
