@@ -303,6 +303,53 @@ describe("StartScreen", () => {
     expect(api.startOpen).not.toHaveBeenCalled();
   });
 
+  // Yenilemenin ortası sessiz: düğme kapanıyor, yük ise yanıt gelince değişiyor. Kart o arada
+  // kendi sınıfıyla meşgul olduğunu taşımalı (`start-card-refreshing` → CSS'teki bant).
+  it("yenileme sürerken kartın sınıfı bunu taşır, yanıt inince düşer", async () => {
+    let land;
+    api.start.mockResolvedValue({ cards: [NUMBER] });
+    api.startRefresh.mockReturnValue(
+      new Promise((resolve) => {
+        land = resolve;
+      }),
+    );
+    const app = await mount();
+    await settle();
+
+    const card = app.querySelector('.start-card[data-card-id="11"]');
+    await click(card.querySelector("button[data-card-refresh]"));
+
+    expect(card.className).toContain("start-card-refreshing");
+
+    land({ card: { ...NUMBER, value: 100 } });
+    await settle();
+
+    expect(card.className).not.toContain("start-card-refreshing");
+  });
+
+  it("reddedilen yenileme de kartın meşgul sınıfını bırakır", async () => {
+    let refuse;
+    api.start.mockResolvedValue({ cards: [NUMBER] });
+    api.startRefresh.mockReturnValue(
+      new Promise((_, reject) => {
+        refuse = reject;
+      }),
+    );
+    const app = await mount();
+    await settle();
+
+    const card = app.querySelector('.start-card[data-card-id="11"]');
+    await click(card.querySelector("button[data-card-refresh]"));
+
+    expect(card.className).toContain("start-card-refreshing");
+
+    refuse(new api.ApiError(429, "Bu kart az önce yenilendi; 28 sn sonra yeniden deneyin."));
+    await settle();
+
+    expect(card.className).not.toContain("start-card-refreshing");
+    expect(app.querySelector(".start-card-refresh").disabled).toBe(false);
+  });
+
   it("yönetici hata kartında soruyu soru kutusuna alır", async () => {
     const reapproved = [];
     api.start.mockResolvedValue({ cards: [BROKEN] });

@@ -3125,6 +3125,40 @@ a.db-label:hover {
   cursor: default;
 }
 
+/* Yenileme sürerken kartın üstünden tek bir ışık bandı geçiyor: "Yenile" kapanıyor ama yükün
+   değişeceği ana kadar kart hiçbir şey yapmıyor görünüyordu. Yeni eleman yok — kartın kendi
+   ::after'ı, bandı kartın içinden geçiyor (`overflow: hidden` komşu kartların üstüne taşmasın),
+   `pointer-events: none` tıklamayı engellemesin. Ton `--accent-soft`: iki temada da yüzeyin
+   hemen üstünde okunan solukluk. */
+.start-card-refreshing {
+  position: relative;
+  overflow: hidden;
+}
+
+.start-card-refreshing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, var(--accent-soft) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: start-card-shimmer 1.1s ease-in-out infinite;
+}
+
+@keyframes start-card-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Hareketi istemeyen bantı hiç görmez: meşgulün sözü zaten düğmenin yazısıdır, o hareket değildir.
+   Kural temelin altında — eşit özgüllükte sıra kazanır, yoksa `animation: none` yenmezdi. */
+@media (prefers-reduced-motion: reduce) {
+  .start-card-refreshing::after {
+    animation: none;
+  }
+}
+
 .start-card-title {
   margin: 0;
   font-size: 15px;

@@ -128,10 +128,13 @@ export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, on
   };
 
   const error = Boolean(card?.error);
+  // Yenilenen kartın gövdesi de "işte" der: düğmenin "Yenileniyor…" yazısı kartın yanında kayboluyor,
+  // o yüzden sınıf kartta durur ve bandı çizen CSS onun altındaki `::after` (styles.css).
+  const base = error ? "card start-card start-card-error error-card" : "card start-card";
 
   return (
     <article
-      className={error ? "card start-card start-card-error error-card" : "card start-card"}
+      className={busy === "refresh" ? `${base} start-card-refreshing` : base}
       data-card-id={card?.id}
       data-display={card?.display ?? "table"}
       role="button"
