@@ -12,9 +12,11 @@ const COLLAPSED_ROWS = 5;
 // saklanan satırlardır, tıklayınca açılır. Kayıtlı turda yük yoktur — tam tablo ve grafik ancak
 // SQL yeniden koşularak elde edilir, o yüzden açmak hiçbir şey koşturmaz (R7-15).
 // `onExpand(tur no)` aç/kapatı çevirir, `onReplay(tur)` kayıtlı SQL'i yeniden koşar.
+// `isLast` akışın son turu: son tur hiç katlanmaz (thread.js `mark`), o yüzden kapanacak bir katı
+// yoktur ve Kapat düğmesi açılmaz (M23 review 3).
 // `isAdmin` ve `reapproveId` cevabın panonun diliyle konuşması içindir (R7-21): kartı yalnız canlı
 // tur açar, kayıtlı turda yürüyecek bir yük yoktur.
-export default function TurnCard({ turn, onExpand, onReplay, onChoose, onChange, onSave, isAdmin = false, reapproveId = null }) {
+export default function TurnCard({ turn, onExpand, onReplay, onChoose, onChange, onSave, isAdmin = false, reapproveId = null, isLast = false }) {
   const summary = turn?.summary ?? {};
   const columns = Array.isArray(summary.columns) ? summary.columns : [];
   const rows = Array.isArray(summary.rows) ? summary.rows : [];
@@ -120,7 +122,7 @@ export default function TurnCard({ turn, onExpand, onReplay, onChoose, onChange,
           </button>
         </div>
       )}
-      {!collapsed && (
+      {!collapsed && !isLast && (
         <button type="button" className="btn btn-ghost turn-close" onClick={open}>
           Kapat
         </button>

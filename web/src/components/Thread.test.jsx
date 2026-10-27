@@ -102,6 +102,17 @@ const STORED_THREAD = thread(
   { type: "receive", payload: payload(2, "Ya Ağustos?") },
 );
 
+// Depodan açılan konuşma (M23 review 3): üçü de kayıtlı, son tur katlanmaz, eskileri katlı gelir.
+const THREE_STORED = thread({
+  type: "load",
+  conversation: { id: "kon1" },
+  turns: [
+    STORED,
+    { ...STORED, n: 2, question: "Ya Ağustos?", audit_id: "aa2" },
+    { ...STORED, n: 3, question: "Ya Temmuz?", audit_id: "aa3" },
+  ],
+});
+
 // Grafik yalnız markup'ta çizilir: ChartView'ın efekti jsdom'da koşamadığı için `mount` edilen
 // akışların yükü graphsız kalır.
 const WITH_CHART = thread(
@@ -256,6 +267,29 @@ describe("aç/kapat", () => {
     expect(app.querySelectorAll(".turn")[0].querySelector("#answer-card")).not.toBeNull();
     // Başka turların kartı yerinde: açma yalnız o turun katını çevirir.
     expect(app.querySelectorAll(".turn")[2].querySelector("#answer-card")).not.toBeNull();
+  });
+
+  it("son turda Kapat yoktur; açılan eski turun Kapat'ı onu yeniden katlar", () => {
+    const app = mount(THREE_STORED);
+    expect(app.querySelectorAll(".turn")).toHaveLength(3);
+    // Katlı iki eski turda da düğme yok, sondakinde de: ortada açılmış kart yok.
+    for (const turn of app.querySelectorAll(".turn")) {
+      expect(turn.querySelector(".turn-close")).toBeNull();
+    }
+
+    click(app.querySelectorAll(".turn")[0].querySelector(".turn-collapsed"));
+
+    const opened = app.querySelectorAll(".turn")[0];
+    expect(opened.querySelector(".turn-close")).not.toBeNull();
+    expect(opened.querySelector(".turn-collapsed").getAttribute("aria-expanded")).toBeNull();
+    // Son tur açılmadı: onun kartı hâlâ katlanamaz, o yüzden düğmesiz.
+    expect(app.querySelectorAll(".turn")[2].querySelector(".turn-close")).toBeNull();
+
+    click(opened.querySelector(".turn-close"));
+
+    const folded = app.querySelectorAll(".turn")[0];
+    expect(folded.querySelector(".turn-close")).toBeNull();
+    expect(folded.querySelector(".turn-collapsed").getAttribute("aria-expanded")).toBe("false");
   });
 
   it("klavyeyle de açılır", () => {

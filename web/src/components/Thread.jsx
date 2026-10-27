@@ -31,6 +31,7 @@ export default function Thread({
               onSave={onSave}
               isAdmin={isAdmin}
               reapproveId={index === list.length - 1 ? reapproveId : null}
+              isLast={index === list.length - 1}
             />
           </article>
         );
