@@ -1,8 +1,8 @@
 import { useState } from "react";
+import { useT } from "../i18n/index.js";
 import * as api from "../lib/api.js";
-import { ROLE_LABELS } from "../lib/auth.js";
 import { BUSINESS_ROLES, roleLabel } from "../lib/startCards.js";
-import { PASSWORD_MESSAGE, PASSWORD_MIN_LEN, ROLES, clientErrors, toPayload } from "../lib/usersForm.js";
+import { MESSAGE_KEYS, PASSWORD_MIN_LEN, ROLES, clientErrors, toPayload } from "../lib/usersForm.js";
 
 // Kullanıcı ekranı (R6-19): yöneticinin defteri. Liste üstten okunur; her ekme ve güncelleme
 // sonrası aynı istek yinelenir ki tablo sunucudaki halini göstersin. Reddin cümlesi değiştirilmeden
@@ -12,18 +12,26 @@ const DEFAULT_BUSINESS_ROLE = "genel";
 
 const EMPTY_FORM = { username: "", password: "", password2: "", role: "user", businessRole: DEFAULT_BUSINESS_ROLE };
 
-// Kendi rolü tek tıkla düşmez: değişince yönetici ekranları kapanır, o yüzden önce söz istenir.
-const SELF_ROLE_QUESTION = "Kendi rolünüzü değiştiriyorsunuz; yönetici ekranları kapanır. Değiştirilsin mi?";
+// Kendi rolü tek tıkla düşmez: değişince yönetici ekranları kapanır, o yüzden önce söz istenir
+// (cümleler kataloğunda, R8-20; sunucunun reddi kendi diliyle geldiği için olduğu gibi okunur).
+// Rol adları da katalogdan: `lib/auth.js` ve `lib/startCards.js` Türkçe sabitlerini kendi
+// ekranları için taşıyor, tanınmayan kod kendi adıyla kalır.
+const ROLE_KEYS = { admin: "role.admin", user: "role.user" };
+const BUSINESS_ROLE_KEYS = {
+  satis: "role.satis",
+  satin_alma: "role.satin_alma",
+  muhasebe: "role.muhasebe",
+  yonetim: "role.yonetim",
+  genel: "role.genel",
+};
 
-// İş rolü kendi üstüne değişilemez (R7-16) — reddin cümlesi sunucunundur (auth_api.OWN_BUSINESS_ROLE),
-// alan o yüzden kapalı geliyor ve ipucusu aynı sözü söylüyor.
-const OWN_BUSINESS_ROLE = "Kendi iş rolünüzü değiştiremezsiniz.";
+const LOCALES = { tr: "tr-TR", en: "en-US" };
 
 // ASSUMPTION: "Son giriş" tarayıcının yerel saatiyle okunur; sunucu UTC yazıyor, dilim yalnız gösterim.
-function lastLogin(value) {
+function lastLogin(value, lang) {
   const date = new Date(typeof value === "string" ? value : Number.NaN);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("tr-TR", {
+  return date.toLocaleString(LOCALES[lang] ?? LOCALES.tr, {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -70,6 +78,7 @@ export function UsersNote({ children }) {
 }
 
 export default function UsersScreen({ users = [], currentUser = null, loading = false, error = "", onRefresh }) {
+  const { t, lang } = useT();
   const [form, setForm] = useState(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
   const [flagged, setFlagged] = useState(""); // sunucunun reddettiği alan: cümle bantta, işaret alanda
@@ -88,7 +97,7 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
   const problem = error || failure;
   // Okuma düşerse tablo "okunuyor…"da beklememeli: yukarıdaki cümle ne olduğunu söylüyor, hücre
   // de boş yere söz vermesin. Yazma reddi (`failure`) listeyi etkilemez.
-  const emptyText = error ? "Kullanıcılar okunamadı." : loading ? "Kullanıcılar okunuyor…" : "Henüz kullanıcı yok.";
+  const emptyText = error ? t("users.loadFailed") : loading ? t("users.empty.loading") : t("users.empty.none");
 
   const change = (name) => (event) => {
     setForm((current) => ({ ...current, [name]: event.target.value }));
@@ -97,7 +106,7 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
   };
 
   const add = async () => {
-    const invalid = clientErrors(form);
+    const invalid = clientErrors(form, lang);
     setFieldErrors(invalid);
     if (Object.keys(invalid).length) return;
     // İş rolü formda `businessRole` adıyla duruyor (React alanı), API'nin beklediği anahtar ise
@@ -109,12 +118,12 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
     try {
       await api.usersCreate(payload);
       setForm(EMPTY_FORM);
-      setNote(`“${payload.username}” eklendi.`);
+      setNote(t("users.added", { name: payload.username }));
       onRefresh?.();
     } catch (rejected) {
       // ASSUMPTION: istemci denetimlerini geçmiş bir eklemede sunucunun reddi kullanıcı adına
       // ilişkindir (409 "zaten var"), o yüzden işaret edilecek alan kullanıcı adıdır.
-      setFailure(rejected?.message || "Kullanıcı eklenemedi.");
+      setFailure(rejected?.message || t("users.addFailed"));
       setFlagged("username");
     } finally {
       setAdding(false);
@@ -131,7 +140,7 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
       setNote(message);
       onRefresh?.();
     } catch (rejected) {
-      setFailure(rejected?.message || "Değişiklik kaydedilemedi.");
+      setFailure(rejected?.message || t("users.saveFailed"));
     } finally {
       setBusyId(null);
     }
@@ -145,21 +154,21 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
 
   const saveReset = (user) => {
     if (resetValue.length < PASSWORD_MIN_LEN) {
-      setResetError(PASSWORD_MESSAGE);
+      setResetError(t(MESSAGE_KEYS.password, { min: PASSWORD_MIN_LEN }));
       return;
     }
     const password = resetValue;
     setResetId(null);
     setResetValue("");
     setResetError("");
-    update(user, { password }, `“${user.username}” için parola güncellendi; oturumu kapandı.`);
+    update(user, { password }, t("users.reset.saved", { name: user.username }));
   };
 
   return (
     <section id="users-screen" className="screen users-screen">
       <div>
-        <h1 className="screen-title">Kullanıcılar</h1>
-        <p className="screen-lead">Hesaplar, rolleri ve son girişleri; her değişiklik hemen geçerlidir.</p>
+        <h1 className="screen-title">{t("users.title")}</h1>
+        <p className="screen-lead">{t("users.lead")}</p>
       </div>
 
       <form
@@ -170,12 +179,12 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
           add();
         }}
       >
-        <h2 className="rule-form-title">Yeni kullanıcı</h2>
+        <h2 className="rule-form-title">{t("users.newTitle")}</h2>
         <div className="user-add-fields">
           <Field
             id="user-new-username"
-            label="Kullanıcı adı"
-            hint="Küçük harf, rakam, . _ -; 3-32 karakter."
+            label={t("users.field.username")}
+            hint={t("users.hint.username")}
             error={fieldErrors.username}
             invalid={flagged === "username"}
             value={form.username}
@@ -184,8 +193,8 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
           />
           <Field
             id="user-new-password"
-            label="Parola"
-            hint={`En az ${PASSWORD_MIN_LEN} karakter.`}
+            label={t("users.field.password")}
+            hint={t("users.hint.password", { min: PASSWORD_MIN_LEN })}
             error={fieldErrors.password}
             value={form.password}
             type="password"
@@ -194,8 +203,8 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
           />
           <Field
             id="user-new-password2"
-            label="Parola (tekrar)"
-            hint="Yanlış yazmayı engeller."
+            label={t("users.field.password2")}
+            hint={t("users.hint.password2")}
             error={fieldErrors.password2}
             value={form.password2}
             type="password"
@@ -204,7 +213,7 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
           />
           <div className="field">
             <label className="field-label" htmlFor="user-new-role">
-              Rol
+              {t("users.field.role")}
             </label>
             <select
               id="user-new-role"
@@ -216,17 +225,17 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
             >
               {ROLES.map((role) => (
                 <option value={role} key={role}>
-                  {ROLE_LABELS[role] ?? role}
+                  {t(ROLE_KEYS[role])}
                 </option>
               ))}
             </select>
             <p className={fieldErrors.role ? "field-error" : "field-hint"} id="user-new-role-note">
-              {fieldErrors.role || "Yönetici kullanıcıları ve iş kurallarını değiştirir."}
+              {fieldErrors.role || t("users.hint.role")}
             </p>
           </div>
           <div className="field">
             <label className="field-label" htmlFor="user-new-business-role">
-              İş rolü
+              {t("users.field.businessRole")}
             </label>
             <select
               id="user-new-business-role"
@@ -237,12 +246,12 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
             >
               {BUSINESS_ROLES.map((item) => (
                 <option value={item.role} key={item.role}>
-                  {item.label}
+                  {t(BUSINESS_ROLE_KEYS[item.role])}
                 </option>
               ))}
             </select>
             <p className="field-hint" id="user-new-business-role-note">
-              Başlangıç ekranı ve hazır sorular bu role göre gelir.
+              {t("users.hint.businessRole")}
             </p>
           </div>
         </div>
@@ -255,7 +264,7 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
         {!problem && note && <UsersNote>{note}</UsersNote>}
         <div className="user-add-actions">
           <button type="submit" id="user-add-submit" className="btn btn-primary" disabled={adding}>
-            {adding ? "Ekleniyor…" : "Kullanıcıyı ekle"}
+            {adding ? t("users.adding") : t("users.add")}
           </button>
         </div>
       </form>
@@ -264,13 +273,13 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
         <table className="users-table">
           <thead>
             <tr>
-              <th scope="col">Kullanıcı</th>
-              <th scope="col">Rol</th>
-              <th scope="col">İş rolü</th>
-              <th scope="col">Durum</th>
-              <th scope="col">Son giriş</th>
+              <th scope="col">{t("users.col.user")}</th>
+              <th scope="col">{t("users.col.role")}</th>
+              <th scope="col">{t("users.col.businessRole")}</th>
+              <th scope="col">{t("users.col.status")}</th>
+              <th scope="col">{t("users.col.lastLogin")}</th>
               <th scope="col" className="users-col-actions">
-                İşlemler
+                {t("users.col.actions")}
               </th>
             </tr>
           </thead>
@@ -285,7 +294,7 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
             {rows.map((user) => {
               const busy = busyId === user.id;
               const self = Boolean(selfName) && String(user.username ?? "").toLowerCase() === selfName;
-              const login = lastLogin(user.last_login_at);
+              const login = lastLogin(user.last_login_at, lang);
               // İş rolü Run 7'nin alanı: eski bir listede hiç olmayabilir, o zaman sunucunun
               // varsayılanı okunur; listede olmayan kod ilk seçenek olarak düşmesin, kendi adıyla dursun.
               const listed = typeof user.business_role === "string" ? user.business_role : "";
@@ -300,19 +309,19 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
                     <select
                       id={`user-role-${user.id}`}
                       className="field-input users-select"
-                      aria-label={`${user.username} rolü`}
+                      aria-label={t("users.row.roleAria", { name: user.username })}
                       data-user-role={user.id}
                       value={user.role}
                       disabled={busy}
                       onChange={(event) => {
                         const role = event.target.value;
-                        if (self && !window.confirm(SELF_ROLE_QUESTION)) return;
-                        update(user, { role }, `“${user.username}” rolü güncellendi.`);
+                        if (self && !window.confirm(t("users.selfRoleConfirm"))) return;
+                        update(user, { role }, t("users.roleUpdated", { name: user.username }));
                       }}
                     >
                       {ROLES.map((role) => (
                         <option value={role} key={role}>
-                          {ROLE_LABELS[role] ?? role}
+                          {t(ROLE_KEYS[role])}
                         </option>
                       ))}
                     </select>
@@ -322,22 +331,22 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
                     <select
                       id={`user-business-role-${user.id}`}
                       className="field-input users-select"
-                      aria-label={`${user.username} iş rolü`}
+                      aria-label={t("users.row.businessRoleAria", { name: user.username })}
                       data-user-business-role={user.id}
                       value={business}
                       disabled={busy || self}
-                      title={self ? OWN_BUSINESS_ROLE : undefined}
+                      title={self ? t("users.ownBusinessRole") : undefined}
                       onChange={(event) =>
                         update(
                           user,
                           { business_role: event.target.value },
-                          `“${user.username}” iş rolü güncellendi.`,
+                          t("users.businessRoleUpdated", { name: user.username }),
                         )
                       }
                     >
                       {BUSINESS_ROLES.map((item) => (
                         <option value={item.role} key={item.role}>
-                          {item.label}
+                          {t(BUSINESS_ROLE_KEYS[item.role])}
                         </option>
                       ))}
                       {extraRole.map((role) => (
@@ -349,10 +358,10 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
                   </td>
                   <td className="users-status">
                     <span className={user.active ? "users-state is-active" : "users-state is-passive"}>
-                      {user.active ? "Etkin" : "Pasif"}
+                      {user.active ? t("users.status.active") : t("users.status.passive")}
                     </span>
                   </td>
-                  <td className="users-login" title={login ? undefined : "Hiç giriş yapmadı."}>
+                  <td className="users-login" title={login ? undefined : t("users.neverLoggedIn")}>
                     {login || "—"}
                   </td>
                   <td className="users-actions">
@@ -369,12 +378,12 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
                             user,
                             { active: !user.active },
                             user.active
-                              ? `“${user.username}” pasifleştirildi; oturumu kapandı.`
-                              : `“${user.username}” etkinleştirildi.`,
+                              ? t("users.deactivated", { name: user.username })
+                              : t("users.activated", { name: user.username }),
                           )
                         }
                       >
-                        {user.active ? "Pasifleştir" : "Etkinleştir"}
+                        {user.active ? t("users.deactivate") : t("users.activate")}
                       </button>
                     )}
                     <button
@@ -385,7 +394,7 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
                       disabled={busy}
                       onClick={() => openReset(user)}
                     >
-                      Parolayı değiştir
+                      {t("users.reset")}
                     </button>
                     {resetId === user.id && (
                       <span className="users-reset">
@@ -394,8 +403,8 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
                           className="field-input"
                           type="password"
                           autoComplete="new-password"
-                          aria-label={`${user.username} için yeni parola`}
-                          placeholder={`En az ${PASSWORD_MIN_LEN} karakter`}
+                          aria-label={t("users.reset.aria", { name: user.username })}
+                          placeholder={t("users.reset.placeholder", { min: PASSWORD_MIN_LEN })}
                           value={resetValue}
                           aria-invalid={resetError ? "true" : undefined}
                           onChange={(event) => {
@@ -409,7 +418,7 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
                           data-user-reset-save={user.id}
                           onClick={() => saveReset(user)}
                         >
-                          Kaydet
+                          {t("users.reset.save")}
                         </button>
                         {resetError && <p className="field-error">{resetError}</p>}
                       </span>
