@@ -28,10 +28,14 @@ def detect_lang(text: str, fallback: str = "tr") -> str:
     it. Text with no signal at all - empty, a number, a bare product code - is not guessed either:
     the caller's own default comes back.
     """
-    letters = sum(1 for ch in text if ch in TURKISH_LETTERS)
     tokens = _TOKENS.findall(_fold(text))
-    score_tr = 2 * letters + sum(1 for token in tokens if token in _TR_WORDS)
     score_en = sum(1 for token in tokens if token in _EN_WORDS)
+    # ASSUMPTION: a capitalised proper name ("Çay", "Özgür") is a Turkish letter that says nothing
+    # about the language, so once the sentence already carries two English words the letter counts
+    # single and cannot outweigh them.
+    weight = 1 if score_en >= 2 else 2
+    letters = sum(1 for ch in text if ch in TURKISH_LETTERS)
+    score_tr = weight * letters + sum(1 for token in tokens if token in _TR_WORDS)
     if score_tr == score_en:
         return fallback
     return "tr" if score_tr > score_en else "en"
