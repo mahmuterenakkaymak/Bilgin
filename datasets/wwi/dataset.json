@@ -14,6 +14,7 @@
     "traps": "traps.jsonl",
     "ambiguous": "ambiguous.jsonl",
     "followups": "followups.jsonl",
+    "followups_en": "followups_en.jsonl",
     "ready_questions": "ready_questions.json"
   },
   "builder": "builder.py:build_db",
