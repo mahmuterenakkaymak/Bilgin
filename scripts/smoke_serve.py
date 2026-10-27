@@ -50,6 +50,15 @@ Aynı formu ``readonly`` dediği sunucuyla geçirdiğinde cevap 200'dür ve sat�
 gövdesinde okunmaz. Son adım sağlık çipini bir kullanıcının gözünden okur: durum ``ok``, yöneticiye
 ayrılmış satırlar yok. Yoklanacak küme dosyada adıyla durmak zorunda olduğu için ``--connections`` da
 ``--start`` gibi kümesini kendisi söyler.
+
+``--lang en`` Run 8'in arayüz dilini aynı sunucuda koşar (R8-5, R8-12): yönetici ``PUT /api/auth/me``le
+kendi tercihini yazar ve cevabında okur, sonraki her istek dili ayrıca ``Accept-Language`` başlığıyla
+söyler. Soru kümenin o dildeki ilk altın sorusudur -- ``wwi``nin E01'i -- ve cevabın dili payload'ın
+``answer_lang``inden okunur: İngilizce sorulan sorunun cevabı İngilizcedir. Red de şablon da o dili
+konuşur -- boş sorunun 400'ü kataloğun İngilizce satırıdır, inen şablonun sayfa adları İngilizcedir.
+``--lang`` bir mod değil bir dildir, o yüzden ``--roles``la da ``--conversation``la da koşar;
+İngilizce altın kümesi olmayan bir kümeyi ölçemediği için ``--dataset`` söylenmediğinde kümesini de
+kendisi söyler.
 """
 
 from __future__ import annotations
@@ -57,6 +66,7 @@ from __future__ import annotations
 import argparse
 import codecs
 import http.cookiejar
+import io
 import json
 import os
 import re
@@ -72,8 +82,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))  # betik nereden çağrılırsa çağrılsın nl2sql görünsün
 
+import openpyxl  # noqa: E402  # şablonun sayfa adları indirilen dosyadan okunur
 from nl2sql import config, datasets  # noqa: E402
 from nl2sql.auth.bootstrap import DEV_USERNAME  # noqa: E402
+from nl2sql.i18n import t  # noqa: E402
+from nl2sql.schema_map import template  # noqa: E402
 from nl2sql.web.app import BUILD_COMMAND, NO_UI  # noqa: E402
 
 HOST = "127.0.0.1"
@@ -88,8 +101,10 @@ CONN_DATASET = "wwi_real"  # --connections'ın formu bir SQL Server kümesine ya
 CONN_DATABASE = "wwi"  # yoklama sunucu adı kadarını okur; veritabanının adı hiçbir şeyi değiştirmez
 PROBE_READONLY = "ro.local"  # yoklama dosyasının salt okunur girişi: kaydeden sunucu
 PROBE_SYSADMIN = "sa.local"  # yoklama dosyasının yönetici girişi: reddedilen sunucu
+LANG_DATASET = "wwi"  # --lang'ın kümesi: İngilizce altın soruları olan vitrin kümesi (R8-10)
 
 BODIES: list[str] = []  # görülen her cevap gövdesi: --connections parolanın bunlarda kalmadığını ölçer
+LANG: str | None = None  # --lang: her istek dili başlıkla söyler, sunucu da reddi o dilde kurar (R8-5)
 
 
 class SmokeError(Exception):
@@ -97,13 +112,16 @@ class SmokeError(Exception):
 
 
 def main(argv: list[str] | None = None) -> int:
+    global LANG  # dili her isteğin başlığı tek yerden okur: dumanın tamamı tek dili konuşur
     args = _parse_args(argv)
-    dataset = args.dataset or config.DEFAULT_DATASET
-    question = datasets.load_dataset(dataset).golden()[0]["question"]
+    LANG = args.lang
     # ASSUMPTION: --start tohumlu bir küme ölçer; --dataset söylenmemişse küme betikten söylenir, çünkü
     # serve'ın kendi sırası hazır sorusu olmayan bir kümeye düşebilir ve boş pano dumanın geçmesi değildir.
     # --connections da kümesini kendisi söyler: yoklama dosyası yoklanacak kümenin adını taşır.
-    served = dataset if (args.start or args.connections) else args.dataset
+    # --lang da söyler: config'in varsayılanı İngilizce altın soru taşımıyor, o yüzden kümesi wwi'dir.
+    dataset = args.dataset or (LANG_DATASET if args.lang else config.DEFAULT_DATASET)
+    question = datasets.load_dataset(dataset).golden(args.lang or "tr")[0]["question"]
+    served = dataset if (args.start or args.connections or args.lang) else args.dataset
 
     fd, app_db = tempfile.mkstemp(suffix=".db")  # sunucunun boş kullanıcı dosyası, sonda silinir
     os.close(fd)
@@ -114,7 +132,7 @@ def main(argv: list[str] | None = None) -> int:
         code = _run_steps(
             args.port, question, server, password,
             ui=args.ui, roles=args.roles, conversation=args.conversation, start=args.start,
-            connections=args.connections,
+            connections=args.connections, lang=args.lang,
         )
     finally:
         log = _stop_server(server)
@@ -161,6 +179,12 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         action="store_true",
         help="bağlantı ekranını ve durum çipini de dener (R7-22..R7-27)",
     )
+    parser.add_argument(
+        "--lang",
+        choices=list(config.LANGUAGES),
+        default=None,
+        help="arayüz dilini de dener: her istek o dille gider (R8-5, R8-12)",
+    )
     return parser.parse_args(argv)
 
 
@@ -174,9 +198,10 @@ def _run_steps(
     conversation: bool = False,
     start: bool = False,
     connections: bool = False,
+    lang: str | None = None,
 ) -> int:
     """Adımlar sırayla; ilki tökezlerse durur, geçeni tek ✓ satırı olarak basar."""
-    state: dict = {}
+    state: dict = {"lang": lang} if lang else {}
     opener = _opener()  # girişin açtığı oturum kavanozda durur, sonraki her adım onu taşır
     steps = [
         ("oturumsuz istek 401", lambda: _check_anonymous(port, server, question)),
@@ -187,6 +212,13 @@ def _run_steps(
     ]
     if ui:
         steps.insert(3, ("derlenmiş ekran", lambda: _check_ui(opener, port)))  # boş perdenin önüne
+    if lang:
+        # Tercih en önce yazılır: sonraki her adımın cümlesi -- cevabı da reddi de şablonu da -- o dilde.
+        steps.insert(2, (f"kullanıcının dili {lang}", lambda: _check_lang_saved(opener, port, state)))
+        steps += [
+            (f"boş sorunun {lang} reddi", lambda: _check_blank_question(opener, port, state)),
+            (f"şablonun {lang} sayfaları", lambda: _check_template_sheets(opener, port, state)),
+        ]
     if roles:
         # Yöneticinin sorusu ve onun dışa aktarımı ölçülünce adımlar onların üstüne kurulur.
         steps += [
@@ -308,7 +340,10 @@ def _check_ask(opener, port: int, question: str, state: dict) -> str:
             f" (audit {payload.get('audit_id')})"
         )
     state["audit_id"] = payload["audit_id"]
-    return f"{payload['row_count']} satır · {payload['audit_id']}"
+    answer = payload.get("answer_lang")
+    if state.get("lang") and answer != state["lang"]:
+        raise SmokeError(f"cevabın dili {answer!r}; {state['lang']!r} bekleniyor")
+    return f"{answer} · {payload['row_count']} satır · {payload['audit_id']}"
 
 
 def _check_export(opener, port: int, state: dict) -> str:
@@ -318,6 +353,37 @@ def _check_export(opener, port: int, state: dict) -> str:
         raise SmokeError(f"CSV {BOM!r} ile başlamıyor: {raw[:16]!r}")
     lines = raw.decode("utf-8-sig").splitlines()
     return f"{audit_id}.csv · {lines[0] if lines else 'boş'}"
+
+
+def _check_lang_saved(opener, port: int, state: dict) -> str:
+    """Kişi kendi arayüz tercihini yazar ve cevabında okur: tercih sonraki isteklerin dilidir (R8-5)."""
+    label = "/api/auth/me"
+    payload = _send(opener, _put_request(port, label, {"lang": state["lang"]}), label)
+    if payload.get("lang") != state["lang"]:
+        raise SmokeError(f"{label} {payload} döndü; lang {state['lang']!r} bekleniyor")
+    return f"{payload['username']} · {payload['lang']}"
+
+
+def _check_blank_question(opener, port: int, state: dict) -> str:
+    """Boş sorunun reddi arayüz dilini konuşturur: durum 400, cümle kataloğun o dildeki satırı (R8-5)."""
+    label = "/api/ask"
+    request = _ask_request(f"http://{HOST}:{port}{label}", "   ")
+    detail = _expect(opener, request, label, 400, body=True)
+    wanted = t("app.blank_question", state["lang"])
+    if detail != wanted:
+        raise SmokeError(f"red {detail!r} dedi; {wanted!r} bekleniyor")
+    return f"400 · {detail}"
+
+
+def _check_template_sheets(opener, port: int, state: dict) -> str:
+    """Şablonun sayfa adları arayüz dilinde doğar: İngilizce ekran İngilizce sayfa indirir (R8-12)."""
+    label = "/api/schema-map/template.xlsx"
+    raw = _get(opener, f"http://{HOST}:{port}{label}", raw=True)
+    names = openpyxl.load_workbook(io.BytesIO(raw)).sheetnames
+    wanted = [*template.LABELS[state["lang"]]["sheets"], template.INFO_SHEET]
+    if names != wanted:
+        raise SmokeError(f"şablon sayfaları {names}; {wanted} bekleniyor")
+    return f"{len(names)} sayfa · {names[0]}"
 
 
 def _check_user_added(opener, port: int, state: dict, business_role: str | None = None) -> str:
@@ -333,7 +399,7 @@ def _check_user_added(opener, port: int, state: dict, business_role: str | None 
     request = urllib.request.Request(
         f"http://{HOST}:{port}/api/users",
         data=json.dumps(body).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={**_headers(), "Content-Type": "application/json"},
         method="POST",
     )
     user = _send(opener, request, "/api/users").get("user") or {}
@@ -362,7 +428,7 @@ def _check_rule_denied(port: int, state: dict) -> str:
         data=json.dumps(
             {"id": "duman_kurali", "term": "Duman terimi", "definition": "Dumanın kendi tarifi."}
         ).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={**_headers(), "Content-Type": "application/json"},
         method="POST",
     )
     return _expect(state["user_opener"], request, "/api/rules", 403)
@@ -462,7 +528,9 @@ def _check_card_open(port: int, state: dict) -> str:
     label = f"/api/start/cards/{state['card_id']}/open"
     payload = _send(
         state["user_opener"],
-        urllib.request.Request(f"http://{HOST}:{port}{label}", data=b"", method="POST"),
+        urllib.request.Request(
+            f"http://{HOST}:{port}{label}", data=b"", headers=_headers(), method="POST"
+        ),
         label,
     )
     if payload.get("status") != "answered":
@@ -575,7 +643,7 @@ def _ask_request(url: str, question: str, conversation_id: str | None = None) ->
     return urllib.request.Request(
         url,
         data=json.dumps(body).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={**_headers(), "Content-Type": "application/json"},
         method="POST",
     )
 
@@ -585,7 +653,7 @@ def _login_request(port: int, username: str, password: str) -> urllib.request.Re
     return urllib.request.Request(
         f"http://{HOST}:{port}/api/auth/login",
         data=json.dumps({"username": username, "password": password}).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={**_headers(), "Content-Type": "application/json"},
         method="POST",
     )
 
@@ -606,7 +674,7 @@ def _put_request(port: int, label: str, body: dict) -> urllib.request.Request:
     return urllib.request.Request(
         f"http://{HOST}:{port}{label}",
         data=json.dumps(body).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={**_headers(), "Content-Type": "application/json"},
         method="PUT",
     )
 
@@ -617,6 +685,11 @@ def _questions(opener, port: int) -> list[str]:
     return [item["question"] for item in payload.get("history", [])]
 
 
+def _headers() -> dict:
+    """İstek başlıkları: ``--lang`` söylenmişse arayüz dili her isteğin başlığındadır (R8-5)."""
+    return {"Accept-Language": LANG} if LANG else {}
+
+
 def _opener():
     """Çerez kavanozlu istemci: ``/api/auth/login``ın açtığı oturum tek satır kod gerektirmez."""
     return urllib.request.build_opener(
@@ -625,7 +698,10 @@ def _opener():
 
 
 def _get(opener, url: str, timeout: float = HTTP_TIMEOUT_S, raw: bool = False):
-    return _send(opener, urllib.request.Request(url, method="GET"), url, timeout=timeout, raw=raw)
+    return _send(
+        opener, urllib.request.Request(url, headers=_headers(), method="GET"), url,
+        timeout=timeout, raw=raw,
+    )
 
 
 def _send(opener, request, label: str, timeout: float = HTTP_TIMEOUT_S, raw: bool = False):
@@ -642,8 +718,12 @@ def _send(opener, request, label: str, timeout: float = HTTP_TIMEOUT_S, raw: boo
     return content if raw else json.loads(text)
 
 
-def _expect(opener, request, label: str, code: int) -> str:
-    """Reddi ölçen kapı: beklenen durum kodu dışında her şey SmokeError, kabul de öyle."""
+def _expect(opener, request, label: str, code: int, body: bool = False):
+    """Reddi ölçen kapı: beklenen durum kodu dışında her şey SmokeError, kabul de öyle.
+
+    ``body`` istendiğinde dönen durum kodunun değil gövdedeki ``detail``in kendisidir: reddin hangi
+    dilde konuştuğu ancak cümlesinden okunur.
+    """
     try:
         with opener.open(request, timeout=HTTP_TIMEOUT_S) as response:
             response.read()
@@ -652,7 +732,7 @@ def _expect(opener, request, label: str, code: int) -> str:
         BODIES.append(detail)
         if exc.code != code:
             raise SmokeError(f"{label} -> {exc.code}: {detail[:300]}") from exc
-        return f"{code}"
+        return str(json.loads(detail).get("detail", "")) if body else f"{code}"
     raise SmokeError(f"{label} {code} yerine cevap verdi; kapı açık kalmış")
 
 
