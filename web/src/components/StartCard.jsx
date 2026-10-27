@@ -12,12 +12,12 @@ import ChartView from "./ChartView.jsx";
 // soru kutusuna alabilir.
 
 // Mini tablo: kartın kutusu kadar. Satırlar sunucuda kesilir (CARD_TABLE_ROWS); burada hiçbir
-// sayı yeniden hesaplanmaz, sütun yalnız Türkçe okunur.
+// sayı yeniden hesaplanmaz, sütun arayüzün diliyle okunur.
 function MiniTable({ columns, rows }) {
-  const { lang } = useT();
+  const { lang, t } = useT();
   const names = Array.isArray(columns) ? columns : [];
   const list = Array.isArray(rows) ? rows : [];
-  if (!names.length || !list.length) return <p className="start-card-empty">Bu soruya uyan kayıt yok.</p>;
+  if (!names.length || !list.length) return <p className="start-card-empty">{t("table.empty")}</p>;
   const numeric = names.map((_, index) => isNumericColumn(list, index));
 
   return (
@@ -50,7 +50,7 @@ function MiniTable({ columns, rows }) {
 
 // Kartın yükü üç biçimden biridir; hiçbirinde eksik alan ekrana "undefined" düşmez.
 function CardLoad({ card }) {
-  const { lang } = useT();
+  const { lang, t } = useT();
   if (card.error) return <p className="error-reason start-card-error-text">{card.error}</p>;
   if (card.display === "number") {
     const label = typeof card.label === "string" ? card.label.trim() : "";
@@ -63,7 +63,7 @@ function CardLoad({ card }) {
   }
   if (card.display === "chart") {
     // Sözleşmede `chart` seçenekli: yük gelmediyse kart boş bir kutu değil, nedenini söyleyen karttır.
-    if (!card.chart?.option) return <p className="start-card-empty">Kartın grafiği yüklenemedi.</p>;
+    if (!card.chart?.option) return <p className="start-card-empty">{t("start.card.chartFailed")}</p>;
     return (
       <div className="start-card-chart">
         <ChartView chart={card.chart} />
@@ -74,11 +74,12 @@ function CardLoad({ card }) {
 }
 
 export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, onReapprove, onUnpin }) {
+  const { lang, t } = useT();
   const [busy, setBusy] = useState(""); // "" | "open" | "refresh" | "unpin"
   const [note, setNote] = useState("");
 
   const title = String(card?.title ?? "").trim() || String(card?.question ?? "").trim();
-  const refreshed = card ? refreshedText(card.refreshed_at) : "";
+  const refreshed = card ? refreshedText(card.refreshed_at, new Date(), lang) : "";
 
   // Açma ve yenileme aynı iki durumun iki işi: meşgule ikinci tıklama işlemez, red cümle olur.
   const open = async () => {
@@ -89,7 +90,7 @@ export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, on
       await onOpen?.(card);
     } catch (error) {
       setBusy("");
-      setNote(error?.message || "Kart açılamadı.");
+      setNote(error?.message || t("start.card.open.failed"));
     }
   };
 
@@ -101,7 +102,7 @@ export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, on
       await onRefresh?.(card);
     } catch (error) {
       // 429'un cümlesi sunucunundur: "Bu kart az önce yenilendi; 12 sn sonra yeniden deneyin."
-      setNote(error?.message || "Kart yenilenemedi.");
+      setNote(error?.message || t("start.card.refresh.failed"));
     }
     setBusy("");
   };
@@ -116,7 +117,7 @@ export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, on
       await onUnpin?.(card);
     } catch (error) {
       setBusy("");
-      setNote(error?.message || "Kart panodan çıkarılamadı.");
+      setNote(error?.message || t("start.card.unpin.failed"));
     }
   };
 
@@ -143,7 +144,7 @@ export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, on
       data-display={card?.display ?? "table"}
       role="button"
       tabIndex={0}
-      aria-label={`${title || "Kart"} — konuşma olarak aç`}
+      aria-label={t("start.card.aria", { title: title || t("start.card.untitled") })}
       title={card?.question || undefined}
       onClick={click}
       onKeyDown={key}
@@ -151,7 +152,7 @@ export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, on
       <h2 className={error ? "start-card-title error-title" : "start-card-title"}>{title}</h2>
       <CardLoad card={card} />
       <div className="start-card-actions">
-        {refreshed && <span className="start-card-meta">{refreshed} yenilendi</span>}
+        {refreshed && <span className="start-card-meta">{t("start.card.refreshed", { time: refreshed })}</span>}
         <button
           type="button"
           className="btn btn-ghost start-card-refresh"
@@ -159,7 +160,7 @@ export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, on
           disabled={Boolean(busy)}
           onClick={refresh}
         >
-          {busy === "refresh" ? "Yenileniyor…" : "Yenile"}
+          {busy === "refresh" ? t("start.card.refreshing") : t("start.card.refresh")}
         </button>
         {card?.personal && (
           <button
@@ -169,7 +170,7 @@ export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, on
             disabled={Boolean(busy)}
             onClick={unpin}
           >
-            {busy === "unpin" ? "Çıkarılıyor…" : "Panodan çıkar"}
+            {busy === "unpin" ? t("start.card.unpinning") : t("start.card.unpin")}
           </button>
         )}
         {error && isAdmin && (
@@ -180,11 +181,11 @@ export default function StartCard({ card, isAdmin = false, onOpen, onRefresh, on
             disabled={Boolean(busy)}
             onClick={() => onReapprove?.(card)}
           >
-            SQL'i yeniden onayla
+            {t("start.card.reapprove")}
           </button>
         )}
       </div>
-      {busy === "open" && <p className="start-card-note" role="status">Kart açılıyor…</p>}
+      {busy === "open" && <p className="start-card-note" role="status">{t("start.card.opening")}</p>}
       {note && <p className="start-card-note" role="alert">{note}</p>}
     </article>
   );

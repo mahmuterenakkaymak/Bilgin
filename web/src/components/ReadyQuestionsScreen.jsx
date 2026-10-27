@@ -1,28 +1,30 @@
 import { useEffect, useState } from "react";
+import { useT } from "../i18n/index.js";
 import * as api from "../lib/api.js";
-import { BUSINESS_ROLES, EVERY_ROLE, EVERY_ROLE_LABEL, groupByRole } from "../lib/startCards.js";
+import { BUSINESS_ROLES, EVERY_ROLE, groupByRole, roleLabel } from "../lib/startCards.js";
 
 // Yöneticinin hazır soru defteri (PLAN R7-21): kümenin bütün satırları burada durur, onaylıları
 // kullanıcının panosunda görünür. Satırın SQL'i hiçbir yerde gösterilmez — açma, onay, düzenleme
 // ve silme sunucunun kendi yollarıdır, reddin cümlesi değiştirilmeden okunur.
 const DISPLAYS = [
-  ["number", "Tek sayı"],
-  ["chart", "Grafik"],
-  ["table", "Tablo"],
+  ["number", "ready.display.number"],
+  ["chart", "ready.display.chart"],
+  ["table", "ready.display.table"],
 ];
 
-const DISPLAY_NAMES = new Map(DISPLAYS);
+const DISPLAY_KEYS = new Map(DISPLAYS);
 
-// Rol seçenekleri "Hazır soru yap" formuyla aynı sıra ve aynı adlar: defter yeni bir rol uydurmaz.
-// Kişisel satır (business_role null) seçenekte yoktur — onu sahibi panosundan kendisi ekler.
-const ROLES = [[EVERY_ROLE, EVERY_ROLE_LABEL], ...BUSINESS_ROLES.map((item) => [item.role, item.label])];
-const ROLE_NAMES = new Map(ROLES);
+// Rol seçenekleri "Hazır soru yap" formuyla aynı sıra ve aynı adlar: defter yeni bir rol uydurmaz
+// ve adı lib/startCards.js'in `roleLabel`ı söyler. Kişisel satır (business_role null) seçenekte
+// yoktur — onu sahibi panosundan kendisi ekler.
+const ROLES = [EVERY_ROLE, ...BUSINESS_ROLES.map((item) => item.role)];
 
 // Öneri işi sunucuda koşar (R7-20); ekran işi bırakmaz, aşamasını iki saniyede bir sorar.
 const JOB_POLL_MS = 2000;
 
-function displayLabel(display) {
-  return DISPLAY_NAMES.get(display) ?? String(display ?? "");
+function displayLabel(display, t) {
+  const key = DISPLAY_KEYS.get(display);
+  return key ? t(key) : String(display ?? "");
 }
 
 function count(value) {
@@ -36,15 +38,18 @@ function titleOf(row) {
 
 // İşin aşaması tek cümle: koşan soru ile aday satır sayısı ayrı ayrı okunur, yoksa "çalışıyor"
 // hiçbir şey söylemez.
-function jobText(job) {
+function jobText(job, t) {
   const asked = count(job.asked);
   const stored = count(job.stored);
-  if (job.phase === "done") return `Öneri bitti: ${asked} soru soruldu, ${stored} aday onay bekliyor.`;
-  if (job.phase === "failed") return job.message ? `Öneri tamamlanamadı: ${job.message}` : "Öneri tamamlanamadı.";
-  return `Öneri koşuyor: ${asked} soru soruldu, ${stored} aday eklendi.`;
+  if (job.phase === "done") return t("ready.job.done", { asked, stored });
+  if (job.phase === "failed") {
+    return job.message ? t("ready.job.failed", { message: job.message }) : t("ready.job.failedPlain");
+  }
+  return t("ready.job.asking", { asked, stored });
 }
 
 function ReadyRow({ row, busy, confirming, draft, handlers }) {
+  const { lang, t } = useT();
   const pending = !row.approved;
   const editing = Boolean(draft);
   const change = (name) => (event) => handlers.onField(name, event.target.value);
@@ -58,11 +63,11 @@ function ReadyRow({ row, busy, confirming, draft, handlers }) {
       <div className="ready-row-main">
         <h3 className="ready-row-title">
           {title}
-          {pending && <span className="users-state ready-badge">Onay bekliyor</span>}
+          {pending && <span className="users-state ready-badge">{t("ready.pending")}</span>}
         </h3>
         {question && title !== question && <p className="ready-row-question">{question}</p>}
         <p className="ready-row-meta">
-          {[displayLabel(row.display), `sıra ${count(row.position)}`, row.created_by ? String(row.created_by) : ""]
+          {[displayLabel(row.display, t), t("ready.order", { count: count(row.position) }), row.created_by ? String(row.created_by) : ""]
             .filter(Boolean)
             .join(" · ")}
         </p>
@@ -77,10 +82,10 @@ function ReadyRow({ row, busy, confirming, draft, handlers }) {
           className="btn btn-ghost"
           data-ready-open={row.id}
           disabled={busy}
-          title={pending ? "Onaysız satır panoda görünmez; yönetici ön izlemesidir." : "Cevabı yeni bir konuşmada açılır."}
+          title={pending ? t("ready.preview.title") : t("ready.open.title")}
           onClick={() => handlers.onOpen(row)}
         >
-          {pending ? "Önizle" : "Aç"}
+          {pending ? t("ready.preview") : t("ready.open")}
         </button>
         {pending && (
           <button
@@ -90,7 +95,7 @@ function ReadyRow({ row, busy, confirming, draft, handlers }) {
             disabled={busy}
             onClick={() => handlers.onApprove(row)}
           >
-            Onayla
+            {t("ready.approve")}
           </button>
         )}
         <button
@@ -101,16 +106,16 @@ function ReadyRow({ row, busy, confirming, draft, handlers }) {
           aria-expanded={editing}
           onClick={() => (editing ? handlers.onCancelEdit() : handlers.onEdit(row))}
         >
-          {editing ? "Vazgeç" : "Düzenle"}
+          {editing ? t("ready.cancel") : t("ready.edit")}
         </button>
         {confirming ? (
           <span className="ready-confirm">
-            Silinsin mi?
+            {t("ready.confirmDelete")}
             <button type="button" className="btn btn-ghost" data-ready-delete-confirm={row.id} disabled={busy} onClick={() => handlers.onRemove(row)}>
-              Evet
+              {t("ready.confirmYes")}
             </button>
             <button type="button" className="btn btn-ghost" onClick={() => handlers.onCancelConfirm()}>
-              Vazgeç
+              {t("ready.cancel")}
             </button>
           </span>
         ) : (
@@ -121,7 +126,7 @@ function ReadyRow({ row, busy, confirming, draft, handlers }) {
             disabled={busy}
             onClick={() => handlers.onConfirm(row)}
           >
-            Sil
+            {t("ready.delete")}
           </button>
         )}
       </div>
@@ -136,7 +141,7 @@ function ReadyRow({ row, busy, confirming, draft, handlers }) {
         >
           <div className="field">
             <label className="field-label" htmlFor="ready-edit-title">
-              Başlık
+              {t("ready.field.title")}
             </label>
             <input
               id="ready-edit-title"
@@ -145,37 +150,37 @@ function ReadyRow({ row, busy, confirming, draft, handlers }) {
               value={draft.title}
               onChange={change("title")}
             />
-            <p className="field-hint">Panodaki kartın üstünde okunur.</p>
+            <p className="field-hint">{t("ready.hint.title")}</p>
           </div>
           <div className="field">
             <label className="field-label" htmlFor="ready-edit-role">
-              İş rolü
+              {t("ready.field.role")}
             </label>
             <select id="ready-edit-role" className="field-input" value={draft.business_role} onChange={change("business_role")}>
-              {ROLES.map(([role, label]) => (
+              {ROLES.map((role) => (
                 <option key={role} value={role}>
-                  {label}
+                  {roleLabel(role, lang)}
                 </option>
               ))}
             </select>
-            <p className="field-hint">Kart yalnız bu rolün panosunda açılır.</p>
+            <p className="field-hint">{t("ready.hint.role")}</p>
           </div>
           <div className="field">
             <label className="field-label" htmlFor="ready-edit-display">
-              Görünüm
+              {t("ready.field.display")}
             </label>
             <select id="ready-edit-display" className="field-input" value={draft.display} onChange={change("display")}>
-              {DISPLAYS.map(([kind, label]) => (
+              {DISPLAYS.map(([kind, key]) => (
                 <option key={kind} value={kind}>
-                  {label}
+                  {t(key)}
                 </option>
               ))}
             </select>
-            <p className="field-hint">Kartın yükü bu biçimde çizilir.</p>
+            <p className="field-hint">{t("ready.hint.display")}</p>
           </div>
           <div className="field">
             <label className="field-label" htmlFor="ready-edit-position">
-              Sıra
+              {t("ready.field.position")}
             </label>
             <input
               id="ready-edit-position"
@@ -185,14 +190,14 @@ function ReadyRow({ row, busy, confirming, draft, handlers }) {
               value={draft.position}
               onChange={change("position")}
             />
-            <p className="field-hint">Küçük olan önce gelir; eşitlikte eklenme sırası.</p>
+            <p className="field-hint">{t("ready.hint.position")}</p>
           </div>
           <div className="ready-edit-actions">
             <button type="submit" id="ready-edit-save" className="btn btn-primary" disabled={busy}>
-              Kaydet
+              {t("ready.save")}
             </button>
             <button type="button" id="ready-edit-cancel" className="btn" onClick={() => handlers.onCancelEdit()}>
-              Vazgeç
+              {t("ready.cancel")}
             </button>
           </div>
         </form>
@@ -202,6 +207,7 @@ function ReadyRow({ row, busy, confirming, draft, handlers }) {
 }
 
 export default function ReadyQuestionsScreen({ rows = [], loading = false, error = "", onRefresh }) {
+  const { lang, t } = useT();
   const [note, setNote] = useState("");
   const [failure, setFailure] = useState("");
   const [job, setJob] = useState(null);
@@ -210,7 +216,7 @@ export default function ReadyQuestionsScreen({ rows = [], loading = false, error
   const [draft, setDraft] = useState(null); // düzenlenen satırın alanları | null: form kapalı
 
   const list = (Array.isArray(rows) ? rows : []).filter((row) => row?.id !== undefined && row?.id !== null);
-  const groups = groupByRole(list);
+  const groups = groupByRole(list, lang);
 
   // Aday satırlar iş bittiğinde depoya yazılmış olur: işin sözü ekranda kalsın, liste baştan
   // okunsun, yoksa "9 aday eklendi" diyen ekranın altında dokuz satır görünmez.
@@ -225,7 +231,7 @@ export default function ReadyQuestionsScreen({ rows = [], loading = false, error
         })
         .catch((rejected) => {
           setJob(null);
-          setFailure(rejected?.message || "Öneri işi izlenemedi.");
+          setFailure(rejected?.message || t("ready.job.watchFailed"));
         });
     }, JOB_POLL_MS);
     return () => clearTimeout(timer);
@@ -237,7 +243,7 @@ export default function ReadyQuestionsScreen({ rows = [], loading = false, error
     try {
       setJob(await api.readySuggest());
     } catch (rejected) {
-      setFailure(rejected?.message || "Öneri işi başlatılamadı.");
+      setFailure(rejected?.message || t("ready.suggest.failed"));
     }
   };
 
@@ -253,7 +259,7 @@ export default function ReadyQuestionsScreen({ rows = [], loading = false, error
       onRefresh?.();
       return true;
     } catch (rejected) {
-      setFailure(rejected?.message || "İstek tamamlanamadı.");
+      setFailure(rejected?.message || t("ready.failed"));
       return false;
     } finally {
       setBusyId(null);
@@ -267,23 +273,22 @@ export default function ReadyQuestionsScreen({ rows = [], loading = false, error
     try {
       const payload = await api.startOpen(row.id);
       if (!payload?.conversation_id) {
-        setFailure("Cevap açılamadı.");
+        setFailure(t("ready.open.failed"));
         return;
       }
       window.location.hash = `#/c/${payload.conversation_id}`;
     } catch (rejected) {
-      setFailure(rejected?.message || "Cevap açılamadı.");
+      setFailure(rejected?.message || t("ready.open.failed"));
     } finally {
       setBusyId(null);
     }
   };
 
-  const approve = (row) =>
-    guard(row, () => api.readyUpdate(row.id, { approved: true }), `“${titleOf(row)}” onaylandı; kart artık panoda.`);
+  const approve = (row) => guard(row, () => api.readyUpdate(row.id, { approved: true }), t("ready.approved", { title: titleOf(row) }));
 
   const remove = (row) => {
     setConfirmId(null);
-    return guard(row, () => api.readyRemove(row.id), `“${titleOf(row)}” silindi.`);
+    return guard(row, () => api.readyRemove(row.id), t("ready.deleted", { title: titleOf(row) }));
   };
 
   const edit = (row) => {
@@ -295,8 +300,8 @@ export default function ReadyQuestionsScreen({ rows = [], loading = false, error
       id: row.id,
       title: String(row.title ?? ""),
       // Satırda tanınmayan bir kod varsa form onu olduğu gibi taşır: kaydet, görüneni yazmış olur.
-      display: DISPLAY_NAMES.has(row.display) ? row.display : "table",
-      business_role: ROLE_NAMES.has(row.business_role) ? row.business_role : EVERY_ROLE,
+      display: DISPLAY_KEYS.has(row.display) ? row.display : "table",
+      business_role: ROLES.includes(row.business_role) ? row.business_role : EVERY_ROLE,
       position: String(count(row.position)),
     });
   };
@@ -304,7 +309,7 @@ export default function ReadyQuestionsScreen({ rows = [], loading = false, error
   const saveEdit = async (row, fields) => {
     const title = String(fields.title ?? "").trim();
     if (!title) {
-      setFailure("Başlık boş olamaz.");
+      setFailure(t("ready.title.empty"));
       return false;
     }
     const saved = await guard(
@@ -316,7 +321,7 @@ export default function ReadyQuestionsScreen({ rows = [], loading = false, error
           business_role: fields.business_role,
           position: count(fields.position),
         }),
-      `“${title}” güncellendi.`,
+      t("ready.updated", { title }),
     );
     if (saved) setDraft(null);
     return saved;
@@ -335,18 +340,14 @@ export default function ReadyQuestionsScreen({ rows = [], loading = false, error
   };
 
   // Okuma hatasının cümlesi bantta durur; satır yuvası aynı sözü bir daha saymaz.
-  const emptyText = loading
-    ? "Hazır sorular okunuyor…"
-    : "Henüz hazır soru yok. Bir soru sorup cevabını hazır soru yapabilir ya da “Öneri iste” ile aday üretebilirsiniz.";
+  const emptyText = loading ? t("ready.empty.loading") : t("ready.empty.none");
 
   return (
     <section id="ready-screen" className="screen ready-screen">
       <div className="rules-head">
         <div>
-          <h1 className="screen-title">Hazır sorular</h1>
-          <p className="screen-lead">
-            Panodaki kartların defteri: onaylı satırlar kullanıcıların ekranında açılır, onay bekleyenler burada kalır.
-          </p>
+          <h1 className="screen-title">{t("ready.title")}</h1>
+          <p className="screen-lead">{t("ready.lead")}</p>
         </div>
         <button
           type="button"
@@ -355,13 +356,13 @@ export default function ReadyQuestionsScreen({ rows = [], loading = false, error
           disabled={job?.phase === "asking"}
           onClick={suggest}
         >
-          Öneri iste
+          {t("ready.suggest")}
         </button>
       </div>
 
       {job && (
         <p className="rules-note" id="ready-job" role="status">
-          {jobText(job)}
+          {jobText(job, t)}
         </p>
       )}
       {failure && (

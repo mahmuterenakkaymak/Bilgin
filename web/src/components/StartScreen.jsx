@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT } from "../i18n/index.js";
 import * as api from "../lib/api.js";
 import AskBox from "./AskBox.jsx";
 import StartCard from "./StartCard.jsx";
@@ -20,6 +21,7 @@ export default function StartScreen({
   loading = false,
   datasetKey = 0,
 }) {
+  const { t } = useT();
   const [cards, setCards] = useState(null); // null: henüz okunmadı — yerinde iskelet kartlar boyanır
 
   // Kartlar kümenin sorularıdır: küme değişince liste baştan okunur, yoksa eski veritabanının
@@ -85,12 +87,12 @@ export default function StartScreen({
       </div>
       {cards !== null && list.length === 0 && (
         <p className="start-empty" id="start-empty">
-          Panonda henüz kart yok: bir soru sor, cevabını panoya ekle.
+          {t("start.empty")}
           {isAdmin && (
             <>
-              {" Onaylanmış hazır sorular "}
-              <a href="#/hazir-sorular">Hazır sorular</a>
-              {" ekranında."}
+              {t("start.empty.adminBefore")}
+              <a href="#/hazir-sorular">{t("nav.ready")}</a>
+              {t("start.empty.adminAfter")}
             </>
           )}
         </p>
