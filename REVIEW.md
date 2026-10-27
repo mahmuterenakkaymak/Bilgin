@@ -1,12 +1,13 @@
-# REVIEW M23 (T304-T315 + visual review T366-T372; range 5911118^ -> 2cab047)
+# REVIEW M24 (T316-T331 + visual review T376-T382; range a283ad4^ -> b70e2c5)
 
-Whole-project checks: the listed smoke failure is stale, not a regression - `tests\fixtures\map_netsis_style.xlsx` was renamed `map_erp_style.xlsx` by T356 and `.hybrid/checks.json` already follows it (f34f419); build-db, both import-map runs, `eval --followups --llm fake` (100 %) and `smoke_serve.py --conversation` all pass now. Full pytest here: 5397 passed, 1 failed + 14 errors, all worktree artefacts: `web/node_modules/.bin/vite` is missing in this worktree (14 build-fixture errors), and `test_dataset_move` hashes `datasets/synthetic_erp/schema.json` which this checkout has as CRLF (index is LF) - no task changed the file since T123.
+Whole-project checks: 19 suite/smoke commands pass; I re-read the diff against PLAN R7-16..R7-21 and the "ready question / start card / ready seed line / suggest job" contracts.
 
-- **BUG (T373)**: the stored-turn replay button appends a local turn that the server never stored (`replay_payload` has no `turn`/`conversation_id`); the next ask gets the same number -> duplicate `n`, reload loses it.
-- **BUG (T374)**: deleting the open conversation from the list only refreshes the list; the next question is sent with the dead id and 404s.
-- **BUG (T375)**: the last turn of a reloaded conversation shows a "Kapat" that cannot do anything (`mark` never folds the last turn).
-- Visual-review findings already queued: T366-T372 (start-card chart box, composer not cleared, pie legend, card table columns, shared-server dataset restore, conversation row, start grid).
-- ASSUMPTIONs checked and holding: loop hints (loop.py:131), eval followups default dataset, GET conversation NULL-dataset skip, ConversationList sorts/times by updated_at.
-- Contracts traced: eval followups report keys == CLI/report.md; TurnSummary rows cap (5) == COLLAPSED_ROWS; ask payload `conversation_id`/`turn` consumed by thread.js `receive`; replay payload is the one producer that omits them.
-- Risk: `test_dataset_move` pins raw bytes, so a CRLF checkout (autocrlf) turns it red on Windows; risk: `run_followups` scores a clarification turn wrong (runner never supplies a choice).
-- Missing tests: replay inside a thread, delete of the open conversation, last stored turn controls, `eval --compare --followups` (flag silently ignored).
+- **BUG (T383)**: `StartCache` keys on the SQL digest only, but the cached payload embeds title/question/display; a `PUT /api/ready-questions/{id}` edit of those fields shows the old card on the board for up to 300 s.
+- **BUG (T384)**: personal-card unpin has a route and an `api.unpinCard`, but no component calls it; after 6 pins "Panoma ekle" 409s for good and only an admin can clean up.
+- Visual-review findings already queued: T376 (wwi has no ready seeds -> empty board, two flows die), T377 (phone chart labels/legend), T378 (second "Öneri iste" duplicates), T379 (alias labels), T380 (turn-count wording), T381-T382 (polish).
+- ASSUMPTIONs checked and holding: per-dataset personal-card cap (ready.py `_check_cap`), executor-owned policy filter for seeds (seed.py), label read from `executor._pii_schema` (SessionExecutor forwards it), personal pin needs a username (409 AUTH_OFF), open only via POST /open.
+- Contracts traced: start card keys vs StartCard/startCards.js (value/label/chart/columns/rows/error/refreshed_at/personal) match; suggest job keys match the screen's poll; ready create body never carries `sql`; ROUTE_ROLES rows match the real routes.
+- Risk: an error payload (e.g. DB briefly down) is cached 300 s for every user, refresh limited to 1/30 s per card.
+- Risk: `PUT /api/ready-questions/{id}` takes an untyped dict - `position: "x"`, empty `title`, or `business_role: null` on a seed row (created_by NULL, invisible to everyone, cap skipped) are accepted.
+- Risk: `SuggestJobs._jobs` and `StartCache._refreshed/_locks` never evict (bounded by use, slow growth).
+- Missing tests: edit-then-board freshness (T383), unpin UI (T384), PUT field validation, a second dataset switch not re-seeding, error-card caching.
