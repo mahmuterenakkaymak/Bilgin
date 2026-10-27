@@ -1,3 +1,5 @@
+Türkçe: [README.tr.md](README.tr.md)
+
 # Bilgin — Run 1
 
 Product name **Bilgin**; the package and the CLI stay `nl2sql`.
@@ -77,11 +79,12 @@ python -m nl2sql eval
 `eval_out/latest/report.md` — the same pair also lands in a timestamped `eval_out/<run>/`, so
 `latest` is what the next run diffs against. In order:
 
-1. **Skor** `7/10` and the decision that score implies (continue / rebuild / rethink).
-2. **Bağlam** — peak and median prompt tokens per question: how much of the window the schema and
-   the tool results eat, which is the number that decides whether a bigger model fits at all.
-3. **Önceki koşuya göre** — score delta versus the previous run and which questions flipped
-   (`Q04 ✗ wrong_result → ✓ pass`). Absent on the first run.
+1. **Score** (`Skor`) `7/10` and the decision that score implies (continue / rebuild / rethink).
+2. **Context** (`Bağlam`) — peak and median prompt tokens per question: how much of the window the
+   schema and the tool results eat, which is the number that decides whether a bigger model fits at
+   all.
+3. **Versus the previous run** (`Önceki koşuya göre`) — score delta versus the previous run and which
+   questions flipped (`Q04 ✗ wrong_result → ✓ pass`). Absent on the first run.
 4. One table row per question, then a section each with the question, the failure reason, the
    submitted SQL and the golden SQL side by side.
 
@@ -653,13 +656,14 @@ python -m nl2sql eval-retrieval --summaries on|off # recall@k with and without t
 ```
 
 `eval --ambiguous` runs the golden questions plus the dataset's ambiguous set and, besides accuracy,
-prints the metrics that describe *asking instead of guessing*: **Doğruluk**, **Cevaplanan %**,
-**Cevaplananlarda doğruluk**, **Yanlış cevap oranı**, **Netleştirme kesinliği** (precision) and
-**Netleştirme duyarlılığı** (recall). The scoring rule keeps the model honest: a clarification on a
+prints the metrics that describe *asking instead of guessing*: `Doğruluk` (accuracy),
+`Cevaplanan %` (answered %), `Cevaplananlarda doğruluk` (accuracy among the answered), `Yanlış cevap
+oranı` (wrong-answer rate), `Netleştirme kesinliği` (clarification precision) and `Netleştirme
+duyarlılığı` (clarification recall). The scoring rule keeps the model honest: a clarification on a
 golden question counts as **not answered**, so asking too often lowers the score.
 
 `eval --narrate` runs each submitted golden answer back through the narrator and reports who wrote
-each sentence — `llm`, `llm_retry`, `şablon` — and the **template rate** (şablon oranı): how often the
+each sentence — `llm`, `llm_retry`, `şablon` — and the **template rate** (`şablon oranı`): how often the
 number guard rejected the LLM's text and fell back to the deterministic sentence. A high template
 rate is a signal the guard is doing real work, not a failure.
 
@@ -703,13 +707,13 @@ be served open by accident.
 
 **What each role may do** (enforced on the server, per route — hiding a menu item is not a permission):
 
-| | Kullanıcı | Yönetici |
+| | `Kullanıcı` (user) | `Yönetici` (admin) |
 |---|---|---|
 | Ask, replay, export, tables, examples | ✓ | ✓ |
 | Saved questions and history | own only | the whole dataset |
 | Rules screen | read-only ("İş kurallarını yalnız yönetici değiştirebilir.") | add / edit / delete, rebuild index |
-| Veritabanı haritası, veri kümesi geçişi | no | ✓ |
-| Kullanıcılar screen | no | ✓ |
+| Database map, dataset switch | no | ✓ |
+| Users screen | no | ✓ |
 
 History and saved questions are filtered by the logged-in name, so an analyst's sidebar is their own
 questions; an admin sees everything the active dataset holds. The filter is on the read *and* the
@@ -748,45 +752,50 @@ length check that `user add` applies, and a bootstrap admin with a variable-leng
 account you want to keep. Open the real first account with `user add <ad> --role admin` and leave the
 variable unset.
 
-## Yeni bir veritabanını Bilgin'e tanıtmak
+## Introducing a new database to Bilgin
 
-**Veritabanı haritası** (`#/harita`, yöneticiye açık) is the screen where a new database becomes a dataset
-Bilgin can ask questions about. It is three cards: indir, doldur, yükle.
+**The database map** (`#/harita`, admin only) is the screen where a new database becomes a dataset
+Bilgin can ask questions about. It is three cards: download, fill in, upload.
 
-**1 — Şablonu alın.** *Boş şablonu indir* gives `bilgin-veritabani-sablonu.xlsx`: *Nasıl doldurulur*,
-*Veri kümesi*, *Tablolar*, *Kolonlar*, *İş kuralları* and a filled *Örnek* page. Two shortcuts:
+**1 — Get the template.** *Download the blank template* gives `bilgin-veritabani-sablonu.xlsx`: the
+`Nasıl doldurulur`, `Veri kümesi`, `Tablolar`, `Kolonlar` and `İş kuralları` sheets and a filled
+`Örnek` page; Run 8 writes the same workbook in English when the language is `en`. Two shortcuts:
 
-- **Canlı veritabanından doldur** (shown only when the served box has an SQL Server connection) reads the
+- **Fill it from the live database** (shown only when the served box has an SQL Server connection) reads the
   live catalogue and pre-fills *Tablolar* and *Kolonlar* with names, types, NULL-ability and references —
   you then add the descriptions, which is the part a catalogue cannot tell anyone. If the read fails
   (missing `VIEW DEFINITION` permission) you get the **blank** template and a one-line note, never a
   second login attempt and never a half-filled file.
-- **Örnek dolu şablonla dene** downloads a complete example (`ornek_fatura`) so the whole flow can be
+- **Try the filled example** downloads a complete example (`ornek_fatura`) so the whole flow can be
   walked before a customer's data exists.
 
-**2 — Doldur.** Four columns decide what the model can do with a table:
+**2 — Fill it in.** Four columns decide what the model can do with a table; in the English template
+they read `DESCRIPTION`, `VALUES`, `PERSONAL DATA`, `CLOSED` and `REFERENCE`:
 
-- **AÇIKLAMA matters most.** The model knows a table or a column *only* from the text you write there;
-  an empty description means the retrieval finds it by name alone and the agent guesses at its meaning.
-- **DEĞERLER** carries coded values (`G` giriş, `C` çıkış; `1` satış faturası …) — the difference between
-  a correct `WHERE` and a plausible wrong one.
-- **KİŞİSEL VERİ** picks one of the personal-data classes; a marked column's value is masked in every
-  answer, chart and export, because the mask is applied inside the executor.
-- **KAPALI = E** keeps the column in the schema but out of every query (passwords, internal notes), and
-  **REFERANS** is `Tablo.Kolon` or `Şema.Tablo.Kolon` — the join graph is built from it.
+- **`AÇIKLAMA` (description) matters most.** The model knows a table or a column *only* from the text
+  you write there; an empty description means the retrieval finds it by name alone and the agent
+  guesses at its meaning.
+- **`DEĞERLER` (values)** carries coded values ("`G` giriş, `C` çıkış; `1` satış faturası …") — the
+  difference between a correct `WHERE` and a plausible wrong one.
+- **`KİŞİSEL VERİ` (personal data)** picks one of the personal-data classes; a marked column's value
+  is masked in every answer, chart and export, because the mask is applied inside the executor.
+- **`KAPALI = E` (closed)** keeps the column in the schema but out of every query (passwords, internal
+  notes), and **`REFERANS` (reference)** is `Tablo.Kolon` or `Şema.Tablo.Kolon` — the join graph is
+  built from it.
 
-**3 — Kontrol et** uploads the file and shows a report without writing anything else: counts (Tablo,
-Kolon, Kişisel veri, Kapalı, Referans, Kural), then **errors** with Sayfa / Satır / Kolon / Sorun, then
-warnings (the first 20, "ve N tane daha"). An error blocks **Oluştur** and says *Önce hataları düzeltin.*;
-a warning never does — a table with no description is worth asking about, not refusing the file.
+**3 — Check** (`Kontrol et`) uploads the file and shows a report without writing anything else: counts
+of `Tablo`, `Kolon`, `Kişisel veri`, `Kapalı`, `Referans` and `Kural`, then **errors** with `Sayfa` /
+`Satır` / `Kolon` / `Sorun`, then warnings (the first 20, "ve N tane daha"). An error blocks
+**Create** and says `Önce hataları düzeltin.`; a warning never does — a table with no description is
+worth asking about, not refusing the file.
 
-**4 — Oluştur** creates `real_datasets/<name>/` — `dataset.json`, `schema.json`, `rules.json`,
-`profile.json`, an empty `golden.jsonl`, a `real.py` stub and a generated `readonly_login.sql` — and
-indexes it; the progress line runs *Yazılıyor → İndeks kuruluyor → Hazır*. Then **Bu veri kümesine geç**
-switches the served session, and every screen that names a dataset follows it: the header chip, the
-examples, the tables, the rules, the saved list and the history.
+**4 — Create** (`Oluştur`) creates `real_datasets/<name>/` — `dataset.json`, `schema.json`,
+`rules.json`, `profile.json`, an empty `golden.jsonl`, a `real.py` stub and a generated
+`readonly_login.sql` — and indexes it; the progress line runs `Yazılıyor → İndeks kuruluyor → Hazır`.
+Then **`Bu veri kümesine geç`** switches the served session, and every screen that names a dataset
+follows it: the header chip, the examples, the tables, the rules, the saved list and the history.
 
-**5 — SQL Server tarafı.** A new SQL Server dataset needs a read-only login before it can answer. The
+**5 — The SQL Server side.** A new SQL Server dataset needs a read-only login before it can answer. The
 generated script is downloadable per dataset (`GET /api/datasets/<name>/login-script.sql`); it contains
 **`__DEGISTIR__`** where the password goes — the file never carries a password, and the allowlist and the
 denied PII columns are already in it. Run it on the server, then start Bilgin with that connection
@@ -797,8 +806,8 @@ rather than failing a question with a connection error.
 ## An upload never touches an existing dataset
 
 Preview writes only under `data/map_previews/` and expires after 30 minutes; **apply creates a folder
-that does not exist yet** — a name already used by a dataset is refused with "Bu ad zaten bir veri
-kümesi" and no file anywhere is modified. The datasets under `datasets/` (the synthetic and WWI demo
+that does not exist yet** — a name already used by a dataset is refused with `Bu ad zaten bir veri
+kümesi` and no file anywhere is modified. The datasets under `datasets/` (the synthetic and WWI demo
 sets) are never written by an upload, so a bad map cannot break the eval you are measuring with.
 
 `real_datasets/*` is **git-ignored except `real_datasets/wwi_real/`**: a customer's schema, rules and
@@ -815,18 +824,18 @@ the right turn, and did it get the right number? The core rule is untouched: the
 words, the executor runs it read-only with the mask on, and every number in an answer still comes from
 **this turn's** rows.
 
-## Konuşma: ardışık sorular
+## Conversation: one question after another
 
-A turn is one question and its answer; a conversation is the turns under one id. "Bunlardan kaç
-taneydi?" after a list of customers works because the earlier turn is in front of the model again —
+A turn is one question and its answer; a conversation is the turns under one id. `Bunlardan kaç
+taneydi?` after a list of customers works because the earlier turn is in front of the model again —
 not because anything was guessed at.
 
 **Bir takip sorusu neye yaslanabilir.** The model is offered the last `CONV_TURNS` (3) **answered**
 turns of the conversation as a `## Önceki turlar` block appended to the single system message: per
 turn its question, its SQL, its column names and its kept rows. A keyword hint under it names what
 kind of refinement this is — a `sadece / yalnız` filter, a `karşılaştır / önceki yıl` comparison, an
-`aylık / yıllık` period change, an `ilk N` top-N — and the model resolves *bu / bunlar / o müşteri /
-aynı dönem / bunu / peki* from those turns. Two follow-ups never reach the model at all:
+`aylık / yıllık` period change, an `ilk N` top-N — and the model resolves `bu / bunlar / o müşteri /
+aynı dönem / bunu / peki` from those turns. Two follow-ups never reach the model at all:
 
 - **A chart-only turn** ("bunun grafiğini çizgi yap") reruns the previous turn's SQL through the
   executor and redraws it in the requested kind: zero model calls, one new audit line. A kind the
@@ -836,7 +845,7 @@ aynı dönem / bunu / peki* from those turns. Two follow-ups never reach the mod
   a clarification built from those rows — Run 5's clarification, one turn down the line. The chosen
   option runs the agent with that value fixed.
 
-**Kanıt satırı.** When an answer stands on an earlier turn, the card says which one, above
+**The evidence line.** When an answer stands on an earlier turn, the card says which one, above
 *"Nasıl hesapladım"* (`#context-line`): `Önceki cevaptan: <etiket> <değer> (<ad>)`, where the label is
 the column's schema description and never its technical name, and the parenthesis is the other text
 cell of the row carrying the value. A turn that only reused an earlier query says
@@ -851,7 +860,7 @@ recomputed.
 **Ekranda.** The address becomes `#/c/<id>` the moment the first answer arrives, so a thread is a link
 you can return to. Reloading it reads the stored turns and **runs no SQL**: an older turn shows its
 sentence and its kept rows with "Tam tablo ve grafik için yeniden çalıştırın." and the replay button.
-**Yeni konuşma** empties the thread and goes back to `#/` — the turns stay on the server, and the
+**New conversation** empties the thread and goes back to `#/` — the turns stay on the server, and the
 sidebar (`#conversation-list`, above history) lists them by title, relative time and turn count, with
 a delete that asks first. A conversation belongs to the user who started it and to the dataset it was
 started on: an id that is someone else's, or from another dataset, answers `Konuşma bulunamadı.` —
@@ -870,23 +879,23 @@ Both end with one line, `Konuşma: <id> · tur <n>`, which is what you paste int
 are mutually exclusive; a plain `ask` is still Run 6 — no conversation is opened and nothing is
 written — and an unknown id is `Konuşma bulunamadı.` with exit code 2.
 
-**Ölçüm: `eval --followups`.** A dataset may carry `followups.jsonl`: chains of 2–3 turns, each turn
+**Measurement: `eval --followups`.** A dataset may carry `followups.jsonl`: chains of 2–3 turns, each turn
 with its golden SQL and the turns it is allowed to lean on (`uses_turns`). `--followups` runs them
 after the golden questions, turn by turn through the same door the screen uses, with a throwaway
 conversation store under `eval_out/<dataset>/followups/` — the real producer, not a copy of the loop:
 
 | | |
 |---|---|
-| **Tur doğruluğu** (`turn_accuracy`) | the turn's result set equals its own golden SQL |
-| **Zincir doğruluğu** (`chain_accuracy`) | every turn of the chain is right |
-| **Bağlam doğruluğu** (`context_accuracy`) | the note's `uses_turns` equals the golden set — an empty set is correct for a turn that stood alone |
+| **Turn accuracy** (`turn_accuracy`) | the turn's result set equals its own golden SQL |
+| **Chain accuracy** (`chain_accuracy`) | every turn of the chain is right |
+| **Context accuracy** (`context_accuracy`) | the note's `uses_turns` equals the golden set — an empty set is correct for a turn that stood alone |
 
-report.md gets an **Ardışık sorular** section with those three numbers and a table per chain, and the
+report.md gets an `Ardışık sorular` section with those three numbers and a table per chain, and the
 console prints one line per chain plus a total. `--llm fake` replays the chains and must come out
-100 % — it proves the wiring, not the model. The number worth watching is a real model's **tur
-doğruluğu** in `full_rules` (target ≥ 80 %).
+100 % — it proves the wiring, not the model. The number worth watching is a real model's
+**`tur doğruluğu`** in `full_rules` (target ≥ 80 %).
 
-**Gerçek veritabanında elle koşum.** `wwi_real`'s chains are written for the public sample database
+**Manual run on the real database.** `wwi_real`'s chains are written for the public sample database
 and are measured on the real server **by hand** — never as an automated test, because the numbers they
 check against live on a machine this repo does not own:
 
@@ -898,7 +907,7 @@ NL2SQL_BACKEND=mssql NL2SQL_MSSQL_CONN="<salt okunur giriş>" \
 What a test *does* guarantee is that every turn's golden SQL passes the policy against that dataset's
 allowlist, so the manual run measures the model rather than a broken chain.
 
-**Bir turda ne saklanır.** Per turn the store keeps the question, the status, the answer sentence, the
+**What a turn keeps.** Per turn the store keeps the question, the status, the answer sentence, the
 column names, the row count, the computed facts, the chart kind, the context note and **at most
 `CONV_KEEP_ROWS` (5) result rows** — the rows exactly as the executor returned them, i.e. already
 masked, so a masked cell stays masked in the next turn's context too. No chart option, no export, no
@@ -906,7 +915,7 @@ row 6 and beyond: a full table is re-run from its SQL, never read back out of a 
 turn stays in the thread but never enters a context block. Conversations live in the app's own SQLite
 file, `data/bilgin.db`, never in the analysed database.
 
-## Başlangıç ekranı ve hazır sorular
+## The start screen and ready questions
 
 `#/` is no longer an empty box: the screen is a board of cards, and a card is an **approved question
 with its saved SQL** showing its last result — a number, a chart, a short table. The model never writes
@@ -915,39 +924,39 @@ sentence over it is the narrator speaking *this* run's rows, and no answer on th
 itself. Clicking a card opens that question as **turn 1 of a new conversation**, so the follow-up that
 leans on it is the same Run 7 door.
 
-**İş rolü.** A card belongs to one of the `BUSINESS_ROLES` (5) — Satış, Satın alma, Muhasebe, Yönetim,
-Genel — or to `*`, which every role sees. The role is a field on the account, set where accounts are
+**Business role.** A card belongs to one of the `BUSINESS_ROLES` (5) — `Satış`, `Satın alma`,
+`Muhasebe`, `Yönetim`, `Genel` — or to `*`, which every role sees. The role is a field on the account, set where accounts are
 made (`POST /api/users`, the users screen), and the board is the filter: an approved card of someone
 else's role is not greyed out on your screen, it is not in your list at all, and opening or refreshing
 it answers 404 — the same sentence as a card that does not exist, so the board is not a way to discover
 other roles' questions. A user with no role gets `*` and their own cards.
 
-**Cevaptan onay.** A card is born from an answer, never from typed SQL: **Hazır soru yap** on an
+**Approval from an answer.** A card is born from an answer, never from typed SQL: **`Hazır soru yap`** on an
 answered card takes that question's own record and runs its SQL once more through the executor — if it
 does not run, nothing is saved and the reason stays on the form. The ready-questions screen
 (`#/hazir-sorular`, admin) is the same approval from the other side, on a row that is already waiting
-there. Approval is the only thing that makes a row visible: an **Onay bekliyor** row exists in the
+there. Approval is the only thing that makes a row visible: an **`Onay bekliyor`** row exists in the
 store and on that screen and is invisible on the board; an admin opening one there is a preview, and
 says so.
 
-**Kişisel kart.** **Panoma ekle** on any answer pins it to your own board: no business role, no
+**A personal card.** **`Panoma ekle`** on any answer pins it to your own board: no business role, no
 approval, at most `PERSONAL_CARDS` (6) per dataset, and only you see or remove it. The filter is your
 own name, so a pin built on someone else's answer record is a 404 rather than their card.
 
-**Öneriler onaysız doğar.** `Öneri iste` starts a background job that asks the model — through the same
+**Suggestions are born unapproved.** `Öneri iste` starts a background job that asks the model — through the same
 agent, with the schema and the business rules in front of it — for questions this dataset answers well,
 `SUGGEST_PER_ROLE` (2–4) per role, and the screen shows the job's progress line. Every suggestion is
 stored **unapproved**: only the ones that actually answered got their SQL written, and none of them
 reaches a board before an admin has looked at it and approved it.
 
-**Oturmuş bir ekran.** A card's load is cached for `START_CACHE_S` (300) per dataset + card + SQL, so
+**A settled screen.** A card's load is cached for `START_CACHE_S` (300) per dataset + card + SQL, so
 ten people opening the board run one query, and re-approving a card's SQL retires its old load.
-**Yenile** steps over the cache but not over the calendar: one card refreshes at most once per
+**`Yenile`** steps over the cache but not over the calendar: one card refreshes at most once per
 `CARD_REFRESH_MIN_S` (30), and the 429 names the seconds left. A card whose query fails is one error
 card in warning colours, and the other cards on the board are unaffected; on an admin's board that card
 carries `SQL'i yeniden onayla`, which puts the question in the ask box.
 
-**Tohum: `ready_questions.json`.** A dataset may ship its board. The file in the dataset folder is
+**The seed: `ready_questions.json`.** A dataset may ship its board. The file in the dataset folder is
 written to the store once, on the first `serve` that opens that dataset — the `ready_seeded` setting is
 why a second start, or a card an admin deleted, does not bring them back. Seeds are born approved (their
 SQL is a golden line or a hand-checked constant) but they are only *checked* against the policy at that
@@ -955,15 +964,15 @@ moment, never run: a seed the guard refuses prints one line and drops, instead o
 card. `wwi_real` ships 14 seeds across the five roles, so a fresh server pointed at the real database
 has something to show.
 
-## Veritabanı bağlantıları
+## Database connections
 
-**Her veri kümesinin kendi bağlantısı vardır.** A SQL Server dataset's connection is a row in the app's
+**Every dataset has its own connection.** A SQL Server dataset's connection is a row in the app's
 own SQLite file (`data/bilgin.db`), filled in on a screen — `#/baglantilar`, admin — and the table
-lists one row per SQL Server dataset with its own dot, **Son başarılı** and **Son hata**. Switching the
+lists one row per SQL Server dataset with its own dot, **`Son başarılı`** and **`Son hata`**. Switching the
 active dataset switches the database with it: the session's executor is rebuilt on the spot, no
 restart, and a dataset with no row keeps answering from whatever it was built on.
 
-**Parola ekrana hiç dönmez.** The password box says `değiştirmek için yazın` — an empty box **keeps**
+**The password never comes back to the screen.** The password box says `değiştirmek için yazın` — an empty box **keeps**
 the stored password, it never clears it. What is stored is a **DPAPI** blob (Windows, local-machine
 scope, the dataset's own name as extra entropy), never the text. What that protects against is the file
 leaving the machine: a copied or backed-up app database, a commit and a log line all carry bytes that
@@ -972,13 +981,13 @@ connection. No answer ever carries a password or a connection string — a row s
 as `has_secret` — and a driver's own sentence, which quotes the connection string back, goes through
 `connections.scrub` before anyone reads it.
 
-**Ortam değişkeni kazanır.** `NL2SQL_MSSQL_CONN_<DATASET>` (the dataset name upper-cased) beats the
+**The environment variable wins.** `NL2SQL_MSSQL_CONN_<DATASET>` (the dataset name upper-cased) beats the
 stored row, and the generic `NL2SQL_MSSQL_CONN` beats it while it names the database the whole process
 is asking — the active dataset, on the mssql backend. Such a row carries an `Ortam değişkeninden`
 badge and its form opens read-only:
 `Bu bağlantı ortam değişkeninden geliyor; ekrandan değiştirilemez.`
 
-**Kaydetmeden önce sunucuya sorulur.** Neither `Bağlantıyı test et` nor `Kaydet` trusts the form: the
+**The server is asked before anything is saved.** Neither `Bağlantıyı test et` nor `Kaydet` trusts the form: the
 login's own powers are read from the server — `sysadmin` and `db_owner` membership, the five
 database-level powers (`INSERT`, `UPDATE`, `DELETE`, `ALTER`, `EXECUTE`) and whether a sample of the
 map's own tables is readable. A login that writes or manages answers 409 with the report line by line
@@ -987,10 +996,10 @@ name a table this database does not have. Every report ends with `Salt okunur gi
 the dataset's own generated `login-script.sql`, the same script the map screen offers, so the fix is
 one download away.
 
-**Durum noktası hiçbir isteği bekletmez.** A background thread runs `SELECT 1` every `DB_CHECK_S` (60)
+**The status dot never holds a request waiting.** A background thread runs `SELECT 1` every `DB_CHECK_S` (60)
 over the datasets somebody actually reads, and again right after a saved connection or a connection
-error; what a screen shows is the last answer, never a new question. `#db-dot` (labelled *Veritabanı*)
-is that answer for every logged-in user — Bağlı / Erişilemiyor / Denenmedi / Kurulu değil — and while
+error; what a screen shows is the last answer, never a new question. `#db-dot` (labelled `Veritabanı`)
+is that answer for every logged-in user — `Bağlı` / `Erişilemiyor` / `Denenmedi` / `Kurulu değil` — and while
 it is down a red `#db-banner` sits above the start, ask and thread screens. A user reads one generic
 sentence and nothing else:
 
@@ -999,3 +1008,83 @@ sentence and nothing else:
 **An admin additionally gets** the driver's own text (`message_admin`, scrubbed) and the address of the
 screen that fixes it. A question asked while the state is down is refused before the model runs —
 `db_down` — because an answer built on rows that never arrived is worse than no answer.
+
+---
+
+# Run 8 — The program speaks English too
+
+Run 8 moves every sentence a person reads into a message catalog and resolves the language in one
+place. The core rule does not change: the model writes SQL and words, every number in an answer comes
+from **this turn's** rows, and neither the mask nor the policy has a language. What changes is that the
+same measurement box answers an English question in English, writes its report in English and hands out
+an English template.
+
+## Choosing the language
+
+| Where | Order |
+| --- | --- |
+| CLI | `--lang` (on every command; it also builds the parser in that language) → `NL2SQL_LANG` → `tr` |
+| Web and API | the logged-in user's `lang` preference (`PUT /api/auth/me`) → `Accept-Language` → `NL2SQL_LANG` |
+| The answer | the question's language: the payload's `answer_lang`; when the question says nothing, the screen language |
+
+`config.LANGUAGES` (`tr`, `en`) and `config.DEFAULT_LANG` (`tr`) are the one list, and every sentence
+lives in `nl2sql/i18n/tr.json` and `nl2sql/i18n/en.json` (`t(key, lang)`); the two files carry the same
+key set, so a missing English sentence is a test failure, not an English screen with Turkish in it. The
+shell picks it too:
+
+```bash
+NL2SQL_LANG=en python -m nl2sql eval --dataset wwi --llm fake
+python -m nl2sql --lang en ask "How many invoices were issued in September 2026?" --dataset wwi
+python -m nl2sql eval --help --lang en      # the help text is English as well
+```
+
+**The answer's language is the question's language**, separate from the screen's: a Turkish question
+asked under `--lang en` is answered in Turkish, an English one in English. `--lang` names the frame —
+headings, warnings, the report — and `answer_lang` names the sentence. Number formats follow the
+language: `tr` writes `1.234,56` and `%12,3`, `en` writes `1,234.56` and `12.3%`, and the number guard
+rejects the other language's format — an English answer never shows `1.234,56`, and its retry is
+written in that language too.
+
+## The English template
+
+The template comes in the program's language: `python -m nl2sql template --lang en --out
+bilgin-database-template.xlsx` writes the English sheets (`How to fill in`, `Dataset`, `Tables`,
+`Columns`, `Business rules`, `Example`), English headers, `Y/N` validation lists and one filled English
+example row; `--lang tr` writes today's Turkish workbook. The download follows the same rule —
+`GET /api/schema-map/template.xlsx?lang=en` uses the requesting user's language.
+
+**Either template imports in either language:** `profiles/excel_headers.json` knows the English headers
+and sheet names too, `E/H` and `Y/N` both read as booleans, and the workbook carries its own language
+in the hidden `_bilgin` sheet. On the rules sheet, `SYNONYMS (EN)` / `EŞ ANLAMLILAR (EN)` is the rule's
+`synonyms_en` field.
+
+## `synonyms_en`: an English question finds the same rule
+
+A business rule's `synonyms_en` is optional (a list of non-empty strings, default `[]`). A term whose
+Turkish synonyms are already written goes here when it has an English name as well. The index folds
+both lists into the rule document's text, the BM25 query rewrite uses both, and the `full_rules` prompt
+writes both — so an English question reaches the rule and the table it needs even on a dataset whose
+descriptions were written in Turkish.
+
+## `eval --lang en`
+
+`--lang en` translates the golden set too: the dataset's `dataset.json` names it in `files.golden_en`
+— `golden_en.jsonl` — and a dataset without one runs the Turkish questions. `wwi` and `wwi_real` each
+carry two English sets: `golden_en.jsonl` (`E01..E26`, `source_id` pointing at the Turkish question,
+while `sql`, `requires_tables`, `rules` and `tags` are copied as they are) and `followups_en.jsonl`
+(chains translated turn by turn, SQL copied). The same order holds for `eval --followups --lang en`.
+
+The report is written in English and `report.json` records `lang`. With `--llm fake`, `eval --lang en`
+on `wwi` and on `wwi_real` has to come out 26/26 — what that measures is the wiring, not the model.
+
+**The manual English run on the real database.** `wwi_real`'s English set is measured on the real
+server by hand as well: the same two variables and the same read-only login as Run 7's manual step,
+only the questions are English:
+
+```bash
+NL2SQL_BACKEND=mssql NL2SQL_MSSQL_CONN="<salt okunur giriş>" \
+  python -m nl2sql eval --lang en --dataset wwi_real --llm openai --model <model>
+```
+
+What a test does guarantee stays the same: every question's golden SQL passes the policy against that
+dataset's own allowlist, so the run measures the model rather than a broken chain.
