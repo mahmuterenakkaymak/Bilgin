@@ -63,6 +63,7 @@ from nl2sql.eval.compare_modes import (
 from nl2sql.eval.runner import _tokens
 from nl2sql.graph.graph import build_graph
 from nl2sql.graph.profile import load_profile
+from nl2sql.i18n import normalize_lang, t
 from nl2sql.index.docs import COLLECTIONS, build_documents
 from nl2sql.index.embed import EmbedError, make_embedder
 from nl2sql.index.search import build_search, load_search
@@ -1507,16 +1508,16 @@ def make_map_client(kind: str, preview: dict):
     return make_client(kind)
 
 
-def _add_dataset_option(command: argparse.ArgumentParser) -> None:
+def _add_dataset_option(command: argparse.ArgumentParser, lang: str) -> None:
     """``--dataset``: komutun hiçbir varsayılanı config'de kalmaz, hepsi o kümenin tanımıdır (R4-14)."""
     command.add_argument(
         "--dataset",
         metavar="AD",
-        help=f"veri kümesi adı (varsayılan: {config.DEFAULT_DATASET})",
+        help=_h("dataset", lang, default=config.DEFAULT_DATASET),
     )
 
 
-def _add_model_options(command: argparse.ArgumentParser) -> None:
+def _add_model_options(command: argparse.ArgumentParser, lang: str) -> None:
     """``--model`` bir profil seçer (R4-10): uç nokta, model adı, anahtar değişkeni ve pencere.
 
     Söylenmediğinde koşum Run 3'ün halidir - ``NL2SQL_LLM_*`` ile kurulan uç nokta, bütçe yok.
@@ -1526,16 +1527,16 @@ def _add_model_options(command: argparse.ArgumentParser) -> None:
     command.add_argument(
         "--model",
         metavar="PROFIL",
-        help=f"config/models.json profili (varsayılan: {config.llm_settings().base_url})",
+        help=_h("model", lang, url=config.llm_settings().base_url),
     )
     command.add_argument(
         "--models-file",
         metavar="DOSYA.json",
-        help=f"--model için profil dosyası (varsayılan {config.MODELS_PATH})",
+        help=_h("models_file", lang, path=config.MODELS_PATH),
     )
 
 
-def _add_embed_options(command: argparse.ArgumentParser) -> None:
+def _add_embed_options(command: argparse.ArgumentParser, lang: str) -> None:
     """``build-index`` ile ``eval-retrieval``ın ortak embedder bayrakları (R3-9).
 
     ``--embed-model`` model adını doğrudan söyler: aynı sunucuda duran iki modeli (embeddinggemma,
@@ -1544,12 +1545,12 @@ def _add_embed_options(command: argparse.ArgumentParser) -> None:
     command.add_argument(
         "--embed",
         default=DEFAULT_EMBED,
-        help="embedder kaynağı: fake, fake:<dim>, openai (varsayılan %(default)s)",
+        help=_h("embed", lang),
     )
     command.add_argument(
         "--embed-model",
         metavar="AD",
-        help="openai kaynağının model adı, örn. bge-m3 (varsayılan: NL2SQL_EMBED_MODEL)",
+        help=_h("embed_model", lang),
     )
 
 
@@ -1630,30 +1631,72 @@ def _given(**values) -> dict:
     return {key: value for key, value in values.items() if value is not None}
 
 
-def main(argv: list[str] | None = None) -> int:
-    """argparse: ``build-db`` | ``ask`` | ``eval``; seçilen komutun işlevini çağırır."""
-    parser = argparse.ArgumentParser(prog="python -m nl2sql", description="NL -> T-SQL ölçüm aracı.")
+def _h(key: str, lang: str, **params) -> str:
+    """Yardımcı satırın kataloğu: her ``help``/``description``/``epilog`` ``cli.help.<key>``dır (R8-5)."""
+    return t(f"cli.help.{key}", lang, **params)
+
+
+def _scan_lang(argv: list[str]) -> str:
+    """Parserı kurmadan önce dil: ``--lang X`` > ``NL2SQL_LANG`` > tr (R8-5).
+
+    Argparse bayrağı zaten doğrular; ön tarama yalnız yardımın hangi dilde kurulacağını seçer, o
+    yüzden tanınmayan bir değerde susar ve ortam/varsayılan sırasına düşer.
+    """
+    for i, arg in enumerate(argv):
+        if arg == "--lang" and i + 1 < len(argv):
+            found = normalize_lang(argv[i + 1])
+        elif arg.startswith("--lang="):
+            found = normalize_lang(arg.split("=", 1)[1])
+        else:
+            continue
+        if found:
+            return found
+    return config.lang()
+
+
+def _lang_parent(lang: str) -> argparse.ArgumentParser:
+    """``--lang {tr,en}``: üst parserın ve her alt komunun ortak ebeveyni (R8-5).
+
+    Varsayılan çözülmüş dildir, böylece bayrak verilmediğinde de ``args.lang`` komuta çözümü taşır.
+    """
+    parent = argparse.ArgumentParser(add_help=False)
+    parent.add_argument(
+        "--lang", choices=list(config.LANGUAGES), default=lang, help=_h("lang", lang)
+    )
+    return parent
+
+
+def build_parser(lang: str) -> argparse.ArgumentParser:
+    """Komut ağacı; her ``help``/``description``/``epilog`` ``cli.help`` anahtarlarından ``lang``da gelir (R8-5)."""
+    lang_parent = _lang_parent(lang)
+    parser = argparse.ArgumentParser(
+        prog="python -m nl2sql", description=_h("description", lang), parents=[lang_parent]
+    )
     commands = parser.add_subparsers(dest="command", required=True)
 
-    build_cmd = commands.add_parser("build-db", help="sentetik veritabanını ve T-SQL betiğini kurar")
+    build_cmd = commands.add_parser(
+        "build-db", help=_h("build_db", lang), parents=[lang_parent]
+    )
     build_cmd.add_argument(
         "--seed",
         type=int,
-        help=f"üretici tohumu (varsayılan: veri kümesinin tohumu, {config.SEED})",
+        help=_h("seed", lang, seed=config.SEED),
     )
-    _add_dataset_option(build_cmd)
+    _add_dataset_option(build_cmd, lang)
 
-    index_cmd = commands.add_parser("build-index", help="şema ve kurallardan arama indeksini kurar")
-    _add_embed_options(index_cmd)
-    _add_dataset_option(index_cmd)
+    index_cmd = commands.add_parser(
+        "build-index", help=_h("build_index", lang), parents=[lang_parent]
+    )
+    _add_embed_options(index_cmd, lang)
+    _add_dataset_option(index_cmd, lang)
 
     retrieval_cmd = commands.add_parser(
-        "eval-retrieval", help="altın sorularında aramanın geri çağırmasını ölçer"
+        "eval-retrieval", help=_h("eval_retrieval", lang), parents=[lang_parent]
     )
-    _add_embed_options(retrieval_cmd)
-    _add_dataset_option(retrieval_cmd)
+    _add_embed_options(retrieval_cmd, lang)
+    _add_dataset_option(retrieval_cmd, lang)
     retrieval_cmd.add_argument(
-        "--k", type=int, default=config.SEARCH_K, help="kaç tablo (varsayılan %(default)s)"
+        "--k", type=int, default=config.SEARCH_K, help=_h("k", lang)
     )
     # Varsayılan bilinçli olarak None: verilmeyen bayrak ``eval_retrieval``in kendi varsayılanına
     # (off) düşer, yani ``--summaries`` yazılmayan bir koşumun raporu bugünkü raporun aynısıdır.
@@ -1661,242 +1704,268 @@ def main(argv: list[str] | None = None) -> int:
         "--summaries",
         choices=("on", "off"),
         default=None,
-        help="tablo özetlerini aramaya kat: on, off (varsayılan off)",
+        help=_h("summaries", lang),
     )
 
     import_cmd = commands.add_parser(
-        "import-map", help="Excel şema haritasını eşler; --accept ile şemayı yazar"
+        "import-map", help=_h("import_map", lang), parents=[lang_parent]
     )
-    import_cmd.add_argument("file", metavar="HARITA.xlsx", help="Excel şema haritasının yolu")
+    import_cmd.add_argument("file", metavar="HARITA.xlsx", help=_h("map_file", lang))
     import_cmd.add_argument(
-        "--llm", choices=LLMS, default=DEFAULT_LLM, help="istem kaynağı (varsayılan %(default)s)"
+        "--llm", choices=LLMS, default=DEFAULT_LLM, help=_h("llm", lang)
     )
     import_cmd.add_argument(
         "--accept",
         action="store_true",
-        help="eşlemeyi tüm satırlara uygular ve şemayı yazar (uygulamayı kod yapar, model değil)",
+        help=_h("accept", lang),
     )
     import_cmd.add_argument(
         "--mapping",
         metavar="DOSYA.json",
-        help="--accept için eşleme dosyası (varsayılan: az önce yazılan)",
+        help=_h("mapping", lang),
     )
     import_cmd.add_argument(
         "--out",
         default=str(config.IMPORTED_PATH),
-        help="yazılacak şema dosyası (varsayılan %(default)s)",
+        help=_h("out_schema", lang),
     )
 
     introspect_cmd = commands.add_parser(
-        "introspect", help="veritabanını yoklar ve iskelet şemayı yazar"
+        "introspect", help=_h("introspect", lang), parents=[lang_parent]
     )
     introspect_cmd.add_argument(
         "--out",
         default=str(config.SKELETON_PATH),
-        help="yazılacak iskelet dosyası (varsayılan %(default)s)",
+        help=_h("out_skeleton", lang),
     )
     introspect_cmd.add_argument(
         "--sample",
         action="store_true",
-        help=f"kısa metin kolonlarına en fazla {config.SAMPLE_HINT_N} örnek değer ekler",
+        help=_h("sample", lang, n=config.SAMPLE_HINT_N),
     )
 
     diff_cmd = commands.add_parser(
-        "diff-map", help="Excel haritası ile veritabanını karşılaştırır, farkı diff.json/md yazar"
+        "diff-map", help=_h("diff_map", lang), parents=[lang_parent]
     )
     diff_cmd.add_argument(
-        "--excel", required=True, metavar="SEMA.json", help="Excel'den üretilmiş şema dosyası"
+        "--excel", required=True, metavar="SEMA.json", help=_h("excel", lang)
     )
     db_source = diff_cmd.add_mutually_exclusive_group(required=True)
-    db_source.add_argument("--db", action="store_true", help="karşı taraf: canlı veritabanını yoklar")
+    db_source.add_argument("--db", action="store_true", help=_h("db_live", lang))
     db_source.add_argument(
-        "--db-schema", metavar="ISKELET.json", help="karşı taraf: hazır iskelet dosyası"
+        "--db-schema", metavar="ISKELET.json", help=_h("db_schema", lang)
     )
 
     merge_cmd = commands.add_parser(
-        "merge-map", help="Excel haritası ile veritabanını birleştirir, şemayı --outa yazar"
+        "merge-map", help=_h("merge_map", lang), parents=[lang_parent]
     )
     merge_cmd.add_argument(
-        "--excel", required=True, metavar="SEMA.json", help="Excel'den üretilmiş şema dosyası"
+        "--excel", required=True, metavar="SEMA.json", help=_h("excel", lang)
     )
     merge_source = merge_cmd.add_mutually_exclusive_group(required=True)
-    merge_source.add_argument("--db", action="store_true", help="birleşecek taraf: canlı veritabanını yoklar")
+    merge_source.add_argument("--db", action="store_true", help=_h("db_live_merge", lang))
     merge_source.add_argument(
-        "--db-schema", metavar="ISKELET.json", help="birleşecek taraf: hazır iskelet dosyası"
+        "--db-schema", metavar="ISKELET.json", help=_h("db_schema_merge", lang)
     )
     merge_cmd.add_argument(
         "--out",
         default=str(config.MERGED_PATH),
-        help="yazılacak birleşik şema dosyası (varsayılan %(default)s)",
+        help=_h("out_merged", lang),
     )
 
     login_cmd = commands.add_parser(
-        "make-login-script", help="salt okunur MSSQL giriş betiğini üretir ve yazar"
+        "make-login-script", help=_h("make_login_script", lang), parents=[lang_parent]
     )
     login_cmd.add_argument(
         "--login",
         default=login_script.DEFAULT_LOGIN,
-        help="giriş ve kullanıcı adı (varsayılan %(default)s)",
+        help=_h("login", lang),
     )
-    _add_dataset_option(login_cmd)
+    _add_dataset_option(login_cmd, lang)
 
-    ask_cmd = commands.add_parser("ask", help="tek bir soruyu modelden geçirip cevabı gösterir")
-    ask_cmd.add_argument("question", help='Türkçe soru, örn. "Geçen ayın cirosu ne kadar?"')
+    ask_cmd = commands.add_parser(
+        "ask", help=_h("ask", lang), parents=[lang_parent]
+    )
+    ask_cmd.add_argument("question", help=_h("question", lang))
     ask_cmd.add_argument(
-        "--llm", choices=LLMS, default=DEFAULT_LLM, help="istem kaynağı (varsayılan %(default)s)"
+        "--llm", choices=LLMS, default=DEFAULT_LLM, help=_h("llm", lang)
     )
     ask_cmd.add_argument(
         "--mode",
         choices=(*config.MODES, "auto"),
         default="auto",
-        help="bağlam modu (varsayılan %(default)s)",
+        help=_h("mode", lang),
     )
     ask_cmd.add_argument(
         "--json",
         action="store_true",
-        help="yalnız cevabın JSON'unu yazdır (web API ile aynı tek kapı)",
+        help=_h("json", lang),
     )
     ask_cmd.add_argument(
         "--choice",
-        metavar="SEÇENEK",
-        help="netleştirme şıkkı: soruyu seçilen anlamıyla koşar, yeniden sormaz",
+        metavar=_h("choice_metavar", lang),
+        help=_h("choice", lang),
     )
     conversation = ask_cmd.add_mutually_exclusive_group()
     conversation.add_argument(
         "--conversation",
         metavar="ID",
-        help="soruyu bu konuşmanın devamı olarak sor (önceki turlar bağlama girer)",
+        help=_h("conversation", lang),
     )
     conversation.add_argument(
         "--new",
         action="store_true",
-        help="yeni bir konuşma aç ve kimliğini son satırda söyle",
+        help=_h("new", lang),
     )
-    _add_model_options(ask_cmd)
-    _add_dataset_option(ask_cmd)
+    _add_model_options(ask_cmd, lang)
+    _add_dataset_option(ask_cmd, lang)
 
     serve_cmd = commands.add_parser(
-        "serve", help="web API'sini ve arayüzü kendi makinesine bağlı çalıştırır"
+        "serve", help=_h("serve", lang), parents=[lang_parent]
     )
     serve_cmd.add_argument(
         "--host",
         default=config.SERVE_HOST,
-        help=f"bağlanılacak adres (yalnız {', '.join(LOOPBACK_HOSTS)})",
+        help=_h("host", lang, hosts=", ".join(LOOPBACK_HOSTS)),
     )
     serve_cmd.add_argument(
-        "--port", type=int, default=config.SERVE_PORT, help="bağlanılacak port (varsayılan %(default)s)"
+        "--port", type=int, default=config.SERVE_PORT, help=_h("port", lang)
     )
     serve_cmd.add_argument(
-        "--llm", choices=LLMS, default=DEFAULT_LLM, help="istem kaynağı (varsayılan %(default)s)"
+        "--llm", choices=LLMS, default=DEFAULT_LLM, help=_h("llm", lang)
     )
-    _add_model_options(serve_cmd)
-    _add_dataset_option(serve_cmd)
+    _add_model_options(serve_cmd, lang)
+    _add_dataset_option(serve_cmd, lang)
     # R7-26: gizli - görsel inceleme ve duman testinin kendi seçeneği, kullanıcıya anlatılacak bir
     # ayar değil; yardımı bu yüzden basılmaz.
     serve_cmd.add_argument("--db-probe-file", default=None, help=argparse.SUPPRESS)
 
     # R6-8: kullanıcı hesapları parolayı asla komut satırından almaz — iki kez sorulur, yani
     # kabuk geçmişine düşmez. Komut login istemez: kendi makinesinin dosyasını kendi yönetir.
-    user_cmd = commands.add_parser("user", help="kullanıcı hesaplarını listeler, açar, değiştirir")
+    user_cmd = commands.add_parser(
+        "user", help=_h("user", lang), parents=[lang_parent]
+    )
     user_sub = user_cmd.add_subparsers(dest="user_command", required=True)
-    user_add_cmd = user_sub.add_parser("add", help="yeni kullanıcı açar, parolayı iki kez sorar")
+    user_add_cmd = user_sub.add_parser(
+        "add", help=_h("user_add", lang), parents=[lang_parent]
+    )
     user_add_cmd.add_argument("name", metavar="AD")
     user_add_cmd.add_argument(
         "--role",
         choices=("admin", "user"),
         default="user",
-        help="rol (varsayılan %(default)s)",
+        help=_h("role", lang),
     )
     user_add_cmd.add_argument(
         "--business-role",
         choices=tuple(config.BUSINESS_ROLES),
         default=config.DEFAULT_BUSINESS_ROLE,
-        help="iş rolü (varsayılan %(default)s)",
+        help=_h("business_role", lang),
     )
-    user_sub.add_parser("list", help="kullanıcıları, rollerini ve son girişleri listeler")
-    user_passwd_cmd = user_sub.add_parser("passwd", help="parolayı değiştirir")
+    user_sub.add_parser("list", help=_h("user_list", lang), parents=[lang_parent])
+    user_passwd_cmd = user_sub.add_parser(
+        "passwd", help=_h("user_passwd", lang), parents=[lang_parent]
+    )
     user_passwd_cmd.add_argument("name", metavar="AD")
-    user_set_cmd = user_sub.add_parser("set", help="rolü, etkinliği ya da iş rolünü değiştirir")
+    user_set_cmd = user_sub.add_parser(
+        "set", help=_h("user_set", lang), parents=[lang_parent]
+    )
     user_set_cmd.add_argument("name", metavar="AD")
     user_change = user_set_cmd.add_mutually_exclusive_group(required=True)
-    user_change.add_argument("--role", choices=("admin", "user"), help="yeni rol")
+    user_change.add_argument("--role", choices=("admin", "user"), help=_h("new_role", lang))
     user_change.add_argument(
-        "--deactivate", action="store_true", help="kullanıcıyı pasifleştirir"
+        "--deactivate", action="store_true", help=_h("deactivate", lang)
     )
-    user_change.add_argument("--activate", action="store_true", help="kullanıcıyı etkinleştirir")
+    user_change.add_argument("--activate", action="store_true", help=_h("activate", lang))
     user_change.add_argument(
-        "--business-role", choices=tuple(config.BUSINESS_ROLES), help="yeni iş rolü"
+        "--business-role", choices=tuple(config.BUSINESS_ROLES), help=_h("new_business_role", lang)
     )
 
-    eval_cmd = commands.add_parser("eval", help="altın soruları koşar ve raporu yazar")
+    eval_cmd = commands.add_parser("eval", help=_h("eval", lang), parents=[lang_parent])
     eval_cmd.add_argument(
-        "--llm", choices=LLMS, default=DEFAULT_LLM, help="istem kaynağı (varsayılan %(default)s)"
+        "--llm", choices=LLMS, default=DEFAULT_LLM, help=_h("llm", lang)
     )
     eval_cmd.add_argument(
-        "--only", nargs="+", metavar="Q03", help="yalnız bu soru kimlikleri (boşlukla ayrılır)"
+        "--only", nargs="+", metavar="Q03", help=_h("only", lang)
     )
     eval_cmd.add_argument(
         "--tag",
         nargs="+",
         metavar="archive",
-        help="yalnız bu etiketlerden birini taşıyan sorular (boşlukla ayrılır)",
+        help=_h("tag", lang),
     )
     eval_cmd.add_argument(
         "--mode",
         choices=(*config.MODES, "auto"),
         default=config.DEFAULT_EVAL_MODE,
-        help="bağlam modu (varsayılan %(default)s); auto yalnız ask'ta",
+        help=_h("eval_mode", lang),
     )
     eval_cmd.add_argument(
         "--compare",
         action="store_true",
-        help="üç modu aynı sorularda koşar ve tek raporda karşılaştırır",
+        help=_h("compare", lang),
     )
     eval_cmd.add_argument(
-        "--fresh", action="store_true", help="--compare ile yeniden koşmayan modları da koşar"
+        "--fresh", action="store_true", help=_h("fresh", lang)
     )
     eval_cmd.add_argument(
         "--models",
         metavar="A,B",
-        help="--compare ile model x mod karşılaştırması: virgülle ayrılmış profil adları",
+        help=_h("models", lang),
     )
     eval_cmd.add_argument(
         "--modes",
         metavar="M1,M2",
-        help=f"--models ile koşulacak modlar (varsayılan {','.join(config.COMPARE_MODEL_MODES)})",
+        help=_h("modes", lang, modes=",".join(config.COMPARE_MODEL_MODES)),
     )
     eval_cmd.add_argument(
         "--repeat",
         type=int,
         default=1,
         metavar="N",
-        help="--compare ile her modu N kez koşar ve gürültüyü ölçer (varsayılan %(default)s)",
+        help=_h("repeat", lang),
     )
     eval_cmd.add_argument(
         "--schema",
         default=FULL_SCHEMA,
         metavar="DOSYA|full|skeleton",
-        help="ölçümün şeması: tam ad ya da yol (varsayılan %(default)s)",
+        help=_h("schema", lang),
     )
     eval_cmd.add_argument(
         "--ambiguous",
         action="store_true",
-        help="altın sorulara kümenin belirsiz setini de katıp netleştirme metriklerini ölçer",
+        help=_h("ambiguous", lang),
     )
     eval_cmd.add_argument(
         "--narrate",
         action="store_true",
-        help="gönderilen her altın cevabı anlatıp anlatıcının kaynağını sayar",
+        help=_h("narrate", lang),
     )
     eval_cmd.add_argument(
         "--followups",
         action="store_true",
-        help="altın koşumun ardına kümenin ardışık soru zincirlerini konuşmadan geçirip bağlamı ölçer",
+        help=_h("followups", lang),
     )
-    _add_model_options(eval_cmd)
-    _add_dataset_option(eval_cmd)
+    _add_model_options(eval_cmd, lang)
+    _add_dataset_option(eval_cmd, lang)
 
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    """argparse: ``build-db`` | ``ask`` | ``eval``; seçilen komutun işlevini çağırır.
+
+    Dili argv'den önce tarar (``--lang`` > ``NL2SQL_LANG`` > tr), parserı o dilde kurar; çözülen dil
+    ``args.lang`` olarak komuta kalır (R8-5).
+    """
+    argv = list(sys.argv[1:] if argv is None else argv)
+    lang = _scan_lang(argv)
+    parser = build_parser(lang)
     args = parser.parse_args(argv)
+    # ASSUMPTION: komutların argümanı dil taşımaz; çözülen dil buradan komuta ``args.lang`` ile kalır.
+    # Üst düzey ``--lang``ı alt komanın varsayılanı ezebildiği için argparse'ın değerine değil ön
+    # taramanın çözümüne güvenilir (R8-5).
+    args.lang = lang
     if args.command == "build-db":
         return build_database(**_given(seed=args.seed, dataset=args.dataset))
     if args.command == "build-index":
