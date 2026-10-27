@@ -6,15 +6,11 @@
 // döner — sunucu `message_admin`i zaten yalnız yöneticiye gönderiyor (web/app.py `_db_block`).
 // Bant yalnız `down` halinde açılır ve ekranın üstünde kendi yerini alır: soru kutusu altında
 // durmaya devam eder, çünkü soru koşmaz ama yazılmaktan da alıkonulmaz.
+import { makeT, useT } from "../i18n/index.js";
 
-const SENTENCES = {
-  ok: "Veritabanı yanıt veriyor.",
-  down: "Veritabanına bağlanılamıyor, yöneticinize haber verin.",
-  none: "Bu veri kümesinin veritabanı bağlantısı yok.",
-  unknown: "Veritabanı durumu henüz ölçülmedi.",
-};
+const SENTENCE_KEYS = { ok: "db.ok", down: "db.down", none: "db.none", unknown: "db.unknown" };
+const LOCALES = { tr: "tr-TR", en: "en-US" };
 
-const LABEL = "Veritabanı";
 const CONNECTIONS_URL = "#/baglantilar";
 
 function text(value) {
@@ -23,10 +19,10 @@ function text(value) {
 
 // "2026-10-27T09:15:00+00:00" → "27 Ekim 2026 12:15". ASSUMPTION: sunucu UTC yazıyor, dilim
 // yalnız gösterim; okunamayan tarih cümleyi kabartmaz, ipucu süresiz de okunur.
-function stamp(value) {
+function stamp(value, lang) {
   const date = new Date(typeof value === "string" ? value : Number.NaN);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("tr-TR", {
+  return date.toLocaleString(LOCALES[lang] ?? LOCALES.tr, {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -36,18 +32,20 @@ function stamp(value) {
 }
 
 // Cümle + saat + (yönetici için) sürücü satırı. Sunucunun gönderdiği genel cümle ne varsa odur;
-// sabiti yalnız cevap boş kaldığında okunur, iki yer aynı şeyi söylemesin.
-export function dbStatus(db, isAdmin = false) {
-  const tone = SENTENCES[db?.state] ? db.state : "unknown";
-  const sentence = (tone === "down" && text(db?.message)) || SENTENCES[tone];
+// katalogunki yalnız cevap boş kaldığında okunur, iki yer aynı şeyi söylemesin.
+export function dbStatus(db, isAdmin = false, lang = "tr") {
+  const t = makeT(lang);
+  const tone = SENTENCE_KEYS[db?.state] ? db.state : "unknown";
+  const sentence = (tone === "down" && text(db?.message)) || t(SENTENCE_KEYS[tone]);
   const adminMessage = isAdmin ? text(db?.message_admin) : "";
-  const time = stamp(db?.checked_at);
-  const parts = [sentence, time ? `Son kontrol: ${time}` : "", adminMessage];
-  return { tone, label: LABEL, sentence, adminMessage, tip: parts.filter(Boolean).join(" · ") };
+  const time = stamp(db?.checked_at, lang);
+  const parts = [sentence, time ? t("db.checkedAt", { time }) : "", adminMessage];
+  return { tone, label: t("db.label"), sentence, adminMessage, tip: parts.filter(Boolean).join(" · ") };
 }
 
 export function DbDot({ db, isAdmin = false }) {
-  const { tone, label, tip } = dbStatus(db, isAdmin);
+  const { lang } = useT();
+  const { tone, label, tip } = dbStatus(db, isAdmin, lang);
   // ASSUMPTION: `title` bağlantı taşıyamaz; yöneticinin adresi noktanın adında durur, kullanıcının
   // adı düz sözcük kalır — iki başlıkta da ne okunduğu ile nereye gidildiği karışmaz.
   return (
@@ -65,7 +63,8 @@ export function DbDot({ db, isAdmin = false }) {
 }
 
 export function DbBanner({ db, isAdmin = false }) {
-  const { tone, sentence, adminMessage } = dbStatus(db, isAdmin);
+  const { t, lang } = useT();
+  const { tone, sentence, adminMessage } = dbStatus(db, isAdmin, lang);
   if (tone !== "down") return null;
   return (
     <p className="db-banner" id="db-banner" role="alert">
@@ -73,7 +72,7 @@ export function DbBanner({ db, isAdmin = false }) {
       {adminMessage && <span className="db-banner-admin">{adminMessage}</span>}
       {isAdmin && (
         <a className="db-banner-link" href={CONNECTIONS_URL}>
-          Bağlantıyı düzenle
+          {t("db.editConnection")}
         </a>
       )}
     </p>

@@ -16,20 +16,27 @@ import Sidebar from "./components/Sidebar.jsx";
 import StartScreen from "./components/StartScreen.jsx";
 import Thread from "./components/Thread.jsx";
 import UsersScreen from "./components/UsersScreen.jsx";
-import { useT } from "./i18n/index.js";
+import { makeT, useT } from "./i18n/index.js";
 import * as api from "./lib/api.js";
-import { NOT_ALLOWED_NOTE, ROLE_LABELS, canSee } from "./lib/auth.js";
+import { NOT_ALLOWED_NOTE, canSee } from "./lib/auth.js";
 import { parseRoute } from "./lib/route.js";
-import { roleLabel } from "./lib/startCards.js";
 import { applyTheme, nextTheme, readStored, store } from "./lib/theme.js";
 import { initialState as initialThread, threadReducer } from "./lib/thread.js";
 
 // Düğmenin gördüğü ad, sıradaki temayı değil seçili olanı söyler: "Koyu" yazan bir düğmeye
 // basınca ne olacağı belirsiz kalmasın.
 const HEALTH_URL = "/api/health";
-// Konuşmayı açamamanın cümlesi: sunucudaki 404 ile aynı sözcükler (conversations_api).
-const NO_CONVERSATION = "Konuşma bulunamadı.";
-const THEME_LABELS = { system: "Sistem", dark: "Koyu", light: "Açık" };
+const THEME_KEYS = { system: "theme.system", dark: "theme.dark", light: "theme.light" };
+// Çipteki rollerin anahtarları: `lib/auth.js` ve `lib/startCards.js` Türkçe sabitlerini kendi
+// ekranları için taşıyor; başlık katalogdan okur, tanınmayan kod kendi adıyla kalır.
+const ROLE_KEYS = { admin: "role.admin", user: "role.user" };
+const BUSINESS_ROLE_KEYS = {
+  satis: "role.satis",
+  satin_alma: "role.satin_alma",
+  muhasebe: "role.muhasebe",
+  yonetim: "role.yonetim",
+  genel: "role.genel",
+};
 
 // Testler App'i Node'da renderToStaticMarkup ile kuruyor: orada localStorage yoktur, tema da
 // okunacak bir yer bulamayınca "system"de kalır.
@@ -47,21 +54,28 @@ function currentHash() {
 }
 
 // Her halin bir de sözcüğü var: 10px'lik daire tek başına anlamını yalnız ipucunda taşıyordu.
-export function healthDot(health) {
+export function healthDot(health, lang = "tr") {
+  const t = makeT(lang);
   if (!health) {
-    return { tone: "unknown", label: "Bilinmiyor", tip: "Durum alınamadı: sunucu çalışmıyor olabilir." };
+    return { tone: "unknown", label: t("health.unknown"), tip: t("health.tip.unknown") };
   }
   if (health.llm && health.llm.reachable === false) {
+    const reason = health.llm.reason;
     return {
       tone: "down",
-      label: "Kapalı",
-      tip: `Model yanıt vermiyor${health.llm.reason ? `: ${health.llm.reason}` : "."}`,
+      label: t("health.down"),
+      tip: reason ? t("health.tip.downReason", { reason }) : t("health.tip.down"),
     };
   }
   if (health.index && health.index.fresh === false) {
-    return { tone: "stale", label: "Bayat", tip: `İndeks eski${health.index.reason ? `: ${health.index.reason}` : "."}` };
+    const reason = health.index.reason;
+    return {
+      tone: "stale",
+      label: t("health.stale"),
+      tip: reason ? t("health.tip.staleReason", { reason }) : t("health.tip.stale"),
+    };
   }
-  return { tone: "ok", label: "Hazır", tip: "Hazır: model erişilebilir, indeks taze." };
+  return { tone: "ok", label: t("health.ok"), tip: t("health.tip.ok") };
 }
 
 // Çip iki yuvaya ayrılır: veri kümesinin kendi adı, ardından niteliği (parantez içi ve model).
@@ -76,9 +90,11 @@ function chipParts(health) {
 
 // Rol adı hiç okunamazsa çip yalnız kullanıcı adını taşır: "undefined" bir kimlik değildir.
 // İş rolü (R7-16) Run 7 öncesi kimlikte yoktur; halka yoksa çip onu hiç taşımaz, boş bırakmaz.
-function userLabel(user) {
-  const business = user?.business_role ? roleLabel(user.business_role) : "";
-  return [user?.username, business, ROLE_LABELS[user?.role]].filter(Boolean).join(" · ");
+function userLabel(user, t) {
+  const code = user?.business_role;
+  const business = code ? (BUSINESS_ROLE_KEYS[code] ? t(BUSINESS_ROLE_KEYS[code]) : code) : "";
+  const role = ROLE_KEYS[user?.role];
+  return [user?.username, business, role ? t(role) : ""].filter(Boolean).join(" · ");
 }
 
 // Konuşmanın satırı en son sorulan soruyla adlanır (M26 review 4): /api/conversations'ın başlığı ilk
@@ -114,6 +130,7 @@ function AskScreen({
   isAdmin = false,
   resetToken = 0,
 }) {
+  const { t } = useT();
   const [state, dispatch] = useReducer(threadReducer, initialThread);
   const [text, setText] = useState("");
   const [examples, setExamples] = useState([]);
@@ -187,7 +204,10 @@ function AskScreen({
       .catch((error) => {
         if (!mounted) return;
         // Olmayan konuşma ile erişilemeyen konuşma aynı yere düşer: cümle ve kök adres.
-        onNote?.(error?.status === 404 ? NO_CONVERSATION : error?.message || "Konuşma açılamadı.");
+        // `ask.noConversation` sunucudaki 404 ile aynı sözcükleri taşır (conversations_api).
+        onNote?.(
+          error?.status === 404 ? t("ask.noConversation") : error?.message || t("ask.conversationFailed"),
+        );
         window.location.hash = "#/";
       });
     return () => {
@@ -306,7 +326,7 @@ function AskScreen({
     return (
       <section className="screen ask-flow">
         <button type="button" id="new-conversation" className="btn btn-ghost" onClick={newConversation}>
-          Yeni konuşma
+          {t("ask.newConversation")}
         </button>
         <Thread
           turns={turns}
@@ -385,6 +405,7 @@ function AskScreen({
 // Kural ekranı: liste ile indeksin tazeliği aynı iki istekten gelir; kayıt, silme ve yeniden
 // kurma sonrası ekran bunları baştan okur (R5-16).
 function RulesFlow({ onChanged, readOnly }) {
+  const { t } = useT();
   const [data, setData] = useState(null); // {rules, index} | null: henüz okunmadı
   const [tables, setTables] = useState([]);
   const [error, setError] = useState("");
@@ -398,7 +419,7 @@ function RulesFlow({ onChanged, readOnly }) {
           index: payload?.index ?? null,
         }),
       )
-      .catch((failure) => setError(failure?.message || "Kurallar okunamadı."));
+      .catch((failure) => setError(failure?.message || t("rules.loadFailed")));
     api
       .tables()
       .then((payload) => setTables(Array.isArray(payload?.tables) ? payload.tables : []))
@@ -427,6 +448,7 @@ function RulesFlow({ onChanged, readOnly }) {
 // Kullanıcı ekranı: yöneticinin defteri tek istekten okunur; her ekme ve güncelleme sonrası
 // ekran aynı isteği yineler, böylece tablo sunucudaki halini gösterir (R6-19).
 function UsersFlow({ currentUser }) {
+  const { t } = useT();
   const [users, setUsers] = useState(null); // null: henüz okunmadı
   const [error, setError] = useState("");
 
@@ -434,7 +456,7 @@ function UsersFlow({ currentUser }) {
     api
       .usersList()
       .then((payload) => setUsers(Array.isArray(payload?.users) ? payload.users : []))
-      .catch((failure) => setError(failure?.message || "Kullanıcılar okunamadı."));
+      .catch((failure) => setError(failure?.message || t("users.loadFailed")));
   };
 
   useEffect(refresh, []);
@@ -448,6 +470,7 @@ function UsersFlow({ currentUser }) {
 // Hazır soru defteri (R7-21): kümenin bütün satırları tek istekten okunur; onay, düzenleme ve
 // silme sonrası aynı istek yinelenir, böylece liste sunucudaki halini gösterir.
 function ReadyFlow() {
+  const { t } = useT();
   const [rows, setRows] = useState(null); // null: henüz okunmadı
   const [error, setError] = useState("");
 
@@ -457,7 +480,7 @@ function ReadyFlow() {
       .then((payload) =>
         setRows(Array.isArray(payload?.ready_questions) ? payload.ready_questions : []),
       )
-      .catch((failure) => setError(failure?.message || "Hazır sorular okunamadı."));
+      .catch((failure) => setError(failure?.message || t("ready.loadFailed")));
   };
 
   useEffect(refresh, []);
@@ -518,7 +541,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
   // Cümlenin iki kaynağı var: kapınınki (prop) ve konuşmanın açılamaması. İkincisi burada durur,
   // çünkü onu yalnız soru ekranının akışı üretir.
   const [localNote, setLocalNote] = useState("");
-  const { setLang } = useT();
+  const { t, lang, setLang } = useT();
   // Adres ya bir ekrandır ya bir konuşma (`#/c/<id>`, R7-15); konuşmanın ekranı soru ekranıdır.
   // Rol kararı kapının girişiyle aynı: `#/kullanicilar` ile açan ya da yenileyen sıradan bir
   // kullanıcı yönetici defterini görmez, soru ekranına bir cümleyle düşer. Kullanıcı yoksa kabuk
@@ -621,15 +644,16 @@ export default function App({ user = null, onLogout = null, note = "" }) {
     asked.has(item?.id) ? { ...item, last_question: asked.get(item.id) } : item,
   );
 
-  const dot = healthDot(health);
+  const dot = healthDot(health, lang);
   const chip = chipParts(health);
-  const who = userLabel(user);
+  const who = userLabel(user, t);
+  const themeLabel = t(THEME_KEYS[theme]);
 
   return (
     <div className="app">
       <header className="masthead">
         <a className="wordmark" href="#/">
-          Bilgin
+          {t("root.brand")}
         </a>
         {chip.full && (
           <span
@@ -647,10 +671,10 @@ export default function App({ user = null, onLogout = null, note = "" }) {
           type="button"
           id="theme-toggle"
           className="btn btn-theme"
-          aria-label={`Tema: ${THEME_LABELS[theme]}. Değiştirmek için etkinleştir.`}
+          aria-label={t("theme.toggle", { label: themeLabel })}
           onClick={cycleTheme}
         >
-          {THEME_LABELS[theme]}
+          {themeLabel}
         </button>
         {/* Dil de tema gibi görünümün kendisidir: cevabı değil, arayüzü çevirir. */}
         <LangToggle user={user} />
@@ -664,13 +688,13 @@ export default function App({ user = null, onLogout = null, note = "" }) {
             nötr kalır. */}
         {user && <DbDot db={health?.db} isAdmin={user.role === "admin"} />}
         {who && (
-          <span className="chip" id="user-chip" title="Oturum sahibi">
+          <span className="chip" id="user-chip" title={t("shell.userChip")}>
             {who}
           </span>
         )}
         {onLogout && (
           <button type="button" id="logout" className="btn btn-ghost" onClick={logout}>
-            Çıkış
+            {t("shell.logout")}
           </button>
         )}
       </header>
@@ -683,9 +707,13 @@ export default function App({ user = null, onLogout = null, note = "" }) {
           aria-controls="sidebar"
           onClick={() => setSidebarOpen((open) => !open)}
         >
-          Kayıtlılar ve geçmiş
+          {t("shell.sidebarToggle")}
         </button>
-        <aside id="sidebar" className={sidebarOpen ? "sidebar is-open" : "sidebar"} aria-label="Kayıtlılar ve geçmiş">
+        <aside
+          id="sidebar"
+          className={sidebarOpen ? "sidebar is-open" : "sidebar"}
+          aria-label={t("shell.sidebarToggle")}
+        >
           {/* Çekmece ekranı doldurup tek kapatma düğmesini (toggle'ı) listenin üstünde ekrandan
               çıkarıyordu: açık panel kendi düğmesini tepesinde taşır (M22 görsel inceleme 5). */}
           {sidebarOpen && (
@@ -696,7 +724,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
               aria-controls="sidebar"
               onClick={() => setSidebarOpen(false)}
             >
-              Kapat
+              {t("shell.sidebarClose")}
             </button>
           )}
           <Sidebar

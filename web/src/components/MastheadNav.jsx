@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useT } from "../i18n/index.js";
 
 // Gezinme satırı kendi kaymasını kendisi bildirir: telefon başlığında satır kaydırılan bir sıra
 // (styles.css), ama hangi uçta devamı olduğunu bilmiyor. Odaklanınca tarayıcı satırı kaydırdığı
@@ -7,6 +8,7 @@ import { useEffect, useRef } from "react";
 // içerik olup olmadığını veri niteliği olarak üstleniyor; telefon CSS'i kesik uçtaki maskeyi
 // bu duruma göre yakıyor.
 export default function MastheadNav({ route, user }) {
+  const { t } = useT();
   const nav = useRef(null);
 
   useEffect(() => {
@@ -26,34 +28,34 @@ export default function MastheadNav({ route, user }) {
   }, [route, user?.role]);
 
   return (
-    <nav className="masthead-nav" aria-label="Bölümler" ref={nav}>
+    <nav className="masthead-nav" aria-label={t("nav.sections")} ref={nav}>
       <a className="nav-link" id="nav-ask" href="#/" aria-current={route === "ask" ? "page" : undefined}>
-        Sor
+        {t("nav.ask")}
       </a>
       <a className="nav-link" id="nav-rules" href="#/kurallar" aria-current={route === "rules" ? "page" : undefined}>
-        Kurallar
+        {t("nav.rules")}
       </a>
       {/* Harita ve kullanıcı defteri yalnız yöneticiye açık (R6-19): kök kapı rotayı da korur,
           bağlantı gösterilmeyen bir adrese götürmesin. */}
       {user?.role === "admin" && (
         <a className="nav-link" id="nav-map" href="#/harita" aria-current={route === "map" ? "page" : undefined}>
-          Veritabanı haritası
+          {t("nav.map")}
         </a>
       )}
       {/* Bağlantılar da haritanın yanı: küme orada kuruluyor, girişi burada dolduruluyor (R7-27). */}
       {user?.role === "admin" && (
         <a className="nav-link" id="nav-connections" href="#/baglantilar" aria-current={route === "connections" ? "page" : undefined}>
-          Bağlantılar
+          {t("nav.connections")}
         </a>
       )}
       {user?.role === "admin" && (
         <a className="nav-link" id="nav-ready" href="#/hazir-sorular" aria-current={route === "ready" ? "page" : undefined}>
-          Hazır sorular
+          {t("nav.ready")}
         </a>
       )}
       {user?.role === "admin" && (
         <a className="nav-link" id="nav-users" href="#/kullanicilar" aria-current={route === "users" ? "page" : undefined}>
-          Kullanıcılar
+          {t("nav.users")}
         </a>
       )}
     </nav>

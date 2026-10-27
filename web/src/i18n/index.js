@@ -26,7 +26,9 @@ function interpolate(text, params) {
   return text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match));
 }
 
-function makeT(lang) {
+// Bileşen olmayan saf işlevler (başlığın sağlık noktası, veritabanı ipucu) çeviriyi hook
+// olmadan da okusun: dilin kendisi onlara parametre olarak geliyor, varsayılanı tr.
+export function makeT(lang) {
   const code = normalize(lang);
   return (key, params) => {
     const text = catalogs[code]?.[key] ?? catalogs[FALLBACK]?.[key] ?? key;

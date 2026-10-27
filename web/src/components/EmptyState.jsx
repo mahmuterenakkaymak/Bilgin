@@ -1,3 +1,5 @@
+import { useT } from "../i18n/index.js";
+
 // Hiç soru sorulmamış ekranın açılışı: iki cümle ve örnek çipler (R5-18).
 // ASSUMPTION: boş durumdayken çipler burada, soru sorulduktan sonra AskBox'ın altında durur;
 // aynı çip iki kez görünmesin diye kutu boş durumdayken kendi çip sırasını vermez.
@@ -6,13 +8,12 @@
 // ASSUMPTION: ad geldiğinde lead'in kendisi onun cümlesidir; iki cümle üst üste binmesin (M22: tek
 // cümle, yeni veri yok). Ad yoksa — sağlık çıktısı henüz gelmediyse — ekran bugünkü cümlesiyle açılır.
 export default function EmptyState({ examples = [], rulesHint = false, datasetName = "", onSelect }) {
+  const { t } = useT();
   return (
     <section className="card empty-state">
-      <h1 className="screen-title">Verinize Türkçe soru sorun</h1>
+      <h1 className="screen-title">{t("empty.title")}</h1>
       <p className="screen-lead">
-        {datasetName
-          ? `«${datasetName}» üzerinde soruyorsun; örnekler onun tablolarından.`
-          : "Bilgin SQL'i yazar, sonucu ve nasıl hesapladığını gösterir."}
+        {datasetName ? t("empty.leadDataset", { name: datasetName }) : t("empty.lead")}
       </p>
       {examples.length > 0 ? (
         <div className="examples">
@@ -30,13 +31,13 @@ export default function EmptyState({ examples = [], rulesHint = false, datasetNa
         </div>
       ) : (
         <p className="empty-hint" id="empty-hint">
-          Bu veri kümesinde henüz örnek soru yok — sorunu yukarıya yaz, Bilgin ilk kez gördüğü bir
-          soruyu da SQL'e çevirir.
+          {t("empty.hint")}
           {rulesHint && (
             <>
-              {" Kümenin iş kuralı da yok: iş terimlerini hesaba katması için "}
-              <a href="#/kurallar">İş kuralları</a>
-              {" ekranından ilk kuralını ekle."}
+              {" "}
+              {t("empty.rulesBefore")}{" "}
+              <a href="#/kurallar">{t("empty.rulesLink")}</a>{" "}
+              {t("empty.rulesAfter")}
             </>
           )}
         </p>

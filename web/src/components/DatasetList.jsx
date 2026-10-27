@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT } from "../i18n/index.js";
 
 // Veri kümeleri listesi (R6-19): harita ekranının üçüncü kartı. Hangi kümenin etkin olduğu,
 // hangisinin indeksinin bulunduğu ve geçişten sonra kalan son adım burada okunur. Liste üstten
@@ -32,13 +33,13 @@ function text(value) {
 }
 
 // İndeksin üç hali de ayrı söylenir: "yok" ile "eski"nin kullanıcuya farklı işi var.
-function indexState(item) {
+function indexState(item, t) {
   const index = item?.index ?? {};
   if (index.exists && index.fresh === false) {
-    return { label: "İndeks eski", tone: "is-stale", reason: text(index.reason) };
+    return { label: t("dataset.index.stale"), tone: "is-stale", reason: text(index.reason) };
   }
-  if (index.exists) return { label: "İndeks hazır", tone: "is-ready", reason: "" };
-  return { label: "İndeks yok", tone: "is-missing", reason: text(index.reason) };
+  if (index.exists) return { label: t("dataset.index.ready"), tone: "is-ready", reason: "" };
+  return { label: t("dataset.index.missing"), tone: "is-missing", reason: text(index.reason) };
 }
 
 export default function DatasetList({
@@ -50,6 +51,7 @@ export default function DatasetList({
   busy = "",
   onActivate,
 }) {
+  const { t } = useT();
   const items = (Array.isArray(datasets) ? datasets : []).filter((item) => text(item?.name));
   // Görünür olan duyuru kendi kopyası: yeni bir geçiş eskisinin yerine geçer, listeyi
   // tazelerken kaybolmaz. Okuma render'da (işaretçi ilk boyamada da görünsün), yazma effect'te.
@@ -64,10 +66,10 @@ export default function DatasetList({
   }, [notice]);
 
   const emptyText = error
-    ? "Veri kümeleri okunamadı."
+    ? t("dataset.empty.error")
     : loading
-      ? "Kümeler okunuyor…"
-      : "Henüz veri kümesi yok.";
+      ? t("dataset.empty.loading")
+      : t("dataset.empty.none");
 
   return (
     <div className="dataset-block">
@@ -82,7 +84,7 @@ export default function DatasetList({
           <p className="dataset-notice-text">{shown.message}</p>
           {text(shown.login_script_url) && (
             <a className="dataset-notice-link" href={shown.login_script_url} download>
-              Salt okunur giriş betiği
+              {t("dataset.notice.script")}
             </a>
           )}
         </div>
@@ -90,7 +92,7 @@ export default function DatasetList({
       <ul className="dataset-list" id="dataset-list">
         {items.length === 0 && <li className="dataset-empty">{emptyText}</li>}
         {items.map((item) => {
-          const index = indexState(item);
+          const index = indexState(item, t);
           const ready = item.index?.exists === true;
           const isActive = item.active === true || text(item.name) === text(active);
           const pending = busy === item.name;
@@ -107,17 +109,17 @@ export default function DatasetList({
                 {index.label}
               </span>
               {isActive ? (
-                <span className="dataset-state">Etkin</span>
+                <span className="dataset-state">{t("dataset.active")}</span>
               ) : (
                 <button
                   type="button"
                   className="btn dataset-activate"
                   data-dataset-activate={item.name}
                   disabled={!ready || pending}
-                  title={ready ? undefined : "Bu kümenin indeksi yok; geçiş için önce indeksini kurun."}
+                  title={ready ? undefined : t("dataset.activateBlocked")}
                   onClick={() => onActivate?.(item.name)}
                 >
-                  {pending ? "Geçiliyor…" : "Bu kümeye geç"}
+                  {pending ? t("dataset.activating") : t("dataset.activate")}
                 </button>
               )}
             </li>
