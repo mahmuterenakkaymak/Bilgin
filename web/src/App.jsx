@@ -3,6 +3,7 @@ import AnswerCard from "./components/AnswerCard.jsx";
 import AskBox from "./components/AskBox.jsx";
 import ClarificationCard from "./components/ClarificationCard.jsx";
 import { ConnectionsFlow } from "./components/ConnectionsScreen.jsx";
+import { DbBanner, DbDot } from "./components/DbStatus.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import ErrorCard from "./components/ErrorCard.jsx";
 import LoadingSteps from "./components/LoadingSteps.jsx";
@@ -626,6 +627,10 @@ export default function App({ user = null, onLogout = null, note = "" }) {
           <span className={`dot dot-${dot.tone}`} role="img" aria-label={dot.tip} />
           <span id="health-label">{dot.label}</span>
         </span>
+        {/* Veritabanının sağlığı modelden ayrı bir gerçek (R7-27): nokta arka plan yoklamasının
+            son cevabını gösterir, başlık bu yüzden hiçbir `SELECT 1` beklemez; küme SQLite ise
+            nötr kalır. */}
+        {user && <DbDot db={health?.db} isAdmin={user.role === "admin"} />}
         {who && (
           <span className="chip" id="user-chip" title="Oturum sahibi">
             {who}
@@ -676,6 +681,11 @@ export default function App({ user = null, onLogout = null, note = "" }) {
             <p className="route-note" id="route-note">
               {screenNote}
             </p>
+          )}
+          {/* Düşmüş veritabanının bandı sorunun tam üstünde durur (R7-27): panonun, akışın ve
+              konuşmanın ekranları aynı üç haldir. Kutuyu örtmez — soru koşmaz, yazılmaz da değil. */}
+          {(route === "ask" || route === "conversation") && (
+            <DbBanner db={health?.db} isAdmin={!user || user.role === "admin"} />
           )}
           <Screen
             route={route}

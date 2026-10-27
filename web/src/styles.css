@@ -173,8 +173,10 @@ body {
   background: var(--muted);
 }
 
-/* Durum kümesi: nokta + onun sözcüğü tek satırda kalır; sözcük statü satırının ölçüsünde. */
-.health {
+/* Durum kümesi: nokta + onun sözcüğü tek satırda kalır; sözcük statü satırının ölçüsünde.
+   Veritabanı noktası (R7-27) başlığın ikinci durum kümesidir, o yüzden ölçüyü de paylaşıyor. */
+.health,
+.db-status {
   display: inline-flex;
   align-items: center;
   gap: calc(var(--space) * 0.5);
@@ -706,7 +708,8 @@ main {
 .route-note,
 .conn-error,
 .conn-note,
-.conn-readonly {
+.conn-readonly,
+.db-banner {
   border-radius: 0 var(--radius) var(--radius) 0;
 }
 
@@ -1021,10 +1024,10 @@ main {
      sekme) sırası değişmez, `order`/`::after` hilesine gerek kalmadığı için onlar kalktı. */
   .masthead {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
     grid-template-areas:
-      "word chip theme health"
-      "nav  nav  user  out";
+      "word chip theme db health"
+      "nav  nav  user out  out";
     gap: calc(var(--space) * 0.75) var(--space);
   }
 
@@ -1067,6 +1070,17 @@ main {
 
   .health {
     grid-area: health;
+  }
+
+  /* ASSUMPTION: veritabanı noktası dar ekranda adını taşımıyor — iki durum sözcüğü üst satırın
+     payını çipin üstüne çıkarıyor ("Veritabanı" + "Bilinmiyor"), oysa çip hangi veritabanından
+     söz edildiğini söyleyen tek yer. Ton ve ipucu aynı şeyi söylüyor; ad geniş ekranda duruyor. */
+  .db-status {
+    grid-area: db;
+  }
+
+  .db-status .db-label {
+    display: none;
   }
 
   /* Çipin tavanı sütunun payı: 10rem bırakılınca çip kendi adı kadar yer kapıyor (ölçüldü 116px),
@@ -2503,6 +2517,58 @@ main {
 
 .db-dot-unknown {
   background: var(--muted);
+}
+
+/* Ad yöneticinin elinde bağlantıdır — düşmüş veritabanını düzelteceği ekran orada. Çizgi
+   yalnız şıkkın üstüne gelince: başlığın düz sözcükleri arasında kalıcı çizgi gürültü olurdu. */
+.db-label {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+a.db-label:hover {
+  text-decoration: underline;
+}
+
+/* `none`ın dolgusu yok: SQLite kümesinin yoklanacak sunucusu yoktur, uydurma bir renk söylemez.
+   Boşlukta kaybolmasın diye halka — bağlantısı olmayan küme, denenmemiş olandan ayrılıyor. */
+.db-status .db-dot-none {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+}
+
+/* Düşmüş veritabanının bandı (R7-27): sorunun tam üstünde kendi satırı, soru kutusunun üstü.
+   Kaydırmaz ve örtmez — soru o halde koşmaz, ama yazılmaktan da alıkonulmaz. */
+.db-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space) calc(var(--space) * 2);
+  margin: 0 0 calc(var(--space) * 2);
+  padding: calc(var(--space) * 1.25) calc(var(--space) * 1.5);
+  border: 1px solid var(--err-text);
+  border-left-width: 4px;
+  background: var(--err-bg);
+  color: var(--err-text);
+  font-size: 14px;
+}
+
+.db-banner-text {
+  flex: 1 1 260px;
+  font-weight: 600;
+}
+
+.db-banner-admin {
+  flex: 1 1 100%;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.db-banner-link {
+  color: var(--err-text);
+  font-weight: 600;
+  text-decoration: underline;
 }
 
 .conn-screen > * + * {
