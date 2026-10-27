@@ -282,6 +282,47 @@ def test_pinning_another_users_answer_is_404_and_a_role_card_is_not_ones_to_dele
     assert world.store.get(role_card["id"]) is not None
 
 
+def test_pinning_the_same_question_twice_leaves_one_card_and_names_it_both_times(world):
+    ask_record(world, "a1", LIST_SQL, username="satis1", question="Ankara carileri kim?")
+    ask_record(world, "a2", LIST_SQL, username="satis1", question="Ankara carileri kim?")
+    mine = as_user(world.app, "satis1")
+
+    first = mine.post("/api/start/cards", json={"audit_id": "a1", "title": "Ankara carileri"})
+    again = mine.post("/api/start/cards", json={"audit_id": "a2", "title": "Ankara carileri"})
+
+    assert again.status_code == 200
+    assert again.json()["card"]["id"] == first.json()["card"]["id"]
+    assert_no_sql(again.json())
+    assert [c["id"] for c in mine.get("/api/start").json()["cards"]] == [first.json()["card"]["id"]]
+
+
+def test_a_question_that_differs_only_in_case_or_spacing_is_the_same_card(world):
+    ask_record(world, "a1", LIST_SQL, username="satis1", question="ankara  carileri KIM?")
+    ask_record(world, "a2", LIST_SQL, username="satis1", question="Ankara carileri kim?")
+    mine = as_user(world.app, "satis1")
+
+    first = mine.post("/api/start/cards", json={"audit_id": "a1"})
+    again = mine.post("/api/start/cards", json={"audit_id": "a2"})
+
+    assert again.json()["card"]["id"] == first.json()["card"]["id"]
+    assert len(mine.get("/api/start").json()["cards"]) == 1
+
+
+def test_two_different_questions_still_make_two_personal_cards(world):
+    ask_record(world, "a1", LIST_SQL, username="satis1", question="Ankara carileri kim?")
+    ask_record(world, "a2", TOTAL_SQL, username="satis1", question="Net ciro ne kadar?")
+    mine = as_user(world.app, "satis1")
+
+    first = mine.post("/api/start/cards", json={"audit_id": "a1"})
+    second = mine.post("/api/start/cards", json={"audit_id": "a2"})
+
+    assert second.status_code == 200
+    assert [c["id"] for c in mine.get("/api/start").json()["cards"]] == [
+        first.json()["card"]["id"],
+        second.json()["card"]["id"],
+    ]
+
+
 def test_the_seventh_personal_card_is_the_stores_409_sentence(world):
     mine = as_user(world.app, "satis1")
     for n in range(config.PERSONAL_CARDS):

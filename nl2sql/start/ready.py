@@ -223,6 +223,24 @@ class ReadyStore:
             ).fetchall()
         return [_card(row) for row in rows]
 
+    def find_personal(self, dataset: str, username: str, question: str) -> dict | None:
+        """Kişinin panosunda aynı sorunun kartı: boşluk ve büyük/küçük harf farkı sayılmaz (T378'in ölçüsü).
+
+        Yalnız kişinin kendi onaylı kişisel satırları sayılır - panoda durmayan bir satır
+        taşındığı söylenemez, yani dönen kartın açılışı da hep geçerlidir.
+        """
+        key = _question_key(question)
+        with _connect(self.path) as conn:
+            rows = conn.execute(
+                "SELECT id, question FROM ready_questions"
+                " WHERE dataset = ? AND business_role IS NULL AND created_by = ? AND approved = 1",
+                (dataset, username),
+            ).fetchall()
+        for row in rows:
+            if _question_key(row[1]) == key:
+                return self.get(row[0])
+        return None
+
     # ------------------------------------------------------------------ internals
 
     def _check_cap(self, dataset: str, created_by: str | None) -> None:
@@ -292,7 +310,18 @@ def personal_from_audit(
 
     Süzgeç adın kendisidir - başkasının kaydı onun için hiç yoktur. İş rolü NULL olduğu için
     ``PERSONAL_CARDS`` sınırı ve kartın yalnız sahibince silinebilmesi ``ReadyStore``un yoludur.
+
+    Aynı cümleyi pano iki kez taşımaz: sorusu kişinin panosunda zaten varsa yeni satır yazılmaz,
+    olan kart döner - uç ikinci tıklamada da aynı kartı gösterir, kota da dolu olsa 200dür.
+    ASSUMPTION: dönen kart eski satırın kendisidir; bu istekteki ``title``/``display`` onu değiştirmez.
     """
+    record = asklog.find_ask(audit_id, session.ask_log, username=username) or {}
+    if record.get("sql"):
+        pinned = store.find_personal(
+            _dataset_of(session), username, fields.get("question") or record.get("question", "")
+        )
+        if pinned is not None:
+            return pinned
     return approve_from_audit(
         session, store, audit_id, username, username, {**fields, "business_role": None}
     )
@@ -326,6 +355,11 @@ def _check_display(display: str) -> None:
 def _dataset_of(session) -> str:
     """Kartın kümesi: oturumun o anki kümesinin adı - başlangıç ekranı da kartları ona göre listeler."""
     return session.dataset.name if session.dataset else config.DEFAULT_DATASET
+
+
+def _question_key(question: str) -> str:
+    """İki sorunun aynı cümle olup olmadığı: boşluk ve büyük/küçük harf farkı sayılmaz."""
+    return " ".join(question.split()).casefold()
 
 
 def _value(value):
