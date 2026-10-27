@@ -25,6 +25,8 @@ ROUTE_ROLES: dict[tuple[str, str], str] = {
     ("POST", "/api/auth/login"): "public",
     ("POST", "/api/auth/logout"): "public",
     ("GET", "/api/auth/me"): "user",
+    # R8-5: kişi kendi dil tercihini kendi yazar - yönetici değil, oturumun kendisi.
+    ("PUT", "/api/auth/me"): "user",
     ("POST", "/api/ask"): "user",
     ("POST", "/api/replay/{audit_id}"): "user",
     # R7-8: konuşmanın üç yolu - seviye oturum, sahiplik yolda çözülür, başkasınınki 403 değil 404.

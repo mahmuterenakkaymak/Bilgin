@@ -279,6 +279,7 @@ def test_no_returned_dict_carries_the_hash_or_the_plain_password(store):
             "created_at",
             "last_login_at",
             "business_role",
+            "lang",
         }
         assert PAROLA not in json.dumps(item, ensure_ascii=False)
     assert PAROLA not in _stored_hash(store, user["id"])

@@ -30,7 +30,7 @@ NO_SESSION = "Oturum açmanız gerekiyor."
 NOT_ADMIN = "Bu işlem yalnız yöneticiye açık."
 
 # Sözleşme "User (public)": alan adları burada sabit, fazlası sızarsa test kırılır.
-FIELDS = ["active", "business_role", "created_at", "id", "last_login_at", "role", "username"]
+FIELDS = ["active", "business_role", "created_at", "id", "lang", "last_login_at", "role", "username"]
 
 
 @pytest.fixture

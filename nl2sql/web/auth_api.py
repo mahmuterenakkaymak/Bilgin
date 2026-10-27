@@ -25,6 +25,12 @@ class LoginBody(BaseModel):
     password: str = ""
 
 
+class MeLangBody(BaseModel):
+    """``PUT /api/auth/me`` gövdesi (Contracts "me PUT"): kişinin kendi arayüz dili."""
+
+    lang: str = ""
+
+
 class UserCreateBody(BaseModel):
     """``POST /api/users`` gövdesi (Contracts "users API"); rolün varsayılanı CLI ile aynı."""
 
@@ -79,6 +85,21 @@ def create_router() -> APIRouter:
         """Arayüzün ilk çağrısı: oturum varsa kim olduğu, yoksa 401 (R6-5)."""
         _store(request)
         return _who(user)
+
+    @router.put("/me")
+    def me_update(
+        body: MeLangBody, request: Request, user: dict | None = Depends(require("user"))
+    ) -> dict:
+        """Kendi dil tercihini yazar (R8-5): herkes kendi üstünde, reddi 422, cevabı "me" gövdesi.
+
+        Oturum düşmez - tercih bir kimlik bilgisi değil, sunumun ayarıdır. Dil ``LANGUAGES``
+        dışındaysa store reddeder; hiçbir şey yazılmaz, ekran da eski tercihini okumaya devam eder.
+        """
+        try:
+            updated = _store(request).set_lang(user["id"], body.lang)
+        except UserError as exc:
+            raise _refused(exc) from None
+        return _who(updated)
 
     return router
 
@@ -152,9 +173,18 @@ def _store(request: Request):
 
 
 def _who(user: dict) -> dict:
-    """Sözleşme "me / login 200": arayüzün ihtiyaç duyduğu üç alan, fazlası değil (R7-16)."""
-    return {
+    """Sözleşme "me / login 200": arayüzün ihtiyaç duyduğu alanlar, fazlası değil (R7-16, R8-5).
+
+    ``lang`` kişinin kendi arayüz tercihidir ve yalnız bir tercih yaptıysa gövdededir; tercihsiz
+    kişi ``request_lang``a düşer (başlık ya da program dili), yani ekranda eksik alan olmaz.
+    """
+    who = {
         "username": user["username"],
         "role": user["role"],
         "business_role": user["business_role"],
     }
+    # ASSUMPTION: Run 6/7 gövdelerini birebir ölçen testler var, o yüzden tercih NULL olan kişiye
+    # ``lang`` hiç yazılmaz - "tercihim yok" ile "tercihim tr" arayüz için aynı anlama gelir.
+    if user.get("lang"):
+        who["lang"] = user["lang"]
+    return who

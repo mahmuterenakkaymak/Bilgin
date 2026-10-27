@@ -44,6 +44,7 @@ from nl2sql.web.connections_api import create_router as create_connections_route
 from nl2sql.web.conversations_api import NO_CONVERSATION
 from nl2sql.web.conversations_api import create_router as create_conversations_router
 from nl2sql.web.datasets_api import create_router as create_datasets_router
+from nl2sql.web.lang import request_lang
 from nl2sql.web.map_api import create_router as create_map_router
 from nl2sql.web.saved import ALL as SAVED_ALL, SavedStore
 from nl2sql.web.start_api import SessionExecutor
@@ -230,6 +231,9 @@ def create_app(
         question = body.question.strip()
         if not question:
             raise HTTPException(status_code=400, detail=BLANK_QUESTION)
+        # R8-5: arayüz dili kişinin tercihinden, yoksa tarayıcının başlığından; cevabın dili
+        # oradan sorulur (R8-6), yani İngilizce ekran Türkçe bir soruyu Türkçe yanıtlar.
+        lang = request_lang(request, current_user(request))
         status = getattr(request.app.state, "dbstatus", None)
         try:
             if status is not None and status.state(_dataset_name(request))["state"] == "down":
@@ -238,11 +242,11 @@ def create_app(
                 return down_payload(_session(request), question, mode=body.mode, choice=body.choice,
                                     source="web", username=_asker(request),
                                     conversations=request.app.state.conversations,
-                                    conversation_id=body.conversation_id)
+                                    conversation_id=body.conversation_id, lang=lang)
             payload = ask_payload(_session(request), question, mode=body.mode, choice=body.choice,
                                   source="web", username=_asker(request),
                                   conversations=request.app.state.conversations,
-                                  conversation_id=body.conversation_id)
+                                  conversation_id=body.conversation_id, lang=lang)
         except ConversationNotFound:
             raise HTTPException(status_code=404, detail=NO_CONVERSATION) from None
         if status is not None:

@@ -26,7 +26,16 @@ USERNAME_RE = re.compile(r"^[a-z0-9_.-]{3,32}$")
 ROLES = ("admin", "user")
 
 # Sözleşme "User (public)" ve Run 7 "User (ext.)": okuma sorgusu hash'i hiç seçmez, o yüzden yanlışlıkla da çıkmaz.
-_COLUMNS = ("id", "username", "role", "active", "created_at", "last_login_at", "business_role")
+_COLUMNS = (
+    "id",
+    "username",
+    "role",
+    "active",
+    "created_at",
+    "last_login_at",
+    "business_role",
+    "lang",
+)
 _SELECT = ", ".join(_COLUMNS)
 
 DUPLICATE_MESSAGE = "Bu kullanıcı adı zaten var."
@@ -37,6 +46,7 @@ BAD_NAME_MESSAGE = (
 )
 BAD_ROLE_MESSAGE = "Rol admin ya da user olmalı."
 BAD_BUSINESS_ROLE_MESSAGE = "Geçersiz iş rolü."
+BAD_LANG_MESSAGE = "Dil tr ya da en olmalı."
 BAD_LOGIN_MESSAGE = "Kullanıcı adı ya da parola hatalı."
 LOCKED_MESSAGE = "Çok fazla hatalı deneme. {n} dakika sonra yeniden deneyin."
 
@@ -50,6 +60,7 @@ CREATE TABLE IF NOT EXISTS users (
   active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL,
   last_login_at TEXT,
+  lang TEXT,
   business_role TEXT NOT NULL DEFAULT '{config.DEFAULT_BUSINESS_ROLE}'
 )
 """,
@@ -105,6 +116,7 @@ class UserStore:
         with _connect(self.path) as conn:
             for ddl in _CREATE:
                 conn.execute(ddl)
+            _add_lang(conn)
             _add_business_role(conn)
 
     # ------------------------------------------------------------------ users
@@ -199,6 +211,20 @@ class UserStore:
                 conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = ?", (*args, id))
                 if password is not None or active is False:
                     conn.execute("DELETE FROM sessions WHERE user_id = ?", (id,))
+        return self.get_by_id(id)
+
+    def set_lang(self, id: int, lang: str) -> dict:
+        """Kişinin kendi arayüz dilini yazar ve public sözlüğünü döndürür (R8-5).
+
+        Tercih ``LANGUAGES`` dışıysa reddedilir; ``None`` hiçbir tercih yapılmadığıdır ve yalnız
+        ``add_user``da doğar - buradan geri silinmez, kişinin dili hep bir dildir.
+        """
+        if lang not in config.LANGUAGES:
+            raise UserError(BAD_LANG_MESSAGE, 422)
+        if self.get_by_id(id) is None:
+            raise UserError(NOT_FOUND_MESSAGE, 404)
+        with _connect(self.path) as conn:
+            conn.execute("UPDATE users SET lang = ? WHERE id = ?", (lang, id))
         return self.get_by_id(id)
 
     # ------------------------------------------------------- login, lockout, sessions
@@ -345,6 +371,17 @@ def _add_business_role(conn) -> None:
         "ALTER TABLE users ADD COLUMN business_role TEXT NOT NULL DEFAULT"
         f" '{config.DEFAULT_BUSINESS_ROLE}'"
     )
+
+
+def _add_lang(conn) -> None:
+    """Run 7 dosyalarında dil tercihi kolonu yoktur: sona eklenir, eski satır tercihsiz doğar (R8-5).
+
+    İş rolünden önce koşulur: iki kolonu da olmayan Run 6 dosyasında ``business_role`` son kolon
+    olarak kalmalı (test_business_role_store onu birebir ölçer).
+    """
+    if "lang" in {row[1] for row in conn.execute("PRAGMA table_info(users)")}:
+        return
+    conn.execute("ALTER TABLE users ADD COLUMN lang TEXT")
 
 
 @contextlib.contextmanager
