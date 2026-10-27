@@ -1571,3 +1571,257 @@ R7-29. **Test rules kept** (R5-22, R6-23) plus: conversation/start/connection te
   guard, status checker, connections API, health/fail-fast/serve wiring, secret scan, connections UI, header dot +
   banner, visual pages, README + smoke `--connections`. Integration: real store + real resolution + real session swap
   + injected connector/pinger through the API.
+
+# PLAN - NL2SQL Run 8 (English everywhere, template in the program's language, Windows service)
+
+Brief: `PROJECT_BRIEF_RUN8.md`. Product name Bilgin (package/CLI stay `nl2sql`). No commercial ERP product or company
+name anywhere (already guarded by `tests/test_no_erp_brand.py`, T356). **Milestone renumbering:** the brief numbers
+M24-M26, which Run 7 already used, so Run 8 continues at M26 and splits the brief's M25 in two:
+M26 = brief M24 (language core), M27 = brief M25 server half (API, CLI, template, golden/eval, README),
+M28 = brief M25 web half (catalogs, every screen, bundle scan, visual flows), M29 = brief M26 (Windows service).
+**No new dependency**: catalogs are stdlib `json`, the web `t()` is our own hook (no i18n library), DPAPI is the
+existing `ctypes` module, WinSW is downloaded by the operator's install script, never by pip/npm or a test.
+
+Already delivered by Run 7 review tasks (do not redo): brand scrub + its test (T356), `serve` default chain
+stored -> `wwi` -> first indexed -> default (T357), visual run on `wwi` (T370, T387), `wwi` golden/ambiguous/followups
+coverage (T357). **Carry-over:** T376 was ticked but its commit changed nothing in `datasets/` - `wwi` still has no
+`ready_questions.json`; T389 redoes it. T345/T377/T379 stay open as they are (REVIEW.md M25: do not re-implement).
+
+## Run 8 architecture
+
+```
+lang sources:  web: users.lang -> Accept-Language (UI sets it from its own choice) -> NL2SQL_LANG -> "tr"
+               cli: --lang -> NL2SQL_LANG -> "tr"
+nl2sql/i18n/__init__.py  t(key, lang, **params) over tr.json / en.json ; resolve_lang(...) ; LANGUAGES
+nl2sql/i18n/detect.py    detect_lang(question, fallback) -> "tr"|"en"     (deterministic, no model)
+nl2sql/i18n/scan.py      user_literals(path, allow) -> Turkish string literals that are not docstrings/log/allowed
+
+POST /api/ask -> web/lang.request_lang(request, user) = ui_lang
+   -> ask_payload(..., lang=ui_lang): answer_lang = detect_lang(question, ui_lang)
+        run_agent(..., answer_lang)  -> prompt gets ONE extra line for "en" (clarification wording); "tr" byte-identical
+        compute_facts(cols, rows, lang=answer_lang)  labels t("facts.*"), display fmt.format_number(v, lang)
+        chart_spec(..., lang) titles/reasons t("chart.*")
+        narrate(..., lang): SYSTEM_EN twin, guard.check_text(text, allowed, lang), retry text in lang,
+                            template_sentence(q, facts, lang)
+        refine / context.evidence_line / chart-only sentence in answer_lang
+   -> payload + "answer_lang"; error/warning sentences t(..., answer_lang); HTTP `detail` in ui_lang
+
+GET /api/schema-map/template.xlsx?lang= -> template.build_template(skeleton, lang)   (sheet names, headers, Y/N, _bilgin.lang)
+template_import.read_template: sheet/header aliases of BOTH languages (profiles/excel_headers.json), E/H/Y/N booleans
+
+config: HOME = NL2SQL_HOME or ROOT (import time) -> app DB, logs, map previews, eval_out, index, secrets under HOME
+python -m nl2sql paths | service-xml | service-check | secret-set
+deploy/windows/bilgin.xml (WinSW template) <- nl2sql/service/winsw.render_xml <- scripts/install-service.ps1
+service: C:\ProgramData\Bilgin\service\Bilgin.exe (WinSW) + Bilgin.xml -> .venv python -m nl2sql serve ...
+```
+
+## Run 8 file layout additions
+
+```
+nl2sql/i18n/__init__.py tr.json en.json detect.py scan.py
+nl2sql/web/lang.py                       request_lang, PUT /api/auth/me {lang} lives in auth_api.py
+nl2sql/service/__init__.py winsw.py paths.py secrets.py
+deploy/windows/bilgin.xml                WinSW XML template (@TOKENS@), deploy/windows/.gitignore (WinSW-x64.exe)
+scripts/install-service.ps1 uninstall-service.ps1 update-service.ps1
+datasets/wwi/golden_en.jsonl followups_en.jsonl ready_questions.json
+real_datasets/wwi_real/golden_en.jsonl followups_en.jsonl
+README.tr.md (Turkish README), README.md (English)
+web/src/i18n/index.js tr.json en.json, web/src/test-setup.js, web/src/components/LangToggle.jsx
+tests/readme_text.py                     helper: README.md + README.tr.md text (README pins read both)
+```
+
+## Run 8 decisions
+
+R8-1. **Config** (names kept): `LANGUAGES = ("tr", "en")`, `DEFAULT_LANG = "tr"`, `lang()` = `NL2SQL_LANG` if in
+      LANGUAGES else DEFAULT_LANG (an unknown value -> DEFAULT_LANG, no crash), `TEMPLATE_FILENAMES = {"tr":
+      "bilgin-veritabani-sablonu.xlsx", "en": "bilgin-database-template.xlsx"}` (TEMPLATE_FILENAME stays = tr),
+      `SERVICE_NAME = "Bilgin"`, `SERVICE_PORT = 8777`, `SERVICE_HOME = r"C:\ProgramData\Bilgin"`,
+      `DETECT_EN_WORDS`, `DETECT_TR_WORDS` (~25 stopwords each), `FOLLOWUP_MARKERS_EN = ("this","these","those","it",
+      "them","that","same","only","just","their","its")`.
+R8-2. **Catalogs.** `nl2sql/i18n/{tr,en}.json`: flat dotted keys (`api.ask.blank`, `facts.row_count`, `cli.ask.help`,
+      ...), values with `{name}` placeholders. `t(key, lang, **params)`: unknown lang -> tr; key missing in that
+      catalog -> tr value; missing everywhere -> `KeyError` (tests catch typos). A test asserts identical key sets
+      and identical placeholder sets per key. Catalogs are read once (lru_cache). Each migration task adds only its
+      own keys to both files.
+R8-3. **Which strings move.** User-facing = HTTP `detail`/`errors`/`message`, payload text (`answer_text`, warnings,
+      clarification, facts labels/display, chart titles/reasons, evidence lines, step summaries shown in the UI),
+      template sentences, export headers, CLI stdout/stderr and argparse help, eval console + report.md text, preview
+      errors/warnings, guard-report lines. **Stay:** docstrings, comments, log field names, prompts and tool texts
+      sent to the model (`agent/prompt.py`, `agent/tools.py`, `narrate.SYSTEM`), regex word tables used for
+      matching (refine/context markers), synthetic data (`schema_map/generator.py`, `extra.py`), dataset content.
+      `ExecError`/policy messages stay Turkish (the model reads them); the user-facing failure sentence is
+      `t("ask.fail.<kind>", answer_lang)` and the raw text remains in the evidence as technical detail.
+R8-4. **Scan.** `i18n/scan.user_literals(path, allow=())` walks the AST: string constants (also inside f-strings)
+      containing `[çğıöşüÇĞİÖŞÜ]` that are not a docstring, not an argument of a `logging`/`log.`/`logger.` call, and
+      not assigned to a name in `allow`. Each migration task's test asserts `user_literals(<its module>, allow=...)
+      == []` for its own module(s); T425 asserts the whole list. Scanned modules (final list): `nl2sql/web/*.py`,
+      `nl2sql/cli/*.py`, `nl2sql/app/ask.py`, `nl2sql/report/{facts,narrate,chart,export,guard}.py`,
+      `nl2sql/eval/{report,runner,followups,compare,compare_models,compare_modes,retrieval}.py`,
+      `nl2sql/schema_map/{template,template_import,onboard,rules_edit,rules}.py`, `nl2sql/engine/{guard,connections,
+      dbstatus,dpapi}.py`, `nl2sql/auth/store.py`, `nl2sql/start/{ready,cards,suggest,seed}.py`,
+      `nl2sql/agent/{refine,context}.py`. Allow-lists name model-facing constants only (e.g. `narrate.SYSTEM`,
+      `refine.CHART_WISHES`, `config.FOLLOWUP_MARKERS`).
+R8-5. **Language resolution.** Web: `request_lang(request, user)` = `user["lang"]` if set -> first primary subtag of
+      `Accept-Language` in LANGUAGES -> `config.lang()`. `users.lang TEXT NULL` added by `ALTER TABLE` when missing
+      (NULL = no preference); public User gains `lang` (null default) - pins `tests/test_auth_store.py`,
+      `tests/test_web_users_api.py` FIELDS edited by T403 (named). `PUT /api/auth/me {lang}` (user role; 422 for a
+      value outside LANGUAGES) returns the me body; ROUTE_ROLES gets the row in the same task. CLI: a parent parser
+      adds `--lang` to the top parser and every subcommand; help language = a pre-scan of argv for `--lang X`, then
+      `NL2SQL_LANG`, then tr; `build_parser(lang)`.
+R8-6. **Question language** `detect_lang(text, fallback)`: score_tr = Turkish-letter count*2 + TR stopword hits,
+      score_en = EN stopword hits (words folded, ASCII split); higher wins, tie -> fallback. Payload key
+      `answer_lang` always present (ask, replay, card open, chart-only, down_payload = ui lang, clarification).
+      PAYLOAD_KEYS pins in `tests/test_app_ask.py`, `test_app_clarify.py`, `test_ask_conversation.py`,
+      `test_cli_ask_json.py` gain `answer_lang` in T400 (named). A `choice` keeps the language of the original
+      question. Clarification options from the model are shown as given; options built by code (R7-12) use the
+      catalog.
+R8-7. **Numbers** (`report/fmt.py`): `format_number(v, lang, decimals=None)`, `format_percent(v, lang)`,
+      `format_compact(v, lang)` (`en`: "12.5K"/"3.4M"/"1.2B"; tr unchanged "12,5 bin"); `tr_*` stay as thin wrappers
+      (every Run 5 pin holds). Guard: `extract_numbers(text, lang="tr")`, `check_text(text, allowed, lang="tr")`.
+      en grammar: `1,234.56`, `1234.56`, `12.3%`, `-12.3%`; a token in the other language's shape (tr: `1.234,56` or
+      `%12,3`; en: a `,` followed by not-exactly-3 digits, or `.` group separators) is **foreign** -> always rejected
+      and reported in `rejected`. Ambiguous `1,234` / `1.234` read per lang (en 1234 / 1.234; tr 1.234 -> 1234).
+      Tolerance unchanged (`NUMBER_TOLERANCE_UNITS`).
+R8-8. **English narration.** `narrate(..., lang="tr")`: `SYSTEM_EN` is the rule-for-rule twin of SYSTEM (no invented
+      numbers, numbers as shown in en format, no technical column names, natural English, values verbatim); rows and
+      facts shown to the narrator formatted in `lang`; `_RETRY`/`_RETRY_NAMES` from the catalog; template sentence via
+      `t("narrate.template.*", lang)`. tr path byte-identical (pinned prompt tests hold). Fake narrator unaffected.
+R8-9. **Clarification and follow-ups in English.** `prompt.*_prompt(..., answer_lang="tr")`: "en" appends one line
+      "Answer language: English - ask clarification questions and word their options in English."; tr unchanged.
+      `refine.ambiguous_entity(..., lang)` question/options via catalog; `CHART_WISHES` and markers already hold
+      English words (`line`, `bar`, `pie`; add `table`, `as a table`, `chart`, `show`); `followup_hints` also uses
+      `FOLLOWUP_MARKERS_EN`; `ENTITY_NOUNS` gains English nouns (customer, product, supplier, invoice).
+R8-10. **English golden sets.** `golden_en.jsonl` line = Turkish line with `id` "E01".., `source_id` "Q01".., English
+      `question`, everything else (`sql`, `ordered`, `trap`, `tags`, `requires_tables`, `rules`, `review`) copied.
+      `dataset.json files.golden_en` (optional; `Dataset.golden(lang)` -> golden_en when lang en and declared, else
+      the Turkish set). **Deviation:** `wwi_real` only runs on the real SQL Server, so the brief's
+      `eval --lang en --llm fake` 26/26 is proved on `wwi` (same translation job, its own 26 lines) and `wwi_real`'s
+      file is structure-tested (same ids/SQL as its Turkish twin, policy passes its allowlist); the real run is Eren's
+      manual step in README. `followups_en.jsonl` the same way (chains translated, SQL copied). `fake.for_golden`
+      and `make_client("fake")` replay Turkish and English lines together (keys never collide).
+R8-11. **Eval in English.** `eval --lang en` loads `golden(lang)`, prints progress/summary lines and writes report.md
+      with catalog text, `report.json` and compare reports gain `"lang"`; `--followups --lang en` uses followups_en.
+      Outcome codes (`pass`, `wrong_result`, ...) are data, not translated.
+R8-12. **Template per language** (`schema_map/template.py`): `LABELS = {"tr": {...}, "en": {...}}` holding sheet
+      names, header tuples, booleans (`E/H` | `Y/N`), how-to lines, example rows; `build_template(skeleton=None,
+      lang="tr")`, `filled_example_workbook(..., lang="tr")`. `_bilgin` sheet gains row `lang`. Rules sheet gains
+      column `EŞ ANLAMLILAR (EN)` / `SYNONYMS (EN)` -> rule `synonyms_en` (both templates). English headers exactly as
+      the brief. Import: `profiles/excel_headers.json` gains every English header + a `sheets` map (both names ->
+      canonical role); `_EH` accepts `e/h/y/n/evet/hayır/yes/no`; issues worded in the request lang
+      (`read_template(path, llm=None, lang="tr")`, `validate(..., lang="tr")`). Same content in either template ->
+      byte-identical `schema.json` and `rules.json`. API: `?lang=` > request_lang; filename by lang.
+      CLI `python -m nl2sql template --lang tr|en --out FILE [--dataset NAME (skeleton)]`.
+R8-13. **synonyms_en.** Optional list on a rule (rules.py validation: list of non-empty strings); rules API/editor
+      field `synonyms_en` (`#rule-synonyms-en`); index rule document text includes both lists; BM25 synonym rewrite
+      uses both. A rule without it behaves as today.
+R8-14. **README.** `README.md` English, first line links `README.tr.md` ("Türkçe"); `README.tr.md` = today's Turkish
+      README + Run 8 sections; both list the same commands (a test compares the set of `` `python -m nl2sql ...` ``
+      commands). README pins in tests read both files through `tests/readme_text.py` (T422 edits only the read line
+      of each named test).
+R8-15. **Web i18n.** `web/src/i18n/index.js`: `registerCatalog(lang, obj)`, `loadCatalog(lang)` (dynamic
+      `import("./en.json")` / `import("./tr.json")` -> separate chunks), `I18nProvider {lang}`, `useT()` -> `{t, lang}`,
+      `t(key, params)` falls back to tr, then the key itself. `web/src/test-setup.js` registers both catalogs
+      (vite.config `test.setupFiles`), so every existing vitest renders Turkish without a provider (default lang tr).
+      `main.jsx` resolves lang (me.lang after login, else `localStorage["bilgin.lang"]`, else `navigator.language`
+      primary tag if supported, else tr), awaits `loadCatalog`, renders. `document.documentElement.lang` follows.
+      `api.js` sends `Accept-Language: <ui lang>` on every call. `lib/format.js` gains `lang` (`Intl.NumberFormat`
+      `tr-TR`/`en-US`, dates `Intl.DateTimeFormat`); tr output identical to today.
+R8-16. **Language switch.** `LangToggle` = `#lang-toggle` group with `button[data-lang="tr"]` "TR" and
+      `button[data-lang="en"]` "EN", `aria-pressed` on the current one; in the masthead and on the login card. Click:
+      set lang, `localStorage` (try/catch), and when logged in `PUT /api/auth/me {lang}`; the current screen
+      re-renders without reload; server-made text (answers) stays in the language it was produced in.
+R8-17. **Screens.** Every visible string, `aria-label`, `title`, `placeholder` of every component and lib message
+      moves into `web/src/i18n/{tr,en}.json` (keys `<screen>.<name>`). Element ids, classes, data-attributes and hash
+      routes (`#/kurallar`, `#/harita`, ...) never change. Each screen task adds `<Screen>.i18n.test.jsx`: render in
+      tr and en, same ids set, en output has no `[çğıöşüÇĞİÖŞÜ]` outside server-provided fixture data. Phone layout:
+      English strings are longer - buttons wrap inside the existing `@media (max-width: 720px)` block, never a
+      horizontal scroll (visual pages at 390 check it).
+R8-18. **Bundle scan.** After `vite build`, every `nl2sql/web/static/assets/*.js|*.css` except the tr catalog chunk
+      (`tr-*.js`) contains no `[çğıöşüÇĞİÖŞÜ]`; `index.html` likewise (its `lang` attribute is set at runtime).
+R8-19. **Facts panel** (brief §2, T359 follow-up): Evidence lists, under `#evidence-facts` heading "Diğer olgular" /
+      "Other facts", exactly the facts not in the card's chip row (same selection function `chipFacts(facts)` exported
+      from AnswerCard's lib, reused by Evidence); none left -> no list. Pins edited by T391 (named):
+      `EvidenceRowDump.test.jsx` "no .facts list", `AnswerCard.test.jsx`, `AnswerCardFacts.test.jsx`.
+R8-20. **NL2SQL_HOME.** `config.HOME = Path(NL2SQL_HOME or ROOT)` at import; under it `data/bilgin.db`,
+      `data/map_previews`, `logs/{asks,audit,map_changes}.jsonl`, `eval_out/`, `index/`, `secrets/`. Dataset `outputs.
+      index_dir` and `eval_out` resolve against HOME, `db`/`mssql_script` against ROOT (fixtures ship with the code).
+      `NL2SQL_APP_DB`, `NL2SQL_DATASETS_DIR`, `NL2SQL_REAL_DATASETS_DIR` still override. Onboarded datasets: when
+      `NL2SQL_HOME` is set -> `HOME/datasets` (also searched by the loader); unset -> `real_datasets_dir()` as today.
+      Unset HOME = every path identical to Run 7. `python -m nl2sql paths [--json]` prints each name -> path
+      (never a secret or connection string).
+R8-21. **Secrets folder.** `service/secrets.py read_secret(env_name, home=None) -> str|None` reads
+      `HOME/secrets/<ENV_NAME>.bin` (DPAPI machine scope, entropy UTF-8 `"bilgin-secret:" + ENV_NAME`); llm
+      `_api_key` / `key_missing_reason`: env var first, then the secrets file. `python -m nl2sql secret-set ENV_NAME`
+      (getpass, writes the blob; Windows only, exit 2 elsewhere). The install script writes the same blob with
+      `[Security.Cryptography.ProtectedData]::Protect(..., 'LocalMachine')` and the same entropy.
+R8-22. **WinSW.** v2.12.0 x64 (MIT), URL `https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe`,
+      SHA-256 in `$WinSwSha256` at the top of `install-service.ps1`. The hash could not be fetched while planning, so
+      the task leaves the constant empty and the script **refuses to download or install while it is empty**
+      ("fill in the SHA-256 from the release page"); Eren fills it once (README manual step). Existing
+      `deploy/windows/WinSW-x64.exe` -> hash check only. `deploy/windows/bilgin.xml` tokens: `@ID@ @NAME@ @DESCRIPTION@
+      @PYTHON@ @ARGS@ @WORKDIR@ @LOGDIR@ @ENV@`; `render_xml(...)` fills them, `<startmode>Automatic</startmode>
+      <delayedAutoStart>true</delayedAutoStart>`, `<onfailure action="restart" delay="10 sec"/>` 30 / 60,
+      `<resetfailure>1 hour</resetfailure>`, `<log mode="roll-by-size"><sizeThreshold>10240</sizeThreshold><keepFiles>
+      8</keepFiles></log>`, `<serviceaccount><domain>NT SERVICE</domain><user>Bilgin</user><allowservicelogon>true
+      </allowservicelogon></serviceaccount>`; env keys exactly NL2SQL_HOME, NL2SQL_LANG, NL2SQL_BACKEND,
+      NL2SQL_DATASETS_DIR; refuses any env key matching `PASSWORD|KEY|SECRET|CONN|TOKEN`. `python -m nl2sql
+      service-xml --port --dataset --home --lang --out` writes it.
+R8-23. **Install script.** Params `-Port 8777 -Dataset <active> -Home C:\ProgramData\Bilgin -Lang <NL2SQL_LANG|tr>
+      -WhatIf -CopyAppDb`. Steps print as `[<id>] <text>` with ids in order: `admin, powershell, dev-admin-env, venv,
+      port, model, connection, winsw, home, acl, copy-app-db, copy-index, secrets, admin-user, xml, install, start,
+      health`. `dev-admin-env` refuses (exit 1, no change) when `NL2SQL_DEV_ADMIN_PASSWORD` is set at Machine level
+      or in the process. `-WhatIf`: no change, no download, prints every step with "WHATIF" and the generated XML;
+      the admin check is reported and does not stop a WhatIf. `model` and `connection` use `python -m nl2sql
+      service-check --dataset D --json` -> `{"model": {"ok", "message"}, "connection": {"source", "ok", "lines"}}`
+      (warnings only). update: stop -> `vite build` if `web/` is newer than `nl2sql/web/static/index.html` -> start ->
+      health. uninstall: stop, uninstall, keep HOME unless `-RemoveData` (+ confirmation). Scripts are ASCII-only
+      (Windows PowerShell 5.1 reads UTF-8 without BOM as ANSI).
+R8-24. **Test rules kept** (R5-22, R6-23, R7-29) plus: tests that read `NL2SQL_LANG` or `Accept-Language` set them
+      explicitly (`monkeypatch.delenv("NL2SQL_LANG")` where tr is expected); no test installs a service, downloads
+      WinSW, or needs admin; PowerShell tests run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ...
+      -WhatIf` and skip off Windows; DPAPI tests skip off Windows.
+R8-25. **Visual pages in English** (`.hybrid/visual.json`, all `"from": "M28"`, both widths; each ends by clicking
+      `button[data-lang='tr']` while logged in, so the shared server's admin preference and every later page stay tr):
+      `en-login` (`/`: click `button[data-lang='en']` on the login card -> shot `login-en`; wrong password -> shot
+      `login-error-en`; right password -> shot `start-en`), `en-ask-chart` (`/`: login admin, EN, fill `#question` with
+      wwi golden_en E01 "What is the name of each country and how many cities belong to it?", `#ask-button`, wait
+      4 -> shot `answer-chart-en`, open `#evidence` -> shot `evidence-en`), `en-map-screen` (`/#/harita`: login admin,
+      EN, `#nav-map` -> shot `map-blank-en`, `#map-try-sample`, wait 3 -> shot `map-sample-preview-en`; nothing applied).
+
+## Contracts (Run 8 additions)
+
+| Shape | Producer -> Consumer | Fields (optional = default) |
+|---|---|---|
+| catalog | `nl2sql/i18n/*.json`, `web/src/i18n/*.json` -> `t()` | `{"dotted.key": "text with {param}"}`; both langs same keys, same params per key |
+| AskPayload (ext.) | ask_payload, replay, card open, down_payload -> API, CLI `--json`, UI | + `"answer_lang": "tr"\|"en"` (always) |
+| Fact (ext.) | compute_facts(lang) -> payload, guard, narrator | same keys; `label`, `display` in answer_lang |
+| chart_spec (ext.) | chart_spec(lang) -> payload.chart | titles/`reason` in answer_lang; option numbers raw (UI formats) |
+| GuardResult (ext.) | check_text(text, allowed, lang) -> narrate | same fields; foreign-format tokens appear in `rejected` |
+| User (ext.) | UserStore -> me, login 200, users API | + `"lang": "tr"\|"en"\|null` (null = no preference) |
+| me PUT body | LangToggle -> `PUT /api/auth/me` | `{"lang": "tr"\|"en"}` -> 200 me body; other value 422 |
+| request lang | request_lang -> every route's text | user.lang > Accept-Language primary tag > NL2SQL_LANG > "tr" |
+| golden_en line | golden_en.jsonl -> eval, fake | Turkish line + `"source_id": "Q.."`, `id` "E..", English `question` |
+| dataset.json (ext.) | dataset -> loader | `files.golden_en`?, `files.followups_en`? (absent = Turkish only) |
+| eval report (ext.) | eval -> report.json, compare report | + `"lang": "tr"\|"en"` |
+| rule (ext.) | rules.json, rules API, template -> index, prompt | + `"synonyms_en": [str]` = [] |
+| template `_bilgin` (ext.) | build_template -> import | rows mark, version, + `lang` |
+| template preview (ext.) | read_template/validate(lang) -> map screen | same shape, `message` texts in request lang |
+| paths | `python -m nl2sql paths --json` -> install script, README | `{"home", "app_db", "logs", "ask_log", "audit_log", "map_changes", "map_previews", "eval_out", "index", "secrets", "datasets": [..], "onboard_dir"}` |
+| service-check | `nl2sql service-check --json` -> install script | `{"model": {"ok": bool, "message": str}, "connection": {"source": str, "ok": bool\|null, "lines": [str]}}` |
+| service XML | render_xml -> WinSW | id/name/description/executable/arguments/workingdirectory/logpath/env(4 keys)/serviceaccount/onfailure x3; no secret |
+| secret blob | install script / secret-set -> read_secret | `HOME/secrets/<ENV>.bin`, DPAPI LocalMachine, entropy `bilgin-secret:<ENV>` |
+
+## Run 8 milestones
+
+- **M26 - Language core** (T389-T402): wwi ready questions (carry-over), facts panel, i18n core + detect + scan,
+  number formatting + guard per lang, facts/chart/template sentence per lang, English narration + clarification line,
+  refine/context English, ask_payload `answer_lang`. Integration: real ask_payload on built wwi with the real fake ->
+  an English golden question gives an English answer with en numbers that pass the guard, a Turkish one is unchanged.
+- **M27 - Server in English** (T403-T427): users.lang + me PUT + request_lang, every API module, CLI `--lang` + help +
+  output, template en + bilingual import + CLI, synonyms_en, wwi/wwi_real golden_en + followups_en, eval `--lang`,
+  README en/tr. Integration: real create_app with an `en` user: ask, template download -> preview -> apply, errors.
+- **M28 - Web UI in English** (T428-T445): i18n core, format, api header, LangToggle, every screen, bundle scan,
+  visual pages in English. Integration: built bundle scan + served app returning English for an en user.
+- **M29 - Windows service** (T446-T455): NL2SQL_HOME paths, paths CLI, secrets reader + secret-set, service-check,
+  WinSW template + render, install/uninstall/update scripts with -WhatIf, README section, full-repo scan.
+  Integration: `NL2SQL_HOME=tmp` serve started for real -> app DB, logs, index under tmp, `/api/health` answers.

@@ -1,12 +1,25 @@
 {
- "tasks": 0,
- "first_try": 0,
- "local_retries": 0,
- "rescues": 0,
- "failed": [],
- "reviews": 0,
- "checks": "green",
- "minutes": 6.8,
- "brain_calls": 5,
+ "tasks": 36,
+ "first_try": 31,
+ "local_retries": 9,
+ "rescues": 3,
+ "failed": [
+  "T377",
+  "T379",
+  "T345"
+ ],
+ "reviews": 3,
+ "checks": "red",
+ "stale_updates": [
+  {
+   "task": "T331",
+   "commit": "5b981e6",
+   "tests": [
+    "tests/test_visual_flows.py::test_the_map_page_hands_the_dataset_it_found_back_to_the_next_page"
+   ]
+  }
+ ],
+ "minutes": 585.6,
+ "brain_calls": 19,
  "brain": "cloud"
 }
