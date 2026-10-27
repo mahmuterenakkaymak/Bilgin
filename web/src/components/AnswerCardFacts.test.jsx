@@ -58,18 +58,21 @@ describe("AnswerCard olgu çipleri", () => {
     expect(at('id="answer-facts"')).toBeLessThan(at('id="evidence-toggle"'));
   });
 
-  it("panel olguların tam listesini tutar: kartın almadığı da orada okunur", () => {
+  it("panel kartın çip almadığı olguları listeler: çiptekiler yinelenmez", () => {
+    // Updated 2026-10-26 (Eren: "otomatik olsun"): T359 moved the facts out of the evidence panel; Run 8 shows the ones the chips leave out.
     const html = card(answered);
     const body = panel(html);
-    // Updated 2026-10-26 (Eren: "otomatik olsun"): T359 moved the facts out of the evidence panel; Run 8 shows the ones the chips leave out.
-    for (const fact of answered.facts) {
-      expect(body).not.toContain(`<span class="fact-label">${fact.label}</span>`);
-      expect(body).not.toContain(`<span class="fact-value">${fact.display}</span>`);
-    }
     const chips = chipRow(html);
     expect(chips.match(/<li/g)).toHaveLength(3);
+    // Çip şeridi üç özeti taşır; bunlar panelde tekrar okunmaz.
+    for (const label of ["Toplam", "En yüksek (Siyah Çay 500 g)", "Ortalama"]) {
+      expect(chips).toContain(label);
+      expect(body).not.toContain(`<span class="fact-label">${label}</span>`);
+    }
+    // Çipe girmeyen olgular panelde kendi satırında durur.
     for (const label of ["Satır sayısı", "En düşük", "Öne çıkan", "En yüksek pay"]) {
       expect(chips).not.toContain(label);
+      expect(body).toContain(`<span class="fact-label">${label}</span>`);
     }
   });
 

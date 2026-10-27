@@ -39,16 +39,18 @@ describe("kanıtta satır dökümü", () => {
     expect(body).toContain(ROW_DUMP);
   });
 
-  it("olgular panelde değil kartta: #evidence içinde .facts listesi kurulmaz", () => {
+  it("panel yalnız kartın çip almadığı olguları listeler: çiptekiler yinelenmez", () => {
     const body = panel({
       status: "answered",
       sql: "SELECT a, b FROM T",
       facts: [
         { name: "total", label: "Toplam", display: "8.910" },
         { name: "mean", label: "Ortalama", display: "1.782,00" },
+        { name: "min", label: "En düşük", display: "1.105" },
       ],
     });
-    expect(body).not.toContain('class="facts"');
-    expect(body).not.toContain("fact-label");
+    expect(body).toContain('<span class="fact-label">En düşük</span><span class="fact-value">1.105</span>');
+    expect(body).not.toContain('<span class="fact-label">Toplam</span>');
+    expect(body).not.toContain('<span class="fact-label">Ortalama</span>');
   });
 });

@@ -284,8 +284,9 @@ describe("Evidence", () => {
   it("olgular Türkçe okunuşlarıyla, süreler ve notlar kanıtta durur", () => {
     const html = render(<Evidence payload={answered} />);
     // Updated 2026-10-26 (Eren: "otomatik olsun"): T359 moved the facts out of the evidence panel; Run 8 shows the ones the chips leave out.
+    // Çipte okunan "Toplam" panelde yinelenmez; çip olmayan "En yüksek pay" artık panelde listelenir.
     expect(html).not.toContain('<span class="fact-label">Toplam</span><span class="fact-value">8.910</span>');
-    expect(html).not.toContain('<span class="fact-label">En yüksek pay</span><span class="fact-value">%27,8</span>');
+    expect(html).toContain('<span class="fact-label">En yüksek pay</span><span class="fact-value">%27,8</span>');
     expect(html).toContain("ajan 6,4 sn · sorgu 12,5 ms · anlatı 1,9 sn · toplam 8,3 sn");
     // The row count now reads in the step summary (T359: "18 satır döndü" style), not as a fact in the panel.
     expect(html).toContain("5 satır.");

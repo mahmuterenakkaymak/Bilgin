@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { chipFacts } from "../lib/facts.js";
 import { formatCell, formatNumber, formatSeconds } from "../lib/format.js";
 
 // "Nasıl hesapladım": cevabın dayanakları — SQL, kullanılan tablolar ve kurallar, maskeler,
@@ -72,6 +73,11 @@ export default function Evidence({ payload }) {
   // Bağlamın kanıt satırı (R7-5): cevabın hangi önceki turun hangi değerine dayandığı. Panelden
   // dışarıda durur — kapalıyken de okunmalı, yoksa kanıtın kendisi kullanıcıya hiç görünmez.
   const contextLine = typeof payload?.context?.line === "string" ? payload.context.line.trim() : "";
+  // Kartın çip şeridi cevabın özetlerini taşır; panel çipe girmeyen okunur olguları listeler —
+  // aynı olgu iki yerde birden okunmaz (chipFacts girdinin kendi referanslarını döndürür).
+  const facts = Array.isArray(payload?.facts) ? payload.facts : [];
+  const chips = chipFacts(facts);
+  const rest = facts.filter((fact) => fact?.label && fact?.display && !chips.includes(fact));
 
   const copy = async () => {
     try {
@@ -142,6 +148,21 @@ export default function Evidence({ payload }) {
             <dd className="audit-id">{formatCell(payload?.audit_id)}</dd>
           </div>
         </dl>
+        {rest.length > 0 && (
+          <div className="evidence-facts">
+            <h3 id="evidence-facts" className="evidence-facts-title">
+              Diğer olgular
+            </h3>
+            <ul className="facts">
+              {rest.map((fact, index) => (
+                <li key={`${index}-${fact.name ?? ""}`}>
+                  <span className="fact-label">{fact.label}</span>
+                  <span className="fact-value">{fact.display}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {steps.length > 0 && (
           <ol className="steps">
             {steps.map((step, index) => {

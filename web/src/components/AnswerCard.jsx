@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import * as api from "../lib/api.js";
+import { chipFacts } from "../lib/facts.js";
 import { formatNumber, formatSeconds } from "../lib/format.js";
 import { suggestDisplay } from "../lib/startCards.js";
 import ChartView from "./ChartView.jsx";
@@ -17,24 +18,10 @@ const EXPORTS = [
 // reddin cümlesi düğmenin yanında okunur.
 const IDLE = { phase: "idle", note: "" };
 
-// Kartın kendi özetleri: kullanıcının tabloyu gözle toplamasını önleyen üç sayı. Olguların
-// tamamı kanıt panelinde durmaya devam eder; kart yalnız bunları cümlenin altına taşır.
-const CHIP_FACTS = ["total", "max", "mean"];
-
 // İndirme geri bildirimi neyin indiğini de söyler: dosyanın kaç satır taşıdığı, ekrandaki
 // tablonun satır sayısıdır. Satırı olmayan cevapta sayı uydurulmaz, bugünün adı okunur.
 function downloadedLabel(rows) {
   return rows > 0 ? `${formatNumber(rows)} satır indirildi` : "İndirildi";
-}
-
-function headFacts(facts) {
-  const picked = [];
-  for (const name of CHIP_FACTS) {
-    const fact = facts.find((item) => item.name === name);
-    // Tek hücrelik cevapta üç olgu aynı sayıyı söyler; kartta bir kez okunur.
-    if (fact && !picked.some((item) => item.display === fact.display)) picked.push(fact);
-  }
-  return picked;
 }
 
 // Cevap kartı: aynı AskPayload'ın her parçası burada durur — durum satırı, seçilen anlam, cümle,
@@ -62,10 +49,8 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
   const status = ["✓ Cevaplandı", mode, elapsed].filter(Boolean).join(" · ");
   // Seçilen anlam: sorunun birden çok okuması varsa hangisiyle koşulduğu cevapta da okunur.
   const chosen = typeof choice === "string" ? choice.trim() : "";
-  // Okunur bir okunuşu olmayan olgu karta çıkmaz; panelde zaten kendi satırında duruyor.
-  const chips = headFacts(
-    (Array.isArray(payload?.facts) ? payload.facts : []).filter((fact) => fact?.label && fact?.display),
-  );
+  // Kartın çip şeridi cevabın üç özeti; çipe girmeyen olgular kanıt panelinin altında listelenir.
+  const chips = chipFacts(payload?.facts);
 
   // ASSUMPTION: indirilen sayı kartın elindeki satırlardır — kesik bir sonuçta dosya daha
   // fazlasını taşıyabilir, ama kartın bildiği ekrandaki satır sayısıdır.
