@@ -37,7 +37,7 @@ function withNames(option, measure) {
 // Kartın tek etiketi: grafik başlığı ile tablonun başlık satırı aynı okunuşu okur (M24 review 4).
 // ASSUMPTION: kolon adı ERP'den ASCII gelir; başlık ondan türetilir, Türkçesi uydurulmaz. Büyük
 // harfli alias kelimeye döner; içinde küçük harf taşıyan alias zaten elle yazılmış bir addır ve
-// olduğundan farklı yazılmaz. Panonun mini tablosu ile katlanmış konuşma tablosu bu görevin dışında.
+// olduğundan farklı yazılmaz. Panonun mini tablosu bu görevin dışında.
 export function columnLabel(column) {
   const name = String(column ?? "");
   if (!name || /[a-zçğıöşü]/.test(name)) return name;

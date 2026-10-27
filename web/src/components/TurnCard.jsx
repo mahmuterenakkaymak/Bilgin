@@ -1,3 +1,4 @@
+import { columnLabel } from "../lib/chartFormat.js";
 import { formatCell, isNumericColumn } from "../lib/format.js";
 import AnswerCard from "./AnswerCard.jsx";
 import ClarificationCard from "./ClarificationCard.jsx";
@@ -86,7 +87,7 @@ export default function TurnCard({ turn, onExpand, onReplay, onChoose, onChange,
               <tr>
                 {columns.map((name, index) => (
                   <th key={`${index}-${name}`} scope="col" className={numeric[index] ? "num" : undefined}>
-                    {name}
+                    {columnLabel(name)}
                   </th>
                 ))}
               </tr>

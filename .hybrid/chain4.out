@@ -240,3 +240,78 @@
 2026-10-27 09:36:51 | HANDS  | T379 try 1: the card's header row and chart title are the raw SQL alias, and the prettifier breaks the ones that were already words (M24 review 4): `measureName` (web/src/lib/chartFormat.js:38) splits on `_` and lowercases, so `CountryName` becomes "Countryname" while the table beside it still prints `SEHIR_SAYISI` and `URUN_ID` (export-buttons-390.png, conversation-chart-refine-monthly-line-390.png) - one card, two naming styles, neither the Turkish the question was asked in. Fix: one label used by both the chart title and the `.result-table` header: an `ALL_CAPS_WITH_UNDERSCORES` alias becomes sentence case with spaces, an alias that already carries a lowercase letter is shown exactly as written (never re-cased), and nothing else changes. Add cases to web/src/lib/chartFormat.test.js and to web/src/components/AnswerCard.test.jsx (existing files - only these new cases may be added): "CountryName" renders as "CountryName", "SEHIR_SAYISI" renders as "Sehir sayisi" in the header and in the title alike
 2026-10-27 09:42:30 | ORCH   | T379: PASSED (hands)
 2026-10-27 09:42:50 | HANDS  | T345 try 1: M25 integration (no hand-made fakes): add tests/test_integration_m25.py (new file: real UserStore + ConnectionStore (DPAPI on Windows, skipped elsewhere) + real resolve + real open_session + real create_app, only the guard connector and the pinger injected: admin saves a read-only connection for a tmp mssql dataset, switches to it (executor carries the stored conn_str - _mssql.run monkeypatched to record it), the checker goes ok -> down -> ok and /api/health follows for a user with the generic message, a question while down fails fast, NL2SQL_MSSQL_CONN_<NAME> then overrides the stored one and the form turns read-only, the secret appears in no response) and run the whole suite + build
+2026-10-27 10:20:13 | ORCH   | T345: PASSED (hands)
+2026-10-27 10:20:13 | ORCH   | M25: whole-project checks
+2026-10-27 10:28:30 | ORCH   | M25: whole-project checks green (20 command(s))
+2026-10-27 10:28:30 | ORCH   | M25: screenshots for the visual review
+2026-10-27 10:39:59 | ORCH   | M25: page problem: landing-empty-state-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: ask-golden-answer-chart-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: ask-ambiguous-clarify-then-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: export-buttons-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: saved-and-history-sidebar-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: rules-screen-validation-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: dark-mode-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: logout-clears-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: users-screen-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: user-readonly-rules-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: admin-map-onboard-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: conversation-three-turns-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: conversation-chart-refine-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: new-conversation-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: start-sales-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 10:39:59 | ORCH   | M25: page problem: start-sales-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: start-purchasing-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: card-answer-followup-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 10:39:59 | ORCH   | M25: page problem: card-answer-followup-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: admin-ready-questions-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: admin-connections-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 10:39:59 | ORCH   | M25: page problem: admin-connections-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: db-dot-user-ok-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: db-dot-user-down-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: en-login-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 10:39:59 | ORCH   | M25: page problem: en-login-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: en-ask-chart-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 10:39:59 | ORCH   | M25: page problem: en-ask-chart-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: en-map-screen-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 10:39:59 | ORCH   | M25: page problem: en-map-screen-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: landing-empty-state-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: ask-golden-answer-chart-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: ask-ambiguous-clarify-then-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: export-buttons-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: saved-and-history-sidebar-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 10:39:59 | ORCH   | M25: page problem: saved-and-history-sidebar-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: rules-screen-validation-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: dark-mode-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: logout-clears-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: users-screen-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: users-screen-1366: console error: Failed to load resource: the server responded with a status of 409 (Conflict)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: user-readonly-rules-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: admin-map-onboard-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 10:39:59 | ORCH   | M25: page problem: admin-map-onboard-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: conversation-three-turns-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 10:39:59 | ORCH   | M25: page problem: conversation-three-turns-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: conversation-chart-refine-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: new-conversation-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: start-sales-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: start-sales-1366: console error: Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: start-purchasing-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: card-answer-followup-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: admin-ready-questions-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: admin-connections-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 10:39:59 | ORCH   | M25: page problem: admin-connections-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: db-dot-user-ok-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: db-dot-user-down-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: en-login-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 10:39:59 | ORCH   | M25: page problem: en-login-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: en-ask-chart-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 10:39:59 | ORCH   | M25: page problem: en-ask-chart-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:39:59 | ORCH   | M25: page problem: en-map-screen-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 10:39:59 | ORCH   | M25: page problem: en-map-screen-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 10:46:41 | BRAIN  | M25: visual review with local Strata (135 screenshots)
+2026-10-27 10:57:53 | BRAIN  | M25: visual review done - 7 fix task(s) added
+2026-10-27 10:58:08 | BRAIN  | M25: review with sonnet in the background - hands keep building
+2026-10-27 10:58:24 | HANDS  | T456 try 1: a collapsed conversation turn prints the raw SQL alias while the card beside it prints the label (M25 review 1): turn 1 reads `URUN_ID | URUN_ADI | SATIS_MIKTARI` and turn 2 right below it reads `Ürün id | Ürün adı | Satış miktarı` (conversation-three-turns-turn-2-follow-up-1366.png, conversation-three-turns-earlier-turn-expanded-390.png, card-answer-followup-pinned-1366.png), and the same split shows `CountryName / SEHIR_SAYISI` against `CountryName / Sehir sayisi` (conversation-chart-refine-only-ankara-1366.png) - `TurnCard.jsx:89` renders `{name}` into the collapsed `.turn-table` header while `ResultTable.jsx:46` renders `columnLabel(name)`; T379's comment in `web/src/lib/chartFormat.js` puts "katlanmış konuşma tablosu" outside that task, and that exclusion is the defect: one thread, two naming styles. Fix: the collapsed header uses the same `columnLabel` from `web/src/lib/chartFormat.js` as the expanded card and nothing else in `TurnCard.jsx` changes (rows, the replay note, the Kapat button stay). Add web/src/components/TurnCard.test.jsx (new file: a collapsed turn with `summary.columns = ["SEHIR_SAYISI", "CountryName", "Ürün_ADI"]` renders `Sehir sayisi`, `CountryName` and `Ürün adı` in the `<th>` row - all-caps aliases become sentence case, an alias carrying a lowercase letter is never re-cased - and the same turn expanded renders the identical three strings)
