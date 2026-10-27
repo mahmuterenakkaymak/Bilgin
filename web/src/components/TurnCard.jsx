@@ -19,16 +19,17 @@ const COLLAPSED_ROWS = 5;
 // `isAdmin` ve `reapproveId` cevabın panonun diliyle konuşması içindir (R7-21): kartı yalnız canlı
 // tur açar, kayıtlı turda yürüyecek bir yük yoktur.
 export default function TurnCard({ turn, onExpand, onReplay, onChoose, onChange, onSave, isAdmin = false, reapproveId = null, isLast = false }) {
-  const { lang } = useT();
+  const { lang, t } = useT();
   const summary = turn?.summary ?? {};
   const columns = Array.isArray(summary.columns) ? summary.columns : [];
   const rows = Array.isArray(summary.rows) ? summary.rows : [];
   const payload = turn?.payload ?? null;
   const collapsed = Boolean(turn?.collapsed);
-  // Kayıtlı bir başarısız turda cümle boş gelebilir; indirgeyicinin düştüğü cümle burada da okunur.
+  // Kayıtlı bir başarısız turda cümle boş gelebilir; indirgeyici cümle uydurmaz (R8-19), boş kaldığı
+  // yerde kataloğun genel cümlesi okunur.
   const sentence =
     (typeof turn?.answer_text === "string" ? turn.answer_text.trim() : "") ||
-    (turn?.status === "failed" ? "Cevap üretilemedi." : "");
+    (turn?.status === "failed" ? t("ask.genericFailure") : "");
   const replayable = Boolean(turn?.stored && turn?.audit_id && onReplay);
 
   // Bekleyen turun cevabı henüz yok; tam kart "Cevaplandı" yazacağı için bekleme kartı açılır.
@@ -110,7 +111,7 @@ export default function TurnCard({ turn, onExpand, onReplay, onChoose, onChange,
       )}
       {replayable && (
         <div className="turn-actions">
-          <p className="turn-note">Tam tablo ve grafik için yeniden çalıştırın.</p>
+          <p className="turn-note">{t("turn.replayNote")}</p>
           <button
             type="button"
             className="btn"
@@ -121,13 +122,13 @@ export default function TurnCard({ turn, onExpand, onReplay, onChoose, onChange,
               onReplay(turn);
             }}
           >
-            Yeniden çalıştır
+            {t("turn.replay")}
           </button>
         </div>
       )}
       {!collapsed && !isLast && (
         <button type="button" className="btn btn-ghost turn-close" onClick={open}>
-          Kapat
+          {t("turn.close")}
         </button>
       )}
     </div>

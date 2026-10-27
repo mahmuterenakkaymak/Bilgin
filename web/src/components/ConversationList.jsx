@@ -1,16 +1,17 @@
 import { useState } from "react";
+import { useT } from "../i18n/index.js";
 import * as api from "../lib/api.js";
+import { relativeTime } from "../lib/time.js";
 
 // Konuşma listesi (PLAN R7-15): geçmişin üstünde, her satırı bir konuşma. Satıra gelmek hiçbir SQL
 // koşturmaz - adresi #/c/<id> yapar, turları AskScreen conversationGet ile okur. Silme onay ister.
+// Cümleler kataloğunda (R8-19); başlıklar ve sorular veridir, çevrilmez.
 // ASSUMPTION: satırın zamanı en son güncellenme (updated_at); konuşma listesi de üreticide bu alana
 // göre sıralanıyor, böylece satırdaki zaman ile sıra aynı gerçeği söyler.
-const EMPTY = "Henüz konuşma yok.";
-const DELETE_QUESTION = "Konuşma silinsin mi?";
 
-// Tur sayısını iki satır da okur (KONUŞMALAR ve GEÇMİŞ): cümle burada, iki satır aynı kaynaktan yazar.
-export function turnLabel(turns) {
-  return `${turns} tur`;
+// Tur sayısını iki satır da okur (KONUŞMALAR ve GEÇMİŞ): cümle katalogda, iki satır aynı kaynaktan yazar.
+export function turnLabel(turns, t) {
+  return t(turns === 1 ? "side.turns.one" : "side.turns", { count: turns });
 }
 
 function list(value) {
@@ -28,34 +29,8 @@ function lastQuestion(item) {
   return String(item?.last_question ?? "").trim();
 }
 
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-
-function startOfDay(ms) {
-  const day = new Date(ms);
-  day.setHours(0, 0, 0, 0);
-  return day.getTime();
-}
-
-// Kısa Türkçe zaman: "4 dk önce" / "dün". Boş ya da okunamaz zamanda boş dize - satır zamansız kalır.
-function relativeTime(value, now) {
-  if (typeof value !== "string" || !value) return "";
-  const then = Date.parse(value);
-  if (!Number.isFinite(then)) return "";
-  const diff = now - then;
-  if (diff < MINUTE) return "şimdi";
-  if (diff < HOUR) return `${Math.floor(diff / MINUTE)} dk önce`;
-  if (diff < DAY) return `${Math.floor(diff / HOUR)} sa önce`;
-  const days = Math.round((startOfDay(now) - startOfDay(then)) / DAY);
-  if (days <= 1) return "dün";
-  if (days < 7) return `${days} gün önce`;
-  if (days < 30) return `${Math.floor(days / 7)} hafta önce`;
-  if (days < 365) return `${Math.floor(days / 30)} ay önce`;
-  return `${Math.floor(days / 365)} yıl önce`;
-}
-
 export default function ConversationList({ conversations = [], onRemoved }) {
+  const { t } = useT();
   const [note, setNote] = useState("");
 
   const rows = list(conversations)
@@ -75,39 +50,39 @@ export default function ConversationList({ conversations = [], onRemoved }) {
   };
 
   const remove = async (id) => {
-    if (!window.confirm(DELETE_QUESTION)) return;
+    if (!window.confirm(t("side.conversations.deleteConfirm"))) return;
     try {
       await api.conversationDelete(id);
       setNote("");
       onRemoved?.(id);
     } catch (error) {
-      setNote(error?.message || "Konuşma silinemedi.");
+      setNote(error?.message || t("side.conversations.deleteFailed"));
     }
   };
 
   return (
     <section className="side-block">
-      <h2 className="side-title">Konuşmalar</h2>
+      <h2 className="side-title">{t("side.conversations.title")}</h2>
       {note && <p className="side-note">{note}</p>}
       <ul id="conversation-list" className="side-list side-scroll">
-        {rows.length === 0 && <li className="side-empty">{EMPTY}</li>}
+        {rows.length === 0 && <li className="side-empty">{t("side.conversations.empty")}</li>}
         {rows.map((row) => {
-          const time = relativeTime(row.updated, now);
-          const first = row.title || "Cevapsız konuşma";
+          const time = relativeTime(row.updated, now, t);
+          const first = row.title || t("side.conversations.untitled");
           const label = row.last || first;
           return (
             <li className="side-item" key={row.id}>
               <button type="button" className="side-text" title={first} onClick={() => open(row.id)}>
                 {time && <span className="side-time">{time}</span>}
                 <span className="side-label">{label}</span>
-                <span className="side-count">{turnLabel(row.turns)}</span>
+                <span className="side-count">{turnLabel(row.turns, t)}</span>
               </button>
               <button
                 type="button"
                 className="side-remove"
                 data-conversation-delete={row.id}
-                aria-label="Konuşmayı sil"
-                title="Konuşmayı sil"
+                aria-label={t("side.conversations.delete")}
+                title={t("side.conversations.delete")}
                 onClick={() => remove(row.id)}
               >
                 ×

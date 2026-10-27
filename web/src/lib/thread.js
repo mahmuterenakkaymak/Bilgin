@@ -92,7 +92,9 @@ export function threadReducer(state = initialState, action = {}) {
       turns[index] = {
         ...turns[index],
         status: "failed",
-        answer_text: action.message || "Cevap üretilemedi.",
+        // Cümle sunucunundur; yoksa boş kalır ve kart kataloğun genel cümlesini okur (R8-19) —
+        // indirgeyici dil bilmez, ekrana çevrilecek bir metin bırakmaz.
+        answer_text: action.message || "",
         pending: false,
       };
       return mark({ ...state, turns });

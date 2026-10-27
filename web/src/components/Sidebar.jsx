@@ -1,13 +1,13 @@
 import { useState } from "react";
+import { useT } from "../i18n/index.js";
 import * as api from "../lib/api.js";
+import { relativeTime } from "../lib/time.js";
 import ConversationList, { turnLabel } from "./ConversationList.jsx";
 
 // Kenar çubuğu (R5-18): kayıtlı sorular ve geçmiş. Kayıtlı satır soruyu yeniden sorar, geçmiş satırı
 // kayıtlı SQL'i modelsiz açar (audit_id ile); kayıtlıda bir de × vardır. Listeler App'ten gelir — ikisinin de ne zaman tazeleneneceği orada bellidir.
+// Cümleler kataloğunda (R8-19); satırların kendisi veridir, çevrilmez.
 // ASSUMPTION: geçmiş /api/history'den geldiği sırayla (en yeni önce) gösterilir; sözleşme sırayı üreticide veriyor.
-const EMPTY_SAVED = "Henüz kayıtlı soru yok.";
-const EMPTY_HISTORY = "Geçmiş boş.";
-
 function list(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -23,35 +23,8 @@ function marker(status) {
   return { glyph: "✗", tone: "err" };
 }
 
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-
-function startOfDay(ms) {
-  const day = new Date(ms);
-  day.setHours(0, 0, 0, 0);
-  return day.getTime();
-}
-
-// Kısa Türkçe zaman: "4 dk önce" / "dün". "Dün" takvimsel bir fark, o yüzden gün sayısına
-// yerel gecenin başından iniliyor. ASSUMPTION: ts boş ya da okunamazsa boş dize - satır zamansız kalır.
-function relativeTime(value, now) {
-  if (typeof value !== "string" || !value) return "";
-  const then = Date.parse(value);
-  if (!Number.isFinite(then)) return "";
-  const diff = now - then;
-  if (diff < MINUTE) return "şimdi";
-  if (diff < HOUR) return `${Math.floor(diff / MINUTE)} dk önce`;
-  if (diff < DAY) return `${Math.floor(diff / HOUR)} sa önce`;
-  const days = Math.round((startOfDay(now) - startOfDay(then)) / DAY);
-  if (days <= 1) return "dün";
-  if (days < 7) return `${days} gün önce`;
-  if (days < 30) return `${Math.floor(days / 7)} hafta önce`;
-  if (days < 365) return `${Math.floor(days / 30)} ay önce`;
-  return `${Math.floor(days / 365)} yıl önce`;
-}
-
 export default function Sidebar({ saved = [], history = [], conversations = [], onAsk, onRemoved }) {
+  const { t } = useT();
   const [note, setNote] = useState("");
 
   const savedRows = list(saved)
@@ -95,19 +68,19 @@ export default function Sidebar({ saved = [], history = [], conversations = [], 
       setNote("");
       onRemoved?.();
     } catch (error) {
-      setNote(error?.message || "Kayıt silinemedi.");
+      setNote(error?.message || t("side.saved.deleteFailed"));
     }
   };
 
   return (
     <>
       <section className="side-block">
-        <h2 className="side-title">Kayıtlı sorular</h2>
+        <h2 className="side-title">{t("side.saved.title")}</h2>
         {note && <p className="side-note">{note}</p>}
         <ul id="saved-list" className="side-list">
-          {savedRows.length === 0 && <li className="side-empty">{EMPTY_SAVED}</li>}
+          {savedRows.length === 0 && <li className="side-empty">{t("side.saved.empty")}</li>}
           {savedRows.map((row) => {
-            const time = relativeTime(row.created, now);
+            const time = relativeTime(row.created, now, t);
             return (
               <li className="side-item" key={row.id}>
                 <button type="button" className="side-text" title={row.question} onClick={() => onAsk?.(row.question)}>
@@ -117,8 +90,8 @@ export default function Sidebar({ saved = [], history = [], conversations = [], 
                 <button
                   type="button"
                   className="side-remove"
-                  aria-label="Kaydı sil"
-                  title="Kaydı sil"
+                  aria-label={t("side.saved.delete")}
+                  title={t("side.saved.delete")}
                   onClick={() => remove(row.id)}
                 >
                   ×
@@ -130,12 +103,12 @@ export default function Sidebar({ saved = [], history = [], conversations = [], 
       </section>
       <ConversationList conversations={conversations} onRemoved={onRemoved} />
       <section className="side-block">
-        <h2 className="side-title">Geçmiş</h2>
+        <h2 className="side-title">{t("side.history.title")}</h2>
         <ul id="history-list" className="side-list side-scroll">
-          {historyRows.length === 0 && <li className="side-empty">{EMPTY_HISTORY}</li>}
+          {historyRows.length === 0 && <li className="side-empty">{t("side.history.empty")}</li>}
           {historyRows.map((row) => {
             const { glyph, tone } = marker(row.status);
-            const time = relativeTime(row.ts, now);
+            const time = relativeTime(row.ts, now, t);
             return (
               <li className="side-item" key={row.key}>
                 <button
@@ -149,7 +122,7 @@ export default function Sidebar({ saved = [], history = [], conversations = [], 
                   </span>
                   {time && <span className="side-time">{time}</span>}
                   <span className="side-label">{row.question}</span>
-                  {row.turn != null && <span className="side-turn">{turnLabel(row.turn)}</span>}
+                  {row.turn != null && <span className="side-turn">{turnLabel(row.turn, t)}</span>}
                   {row.count > 1 && <span className="side-count">×{row.count}</span>}
                 </button>
               </li>
