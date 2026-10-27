@@ -703,7 +703,10 @@ main {
 .dataset-notice,
 .login-note,
 .login-error,
-.route-note {
+.route-note,
+.conn-error,
+.conn-note,
+.conn-readonly {
   border-radius: 0 var(--radius) var(--radius) 0;
 }
 
@@ -1148,6 +1151,61 @@ main {
   .users-table .users-reset .field-input {
     width: 100%;
     max-width: 16rem;
+  }
+
+  /* Bağlantı satırı altı sütuna sığmıyor: sürücünün kendi cümlesi ("Son hata") tek başına ekranı
+     taşıyor, .table-wrap onu yan kaydırıyordu — hangi kümenin bozuk olduğu görünmüyordu. Tablo
+     bloğa döner, etiketini hücrenin kendisi taşır (yukarıdaki kullanıcı satırıyla aynı çözüm). */
+  .conn-table,
+  .conn-table tbody,
+  .conn-table tr,
+  .conn-table th,
+  .conn-table td {
+    display: block;
+  }
+
+  .conn-table thead {
+    display: none;
+  }
+
+  .conn-table tbody tr {
+    padding: var(--space) 0;
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+
+  .conn-table tbody th,
+  .conn-table tbody td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    box-shadow: none;
+  }
+
+  .conn-table .conn-status::before {
+    content: "Durum: ";
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .conn-table .conn-target::before {
+    content: "Sunucu: ";
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .conn-table .conn-success::before {
+    content: "Son başarılı: ";
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .conn-table .conn-failure::before {
+    content: "Son hata: ";
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .conn-table .conn-actions {
+    text-align: left;
   }
 
   /* Yöneticinin dört bağlantısı (Veritabanı haritası ve Kullanıcılar) iki sütuna sığmıyor ve
@@ -1724,7 +1782,8 @@ main {
 
 /* Salt-okur küme için nötr bant: kehribar uyarıyla aynı gövde, ama renksiz — burada
    düzeltilecek bir şey yok, yalnızca yetki yok. */
-.rules-readonly {
+.rules-readonly,
+.conn-readonly {
   margin: 0;
   padding: calc(var(--space) * 1.25) calc(var(--space) * 1.5);
   border: 1px solid var(--line);
@@ -1950,7 +2009,8 @@ main {
 /* Ret cümlesi tek satır bile olsa kendi zemininde durur: ekranın geri kalanı onun rengi değil.
    Vurgu, dört yanı saran ton çizgisinin kalınlaşmış solu (T268): yalın border-left yuvarlak
    köşede kıvrılıp ilk harfin önüne parantez gibi düşüyordu. */
-.users-error {
+.users-error,
+.conn-error {
   margin: 0;
   padding: calc(var(--space) * 0.75) var(--space);
   border: 1px solid var(--err-text);
@@ -1962,7 +2022,8 @@ main {
 
 /* Formun cevabı çıplak paragraf değil, kendi bandı (M19 review 2): şekil burada, rengi türünde.
    Zemin kartın beyazından ayrışsın diye --surface değil --bg. */
-.users-band {
+.users-band,
+.conn-note {
   margin: 0;
   padding: calc(var(--space) * 0.75) var(--space);
   border: 1px solid var(--line);
@@ -1972,7 +2033,8 @@ main {
   font-weight: 600;
 }
 
-.users-note {
+.users-note,
+.conn-note {
   border-color: var(--ok);
   border-left-color: var(--ok);
   color: var(--ok);
@@ -2409,6 +2471,219 @@ main {
 
 .map-done a {
   color: var(--accent);
+}
+
+/* Haritanın ardından gelen yol (R7-27): küme kuruldu ama girişi henüz yok. Düğmenin yanında
+   duran bu sözcük bir sonraki işe götürüyor, o yüzden düz metin değil, vurgu rengi bir bağlantı. */
+.map-connection-link {
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* --- veritabanı bağlantıları --------------------------------------------------- */
+
+/* Durum noktası arka plan yoklamasının cevabıdır (R7-25). Renk tek başına anlam taşımıyor, o
+   yüzden başlıktaki sağlık noktası gibi yanında kendi sözcüğünü de taşıyor. */
+.db-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.db-dot-ok {
+  background: var(--ok);
+}
+
+.db-dot-down {
+  background: var(--err-text);
+}
+
+.db-dot-unknown {
+  background: var(--muted);
+}
+
+.conn-screen > * + * {
+  margin-top: calc(var(--space) * 2);
+}
+
+.conn-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.conn-table th,
+.conn-table td {
+  padding: calc(var(--space) * 0.75) var(--space);
+  text-align: left;
+  vertical-align: top;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+.conn-table thead th {
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.conn-name {
+  min-width: 9rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Kümenin baktığı yer iki satırda: sunucu üstte, veritabanı altında ve solda. */
+.conn-server,
+.conn-failure {
+  overflow-wrap: anywhere;
+}
+
+.conn-database {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.conn-status {
+  white-space: nowrap;
+}
+
+.conn-status .db-dot {
+  display: inline-block;
+  vertical-align: baseline;
+  margin-right: calc(var(--space) * 0.5);
+}
+
+/* "Ortam değişkeninden" kümenin değil bağlantının niteliğidir: adın yanında kendi çipiyle
+   okunur, yoksa satırın adı uzamış sanılır. */
+.conn-env {
+  display: inline-block;
+  margin-left: calc(var(--space) * 0.5);
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.conn-success,
+.conn-failure {
+  color: var(--muted);
+}
+
+.conn-success {
+  white-space: nowrap;
+}
+
+.conn-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.conn-empty {
+  padding: calc(var(--space) * 3) var(--space);
+  color: var(--muted);
+  text-align: center;
+}
+
+.conn-form {
+  display: grid;
+  gap: calc(var(--space) * 1.5);
+}
+
+.conn-fields {
+  display: grid;
+  gap: calc(var(--space) * 2) calc(var(--space) * 3);
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.conn-checks {
+  display: grid;
+  gap: calc(var(--space) * 0.75);
+  align-content: start;
+}
+
+.conn-check {
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--space) * 0.75);
+  font-size: 14px;
+}
+
+.conn-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.conn-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space);
+}
+
+/* Yoklamanın cevabı satır satır okunur: hangi denetimin neden düştüğü cümlenin kendisiyle
+   birlikte durur, sürücünün kırmızısı ile salt okunurun yeşili aynı listede ayrışır. */
+.conn-result {
+  display: grid;
+  gap: calc(var(--space) * 0.5);
+  padding: calc(var(--space) * 0.75) var(--space);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-size: 14px;
+}
+
+.conn-result-head {
+  margin: 0;
+  font-weight: 600;
+}
+
+.conn-result-head.is-ok {
+  color: var(--ok);
+}
+
+.conn-result-head.is-err {
+  color: var(--err-text);
+}
+
+.conn-lines {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.conn-lines li {
+  display: flex;
+  gap: calc(var(--space) * 0.5);
+  overflow-wrap: anywhere;
+}
+
+.conn-lines li.is-ok {
+  color: var(--ok);
+}
+
+.conn-lines li.is-err {
+  color: var(--err-text);
+}
+
+.conn-missing {
+  margin: 0;
+  color: var(--warn-text);
+  font-weight: 600;
+}
+
+.conn-script {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* --- veri kümeleri listesi ---------------------------------------------------- */

@@ -40,6 +40,12 @@ export default function MastheadNav({ route, user }) {
           Veritabanı haritası
         </a>
       )}
+      {/* Bağlantılar da haritanın yanı: küme orada kuruluyor, girişi burada dolduruluyor (R7-27). */}
+      {user?.role === "admin" && (
+        <a className="nav-link" id="nav-connections" href="#/baglantilar" aria-current={route === "connections" ? "page" : undefined}>
+          Bağlantılar
+        </a>
+      )}
       {user?.role === "admin" && (
         <a className="nav-link" id="nav-ready" href="#/hazir-sorular" aria-current={route === "ready" ? "page" : undefined}>
           Hazır sorular

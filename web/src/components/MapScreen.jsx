@@ -331,9 +331,18 @@ export default function MapScreen({
               </ol>
             )}
             {state.status === "done" && (
-              <button type="button" id="map-activate" className="btn btn-primary" onClick={onActivate} disabled={activating}>
-                {activating ? "Geçiliyor…" : "Bu veri kümesine geç"}
-              </button>
+              <div className="map-actions">
+                <button type="button" id="map-activate" className="btn btn-primary" onClick={onActivate} disabled={activating}>
+                  {activating ? "Geçiliyor…" : "Bu veri kümesine geç"}
+                </button>
+                {/* Kurulan küme gerçek bir SQL Server'a bakıyorsa soru henüz koşulamaz: girişi
+                  yönetici bu ekranın kendisinden doldurur (R7-27). */}
+                {text(state.preview?.dataset?.connection) === "mssql" && (
+                  <a className="map-connection-link" id="map-connection-link" href="#/baglantilar">
+                    Şimdi bağlantıyı girin
+                  </a>
+                )}
+              </div>
             )}
           </div>
         )}

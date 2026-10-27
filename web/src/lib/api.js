@@ -229,6 +229,25 @@ export function readySuggestStatus(jobId) {
   return request(`/api/ready-questions/suggest/${encodeURIComponent(jobId)}`);
 }
 
+// --- Veritabanı bağlantıları (R7-27): sır bu kapıdan yalnız içeri girer. Hiçbir okuma ne parola
+// ne bağlantı dizesi taşır; gövdedeki boş ``password`` sunucuda "saklı olanı koru"dur (connForm.js).
+
+export function connectionsList() {
+  return request("/api/connections");
+}
+
+export function connectionsGet(dataset) {
+  return request(`/api/connections/${encodeURIComponent(dataset)}`);
+}
+
+export function connectionsSave(dataset, body) {
+  return request(`/api/connections/${encodeURIComponent(dataset)}`, { method: "PUT", body });
+}
+
+export function connectionsTest(dataset, body) {
+  return request(`/api/connections/${encodeURIComponent(dataset)}/test`, { method: "POST", body });
+}
+
 async function request(path, { method = "GET", body } = {}) {
   const init = {
     method,

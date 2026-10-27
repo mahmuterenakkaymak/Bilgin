@@ -2,6 +2,7 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import AnswerCard from "./components/AnswerCard.jsx";
 import AskBox from "./components/AskBox.jsx";
 import ClarificationCard from "./components/ClarificationCard.jsx";
+import { ConnectionsFlow } from "./components/ConnectionsScreen.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import ErrorCard from "./components/ErrorCard.jsx";
 import LoadingSteps from "./components/LoadingSteps.jsx";
@@ -465,6 +466,7 @@ function Screen({
   if (route === "rules") return <RulesFlow onChanged={onChanged} readOnly={readOnly} />;
   if (route === "users") return <UsersFlow currentUser={currentUser} />;
   if (route === "ready") return <ReadyFlow />;
+  if (route === "connections") return <ConnectionsFlow />;
   if (route === "map") return <MapFlow onSwitched={onSwitched} />;
   return (
     <AskScreen

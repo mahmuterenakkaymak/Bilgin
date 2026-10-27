@@ -8,9 +8,10 @@ export const EXPIRED_NOTE = "Oturumunuz sona erdi, lütfen yeniden giriş yapın
 
 export const NOT_ALLOWED_NOTE = "Bu sayfa yalnız yöneticiye açık.";
 
-// Harita, kullanıcı listesi ve hazır soru defteri yöneticiye ait; soru ve kural ekranı her role açık
-// (kural ekranı kendi içinde salt okunura döner).
-const ADMIN_ONLY = new Set(["map", "users", "ready"]);
+// Harita, bağlantılar, kullanıcı listesi ve hazır soru defteri yöneticiye ait (R7-27: bir sunucunun
+// kapısını yazmak, o kümenin hangi veritabanına baktığını yazmaktır); soru ve kural ekranı her role
+// açık (kural ekranı kendi içinde salt okunura döner).
+const ADMIN_ONLY = new Set(["map", "connections", "users", "ready"]);
 
 export function canSee(route, role) {
   return !ADMIN_ONLY.has(route) || role === "admin";
