@@ -19,28 +19,33 @@ from pathlib import Path
 from nl2sql import config
 from nl2sql.eval.metrics import compute_metrics
 from nl2sql.eval.runner import QuestionResult, scored
+from nl2sql.i18n import t
 from nl2sql.report import fmt
 
 STAMP = "%Y%m%d-%H%M%S"
 REPORT_FILES = ("report.json", "report.md")
 
-# Karar 10 soru üzerinden verilir: 7+ devam, 5-6 yeniden kur, altında baştan düşün.
-DECISIONS = (
-    (7.0, "Devam — ölçüm bu yönde ilerlemeyi haklı çıkarıyor."),
-    (5.0, "Yeniden kur — yaklaşımı gözden geçirmedikçe skor kendiliğinden yükselmeyecek."),
-    (0.0, "Baştan düşün — bu sonuçlarla yola devam edilmez."),
+# Karar 10 soru üzerinden verilir: 7+ devam, 5-6 yeniden kur, altında baştan düşün. Koşumun kararı
+# ``_decision``dan dilde gelir; ``DECISIONS`` ve ``NO_QUESTIONS`` aynı kararların Türkçe halidir -
+# eşiği ve boş koşumu adıyla okuyan testler oradan bakar (R8-11).
+DECISION_KEYS = (
+    (7.0, "eval.decision.go"),
+    (5.0, "eval.decision.rebuild"),
+    (0.0, "eval.decision.redesign"),
 )
-NO_QUESTIONS = "Kararsız — koşulmuş soru yok, ölçüm boş."
+DECISIONS = tuple((floor, t(key, config.DEFAULT_LANG)) for floor, key in DECISION_KEYS)
+NO_QUESTIONS = t("eval.no_questions", config.DEFAULT_LANG)
 
-# Metrik bloğunun satır sırası ve Türkçe adları (PLAN R5-14): ekran ile report.md aynı listeyi okur,
-# yani iki yerde iki ayrı ad uydurulamaz. Paydası olmayan oran ``–`` ile durur (R5-12).
+# Metrik bloğunun satır sırası ve adlarının kataloğa giden anahtarları (PLAN R5-14, R8-11): ekran
+# ile report.md aynı listeyi okur, yani iki yerde iki ayrı ad uydurulamaz. Paydası olmayan oran
+# ``–`` ile durur (R5-12).
 METRIC_ROWS = (
-    ("accuracy", "Doğruluk"),
-    ("answered_pct", "Cevaplanan %"),
-    ("accuracy_when_answered", "Cevaplananlarda doğruluk"),
-    ("wrong_answer_rate", "Yanlış cevap oranı"),
-    ("clarify_precision", "Netleştirme kesinliği"),
-    ("clarify_recall", "Netleştirme duyarlılığı"),
+    ("accuracy", "eval.metric.accuracy"),
+    ("answered_pct", "eval.metric.answered"),
+    ("accuracy_when_answered", "eval.metric.accuracy_when_answered"),
+    ("wrong_answer_rate", "eval.metric.wrong_answer"),
+    ("clarify_precision", "eval.metric.clarify_precision"),
+    ("clarify_recall", "eval.metric.clarify_recall"),
 )
 
 
@@ -56,6 +61,7 @@ def write_report(
     narration: dict | None = None,
     followups: dict | None = None,
     followup_chains: list | None = None,
+    lang: str = config.DEFAULT_LANG,
 ) -> Path:
     """Write ``<out_dir>/<timestamp>/report.json`` + ``report.md``, copy them to ``<out_dir>/latest``.
 
@@ -75,13 +81,17 @@ def write_report(
     ``followups`` is the ``eval --followups`` block (PLAN R7-14, Contracts "followups report") and
     stays out of the report when the run measured no chains; ``followup_chains`` carries the chain
     questions the markdown table shows but the json block does not repeat.
+
+    ``lang`` (PLAN R8-11) is the language the markdown is written in; it is recorded in report.json
+    as ``lang`` so a reader knows which language a stored report speaks. Numbers and outcome codes
+    are not translated - only the sentences around them.
     """
     stamp = datetime.now()
     out = Path(out_dir)
     previous = _load(out / "latest" / REPORT_FILES[0])
     report = _report(
         results, model, config, stamp, previous, mode, schema_info, dataset, profile, narration,
-        followups,
+        followups, lang,
     )
     run_dir = out / stamp.strftime(STAMP)
     _write(run_dir, report, followup_chains)
@@ -176,6 +186,7 @@ def _report(
     profile: dict | None = None,
     narration: dict | None = None,
     followups: dict | None = None,
+    lang: str = config.DEFAULT_LANG,
 ) -> dict:
     # Kill-gate skoru altın setin sayısıdır (R5-12): belirsiz satırlar netleştirmeyi ölçer, altın
     # cevabın yerine geçmez. Metrik bloğunun hemen üstünde başka bir paydaya bölünmüş bir skor,
@@ -195,12 +206,14 @@ def _report(
         "model": model,
         "mode": mode,
         "dataset": dataset,
+        # Raporun dili (R8-11): diske yazılan report.md hangi dilde okunacağını kendisi söyler.
+        "lang": lang,
         **({"profile": profile} if profile else {}),
         **({"schema": schema_info} if schema_info else {}),
         "config": dict(settings or {}),
         "score": {"passed": passed, "total": len(judged)},
         "tags": _tags(results),
-        "decision": _decision(len(judged), passed),
+        "decision": _decision(len(judged), passed, lang),
         "context": {
             "max_prompt_tokens": max(peaks, default=0),
             "median_prompt_tokens": round(statistics.median(peaks)) if peaks else 0,
@@ -267,12 +280,12 @@ def _tags(results: list[QuestionResult]) -> dict:
     }
 
 
-def _decision(total: int, passed: int) -> str:
+def _decision(total: int, passed: int, lang: str = config.DEFAULT_LANG) -> str:
     """Karar satırı; eşikler 10 soru için verilmiştir, ``--only`` ile kısalan koşu orana göre ölçeklenir."""
     if not total:
-        return NO_QUESTIONS
+        return t("eval.no_questions", lang)
     points = 10 * passed / total
-    return next(text for floor, text in DECISIONS if points >= floor)
+    return t(next(key for floor, key in DECISION_KEYS if points >= floor), lang)
 
 
 def _write(directory: Path, report: dict, followup_chains: list | None = None) -> None:
@@ -286,92 +299,122 @@ def _write(directory: Path, report: dict, followup_chains: list | None = None) -
         (directory / name).write_text(text, encoding="utf-8")
 
 
-def metric_percent(value: float | None) -> str:
-    """Oran yüzde olarak okunur (``0.8333`` -> ``%83,33``); paydası olmayan oran ölçülmedi."""
-    return fmt.tr_percent(None if value is None else 100 * value, 2)
+def metric_percent(value: float | None, lang: str = config.DEFAULT_LANG) -> str:
+    """Oran dilin okunuşuyla yüzde (``0.8333`` -> ``%83,33`` / ``83.33%``); paydasız oran ölçülmedi."""
+    return fmt.format_percent(None if value is None else 100 * value, lang, 2)
 
 
-def metrics_block(metrics: dict) -> list[str]:
+def metrics_block(metrics: dict, lang: str = config.DEFAULT_LANG) -> list[str]:
     """Konsolun metrik bloğu (R5-14): report.md ile aynı satırlar, girintili ve hizalı."""
-    width = max(len(label) for _, label in METRIC_ROWS)
+    rows = [(key, t(label, lang)) for key, label in METRIC_ROWS]
+    width = max(len(label) for _, label in rows)
     return [
-        f"  {label:<{width}}  {metric_percent(metrics[key])}" for key, label in METRIC_ROWS
+        f"  {label:<{width}}  {metric_percent(metrics[key], lang)}" for key, label in rows
     ]
 
 
 def _markdown(report: dict, followup_chains: list | None = None) -> str:
+    lang = report["lang"]
     score, context, metrics = report["score"], report["context"], report["metrics"]
     lines = [
-        f"# Değerlendirme raporu — {report['model'] or 'model adı verilmemiş koşum'}",
+        t("eval.md.title", lang, model=report["model"] or t("eval.md.unnamed", lang)),
         "",
-        f"- Koşum: {report['timestamp']}",
-        f"- Model: `{report['model'] or '-'}`",
-        f"- Mod: {report['mode']}",
+        t("eval.md.stamp", lang, timestamp=report["timestamp"]),
+        t("eval.md.model", lang, model=report["model"] or "-"),
+        t("eval.md.mode", lang, mode=report["mode"]),
     ]
     if report.get("profile"):
-        lines.append(f"- {_profile_note(report)}")
+        lines.append(f"- {_profile_note(report, lang)}")
     if report.get("schema"):
-        lines.append(f"- Şema: {_schema_note(report['schema'])}")
+        lines.append(t("eval.md.schema", lang, note=_schema_note(report["schema"])))
     if report["config"]:
         settings = ", ".join(f"`{key}={value}`" for key, value in report["config"].items())
-        lines.append(f"- Ayar: {settings}")
+        lines.append(t("eval.md.config", lang, settings=settings))
     lines += [
         "",
-        f"## Skor: {score['passed']}/{score['total']}",
+        t("eval.md.score", lang, passed=score["passed"], total=score["total"]),
         "",
         f"**{report['decision']}**",
         "",
-        f"Bağlam: tepe {context['max_prompt_tokens']} istem tokenı, medyan "
-        f"{context['median_prompt_tokens']} istem tokenı.",
+        t(
+            "eval.md.context",
+            lang,
+            peak=context["max_prompt_tokens"],
+            median=context["median_prompt_tokens"],
+        ),
     ]
     if context.get("peak_estimate") or context.get("overflows"):
         lines.append(
-            f"Bağlam bütçesi: tepe tahmin {context.get('peak_estimate', 0)} token, "
-            f"{context.get('overflows', 0)} soru bütçeye sığmadı."
+            t(
+                "eval.md.budget",
+                lang,
+                peak=context.get("peak_estimate", 0),
+                over=context.get("overflows", 0),
+            )
         )
-    lines += ["", "## Metrikler", "", "| Ölçü | Değer |", "| --- | ---: |"]
-    lines += [f"| {label} | {metric_percent(metrics[key])} |" for key, label in METRIC_ROWS]
+    lines += ["", t("eval.md.metrics", lang), "", t("eval.md.metrics_head", lang), "| --- | ---: |"]
+    lines += [
+        f"| {t(label, lang)} | {metric_percent(metrics[key], lang)} |"
+        for key, label in METRIC_ROWS
+    ]
     if report.get("narration"):
-        lines += ["", _narration_note(report["narration"])]
+        lines += ["", _narration_note(report["narration"], lang)]
     if report.get("followups"):
-        lines += ["", *_followups_section(report["followups"], followup_chains)]
+        lines += ["", *_followups_section(report["followups"], followup_chains, lang)]
     if report["previous"]:
-        lines += ["", "## Önceki koşuya göre", ""] + _delta_lines(report)
+        lines += ["", t("eval.md.previous", lang), ""] + _delta_lines(report, lang)
     if report["tags"]:
         lines += [
             "",
-            "## Etiket skorları",
+            t("eval.md.tags", lang),
             "",
-            "| Etiket | Skor |",
+            t("eval.md.tags_head", lang),
             "| --- | ---: |",
             *(
                 f"| {tag} | {counts['passed']}/{counts['total']} |"
                 for tag, counts in report["tags"].items()
             ),
         ]
-    lines += [
-        "",
-        "| Soru | Sonuç | Araç | Token | Süre |",
-        "| --- | --- | ---: | ---: | ---: |",
-    ]
+    lines += ["", t("eval.md.questions_head", lang), "| --- | --- | ---: | ---: | ---: |"]
     for question in report["questions"]:
-        lines.append(
-            f"| {question['id']} | {_mark(question['outcome'])} {question['outcome']} "
-            f"| {question['tool_calls']} | {question['total_tokens']} | {question['seconds']:.1f} sn |"
-        )
-    lines += ["", "## Sorular", ""]
+        lines.append(_question_row(question, lang))
+    lines += ["", t("eval.md.questions", lang), ""]
     for question in report["questions"]:
-        outcome = f"{question['id']} — {_mark(question['outcome'])} {question['outcome']}"
-        lines += [f"### {outcome}", "", question["question"], ""]
+        lines += [
+            t(
+                "eval.md.question_head",
+                lang,
+                id=question["id"],
+                mark=_mark(question["outcome"]),
+                outcome=question["outcome"],
+            ),
+            "",
+            question["question"],
+            "",
+        ]
         if question["reason"]:
-            lines += [f"**Sebep:** {question['reason']}", ""]
-        lines += ["Gönderilen SQL:", "", _sql(question["sql"]), ""]
+            lines += [t("eval.md.reason", lang, reason=question["reason"]), ""]
+        lines += [t("eval.md.submitted", lang), "", _sql(question["sql"], lang), ""]
         if question["golden_sql"] and question["golden_sql"] != question["sql"]:
-            lines += ["Golden SQL:", "", _sql(question["golden_sql"]), ""]
+            lines += ["Golden SQL:", "", _sql(question["golden_sql"], lang), ""]
     return "\n".join(lines) + "\n"
 
 
-def _delta_lines(report: dict) -> list[str]:
+def _question_row(question: dict, lang: str) -> str:
+    """Sorunun tablo satırı: sonuç kodu çevrilmez, yalnız başındaki im ve sütun başlıkları dilde."""
+    return t(
+        "eval.md.question_row",
+        lang,
+        id=question["id"],
+        mark=_mark(question["outcome"]),
+        outcome=question["outcome"],
+        tools=question["tool_calls"],
+        tokens=question["total_tokens"],
+        seconds=f"{question['seconds']:.1f}",
+    )
+
+
+def _delta_lines(report: dict, lang: str) -> list[str]:
     previous, score = report["previous"], report["score"]
     was = f"{previous['score']['passed']}/{previous['score']['total']}"
     now = f"{score['passed']}/{score['total']}"
@@ -381,80 +424,96 @@ def _delta_lines(report: dict) -> list[str]:
         if part
     )
     delta = previous["delta"]
-    change = f"**{delta:+d}** soru ({was} → {now})" if delta else f"değişmedi ({now})"
-    change += _shared_note(previous, score)
+    change = (
+        t("eval.md.delta", lang, delta=f"{delta:+d}", was=was, now=now)
+        if delta
+        else t("eval.md.unchanged", lang, now=now)
+    )
+    change += _shared_note(previous, score, lang)
     flipped = [
         f"- {item['id']} {_mark(item['from'])} {item['from']} → {_mark(item['to'])} {item['to']}"
         for item in previous["flipped"]
     ]
     return [
-        f"- Önceki koşu: {origin}",
-        f"- Skor değişimi: {change}",
-        *(flipped or ["- Soru sonuçları aynı."]),
+        t("eval.md.prev_run", lang, origin=origin),
+        t("eval.md.score_change", lang, change=change),
+        *(flipped or [t("eval.md.same", lang)]),
     ]
 
 
-def _shared_note(previous: dict, score: dict) -> str:
+def _shared_note(previous: dict, score: dict, lang: str) -> str:
     """Fark iki koşunun tamamı üzerinden değilse kaç soru kıyaslandığını söyle; yoksa hiçbir şey."""
     shared = previous["shared"]
     if shared == previous["score"]["total"] and shared == score["total"]:
         return ""
-    return f" — {shared} ortak soru üzerinden"
+    return t("eval.md.shared", lang, shared=shared)
 
 
-def _profile_note(report: dict) -> str:
+def _profile_note(report: dict, lang: str) -> str:
     """Model profilinin satırı (R4-14): hangi pencereyle ölçüldüğü ve o bütçenin iki sayısı.
 
     Sayılar ``context``ten gelir; bütçe hiç aşmadıysa ikisi de 0'dır ve satır yine de okuyana
     koşunun hangi window ile ölçüldüğünü söyler.
     """
     profile, context = report["profile"], report["context"]
-    return (
-        f"Model profili: {profile.get('name') or '-'}"
-        f" · bütçe {profile.get('context_budget') or 0}"
-        f" · tepe tahmin {context.get('peak_estimate') or 0}"
-        f" · taşma {context.get('overflows') or 0}"
+    return t(
+        "eval.md.profile",
+        lang,
+        name=profile.get("name") or "-",
+        budget=profile.get("context_budget") or 0,
+        peak=context.get("peak_estimate") or 0,
+        over=context.get("overflows") or 0,
     )
 
 
-def _narration_note(narration: dict) -> str:
+def _narration_note(narration: dict, lang: str) -> str:
     """Anlatının satırı (R5-13): cümleyi kimin kurduğu, yani kaçı bekçiyi ilk geçirdi.
 
     Sayılar anlatının kendisinden gelir; ``template_pct`` paydasız kaldığında 0.0'dır, çünkü
     anlatılacak cevap olmayan bir koşuda şablon da konuşmamıştır.
     """
-    return (
-        f"Anlatı: llm {narration['llm']} · llm_retry {narration['llm_retry']} · şablon "
-        f"{narration['template']} (şablon oranı {metric_percent(narration['template_pct'])})"
+    return t(
+        "eval.md.narration",
+        lang,
+        llm=narration["llm"],
+        retry=narration["llm_retry"],
+        template=narration["template"],
+        pct=metric_percent(narration["template_pct"], lang),
     )
 
 
-FOLLOWUP_HEAD = "Ardışık sorular"
-FOLLOWUP_COLUMNS = "| Zincir | Tur | Soru | Sonuç | Bağlam |"
 FOLLOWUP_RULE = "| --- | ---: | --- | --- | --- |"
 
 
-def _followups_section(followups: dict, chains: list | None) -> list[str]:
+def _followups_section(followups: dict, chains: list | None, lang: str) -> list[str]:
     """Ardışık sorular bölümü (R7-14): üç doğruluğun üstüne zincir başına bir tablo.
 
     Doğruluklar ``followups`` bloğundan (Contracts "followups report"), sorunun kendisi
     ``chains``den gelir - ölçüm satırı soruyu tekrar taşımaz, zincirin satırı taşır.
     """
     lines = [
-        f"## {FOLLOWUP_HEAD}",
+        f"## {t('eval.followups.head', lang)}",
         "",
-        f"- Tur doğruluğu: {metric_percent(followups['turn_accuracy'])}"
-        f" ({followups['turns']} tur)",
-        f"- Zincir doğruluğu: {metric_percent(followups['chain_accuracy'])}"
-        f" ({followups['chains']} zincir)",
-        f"- Bağlam doğruluğu: {metric_percent(followups['context_accuracy'])}",
+        t(
+            "eval.followups.turn",
+            lang,
+            pct=metric_percent(followups["turn_accuracy"], lang),
+            turns=followups["turns"],
+        ),
+        t(
+            "eval.followups.chain",
+            lang,
+            pct=metric_percent(followups["chain_accuracy"], lang),
+            chains=followups["chains"],
+        ),
+        t("eval.followups.context", lang, pct=metric_percent(followups["context_accuracy"], lang)),
     ]
     questions = _followup_questions(chains)
     grouped: dict[str, list[dict]] = {}
     for item in followups["items"]:
         grouped.setdefault(item["id"], []).append(item)
     for chain_id, items in grouped.items():
-        lines += ["", f"### {chain_id}", "", FOLLOWUP_COLUMNS, FOLLOWUP_RULE]
+        lines += ["", f"### {chain_id}", "", t("eval.followups.columns", lang), FOLLOWUP_RULE]
         for item in items:
             lines.append(
                 f"| {chain_id} | {item['turn']} | {questions.get((chain_id, item['turn']), '')} "
@@ -484,5 +543,5 @@ def _mark(outcome: str) -> str:
     return "✓" if outcome == "pass" else "✗"
 
 
-def _sql(sql: str) -> str:
-    return f"```sql\n{sql or '_cevap gönderilmedi_'}\n```"
+def _sql(sql: str, lang: str = config.DEFAULT_LANG) -> str:
+    return f"```sql\n{sql or t('eval.md.no_sql', lang)}\n```"

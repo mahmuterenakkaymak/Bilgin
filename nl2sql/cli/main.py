@@ -135,21 +135,9 @@ BAD_REPEAT = "--repeat en az 1 olmalı."
 # R8-10: ekranın satırları kataloğa taşındı; iki sabit yine de adlarıyla durur - app/session ve
 # testler onları buradan okur, yani değerleri program dilinin cümlesidir.
 NO_INDEX_NOTE = t("cli.ask.no_index", config.DEFAULT_LANG)
-# R3-10: eval auto'yu kabul etmez, çünkü bir A/B ölçümünün hangi kolu ölçtüğü baştan belli olmalı.
-EVAL_NO_AUTO = "eval auto modu kabul etmez; modu açıkça seçin: full, full_rules, rag."
-# R5-12: --ambiguous iki durumda koşmaz — kümenin belirsiz seti yoksa sorulacak soru yoktur, ve
-# --compare üç modu koşar, oysa belirsiz set bir modun netleştirme davranışının ölçümüdür.
-NO_AMBIGUOUS = "Bu veri kümesinin belirsiz soru seti yok."
-AMBIGUOUS_COMPARE = "--ambiguous tek mod eval'i içindir."
-# R7-14: --followups kümenin ardışık soru seti yoksa koşmaz — ölçülecek zincir yoktur, tıpkı
-# belirsiz setin yokluğu gibi. Ekran zincir başına bir satır ve bir toplam satırı basar.
-NO_FOLLOWUPS = "Bu veri kümesinde ardışık soru seti yok."
-FOLLOWUPS_HEAD = "Ardışık sorular:"
-FOLLOWUP_CHAIN = "  {id}  {passed}/{total} tur  bağlam {mark}"
-FOLLOWUP_TOTAL = "Toplam: tur {turn} · zincir {chain} · bağlam {context}"
-# R5-14: metrik bloğunun başlığı; satırlarını report.metrics_block kurar, yani ekran ile report.md
-# aynı altı ölçüyü söyler.
-METRICS_HEAD = "Metrikler:"
+# R8-11: eval ekranının satırları kataloğun ``cli.eval.*`` anahtarlarıdır. R3-10'un auto yasağı
+# (bir A/B ölçümünün hangi kolu ölçtüğü baştan belli olmalı), R5-12/R7-14'un set yokluğu reddi
+# (ölçülecek soru yoktur) ve R5-14'un metrik başlığı da orada durur.
 # R4-13: kapalı bir uç nokta bütün modeli düşürür; sebep satırı hem ekranda hem raporun
 # ``skipped``ında durur, yani okuyan hangi modelin neden ölçülmediğini rapordan da görür.
 MODES_WITHOUT_MODELS = "--modes yalnız --models ile kullanılır."
@@ -160,7 +148,6 @@ EXIT_NO_CELLS = 3
 
 ENV_URL = "NL2SQL_LLM_BASE_URL"
 EMBED_ENV_URL = "NL2SQL_EMBED_BASE_URL"
-NO_TAG = "Bu etiketle soru yok: {tag}"
 # ASSUMPTION: uç nokta hiçbir soruyu yanıtlamadıysa ortada ölçülen bir şey yoktur; koşu tamamlanmış
 # sayılmaz (PLAN Decision 13'deki crash hali), o yüzden rapor yazılmadan kod 3 ile çıkılır.
 EXIT_NO_DB = 2
@@ -183,8 +170,7 @@ NONE = "-"
 CLARIFY_OPTION = "  {n}. {option}"
 
 # R3-5: eval hangi şema dosyasıyla ölçtüğünü canlı satırlardan önce söyler (imzanın başı, yani iki
-# koşunun aynı şemayı ölçüp ölçmediği ekrandan okunur).
-SCHEMA_LINE = "Şema: {path} ({hash8})"
+# koşunun aynı şemayı ölçüp ölçmediği ekrandan okunur); satırı ``cli.eval.schema`` kataloğu kurar.
 
 # ``--schema``nın argparse varsayılanı: tek başına tam şemanın adı, ``--dataset`` ile birlikte
 # "şema söylenmedi" demek, yani kümenin kendi şemasının önüne geçmez (R4-4).
@@ -664,6 +650,7 @@ def evaluate(
     ambiguous: bool = False,
     narrate: bool = False,
     followups: bool = False,
+    lang: str | None = None,
 ) -> int:
     """Altın soruları bir modda koşar, her soru biter bitmez tek satır dökerek (Delight 4)
     ilerler, raporu ``out_dir`` altına yazar (CLI ona ``eval_out/<mode>`` verir, R2-12), skoru söyler; koşu tamamlandıysa kod 0'dır.
@@ -695,43 +682,50 @@ def evaluate(
     ``followups`` altın koşumun ardına kümenin ardışık soru zincirlerini de ``ask_payload``dan
     geçirir (R7-14): her tur gerçek konuşma deposundan geçer, ölçüm tur/zincir/bağlam doğruluğudur.
     Kümenin böyle bir seti yoksa koşulacak zincir yoktur, yani tek cümle ve kod 2.
+
+    ``lang`` ölçümün dilidir (R8-11): ``en`` kümenin İngilizce altın setini koşar ve ekran ile
+    report.md İngilizce konuşur; söylenmediğinde ``main``in ``--lang``dan çözdüğü dil okunur.
+    Koşulan sorular kümenin verisidir - hangi dilin seti koşulduysa onun soruları ölçülür.
     """
     _utf8_stdout()
+    lang = lang or _LANG
     ds, code = _dataset(dataset)
     if code:
         return code
-    _dataset_line(ds)
+    _dataset_line(ds, lang)
     # Belirsiz setin yokluğu veritabanından önce sorulur: eksik olan ölçümün tanımıdır, kurulu bir
     # dosya onu geri getirmez (R5-12).
     ambiguous_lines = ds.ambiguous() if ambiguous and ds else []
     if ambiguous and not ambiguous_lines:
-        print(NO_AMBIGUOUS)
+        print(_t("cli.eval.no_ambiguous", lang))
         return EXIT_BAD_INPUT
     # Ardışık setin yokluğu da veritabanından önce sorulur: eksik olan ölçümün tanımıdır (R7-14).
     chains = ds.followups() if followups and ds else []
     if followups and not chains:
-        print(NO_FOLLOWUPS)
+        print(_t("cli.eval.no_followups", lang))
         return EXIT_BAD_INPUT
     budget = _or(budget, profile.prompt_limit if profile else None)
     db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
     index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
     out_dir = _or(out_dir, ds.eval_out if ds else None, config.EVAL_OUT)
     if _db_missing(db_path):
-        return _no_db(db_path, ds.name if ds else None)
+        return _no_db(db_path, ds.name if ds else None, lang)
     schema_file = _schema_file(_or(schema_path, ds.schema_path if ds else None, FULL_SCHEMA))
-    schema = _load_schema(schema_file)
+    schema = _load_schema(schema_file, lang)
     if schema is None:
         return EXIT_BAD_INPUT
-    lines = ds.golden() if ds else runner.load_golden()
+    # Ölçümün soruları dilin kendi setidir (R8-11): küme İngilizce kümeyi taşımıyorsa sorular
+    # Türkçedir, yani ``en`` isteyen bir koşum yanlış dili ölçmüş olmaz - çevirisi olmayanı ölçemez.
+    lines = ds.golden(lang) if ds else runner.load_golden()
     absent = _absent_tags(lines, tags)
     if absent:
         for tag in absent:
-            print(NO_TAG.format(tag=tag))
+            print(_t("cli.eval.no_tag", lang, tag=tag))
         return EXIT_NO_TAG
 
     info = report.schema_info(schema_file, schema)
-    print(f"Mod: {mode}")
-    print(SCHEMA_LINE.format(path=info["path"], hash8=info["hash"][:8]) + "\n")
+    print(_t("cli.eval.mode", lang, mode=mode))
+    print(_t("cli.eval.schema", lang, path=info["path"], hash8=info["hash"][:8]) + "\n")
     rules = ds.rules() if ds else load_rules()
     executor = LocalExecutor(
         db_path=db_path, allowlist=doc.allowlist(schema), audit_path=audit_path, pii_schema=schema
@@ -750,14 +744,15 @@ def evaluate(
         mode=mode,
         tags=tags,
         context=context,
-        on_progress=lambda result: print(runner.progress_line(result)),
+        on_progress=lambda result: print(runner.progress_line(result, lang)),
         budget=budget,
         clarify=ambiguous,
         ambiguous=ambiguous_lines,
+        lang=lang,
     )
     if results and all(result.outcome == "llm_error" for result in results):
-        print(f"Uç nokta {len(results)} sorunun hiçbirini yanıtlamadı; rapor yazılmadı.\n")
-        return _llm_failed(results[0].reason)
+        print(_t("cli.eval.no_endpoint", lang, n=len(results)) + "\n")
+        return _llm_failed(results[0].reason, lang)
     narration = _narrate_results(results, executor, _narrator(llm)) if narrate else None
     # Ekrandaki skor report.json ile aynı paydayı taşır (R5-12): belirsiz satırlar altın setin
     # yerine geçmez, hemen altında basılan Doğruluk ile çelişmez.
@@ -790,18 +785,19 @@ def evaluate(
         narration=narration,
         followups=followup_data,
         followup_chains=chains if followups else None,
+        lang=lang,
     )
-    print(f"Skor: {passed}/{len(judged)}")
+    print(_t("cli.eval.score", lang, passed=passed, total=len(judged)))
     if ambiguous:
-        print(f"\n{METRICS_HEAD}")
-        for line in report.metrics_block(metrics.compute_metrics(results)):
+        print("\n" + _t("cli.eval.metrics_head", lang))
+        for line in report.metrics_block(metrics.compute_metrics(results), lang):
             print(line)
         print()
     if followups:
-        print(f"\n{FOLLOWUPS_HEAD}")
-        for line in _followup_lines(followup_data):
+        print("\n" + _t("cli.eval.followups_head", lang))
+        for line in _followup_lines(followup_data, lang):
             print(line)
-    print(f"Rapor: {run_dir / 'report.md'}")
+    print(_t("cli.eval.report", lang, path=run_dir / "report.md"))
     return 0
 
 
@@ -828,13 +824,15 @@ def _run_followup_chains(
     return followup_metrics(run_followups(session, chains, out_dir, mode=mode))
 
 
-def _followup_lines(followup_data: dict) -> list[str]:
+def _followup_lines(followup_data: dict, lang: str = config.DEFAULT_LANG) -> list[str]:
     """Konsolun ardışık soru bloğu (R7-14): zincir başına bir satır, sonda üç doğruluğun toplamı."""
     chains: dict[str, list[bool]] = {}
     for item in followup_data["items"]:
         chains.setdefault(item["id"], []).append(item["outcome"] == "pass")
     lines = [
-        FOLLOWUP_CHAIN.format(
+        _t(
+            "cli.eval.followup_chain",
+            lang,
             id=chain_id,
             passed=sum(ok for ok in oks),
             total=len(oks),
@@ -843,10 +841,12 @@ def _followup_lines(followup_data: dict) -> list[str]:
         for chain_id, oks in chains.items()
     ]
     lines.append(
-        FOLLOWUP_TOTAL.format(
-            turn=report.metric_percent(followup_data["turn_accuracy"]),
-            chain=report.metric_percent(followup_data["chain_accuracy"]),
-            context=report.metric_percent(followup_data["context_accuracy"]),
+        _t(
+            "cli.eval.followup_total",
+            lang,
+            turn=report.metric_percent(followup_data["turn_accuracy"], lang),
+            chain=report.metric_percent(followup_data["chain_accuracy"], lang),
+            context=report.metric_percent(followup_data["context_accuracy"], lang),
         )
     )
     return lines
@@ -903,7 +903,7 @@ def compare_modes(
         return EXIT_BAD_INPUT
     lines = ds.golden() if ds else runner.load_golden()
     info = report.schema_info(schema_file, schema)
-    print(SCHEMA_LINE.format(path=info["path"], hash8=info["hash"][:8]) + "\n")
+    print(_t("cli.eval.schema", path=info["path"], hash8=info["hash"][:8]) + "\n")
     rules = ds.rules() if ds else load_rules()
     name = ds.name if ds else config.DEFAULT_DATASET
     executor = LocalExecutor(
@@ -2154,10 +2154,10 @@ def main(argv: list[str] | None = None) -> int:
         print(MODES_WITHOUT_MODELS)
         return EXIT_BAD_INPUT
     if args.mode == "auto":
-        print(EVAL_NO_AUTO)
+        print(_t("cli.eval.no_auto"))
         return EXIT_BAD_INPUT
     if args.compare and args.ambiguous:
-        print(AMBIGUOUS_COMPARE)
+        print(_t("cli.eval.ambiguous_compare"))
         return EXIT_BAD_INPUT
     # ASSUMPTION: --ambiguous/--followups setleri bir veri kümesinden okunur; --dataset söylenmemişse
     # ölçülen dünya adıyla da söylenir, yani config'in sabitleriyle aynı değerleri taşıyan sentetik ERP
@@ -2676,7 +2676,7 @@ def _schema_file(value: str | Path) -> Path:
     return Path(aliases.get(str(value), value))
 
 
-def _load_schema(path: str | Path) -> dict | None:
+def _load_schema(path: str | Path, lang: str | None = None) -> dict | None:
     """``--schema`` dosyası sözleşme varsayılanlarıyla yüklenir; okunamazsa tek cümle ve None (Delight 3).
 
     Üst düzeyi nesne olmayan ya da ``tables`` taşımayan bir dosya da (yanlış yola verilmiş bir
@@ -2685,8 +2685,7 @@ def _load_schema(path: str | Path) -> dict | None:
     try:
         return doc.load_schema(path)
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
-        # ASSUMPTION: eval ekranının dili T412'nin; cümle şimdilik tr'de kalır.
-        head = t("cli.common.bad_schema", config.DEFAULT_LANG, path=path)
+        head = _t("cli.common.bad_schema", lang, path=path)
         print(f"{head}\n{exc}")
         return None
 
