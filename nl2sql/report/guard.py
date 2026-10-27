@@ -8,9 +8,10 @@ bir okuma olduğu hâlde reddedilirdi. Yüzde yüzde olgusuna denk düşer: sonu
 ekrana çıkmaz; `STK001` ise sayı değil koddur, hiç sorulmaz.
 
 Bekçi cümlenin hangi dilde yazıldığını da bilir (R8-7): `extract_numbers(text, lang)` ve
-`check_text(..., lang)` İngilizce tarafında `1,234.56`, `1234.56`, `12.3%`, `-12.3%` okur. Öteki dilin
-biçimindeki sayı yabancıdır: değeri doğru olsa bile hiç eşleşmez ve geçmeyenlerin arasında yazar.
-Türkçe tarafının okunuşu dünle bayt bayt aynıdır.
+`check_text(..., lang)` İngilizce tarafında `1,234.56`, `1234.56`, `12.3%`, `-12.3%` ve ölçekli
+`12.5K` / `12.5 million` okur — `fmt.format_compact`'ın kendi yazdığı bitişik K/M/B da ölçektir.
+Öteki dilin biçimindeki sayı yabancıdır: değeri doğru olsa bile hiç eşleşmez ve geçmeyenlerin
+arasında yazar. Türkçe tarafının okunuşu dünle bayt bayt aynıdır: `12K` Türkçede hâlâ sayı değildir.
 """
 
 from __future__ import annotations
@@ -22,6 +23,9 @@ from decimal import Decimal
 from nl2sql import config
 
 _SCALES = {"bin": 1e3, "milyon": 1e6, "milyar": 1e9}
+# İngilizce ölçek (R8-7): `fmt.format_compact`'ın bitişik kısaltması ve ölçek sözcükleri. Türkçe
+# sözcükler de taşınır — İngilizce cümlede ikisi de okunur, Türkçe cümlede yalnız kendi sözcükleri.
+_EN_SCALES = {**_SCALES, "k": 1e3, "m": 1e6, "b": 1e9, "thousand": 1e3, "million": 1e6, "billion": 1e9}
 
 # Türkçe binlik ayıracı: ilk küme 1-3 basamak, sonraki her küme tam üç. `12.5` bu yüzden geçmez.
 _TURKISH = re.compile(r"\d+|\d{1,3}(?:\.\d{3})+")
@@ -30,12 +34,12 @@ _TURKISH = re.compile(r"\d+|\d{1,3}(?:\.\d{3})+")
 # (virgülden sonra tam üç basamak değil) bu yüzden İngilizcede okunmaz.
 _ENGLISH = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?")
 
-# Aday sayı: işaret ve Türkçe yüzde imleci sayının önünde, İngilizce imleç ve ölçek sözcüğü ardından.
-# `(?<!\w)` harfe yapışık sayıyı (STK001, Q3) baştan eler; ölçek sözcüğü tutmazsa sayı yine de tek
-# başına alınır.
+# Aday sayı: işaret ve Türkçe yüzde imleci sayının önünde, İngilizce imleç, bitişik ölçek harfi ve
+# ölçek sözcüğü ardından. `(?<!\w)` harfe yapışık sayıyı (STK001, Q3) baştan eler; ölçek tutmazsa
+# sayı yine de tek başına alınır. Ölçek harfi İngilizcede okunur (`12.5K`), Türkçede yoksayılır.
 _CANDIDATE = re.compile(
-    r"(?<!\w)(?P<sign>-)?(?P<percent>%)?(?P<core>\d[\d.,]*)(?P<tail>%)?"
-    r"(?:[ \t]*(?P<scale>bin|milyon|milyar))?",
+    r"(?<!\w)(?P<sign>-)?(?P<percent>%)?(?P<core>\d[\d.,]*)(?P<tail>%)?(?P<compact>[KMB])?"
+    r"(?:[ \t]*(?P<scale>bin|milyon|milyar|thousand|million|billion))?",
     re.IGNORECASE,
 )
 
@@ -103,25 +107,36 @@ def check_text(text: str, allowed: dict, lang: str = "tr") -> GuardResult:
 
 def _token(text: str, match, lang: str) -> NumberToken | None:
     """Adayın okunuşu; cümle noktası sayıya dahil değildir, harfe yapışık dize hiç sayı değildir."""
+    scales = _EN_SCALES if lang == "en" else _SCALES
     core = match.group("core").rstrip(".,")
-    following = text[match.start("core") + len(core) :][:1]
+    # ASSUMPTION: bitişik ölçek harfi yalnız İngilizcede ve rakama yapışık okunur; ardına bir harf
+    # daha gelirse ("10kg") yapışık dize sayı değildir. Türkçe taraf harfi hiç görmez.
+    compact = match.group("compact") if lang == "en" else None
+    scale_text = match.group("scale")
+    if scale_text and scale_text.lower() not in scales:
+        scale_text = None
+    following = text[match.start("core") + len(core) + (1 if compact else 0) :][:1]
     if not core or following.isalpha():
         return None
     sign = match.group("sign")
     # ASSUMPTION: yüzde imleci dilin kendi tarafındadır (tr "%12,3", en "12.3%"); Türkçede sonda
     # duran imleç bugünkü gibi sayının parçası değildir. Ölçek sözcüğü iki dilde de aynı okunur.
     percent = match.group("percent") is not None or (lang == "en" and match.group("tail") is not None)
-    scale_text = match.group("scale")
     raw = f"{sign or ''}{'%' if match.group('percent') else ''}{core}"
     if lang == "en" and match.group("tail"):
         raw += "%"
+    if compact:
+        raw += compact
     if scale_text:
         raw += f" {scale_text}"
     parsed = _parse(core, lang)
     if parsed is None:
         return NumberToken(raw, percent=percent, format_error=True)
     value, decimals = parsed
-    scale = _SCALES[scale_text.lower()] if scale_text else 1.0
+    if compact:
+        scale = scales[compact.lower()]
+    else:
+        scale = scales[scale_text.lower()] if scale_text else 1.0
     return NumberToken(raw, (-value if sign else value) * scale, decimals, scale, percent)
 
 
