@@ -82,6 +82,15 @@ describe("giriş kartının etiketi", () => {
     expect(html.indexOf("login-tagline")).toBeLessThan(html.indexOf("login-username"));
   });
 
+  it("kartın tepesinde ürünün kendi işareti var: bir kez, boş alt ile adın üstünde", () => {
+    const html = render(<LoginScreen onLogin={noop} />);
+    const marks = html.match(/<img\b[^>]*>/g) ?? [];
+    expect(marks).toHaveLength(1);
+    expect(marks[0]).toContain('src="/assets/bilgin.svg"');
+    expect(marks[0]).toContain('alt=""');
+    expect(html.indexOf("<img")).toBeLessThan(html.indexOf('class="login-title"'));
+  });
+
   it("etiket sabittir: not gelse de değişmez, veri seti ya da adres adı taşımaz", () => {
     expect(tagline(render(<LoginScreen note={EXPIRED} onLogin={noop} />))).toBe(TAGLINE);
     expect(tagline(render(<LoginScreen onLogin={noop} />))).not.toMatch(/http|«|\.db|veri seti/i);

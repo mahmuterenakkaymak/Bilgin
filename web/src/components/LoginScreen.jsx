@@ -25,6 +25,8 @@ export default function LoginScreen({ note = "", onLogin }) {
   return (
     <div className="gate">
       <form id="login-form" className="login-card" onSubmit={submit}>
+        {/* alt boş: işaret adın resmi, hemen altında "Bilgin" zaten okunuyor — iki kez söylenmez. */}
+        <img className="login-mark" src="/assets/bilgin.svg" alt="" width="44" height="44" />
         <h1 className="login-title">Bilgin</h1>
         <p className="login-lead">Sormaya devam etmek için oturum açın.</p>
         {/* Kartın ne açtığını ilk kez gelen de bilsin: sabit bir cümle, adresi yok, veri seti

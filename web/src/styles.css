@@ -2992,6 +2992,13 @@ a.db-label:hover {
   background: var(--surface);
 }
 
+/* İşaret ile kelime tek blok okunur: ızgaranın payı ikisini ayırırdı, yarım pay geri çeker —
+   .login-tagline'ın lead'e bitişme biçimi. */
+.login-mark {
+  justify-self: center;
+  margin-bottom: calc(var(--space) * -0.5);
+}
+
 .login-title {
   margin: 0;
   text-align: center;
