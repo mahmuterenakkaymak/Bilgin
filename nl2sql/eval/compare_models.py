@@ -18,6 +18,7 @@ from nl2sql import config
 from nl2sql.eval.compare_modes import _num, _stats
 from nl2sql.eval.report import STAMP
 from nl2sql.eval.runner import QuestionResult, _tokens
+from nl2sql.i18n import t
 
 PASS = "pass"
 
@@ -27,12 +28,16 @@ def build_model_compare(
     profiles: dict | None = None,
     dataset=None,
     skipped: dict | None = None,
+    lang: str = config.DEFAULT_LANG,
 ) -> dict:
     """``{model: {mod: [tekrar başına QuestionResult listesi]}}`` -> Contracts'ın compare raporu.
 
     ``profiles`` model adını o koşunun ölçüldüğü ``ModelProfile``a bağlar; olmadığı modelin
     hanesi sıfırla yazar, yoksa okuyan boş bir bütçeyi gerçek bir sınır sanır. ``dataset`` ya
     bir ``Dataset``tır ya da adının kendisi. ``skipped`` hiç koşmayan modellerin sebebidir.
+
+    ``lang`` (R8-12) markdown ve konsolun dilidir; rapor hangi dille yazıldığını ``lang`` alanıyla
+    kendisi söyler. Türkçe varsayılanın dışına ancak ``en`` istendiğinde çıkılır.
     """
     known = profiles or {}
     modes = _modes(cells)
@@ -40,6 +45,7 @@ def build_model_compare(
     return {
         "timestamp": datetime.now().isoformat(sep=" ", timespec="seconds"),
         "dataset": _dataset_name(dataset),
+        **({"lang": lang} if lang != config.DEFAULT_LANG else {}),
         "questions": len(_ids(cells)),
         "repeat": max(repeats, default=1),
         "models": list(cells),
@@ -58,36 +64,45 @@ def build_model_compare(
 
 def render_model_compare(report: dict) -> str:
     """Raporun okunur hali: model x mod tablosu, etiket tablosu, atlananların listesi."""
+    lang = report.get("lang", config.DEFAULT_LANG)
     lines = [
-        f"# Model karşılaştırması — {report['dataset'] or 'veri kümesi verilmemiş koşum'}",
+        t(
+            "compare.models.title",
+            lang,
+            dataset=report["dataset"] or t("compare.models.unnamed", lang),
+        ),
         "",
-        f"- Koşum: {report['timestamp']}",
-        f"- Veri kümesi: {report['dataset'] or '-'}",
-        f"- Soru: {report['questions']}",
-        f"- Tekrar: {report['repeat']}",
-        f"- Modlar: {', '.join(report['modes']) or '-'}",
+        t("compare.models.stamp", lang, timestamp=report["timestamp"]),
+        t("compare.models.dataset", lang, dataset=report["dataset"] or "-"),
+        t("compare.models.questions", lang, questions=report["questions"]),
+        t("compare.models.repeat", lang, repeat=report["repeat"]),
+        t("compare.models.modes", lang, modes=", ".join(report["modes"]) or "-"),
         "",
-        "## Model x mod",
+        t("compare.models.cells_head", lang),
         "",
-        "| Model | Mod | Skor (ort./soru) | Cevap | Tepe (tahmin/bütçe) | Taşma | sn/soru "
-        "| Sunucu tepe | Kırpma |",
+        f"| {t('compare.models.col_model', lang)} | {t('compare.models.col_mode', lang)} "
+        f"| {t('compare.models.col_score', lang)} | {t('compare.models.col_answered', lang)} "
+        f"| {t('compare.models.col_peak', lang)} | {t('compare.models.col_overflow', lang)} "
+        f"| {t('compare.models.col_seconds', lang)} | {t('compare.models.col_server_peak', lang)} "
+        f"| {t('compare.models.col_trimmed', lang)} |",
         "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for model, mode, cell in _cells(report):
         # Satırın gövdesi R4-14'ün hali; json'daki iki bağlam sayısı son iki sütunda durur.
         lines.append(
-            f"| {_cell_line(model, mode, cell, report['questions'])}"
+            f"| {_cell_line(model, mode, cell, report['questions'], lang)}"
             f" | {_tokens(cell['peak_reported'])} | {cell['trimmed']} |"
         )
-    lines += _tag_lines(report)
-    lines += _skipped_lines(report)
+    lines += _tag_lines(report, lang)
+    lines += _skipped_lines(report, lang)
     return "\n".join(lines) + "\n"
 
 
 def console_lines(report: dict) -> list[str]:
     """Ekranın kendisi (R4-14): hücre başına bir satır, sonra hiç koşmayanların sebebi."""
+    lang = report.get("lang", config.DEFAULT_LANG)
     lines = [
-        _cell_line(model, mode, cell, report["questions"])
+        _cell_line(model, mode, cell, report["questions"], lang)
         for model, mode, cell in _cells(report)
     ]
     lines += [f"⚠ {model}: {reason}" for model, reason in (report.get("skipped") or {}).items()]
@@ -167,14 +182,24 @@ def _passed(run) -> int:
     return sum(1 for result in run if result.outcome == PASS)
 
 
-def _cell_line(model: str, mode: str, cell: dict, total: int) -> str:
+def _cell_line(
+    model: str, mode: str, cell: dict, total: int, lang: str = config.DEFAULT_LANG
+) -> str:
     """R4-14'ün tek satırı: skor, cevap yüzdesi, tepe tahmin/bütçe, taşma, soru başına süre."""
     scores = cell["scores"]
-    return (
-        f"{model} | {mode} | {_num(scores['mean'])}/{total} (ort.) "
-        f"| cevap %{cell['answered_pct']} "
-        f"| tepe {_tokens(cell['peak_estimate'])}/{_tokens(cell['profile']['prompt_limit'])} "
-        f"| taşma {cell['overflows']} | {cell['seconds_per_question']:.1f} sn/soru"
+    return t(
+        "compare.models.cell",
+        lang,
+        model=model,
+        mode=mode,
+        score=_num(scores["mean"]),
+        total=total,
+        ort=t("compare.models.ort", lang),
+        answered=cell["answered_pct"],
+        peak_est=_tokens(cell["peak_estimate"]),
+        peak_limit=_tokens(cell["profile"]["prompt_limit"]),
+        overflows=cell["overflows"],
+        seconds=f"{cell['seconds_per_question']:.1f}",
     )
 
 
@@ -187,16 +212,18 @@ def _cells(report: dict):
                 yield model, mode, cell
 
 
-def _tag_lines(report: dict) -> list[str]:
+def _tag_lines(report: dict, lang: str = config.DEFAULT_LANG) -> list[str]:
     columns = [(model, mode) for model, mode, _ in _cells(report)]
     tags = sorted({tag for _, _, cell in _cells(report) for tag in cell["tags"]})
     if not tags:
         return []
     lines = [
         "",
-        "## Etiket skorları",
+        t("compare.models.tags_head", lang),
         "",
-        "| Etiket | " + " | ".join(f"{model}/{mode}" for model, mode in columns) + " |",
+        f"| {t('compare.models.col_tag', lang)} | "
+        + " | ".join(f"{model}/{mode}" for model, mode in columns)
+        + " |",
         "| --- | " + " | ".join("---:" for _ in columns) + " |",
     ]
     for tag in tags:
@@ -207,13 +234,13 @@ def _tag_lines(report: dict) -> list[str]:
     return lines
 
 
-def _skipped_lines(report: dict) -> list[str]:
+def _skipped_lines(report: dict, lang: str = config.DEFAULT_LANG) -> list[str]:
     skipped = report.get("skipped") or {}
     if not skipped:
         return []
     return [
         "",
-        "## Atlanan modeller",
+        t("compare.models.skipped_head", lang),
         "",
         *(f"- `{model}`: {reason}" for model, reason in skipped.items()),
     ]

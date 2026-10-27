@@ -17,22 +17,26 @@ from pathlib import Path
 from nl2sql import config
 from nl2sql.eval.report import REPORT_FILES, STAMP, _mark
 from nl2sql.eval.runner import _tokens
+from nl2sql.i18n import t
 
 COMPARE_OUT = config.EVAL_OUT / "compare"
-REUSED_NOTE = "(önceki koşu)"
-NO_FLIPS = "Hiçbir sorunun sonucu modlar arasında değişmedi."
+# R8-12: satırlar kataloğun ``compare.*`` anahtarlarıdır; üç sabit yine adlarıyla durur - testler
+# ve CLI onları buradan okur, değerleri tr'nindir.
+REUSED_NOTE = t("compare.reused_note", config.DEFAULT_LANG)
+NO_FLIPS = t("compare.no_flips", config.DEFAULT_LANG)
 # R3-11: iki modun ortalaması kendi dalgalanmasından az farklıysa ölçülen fark kendi gürültüsünden
 # küçük demektir; satır bunu adıyla söyler, çünkü "kaldı" da "yok" da o durumda uydurma olur.
-NOISE = "fark gürültü içinde"
+NOISE = t("compare.noise", config.DEFAULT_LANG)
 
 
-def verdict(mode_reports: dict) -> dict:
+def verdict(mode_reports: dict, lang: str = config.DEFAULT_LANG) -> dict:
     """R2-13: RAG kalır iff rag en az full_rules kadar geçiyor **ve** tepe bağlamı ondan düşük.
 
     İki koşuldan hangisi düşüyorsa satır onu iki sayısıyla birlikte söyler; okuyan kararın nedenini
     tabloyu yeniden kurmadan anlasın. Koşulların sırası sabit: skor, sonra bağlam. R3-11: mod
     listesiyle çağrılırsa karar tekrarların ortalamasıyla kurulur ve fark herhangi bir modun
-    yayılımından küçükse satır gürültüyü adıyla anar.
+    yayılımından küçükse satır gürültüyü adıyla anar. ``lang`` (R8-12) satırın dilidir; kararın
+    kendisi ``keep_rag``dir, iki dilde de aynı.
     """
     rules, rag = _runs(mode_reports.get("full_rules")), _runs(mode_reports.get("rag"))
     rag_mean, rule_mean = _mean(_passed(rag)), _mean(_passed(rules))
@@ -40,22 +44,32 @@ def verdict(mode_reports: dict) -> dict:
     rag_peak, rule_peak = _peaks(rag), _peaks(rules)
     noisy = abs(rag_mean - rule_mean) < max(_spread(rag), _spread(rules))
     if rag_mean < rule_mean:
-        keep, text = False, (
-            f"Karar: RAG yok — rag {_score_text(rag_mean, rag_total)} "
-            f"< full_rules {_score_text(rule_mean, rule_total)}"
+        keep, text = False, t(
+            "compare.verdict.no_score",
+            lang,
+            rag=_score_text(rag_mean, rag_total),
+            rules=_score_text(rule_mean, rule_total),
         )
     elif rag_peak >= rule_peak:
         sign = "≥" if rag_peak == rule_peak else ">"
-        keep, text = False, (
-            f"Karar: RAG yok — tepe bağlam {_tokens(rag_peak)} {sign} {_tokens(rule_peak)} token"
+        keep, text = False, t(
+            "compare.verdict.no_peak",
+            lang,
+            rag_peak=_tokens(rag_peak),
+            sign=sign,
+            rule_peak=_tokens(rule_peak),
         )
     else:
-        keep, text = True, (
-            f"Karar: RAG kalır — rag {_score_text(rag_mean, rag_total)} "
-            f"≥ full_rules {_score_text(rule_mean, rule_total)} "
-            f"ve tepe bağlam {_tokens(rag_peak)} < {_tokens(rule_peak)} token"
+        keep, text = True, t(
+            "compare.verdict.keep",
+            lang,
+            rag=_score_text(rag_mean, rag_total),
+            rules=_score_text(rule_mean, rule_total),
+            rag_peak=_tokens(rag_peak),
+            rule_peak=_tokens(rule_peak),
         )
-    return {"keep_rag": keep, "line": f"{text}{'; ' + NOISE if noisy else ''}."}
+    noise = "; " + t("compare.noise", lang) if noisy else ""
+    return {"keep_rag": keep, "line": f"{text}{noise}."}
 
 
 def flips(mode_reports: dict) -> list[dict]:
@@ -101,7 +115,10 @@ def flips_within_mode(mode_reports: dict) -> int:
 
 
 def build_compare(
-    mode_reports: dict, schema_tokens: int, reused: Iterable[str] | None = None
+    mode_reports: dict,
+    schema_tokens: int,
+    reused: Iterable[str] | None = None,
+    lang: str = config.DEFAULT_LANG,
 ) -> dict:
     """Mod raporlarından karşılaştırma raporu: Contracts'ın compare report.json biçimi.
 
@@ -112,6 +129,10 @@ def build_compare(
     ``scores`` ile etiket başına yayılım ve ``flips_within_mode`` eklenir. Tek ölçümde bu alanlar
     hiç yazılmaz — Contracts'ın ``"repeat":int=1`` satırı yokluğu 1 der, Run 2 raporu da böylece
     değişmeden kalır.
+
+    ``lang`` (R8-12) karar satırının ve report.md'nin dilidir; diskteki rapor hangi dille
+    yazıldığını ``lang`` alanıyla kendisi söyler. Türkçe varsayılanın dışına ancak ``en`` istendiğinde
+    çıkılır, yani Run 2 raporu anahtar kümesini korur.
     """
     modes = _modes(mode_reports)
     taken = set(reused or ())
@@ -121,11 +142,12 @@ def build_compare(
         "model": _model(mode_reports),
         "questions": len(_ids(mode_reports)),
         "schema_tokens": int(schema_tokens or 0),
+        **({"lang": lang} if lang != config.DEFAULT_LANG else {}),
         "modes": {
             mode: _summary(mode, mode_reports[mode], mode in taken) for mode in modes
         },
         "flips": flips(mode_reports),
-        "verdict": verdict(mode_reports),
+        "verdict": verdict(mode_reports, lang),
     }
     if repeat > 1:
         comparison["repeat"] = repeat
@@ -339,57 +361,68 @@ def score_cell(summary: dict) -> str:
 
 
 def _markdown(report: dict) -> str:
+    lang = report.get("lang", config.DEFAULT_LANG)
     modes = list(report["modes"])
     repeat = report.get("repeat", 1)
+    score_column = (
+        t("compare.md.col_score_spread", lang) if repeat > 1 else t("compare.md.col_score", lang)
+    )
     lines = [
-        f"# Mod karşılaştırması — {report['model'] or 'model adı verilmemiş koşum'}",
+        t("compare.md.title", lang, model=report["model"] or t("compare.md.unnamed", lang)),
         "",
-        f"- Koşum: {report['timestamp']}",
-        f"- Model: `{report['model'] or '-'}`",
-        f"- Soru: {report['questions']}",
+        t("compare.md.stamp", lang, timestamp=report["timestamp"]),
+        t("compare.md.model", lang, model=report["model"] or "-"),
+        t("compare.md.questions", lang, questions=report["questions"]),
         *(
             [
-                f"- Tekrar: {repeat} (her mod {repeat} kez koşuldu)",
-                f"- Mod içi dönüş: {report.get('flips_within_mode', 0)} soru",
+                t("compare.md.repeat", lang, repeat=repeat),
+                t("compare.md.flips_within", lang, count=report.get("flips_within_mode", 0)),
             ]
             if repeat > 1
             else []
         ),
-        f"- Şema tahmini: {_tokens(report['schema_tokens'])} token",
+        t("compare.md.schema_tokens", lang, tokens=_tokens(report["schema_tokens"])),
         "",
-        "## Modlar",
+        t("compare.md.modes_head", lang),
         "",
-        "| Mod | "
-        + ("Skor (ort/min/max)" if repeat > 1 else "Skor")
-        + " | Bağlam (tepe/medyan) | Araç (ort/max) | Süre (ort/toplam) | Not |",
+        f"| {t('compare.md.col_mode', lang)} | {score_column} "
+        f"| {t('compare.md.col_context', lang)} | {t('compare.md.col_tools', lang)} "
+        f"| {t('compare.md.col_seconds', lang)} | {t('compare.md.col_note', lang)} |",
         "| --- | ---: | ---: | ---: | ---: | --- |",
     ]
     for mode in modes:
         summary = report["modes"][mode]
         context = summary["context"]
         calls, seconds = summary["tool_calls"], summary["seconds"]
+        note = t("compare.reused_note", lang) if summary["reused"] else "-"
+        elapsed = t(
+            "compare.md.seconds_cell",
+            lang,
+            mean=f"{seconds['mean']:.1f}",
+            total=f"{seconds['total']:.1f}",
+        )
         lines.append(
             f"| {mode} | {score_cell(summary)} "
             f"| {_tokens(context['max_prompt_tokens'])} / {_tokens(context['median_prompt_tokens'])} "
             f"| {calls['mean']:.1f} / {calls['max']} "
-            f"| {seconds['mean']:.1f} / {seconds['total']:.1f} sn "
-            f"| {REUSED_NOTE if summary['reused'] else '-'} |"
+            f"| {elapsed} "
+            f"| {note} |"
         )
     lines += ["", f"**{report['verdict']['line']}**"]
-    lines += _tag_lines(report, modes)
-    lines += _flip_lines(report, modes)
+    lines += _tag_lines(report, modes, lang)
+    lines += _flip_lines(report, modes, lang)
     return "\n".join(lines) + "\n"
 
 
-def _tag_lines(report: dict, modes: list[str]) -> list[str]:
+def _tag_lines(report: dict, modes: list[str], lang: str) -> list[str]:
     tags = sorted({tag for summary in report["modes"].values() for tag in summary["tags"]})
     if not tags:
         return []
     lines = [
         "",
-        "## Etiket skorları",
+        t("compare.md.tags_head", lang),
         "",
-        "| Etiket | " + " | ".join(modes) + " |",
+        f"| {t('compare.md.col_tag', lang)} | " + " | ".join(modes) + " |",
         "| --- | " + " | ".join("---:" for _ in modes) + " |",
     ]
     for tag in tags:
@@ -406,12 +439,12 @@ def _tag_lines(report: dict, modes: list[str]) -> list[str]:
     return lines
 
 
-def _flip_lines(report: dict, modes: list[str]) -> list[str]:
-    lines = ["", "## Dönen sorular", ""]
+def _flip_lines(report: dict, modes: list[str], lang: str) -> list[str]:
+    lines = ["", t("compare.md.flips_head", lang), ""]
     if not report["flips"]:
-        return lines + [NO_FLIPS]
+        return lines + [t("compare.no_flips", lang)]
     lines += [
-        "| Soru | " + " | ".join(modes) + " |",
+        f"| {t('compare.md.col_question', lang)} | " + " | ".join(modes) + " |",
         "| --- | " + " | ".join("---" for _ in modes) + " |",
     ]
     for flip in report["flips"]:

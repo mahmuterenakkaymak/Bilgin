@@ -12,7 +12,9 @@ from collections import Counter
 from dataclasses import dataclass, field
 from decimal import Decimal
 
+from nl2sql import config
 from nl2sql.engine.result import Result
+from nl2sql.i18n import t
 
 DECIMALS = 2
 
@@ -27,13 +29,24 @@ class CompareResult:
     extra_columns: list[str] = field(default_factory=list)  # predicted columns no golden column needed
 
 
-def compare(golden: Result, pred: Result, ordered: bool = False) -> CompareResult:
-    """Compare two result sets; every golden row must appear as a predicted row, in order when ``ordered``."""
+def compare(
+    golden: Result, pred: Result, ordered: bool = False, lang: str = config.DEFAULT_LANG
+) -> CompareResult:
+    """Compare two result sets; every golden row must appear as a predicted row, in order when ``ordered``.
+
+    ``lang`` (R8-12) is the language of the reasons a mismatch carries; the outcome itself is a bool.
+    """
     golden_rows = _grid(golden)
     pred_rows = _grid(pred)
     if len(golden_rows) != len(pred_rows):
         return CompareResult(
-            False, f"Satır sayısı farklı: beklenen {len(golden_rows)}, gelen {len(pred_rows)}."
+            False,
+            t(
+                "eval.compare.row_count",
+                lang,
+                expected=len(golden_rows),
+                got=len(pred_rows),
+            ),
         )
 
     # ASSUMPTION: `ordered` decides row order only; columns are always paired by values, never by name.
@@ -54,16 +67,21 @@ def compare(golden: Result, pred: Result, ordered: bool = False) -> CompareResul
     elif len(pred.columns) != len(golden.columns):
         missing = [golden.columns[g] for g in range(len(wanted)) if g not in column_map]
         return CompareResult(
-            False, f"Bu kolonların değerini taşıyan kolon yok: {', '.join(missing)}.", column_map, extras
+            False,
+            t("eval.compare.missing_columns", lang, columns=", ".join(missing)),
+            column_map,
+            extras,
         )
 
     same_rows = Counter(golden_rows) == Counter(pred_rows)
     if same_rows and (not ordered or golden_rows == pred_rows):
         return CompareResult(True, "", column_map, extras)
     if same_rows:
-        return CompareResult(False, "Satırlar aynı; yalnızca sırası farklı.", column_map, extras)
+        return CompareResult(False, t("eval.compare.order_only", lang), column_map, extras)
     absent = sum((Counter(golden_rows) - Counter(pred_rows)).values())
-    return CompareResult(False, f"Satırlar farklı: {absent} satır karşı tarafta yok.", column_map, extras)
+    return CompareResult(
+        False, t("eval.compare.rows_differ", lang, absent=absent), column_map, extras
+    )
 
 
 def _value(cell):

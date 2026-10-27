@@ -55,7 +55,6 @@ from nl2sql.engine.result import Budget, Result
 from nl2sql.eval import metrics, report, retrieval, runner
 from nl2sql.eval import compare_models
 from nl2sql.eval.compare_modes import (
-    REUSED_NOTE,
     build_compare,
     reusable,
     score_cell,
@@ -126,11 +125,6 @@ DETAIL_HEAD = re.compile(rf"^{TABLE_NAME} — ", re.MULTILINE)  # detay bloğunu
 JOIN_LINE = re.compile(r"\S+ = ")  # bir join satırı: A.X = B.Y (fk 1.0)
 WARNING_MARK = "⚠"
 VALUE_COUNT = re.compile(r"Değerler \((\d+)\)")
-RUNNING = "{mode} koşuluyor ..."
-# R3-11: tekrarlı koşuda hangi denemede olduğu satırdan okunur; gürültü ölçümü uzun bir iş ve
-# ekranın "kaçıncı koşu"yu söylememesi uzun bir bekleyişi sessizliğe çevirirdi.
-RUNNING_REPEAT = "{mode} koşuluyor {attempt}/{repeat} ..."
-REPEAT_LINE = "Tekrar: her mod {repeat} kez koşuluyor (gürültü ölçümü)"
 BAD_REPEAT = "--repeat en az 1 olmalı."
 # R8-10: ekranın satırları kataloğa taşındı; iki sabit yine de adlarıyla durur - app/session ve
 # testler onları buradan okur, yani değerleri program dilinin cümlesidir.
@@ -328,6 +322,7 @@ def eval_retrieval(
     profile_path: str | Path | None = None,
     dataset: str | None = None,
     summaries: bool = False,
+    lang: str | None = None,
 ) -> int:
     """Aramanın geri çağırmasını altın sorular üzerinde ölçer ve raporu yazar (R2-14).
 
@@ -344,10 +339,11 @@ def eval_retrieval(
     dördüncü varyant olarak ölçülür; kapalıyken koşum bugünkü üç varyantın halidir.
     """
     _utf8_stdout()
+    lang = lang or _LANG
     ds, code = _dataset(dataset)
     if code:
         return code
-    _dataset_line(ds)
+    _dataset_line(ds, lang)
     schema_path = _or(schema_path, ds.schema_path if ds else None, config.SCHEMA_PATH)
     rules_path = _or(rules_path, ds.rules_path if ds else None, config.RULES_PATH)
     golden_path = _or(golden_path, ds.golden_path if ds else None, config.GOLDEN_PATH)
@@ -360,16 +356,16 @@ def eval_retrieval(
     try:
         search = build_search(schema, rules, make_embedder(embed), graph if summaries else None)
     except EmbedError as exc:
-        return _embed_failed(str(exc))
+        return _embed_failed(str(exc), lang)
     result = retrieval.run_variants(
-        search, runner.load_golden(golden_path), k, graph, schema, summaries
+        search, runner.load_golden(golden_path), k, graph, schema, summaries, lang=lang
     )
     print()
-    for line in retrieval.console_lines(result):
+    for line in retrieval.console_lines(result, lang):
         print(line)
-    print(f"\nSüre: {time.perf_counter() - started:.1f} sn")
-    run_dir = retrieval.write_retrieval(result, out_dir)
-    print(f"Rapor: {run_dir / 'report.md'}")
+    print("\n" + _t("cli.eval_retrieval.duration", lang, seconds=f"{time.perf_counter() - started:.1f}"))
+    run_dir = retrieval.write_retrieval(result, out_dir, lang)
+    print(_t("cli.eval.report", lang, path=run_dir / "report.md"))
     return 0
 
 
@@ -700,7 +696,8 @@ def evaluate(
         print(_t("cli.eval.no_ambiguous", lang))
         return EXIT_BAD_INPUT
     # Ardışık setin yokluğu da veritabanından önce sorulur: eksik olan ölçümün tanımıdır (R7-14).
-    chains = ds.followups() if followups and ds else []
+    # Zincirler dilin kendi setidir (R8-12): küme İngilizce zincirleri taşımıyorsa Türkçe halidir.
+    chains = ds.followups(lang) if followups and ds else []
     if followups and not chains:
         print(_t("cli.eval.no_followups", lang))
         return EXIT_BAD_INPUT
@@ -764,7 +761,7 @@ def evaluate(
     if followups:
         followup_data = _run_followup_chains(
             ds, schema, rules, executor, profile, budget, index_dir, db_path, audit_path,
-            out_dir, llm, kind, chains, mode,
+            out_dir, llm, kind, chains, mode, lang,
         )
     run_dir = report.write_report(
         results,
@@ -803,7 +800,7 @@ def evaluate(
 
 def _run_followup_chains(
     ds, schema, rules, executor, profile, budget, index_dir, db_path, audit_path, out_dir,
-    llm, kind, chains, mode,
+    llm, kind, chains, mode, lang,
 ) -> dict:
     """Ardışık zincirleri altın koşumla aynı yürütücü ve istemci üzerinden ``ask_payload``dan geçirir.
 
@@ -821,7 +818,7 @@ def _run_followup_chains(
         ask_log=Path(out_dir) / "followups" / "asks.jsonl",
         client_factory=lambda _mode: llm,
     )
-    return followup_metrics(run_followups(session, chains, out_dir, mode=mode))
+    return followup_metrics(run_followups(session, chains, out_dir, mode=mode, lang=lang))
 
 
 def _followup_lines(followup_data: dict, lang: str = config.DEFAULT_LANG) -> list[str]:
@@ -863,6 +860,7 @@ def compare_modes(
     repeat: int = 1,
     dataset: str | None = None,
     profile: ModelProfile | None = None,
+    lang: str | None = None,
 ) -> int:
     """Üç modu aynı sorularda koşar, tek karşılaştırma raporu yazar, mod başına tek satır söyler.
 
@@ -887,23 +885,24 @@ def compare_modes(
     koşar, yani bir kolun ``latest``i ancak aynı bütçeyle ölçüldüyse yeniden kullanılır.
     """
     _utf8_stdout()
+    lang = lang or _LANG
     ds, code = _dataset(dataset)
     if code:
         return code
-    _dataset_line(ds)
+    _dataset_line(ds, lang)
     budget = profile.prompt_limit if profile else None
     db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
     index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
     out_dir = _or(out_dir, ds.eval_out if ds else None, config.EVAL_OUT)
     if _db_missing(db_path):
-        return _no_db(db_path, ds.name if ds else None)
+        return _no_db(db_path, ds.name if ds else None, lang)
     schema_file = _schema_file(_or(schema_path, ds.schema_path if ds else None, FULL_SCHEMA))
-    schema = _load_schema(schema_file)
+    schema = _load_schema(schema_file, lang)
     if schema is None:
         return EXIT_BAD_INPUT
-    lines = ds.golden() if ds else runner.load_golden()
+    lines = ds.golden(lang) if ds else runner.load_golden()
     info = report.schema_info(schema_file, schema)
-    print(_t("cli.eval.schema", path=info["path"], hash8=info["hash"][:8]) + "\n")
+    print(_t("cli.eval.schema", lang, path=info["path"], hash8=info["hash"][:8]) + "\n")
     rules = ds.rules() if ds else load_rules()
     name = ds.name if ds else config.DEFAULT_DATASET
     executor = LocalExecutor(
@@ -933,7 +932,7 @@ def compare_modes(
         except (MissingIndexError, StaleIndexError) as exc:
             return _index_failed(str(exc))
     if repeat > 1:
-        print(REPEAT_LINE.format(repeat=repeat) + "\n")
+        print(_t("cli.compare.repeat_line", lang, repeat=repeat) + "\n")
 
     reports = {mode: stored[mode] for mode in reused}
     for mode in config.MODES:
@@ -943,9 +942,9 @@ def compare_modes(
         runs = []
         for attempt in range(1, repeat + 1):
             print(
-                RUNNING_REPEAT.format(mode=mode, attempt=attempt, repeat=repeat)
+                _t("cli.compare.running_repeat", lang, mode=mode, attempt=attempt, repeat=repeat)
                 if repeat > 1
-                else RUNNING.format(mode=mode)
+                else _t("cli.compare.running", lang, mode=mode)
             )
             results = runner.run_eval(
                 lambda: clients[mode],
@@ -955,10 +954,11 @@ def compare_modes(
                 mode=mode,
                 context=context,
                 budget=budget,
+                lang=lang,
             )
             if results and all(result.outcome == "llm_error" for result in results):
-                print(f"Uç nokta {len(results)} sorunun hiçbirini yanıtlamadı; rapor yazılmadı.\n")
-                return _llm_failed(results[0].reason)
+                print(_t("cli.eval.no_endpoint", lang, n=len(results)) + "\n")
+                return _llm_failed(results[0].reason, lang)
             report.write_report(
                 results,
                 Path(out_dir) / mode,
@@ -973,17 +973,18 @@ def compare_modes(
                 schema_info=info,
                 dataset=name,
                 profile=_profile_block(profile),
+                lang=lang,
             )
             runs.append(_mode_report(out_dir, mode))
         reports[mode] = runs
 
-    comparison = build_compare(reports, doc.estimate_tokens(doc.full_text(schema)), reused)
+    comparison = build_compare(reports, doc.estimate_tokens(doc.full_text(schema)), reused, lang)
     run_dir = write_compare(comparison, Path(out_dir) / "compare")
     print()
     for mode in config.MODES:
-        print(_compare_line(mode, comparison["modes"][mode]))
+        print(_compare_line(mode, comparison["modes"][mode], lang))
     print(f"\n{comparison['verdict']['line']}")
-    print(f"Rapor: {run_dir / 'report.md'}")
+    print(_t("cli.eval.report", lang, path=run_dir / "report.md"))
     return 0
 
 
@@ -998,6 +999,7 @@ def compare_models_cmd(
     audit_path: str = config.AUDIT_LOG,
     out_dir: str | Path | None = None,
     index_dir: str | Path | None = None,
+    lang: str | None = None,
     ping=llm.ping,
 ) -> int:
     """Model x mod hücrelerini aynı sorularda koşar, tek model-karşılaştırma raporu yazar (R4-13).
@@ -1015,19 +1017,20 @@ def compare_models_cmd(
     küçükse hiçbir uç nokta yoklanmadan, hiçbir hücre koşmadan ve hiçbir dosya yazmadan kod 2 döner.
     """
     _utf8_stdout()
+    lang = lang or _LANG
     if repeat < 1:
         print(BAD_REPEAT)
         return EXIT_BAD_INPUT
     ds, code = _dataset(dataset)
     if code:
         return code
-    _dataset_line(ds)
+    _dataset_line(ds, lang)
     modes = list(modes) if modes else list(config.COMPARE_MODEL_MODES)
     db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
     index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
     out_dir = _or(out_dir, ds.eval_out if ds else None, config.EVAL_OUT)
     if _db_missing(db_path):
-        return _no_db(db_path, ds.name if ds else None)
+        return _no_db(db_path, ds.name if ds else None, lang)
     try:
         profiles = load_profiles(models_file or config.MODELS_PATH)
     except ProfileError as exc:
@@ -1042,7 +1045,7 @@ def compare_models_cmd(
         return EXIT_BAD_INPUT
     schema = ds.schema() if ds else doc.load_schema()
     rules = ds.rules() if ds else load_rules()
-    lines = ds.golden() if ds else runner.load_golden()
+    lines = ds.golden(lang) if ds else runner.load_golden()
     executor = LocalExecutor(
         db_path=db_path, allowlist=doc.allowlist(schema), audit_path=audit_path, pii_schema=schema
     )
@@ -1082,6 +1085,7 @@ def compare_models_cmd(
                     mode=mode,
                     context=context,
                     budget=budget,
+                    lang=lang,
                 )
                 for _ in range(repeat)
             ]
@@ -1091,13 +1095,17 @@ def compare_models_cmd(
             print(f"⚠ {model}: {reason}")
         return EXIT_NO_CELLS
     report_data = compare_models.build_model_compare(
-        cells, profiles=used, dataset=ds.name if ds else config.DEFAULT_DATASET, skipped=skipped
+        cells,
+        profiles=used,
+        dataset=ds.name if ds else config.DEFAULT_DATASET,
+        skipped=skipped,
+        lang=lang,
     )
     path = compare_models.write_model_compare(report_data, out_dir)
     print()
     for line in compare_models.console_lines(report_data):
         print(line)
-    print(f"\nRapor: {path}")
+    print("\n" + _t("cli.eval.report", lang, path=path))
     return 0
 
 
@@ -2963,18 +2971,26 @@ def _mode_report(out_dir: str | Path, mode: str) -> dict | None:
     return report._load(Path(out_dir) / mode / "latest" / report.REPORT_FILES[0])
 
 
-def _compare_line(mode: str, summary: dict) -> str:
+def _compare_line(mode: str, summary: dict, lang: str = config.DEFAULT_LANG) -> str:
     """R2-14: mod başına tek satır — skor, tepe/medyan bağlam, ortalama araç, toplam süre, not.
 
-    R3-11: tekrarlı koşuda skor hanesi ``ort/min/max`` okunur; tek ölçümde yine ``7/10``.
+    R3-11: tekrarlı koşuda skor hanesi ``ort/min/max`` okunur; tek ölçümde yine ``7/10``. Satırın
+    etiketleri ``cli.eval.compare_line`` kataloğundan dilde gelir (R8-12).
     """
     context = summary["context"]
-    note = f"  {REUSED_NOTE}" if summary["reused"] else ""
+    note = f"  {t('compare.reused_note', lang)}" if summary["reused"] else ""
     return (
-        f"{mode:<{TOOL_WIDTH}} {score_cell(summary)}"
-        f"  bağlam {_tokens(context['max_prompt_tokens'])}/{_tokens(context['median_prompt_tokens'])}"
-        f"  araç {summary['tool_calls']['mean']:.1f}"
-        f"  {summary['seconds']['total']:.1f} sn{note}"
+        t(
+            "cli.eval.compare_line",
+            lang,
+            mode=f"{mode:<{TOOL_WIDTH}}",
+            score=score_cell(summary),
+            peak=_tokens(context["max_prompt_tokens"]),
+            median=_tokens(context["median_prompt_tokens"]),
+            tools=f"{summary['tool_calls']['mean']:.1f}",
+            seconds=f"{summary['seconds']['total']:.1f}",
+        )
+        + note
     )
 
 

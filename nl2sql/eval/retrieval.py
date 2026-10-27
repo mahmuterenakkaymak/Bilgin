@@ -16,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 from nl2sql import config
+from nl2sql.i18n import t
 from nl2sql.index.search import METHODS, expanded_hits
 
 # ASSUMPTION: geri çağırma raporu eval/mod klasörlerinden ayrı durur; ölçülen şey model değil
@@ -25,13 +26,18 @@ RETRIEVAL_OUT = config.EVAL_OUT / "retrieval"
 STAMP = "%Y%m%d-%H%M%S"
 REPORT_FILES = ("report.json", "report.md")
 TABLE_PREFIX = "table:"
-NOTHING_MISSING = "-"
+# R8-12: etiketler kataloğun ``retrieval.*`` anahtarlarıdır; iki sabit yine adlarıyla durur -
+# markdown/ekran bunları dilde yeniden kurar, sabitlerin değeri tr'nindir.
+NOTHING_MISSING = t("retrieval.nothing_missing", config.DEFAULT_LANG)
 
 # R3-9 varyantları: iki düğme ayrı ayrı ölçülür; adlar raporda, etiketler ekran ve markdown'da.
 VARIANTS = {"base": (False, False), "neighbours": (True, False), "synonyms": (False, True)}
 # R5-20: özet düğmesi taban ayarlarıyla koşar, o yüzden VARIANTSın (expand, rewrite) hali yok.
 SUMMARIES = "summaries"
-VARIANT_LABELS = {"base": "taban", "neighbours": "+komşu", "synonyms": "+eşanlam", SUMMARIES: "+özet"}
+VARIANT_LABELS = {
+    name: t(f"retrieval.variant.{name}", config.DEFAULT_LANG)
+    for name in ("base", "neighbours", "synonyms", SUMMARIES)
+}
 
 
 def run_retrieval(
@@ -43,6 +49,7 @@ def run_retrieval(
     graph=None,
     schema: dict | None = None,
     summaries: bool = False,
+    lang: str = config.DEFAULT_LANG,
 ) -> dict:
     """Altın soruların her biri için üç yöntemin recall@k'sı, ortalamalar ve etiket ortalamaları.
 
@@ -50,12 +57,13 @@ def run_retrieval(
     yöntem başına bir kez, tablo koleksiyonu üzerinde ve istenen ``k`` ile çağrılır. ``expand`` ve
     ``rewrite`` R3-9'un iki düğmesidir; ikisi kapalıyken ölçülen tabandır, hangi yapılandırmanın
     ölçüldüğünü ``variants`` söyler. ``summaries`` R5-20'nin üçüncü düğmesidir: vuruşlar
-    ``search_tables``dan gelir, yani tablo sırası tablo özetlerinin sırasıyla kaynaşır.
+    ``search_tables``dan gelir, yani tablo sırası tablo özetlerinin sırasıyla kaynaşır. ``lang``
+    (R8-12) yalnız eksik girdi reddinin cümlesini çevirir; sayısal rapor dili bilmez.
     """
     # ASSUMPTION: komşu genişletmesi graph ve şema olmadan ölçülemez; sessizce taban ölçümüne
     # düşmesin diye ikisi de açıkça isteniyor.
     if expand and (graph is None or schema is None):
-        raise ValueError("Komşu genişletmesi ölçümü join graphı ve şema ister.")
+        raise ValueError(t("retrieval.need_graph", lang))
     hits = _hits(search, expand, rewrite, graph, schema, summaries)
     questions = [_question(line, k, hits) for line in golden]
     mean = _means(questions)
@@ -78,6 +86,7 @@ def run_variants(
     graph=None,
     schema: dict | None = None,
     summaries: bool = False,
+    lang: str = config.DEFAULT_LANG,
 ) -> dict:
     """R3-9: taban, +komşu ve +eşanlam aynı sorular üzerinde koşar; rapor üçünün birden raporu.
 
@@ -87,12 +96,12 @@ def run_variants(
     """
     lines = list(golden)
     reports = {
-        name: run_retrieval(search, lines, k, expand, rewrite, graph, schema)
+        name: run_retrieval(search, lines, k, expand, rewrite, graph, schema, lang=lang)
         for name, (expand, rewrite) in VARIANTS.items()
     }
     if summaries:
         reports[SUMMARIES] = run_retrieval(
-            search, lines, k, graph=graph, schema=schema, summaries=True
+            search, lines, k, graph=graph, schema=schema, summaries=True, lang=lang
         )
     report = reports["base"]
     report["summaries"] = summaries
@@ -109,39 +118,46 @@ def run_variants(
     return report
 
 
-def write_retrieval(report: dict, out_dir: str | Path = RETRIEVAL_OUT) -> Path:
+def write_retrieval(
+    report: dict, out_dir: str | Path = RETRIEVAL_OUT, lang: str = config.DEFAULT_LANG
+) -> Path:
     """``<out>/<timestamp>/report.json`` + ``report.md`` yazar, aynısını ``<out>/latest``'e koyar.
 
     İki kopya aynı sözlükten üretildiği için okuyucu yarım bir raporla karşılaşmaz; ``latest``
-    bir sonraki koşunun kıyaslayacağı şeydir.
+    bir sonraki koşunun kıyaslayacağı şeydir. ``lang`` (R8-12) report.md'nin dilidir; json sayısal
+    ölçümün kendisi olduğu için dil taşımaz.
     """
     stamp = datetime.now()
     out = Path(out_dir)
     data = {"timestamp": stamp.isoformat(sep=" ", timespec="seconds"), **report}
     run_dir = out / stamp.strftime(STAMP)
-    _write(run_dir, data)
-    _write(out / "latest", data)
+    _write(run_dir, data, lang)
+    _write(out / "latest", data, lang)
     return run_dir
 
 
-def console_lines(report: dict) -> list[str]:
+def console_lines(report: dict, lang: str = config.DEFAULT_LANG) -> list[str]:
     """Ekranın kendisi (R2-14): soru başına bir satır, metod ortalamaları, etiket ortalamaları."""
-    header = f"{'Soru':<6}" + "".join(f"{method:>8}" for method in METHODS) + "  eksik"
+    header = (
+        f"{t('retrieval.col_question', lang):<6}"
+        + "".join(f"{method:>8}" for method in METHODS)
+        + f"  {t('retrieval.col_missing', lang)}"
+    )
     lines = [header]
     for question in report["questions"]:
         lines.append(
             f"{question['id']:<6}"
             + "".join(f"{value:>8}" for value in _recalls(question))
-            + f"  {_missing_text(question)}"
+            + f"  {_missing_text(question, lang)}"
         )
-    lines += ["", _means_line(report)]
-    variants = _variant_lines(report)
+    lines += ["", _means_line(report, lang)]
+    variants = _variant_lines(report, lang)
     if variants:
         lines += ["", *variants]
-    tags = _tag_lines(report)
+    tags = _tag_lines(report, lang)
     if tags:
         order = "/".join(METHODS)
-        lines += ["", f"Etiket ortalamaları ({order}):", *tags]
+        lines += ["", t("retrieval.tag_averages_head", lang, methods=order), *tags]
     return lines
 
 
@@ -246,25 +262,29 @@ def _recalls(question: dict) -> list[str]:
     return [f"{question[method]:.2f}" for method in METHODS]
 
 
-def _missing_text(question: dict) -> str:
+def _missing_text(question: dict, lang: str = config.DEFAULT_LANG) -> str:
     """Eksik sütunu: hangi tablonun hangi yöntemde bulunamadığı; üçü de bulduysa tek çizgi."""
     parts = []
     for method in METHODS:
         tables = question["missing"].get(method) or []
         if tables:
             parts.append(f"{method}: {', '.join(tables)}")
-    return "; ".join(parts) or NOTHING_MISSING
+    return "; ".join(parts) or t("retrieval.nothing_missing", lang)
 
 
-def _means_line(report: dict) -> str:
+def _means_line(report: dict, lang: str = config.DEFAULT_LANG) -> str:
     values = " · ".join(f"{method} {report['mean'][method]:.2f}" for method in METHODS)
-    return (
-        f"Ortalama: {values}  "
-        f"(k={report['k']}, {len(report['questions'])} soru, {report['embedder']})"
+    return t(
+        "retrieval.mean_line",
+        lang,
+        values=values,
+        k=report["k"],
+        count=len(report["questions"]),
+        embedder=report["embedder"],
     )
 
 
-def _variant_lines(report: dict) -> list[str]:
+def _variant_lines(report: dict, lang: str = config.DEFAULT_LANG) -> list[str]:
     """R3-9 ekranı: soru başına üç varyantın sayısı, alta metod metod varyant ortalamaları.
 
     Tek varyantlı ölçüm (``run_retrieval``ın kendi koşumu) karşılaştırılacak bir şey olmadığı için
@@ -273,8 +293,10 @@ def _variant_lines(report: dict) -> list[str]:
     variants = report.get("variants") or {}
     if len(variants) < 2:
         return []
+    labels = {name: t(f"retrieval.variant.{name}", lang) for name in variants}
     return [
-        f"{'Soru':<6}" + "".join(f"{VARIANT_LABELS[name]:>10}" for name in variants),
+        f"{t('retrieval.col_question', lang):<6}"
+        + "".join(f"{labels[name]:>10}" for name in variants),
         *(
             f"{question['id']:<6}"
             + "".join(
@@ -284,67 +306,72 @@ def _variant_lines(report: dict) -> list[str]:
             for question in report["questions"]
         ),
         "",
-        f"Varyant ortalamaları ({'/'.join(METHODS)}):",
+        t("retrieval.variant_averages_head", lang, methods="/".join(METHODS)),
         *(
-            f"  {VARIANT_LABELS[name]:<10}"
+            f"  {labels[name]:<10}"
             + "".join(f"{entry['mean'][method]:>8.2f}" for method in METHODS)
             for name, entry in variants.items()
         ),
     ]
 
 
-def _tag_lines(report: dict) -> list[str]:
+def _tag_lines(report: dict, lang: str = config.DEFAULT_LANG) -> list[str]:
     counts = _tag_counts(report)
     width = max((len(tag) for tag in report["by_tag"]), default=0)
+    unit = t("retrieval.tag_count", lang)
     return [
-        f"  {tag:<{width}}{counts[tag]:>3} soru "
+        f"  {tag:<{width}}{counts[tag]:>3} {unit} "
         + "".join(f"{report['by_tag'][tag][method]:>8.2f}" for method in METHODS)
         for tag in report["by_tag"]
     ]
 
 
-def _write(directory: Path, report: dict) -> None:
+def _write(directory: Path, report: dict, lang: str) -> None:
     directory.mkdir(parents=True, exist_ok=True)
     for name in REPORT_FILES:
         text = (
             json.dumps(report, ensure_ascii=False, indent=2)
             if name.endswith(".json")
-            else _markdown(report)
+            else _markdown(report, lang)
         )
         (directory / name).write_text(text, encoding="utf-8")
 
 
-def _markdown(report: dict) -> str:
+def _markdown(report: dict, lang: str = config.DEFAULT_LANG) -> str:
     lines = [
-        f"# Geri çağırma raporu — {report['embedder'] or 'embedder adı yok'}",
+        t("retrieval.md.title", lang, embedder=report["embedder"] or t("retrieval.md.unnamed", lang)),
         "",
-        f"- Koşum: {report['timestamp']}",
-        f"- k: {report['k']} · Soru: {len(report['questions'])}",
+        t("retrieval.md.stamp", lang, timestamp=report["timestamp"]),
+        t("retrieval.md.k_questions", lang, k=report["k"], count=len(report["questions"])),
         "",
-        "## Metod ortalamaları",
+        t("retrieval.md.methods_head", lang),
         "",
-        "| Metod | Geri çağırma |",
+        f"| {t('retrieval.md.col_method', lang)} | {t('retrieval.md.col_recall', lang)} |",
         "| --- | ---: |",
         *(f"| {method} | {report['mean'][method]:.2f} |" for method in METHODS),
         "",
-        "## Sorular",
+        t("retrieval.md.questions_head", lang),
         "",
-        "| Soru | " + " | ".join(METHODS) + " | eksik |",
+        f"| {t('retrieval.md.col_question', lang)} | "
+        + " | ".join(METHODS)
+        + f" | {t('retrieval.md.col_missing', lang)} |",
         "| --- | " + " | ".join("---:" for _ in METHODS) + " | --- |",
     ]
     for question in report["questions"]:
         lines.append(
             f"| {question['id']} | "
             + " | ".join(_recalls(question))
-            + f" | {_missing_text(question)} |"
+            + f" | {_missing_text(question, lang)} |"
         )
-    lines += _variant_section(report)
-    lines += ["", "## Etiket ortalamaları", ""]
+    lines += _variant_section(report, lang)
+    lines += ["", t("retrieval.md.tags_head", lang), ""]
     if not report["by_tag"]:
-        return "\n".join([*lines, "Soru etiketi yok."]) + "\n"
+        return "\n".join([*lines, t("retrieval.md.no_tags", lang)]) + "\n"
     counts = _tag_counts(report)
     lines += [
-        "| Etiket | Soru | " + " | ".join(METHODS) + " |",
+        f"| {t('retrieval.md.col_tag', lang)} | {t('retrieval.md.col_count', lang)} | "
+        + " | ".join(METHODS)
+        + " |",
         "| --- | ---: | " + " | ".join("---:" for _ in METHODS) + " |",
     ]
     for tag, means in report["by_tag"].items():
@@ -356,17 +383,20 @@ def _markdown(report: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _variant_section(report: dict) -> list[str]:
+def _variant_section(report: dict, lang: str = config.DEFAULT_LANG) -> list[str]:
     """Markdown'ın R3-9 bölümü: soru başına üç varyant, alta varyant başına üç metod."""
     variants = report.get("variants") or {}
     if len(variants) < 2:
         return []
     names = list(variants)
+    labels = {name: t(f"retrieval.variant.{name}", lang) for name in names}
     lines = [
         "",
-        "## Varyantlar",
+        t("retrieval.md.variants_head", lang),
         "",
-        "| Soru | " + " | ".join(VARIANT_LABELS[name] for name in names) + " |",
+        f"| {t('retrieval.md.col_question', lang)} | "
+        + " | ".join(labels[name] for name in names)
+        + " |",
         "| --- | " + " | ".join("---:" for _ in names) + " |",
     ]
     for question in report["questions"]:
@@ -379,12 +409,12 @@ def _variant_section(report: dict) -> list[str]:
         )
     lines += [
         "",
-        "| Varyant | " + " | ".join(METHODS) + " |",
+        f"| {t('retrieval.md.col_variant', lang)} | " + " | ".join(METHODS) + " |",
         "| --- | " + " | ".join("---:" for _ in METHODS) + " |",
     ]
     for name, entry in variants.items():
         lines.append(
-            f"| {VARIANT_LABELS[name]} | "
+            f"| {labels[name]} | "
             + " | ".join(f"{entry['mean'][method]:.2f}" for method in METHODS)
             + " |"
         )

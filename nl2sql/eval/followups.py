@@ -13,6 +13,7 @@ import shutil
 from collections.abc import Iterable
 from pathlib import Path
 
+from nl2sql import config
 from nl2sql.app.ask import ask_payload
 from nl2sql.app.conversations import ConversationStore
 from nl2sql.eval import runner
@@ -20,17 +21,25 @@ from nl2sql.eval import runner
 DECIMALS = 4
 
 
-def load_followups(dataset) -> list[dict]:
-    """Kümenin ardışık soru zincirleri; ``Dataset.followups()``ın ölçüm tarafındaki adı."""
-    return dataset.followups()
+def load_followups(dataset, lang: str = config.DEFAULT_LANG) -> list[dict]:
+    """Kümenin ardışık soru zincirleri; ``Dataset.followups(lang)``ın ölçüm tarafındaki adı.
+
+    ``lang="en"`` kümenin İngilizce zincirlerini okur (R8-12); ``files.followups_en`` yoksa
+    zincirler Türkçe halidir - çevirisi olmayanı ölçemez.
+    """
+    return dataset.followups(lang)
 
 
-def run_followups(session, chains: Iterable[dict], out_dir: str | Path, mode: str = "full") -> list[dict]:
+def run_followups(
+    session, chains: Iterable[dict], out_dir: str | Path, mode: str = "full",
+    lang: str = config.DEFAULT_LANG,
+) -> list[dict]:
     """Her zinciri tur tur ``ask_payload``dan geçirir; satır başına bir karar döner (R7-14).
 
     Konuşma deposu ``out_dir/followups`` altında ve her koşumda sil-baştan kurulur, böylece iki
     koşumun turları birbirinin üstüne binmez. ``mode`` zincirin hangi modda koşacağını söyler
-    (hedef: ``full_rules``); dönen satırlar Contracts "followups report"ın ``items``idir.
+    (hedef: ``full_rules``); dönen satırlar Contracts "followups report"ın ``items``idir. ``lang``
+    (R8-12) bozuk bir golden SQL'in reddetme cümlesinin dilidir; outcome kodları iki dilde de İngilizce.
     """
     folder = Path(out_dir) / "followups"
     shutil.rmtree(folder, ignore_errors=True)
@@ -48,7 +57,7 @@ def run_followups(session, chains: Iterable[dict], out_dir: str | Path, mode: st
             items.append({
                 "id": chain_id,
                 "turn": n,
-                "outcome": _outcome(session.executor, chain_id, n, turn, payload),
+                "outcome": _outcome(session.executor, chain_id, n, turn, payload, lang),
                 "context_ok": _context_ok(turn, payload),
             })
     return items
@@ -77,11 +86,13 @@ def followup_metrics(items: Iterable[dict]) -> dict:
     }
 
 
-def _outcome(executor, chain_id: str, n: int, turn: dict, payload: dict) -> str:
+def _outcome(
+    executor, chain_id: str, n: int, turn: dict, payload: dict, lang: str = config.DEFAULT_LANG
+) -> str:
     """Turun kararı: golden SQL'in sonucuyla runner'ın karşılaştırması - ölçüm kapısı tek yerde."""
     line = {"id": f"{chain_id} t{n}", "question": str(turn.get("question") or ""), "sql": str(turn.get("sql") or "")}
-    truth = runner._truth(line, executor)
-    outcome, _reason, _sql = runner._verdict(line, str(payload.get("sql") or ""), executor, truth, line["id"])
+    truth = runner._truth(line, executor, lang)
+    outcome, _reason, _sql = runner._verdict(line, str(payload.get("sql") or ""), executor, truth, line["id"], lang)
     return outcome
 
 

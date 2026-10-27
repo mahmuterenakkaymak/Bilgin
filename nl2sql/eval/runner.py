@@ -280,7 +280,7 @@ def _outcome(
             # ASSUMPTION: hangi okunuşun "doğru" olduğu ölçülmez; belirsiz bir soruyu sormadan
             # cevaplamak brief'in guessed'ıdır, okunan sayıya bakılmaz (PLAN R5-12).
             return "guessed", t("eval.reason.guessed", lang), str(run.submitted_sql or "")
-        return _verdict(line, str(run.submitted_sql or ""), executor, truth, qid)
+        return _verdict(line, str(run.submitted_sql or ""), executor, truth, qid, lang)
     # ASSUMPTION: submit etmemiş bir koşuda rapor için en işe yarar bilgi modelin üzerinde
     # kaldığı sorgudur; son deneme bir kez daha çalıştırılıp reddedilme sebebi outcome oluyor.
     attempt = _last_attempt(run)
@@ -291,11 +291,13 @@ def _outcome(
     return "no_submission", run.stop_reason or t("eval.reason.no_submit", lang), ""
 
 
-def _verdict(line: dict, sql: str, executor, truth: Result, qid: str) -> tuple[str, str, str]:
+def _verdict(
+    line: dict, sql: str, executor, truth: Result, qid: str, lang: str = config.DEFAULT_LANG
+) -> tuple[str, str, str]:
     result = executor.execute(sql, COMPARE, qid)
     if result.error is not None:
         return EXEC_OUTCOMES[result.error.kind], result.error.message, sql
-    comparison = compare(truth, result, bool(line.get("ordered")))
+    comparison = compare(truth, result, bool(line.get("ordered")), lang)
     if comparison.match:
         return "pass", "", sql
     return "wrong_result", comparison.reason, sql
