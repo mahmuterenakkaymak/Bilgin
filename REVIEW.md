@@ -1,12 +1,12 @@
-# REVIEW M25 (T332-T345, range 92b157a -> HEAD; second pass after T385-T388 and the visual review T456-T462)
+# REVIEW M26 (T389-T402, range 42b159e -> HEAD; visual review T465-T470 already filed)
 
-Whole-project checks pass (20 commands). Earlier reds (T385-T388) are closed; remaining findings are contract gaps.
-- **BUG (T463)**: `_db_status` (nl2sql/cli/main.py:2215) freezes `active` at serve start, so after `POST /api/datasets/active` the generic `NL2SQL_MSSQL_CONN` still belongs to the startup dataset for the dot, while `_row`/`open_session` use the live one. The new active dataset shows no dot (state "none") though its queries run on the env database, and the old one keeps pinging it.
-- **BUG (T464)**: `down_payload` (nl2sql/app/ask.py:340) skips the conversation: no `conversation_id`/`turn`, nothing stored. A question asked while the dot is red vanishes on reload, never opens a conversation, and breaks `/api/ask` "every ask is a turn" (R7-8, App.jsx:201 reads `payload.conversation_id`).
-- Risk: map wizard live comparison (`map_api._db_connection`, map_api.py:165) reads only `NL2SQL_MSSQL_CONN`; a saved connection is never used there (introspect already takes `conn_str`). Not filed: R7-23 lists sessions only.
-- Risk: `ConnectionStore.secret` -> `dpapi.unprotect` raises on a blob from another user/machine; `resolve` is called by `/api/health` and `/api/ask` via `DbStatus.state`, so a bad blob would 500 both. Needs a try in `resolve`/`state`.
-- Risk: a connect failure in the guard returns 409 "Bu giriş salt okunur değil" (GUARD_REFUSED) although the lines say the connection failed; a server that is briefly down cannot be saved.
-- Risk: `DbStatus._asked` only grows; stale "down" answer for a dataset lingers until the next loop round after a save.
-- ASSUMPTIONs checked, holding: Encrypt/Trust defaults (connections.py:36), only a power refuses a save (guard.py:67), save rebuilds the active session (connections_api.py:91), DPAPI failure -> 409 on save.
-- Contracts traced OK: health `db` keys vs DbStatus.jsx, guard report keys, `last_ok_at`/`last_error` now written (T388), `_mssql.run` scrub.
-- Missing tests: dataset switch with the generic env set; ask while down with a `conversation_id`; unprotect failure through `/api/health`; DPAPI-off path off Windows.
+Whole-project checks pass (21 commands). Language core is sound for Turkish (byte-identical paths hold); the gaps are in English edges.
+- **BUG (T471)**: English guard ignores `fmt.format_compact`'s own "12.5K/3.4M": `_token` drops a number followed by a letter and `_CANDIDATE` knows only bin/milyon/milyar. Verified: allowed [12500] -> "99.9K" and "99.9M" pass, "12.5 million" is rejected. An invented scaled number reaches the user in English (guard.py ~110).
+- **BUG (T472)**: `detect_lang` ties to the fallback (tr) for English questions with no stopword ("Top 5 products by revenue", "Customers by city") and a Turkish letter in a proper name ("Show sales of Çay", "...customer Özgür...") outweighs English words. Answer language comes out tr. tests/test_detect_lang.py:17 ASSUMPTION encodes the gap.
+- Already filed from the visual review: T465 (raw column names on board cards), T466 (connection test never times out), T467 (duplicate pinned card), T468 (identical conversation titles), T469/T470 polish.
+- Risk: a short follow-up in an English thread ("and last month?", "as a pie chart") has no signal and falls back to the UI language, so a thread can switch language mid-way; `ask_payload` does not inherit the thread's last `answer_lang`. Not filed (R8-6 defines tie -> fallback).
+- Risk: en guard accepts the Turkish prefix form "%12.3" as a percent; PLAN R8-7 calls only `12.3%` valid. Low impact (value must still match).
+- Risk: `ask.DB_DOWN_MESSAGE` is frozen at import (always the default language) and now unused; any later reader would show the wrong language. `_problem` chart validation lines are intentionally tr-only.
+- ASSUMPTIONs checked: prompt/context schema precedence, auto-mode prompt builder, `GuardResult.offending` as "rejected", end-percent in en, template sentence without numbers, export count = held rows (T469) - hold, except the detect one above.
+- Contracts traced OK: `answer_lang` set by every `_skeleton` caller (ask, replay, down, card open via start_api), facts/chart/narrate take the same lang, PAYLOAD_KEYS pins, `_fail` keeps raw text in `error.detail` and web/app.py sniffs `detail`.
+- Missing tests: guard en with scale suffixes; detect_lang on short noun phrases and names with Turkish letters; follow-up language inside a thread; replay of a log line whose question language differs from the UI language.
