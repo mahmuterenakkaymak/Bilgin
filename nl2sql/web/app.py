@@ -522,10 +522,12 @@ def _kick_on_connection_error(status, payload: dict) -> None:
 
     Nokta kendi turunda yenilenirdi; kullanıcı yeniden sormadan kırmızıya dönmez. Sözdizimi ya da
     politika hatası ise sunucunun ulaşılabildiğini zaten söyler, yani bekçiyi uyandırmaz.
+    Sürücünün ham cümlesi kataloğun yerine okuduğu ``message``da değil ``detail``ındadır (R8-3):
+    burada koklanan teknik metin, ekranda okunan cümle değil.
     """
     error = payload.get("error") or {}
     if str(error.get("kind", "")).startswith("exec:") and looks_like_connection_error(
-        error.get("message")
+        error.get("detail") or error.get("message")
     ):
         status.kick()
 

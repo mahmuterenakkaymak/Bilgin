@@ -2,6 +2,7 @@
   "status": "answered",
   "question": "Satış departmanındaki personelin adı, telefonu ve IBAN bilgisi nedir?",
   "choice": null,
+  "answer_lang": "tr",
   "answer_text": "Satır sayısı 3. Soru: Satış departmanındaki personelin adı, telefonu ve IBAN bilgisi nedir?",
   "narration_source": "template",
   "chart": null,

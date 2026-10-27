@@ -24,6 +24,7 @@ from nl2sql.app.conversations import ConversationNotFound
 from nl2sql.engine import checks
 from nl2sql.engine.result import Budget
 from nl2sql.i18n import t
+from nl2sql.i18n.detect import detect_lang
 from nl2sql.index.store import ForeignIndexError, MissingIndexError, StaleIndexError
 from nl2sql.report.chart import chart_spec
 from nl2sql.report.facts import compute_facts
@@ -40,7 +41,12 @@ INDEX_ERRORS = (MissingIndexError, StaleIndexError, ForeignIndexError)
 _SAME_OWNER = object()
 
 # R7-25: veritabanı cevap vermiyorsa ekranda okunan cümle - modelin uyduracağı cevap değil.
-DB_DOWN_MESSAGE = "Veritabanına şu an bağlanılamıyor; cevap üretilemiyor. Yöneticinize haber verin."
+DB_DOWN_MESSAGE = t("ask.fail.db_down")
+
+
+def payload_lang(question: str, lang: str | None = None) -> str:
+    """Cevabın dili: sorunun dili; soruda hiç sinyal yoksa ``lang`` (None -> program dili) (R8-6)."""
+    return detect_lang(question, lang or config.lang())
 
 
 def ask_payload(
@@ -53,6 +59,7 @@ def ask_payload(
     conversations=None,
     conversation_id: str | None = None,
     owner=_SAME_OWNER,
+    lang: str | None = None,
 ) -> dict:
     """Bir soruyu AskPayload'a çeviren tek fonksiyon (R5-1): modu çözer, ajanı koşurur, yürütür.
 
@@ -79,11 +86,18 @@ def ask_payload(
     birden çok değerli bir kolona işaret eden soru (``refine.ambiguous_entity``, R7-12) da modeli
     beklemez: şıkları konuşmanın kendi satırlarından kurulur ve bekleyen tur olarak yazılır;
     seçilen şık o turun cevabını tamamlar ve bağlam notunun varlığı olur.
+
+    ``lang`` arayüzün dilidir, söylenmezse program dili (R8-6): cevabın dili sorudan çözülür
+    (``answer_lang``), ``choice`` ise sorunun dilini taşır - şıkkın metni dil hakkında bir şey
+    söylemez. Kullanıcının okuduğu her cümle o dilde kurulur: olgular, grafik, anlatı, kanıt
+    satırı, netleştirme ve hatanın cümlesi.
     """
     audit_id = asklog.new_audit_id()
     notes: list[str] = []
     started = time.perf_counter()
-    payload = _skeleton(question, choice, mode or "auto", session, audit_id, notes)
+    payload = _skeleton(
+        question, choice, mode or "auto", session, audit_id, notes, payload_lang(question, lang)
+    )
     asked = follow_up_text(question, choice) if choice else question
     conversation_id, pending, turns, clarification = _thread(
         conversations, conversation_id, username if owner is _SAME_OWNER else owner,
@@ -95,7 +109,9 @@ def ask_payload(
     dropped = None
     wish = refine.chart_only(asked, turns)
     entity = _chosen(clarification, choice)
-    ambiguous = None if choice or wish is not None else refine.ambiguous_entity(asked, turns, session.schema)
+    ambiguous = None if choice or wish is not None else refine.ambiguous_entity(
+        asked, turns, session.schema, payload["answer_lang"]
+    )
     try:
         resolved, _ = session.resolve_mode(payload["mode"], notes)
         payload["mode"] = resolved
@@ -176,12 +192,16 @@ def _audit_source(source: str, username: str | None, audit_id: str) -> str:
     return f"{source}:{username}:{audit_id}" if username else f"{source}:{audit_id}"
 
 
-def _skeleton(question: str, choice, mode: str, session, audit_id: str, notes: list) -> dict:
+def _skeleton(
+    question: str, choice, mode: str, session, audit_id: str, notes: list, answer_lang: str
+) -> dict:
     """Sözleşmenin her durumda taşıdığı anahtarlar; boşmayan tek yer burası."""
     return {
         "status": "failed",
         "question": question,
         "choice": choice,
+        # Contracts "AskPayload (ext.)": cevabın dili her payloadda vardır (R8-6).
+        "answer_lang": answer_lang,
         "answer_text": "",
         "narration_source": None,
         "chart": None,
@@ -228,6 +248,7 @@ def _run(
         context=session.context(mode, clarify),
         budget=session.budget,
         history=history,
+        answer_lang=payload["answer_lang"],
     )
     payload["steps"] = [
         {"tool": step.tool, "ok": step.ok, "summary": step.summary[:STEP_CHARS]}
@@ -268,19 +289,21 @@ def _chart_only(session, question: str, wish: str, turns, source: str, payload: 
     Ne ajan ne anlatıcı koşar: cümle koddan kurulur, sayılar yürütücünün döndürdüğü satırlardır.
     Biçim isteği kaldırmıyorsa ``chart_spec``ın eklediği gerekçe konuşur, kendi grafik kalır.
     """
+    lang = payload["answer_lang"]
     turn = _refined(turns)
     if not _execute(session, turn["sql"], source, payload):
         return
-    payload["facts"] = [fact.to_dict() for fact in compute_facts(payload["columns"], payload["rows"])]
-    payload["chart"] = chart_spec(payload["columns"], payload["rows"], question, kind=wish)
-    payload["answer_text"] = _chart_text(wish, payload["chart"])
+    payload["facts"] = [
+        fact.to_dict() for fact in compute_facts(payload["columns"], payload["rows"], lang)
+    ]
+    payload["chart"] = chart_spec(payload["columns"], payload["rows"], question, kind=wish, lang=lang)
+    payload["answer_text"] = _chart_text(wish, payload["chart"], lang)
     payload["narration_source"] = "template"
     payload["steps"] = [
-        {"tool": "chart", "ok": True,
-         "summary": f"Tur {turn['n']} sorgusu yeniden çalıştırıldı, model SQL yazmadı."}
+        {"tool": "chart", "ok": True, "summary": t("ask.chart_only.step", lang, n=turn["n"])}
     ]
     note = {"uses_turns": [turn["n"]], "entities": [], "refines_sql_of": turn["n"]}
-    payload["context"] = {**note, "line": evidence_line(note, turns, session.schema)}
+    payload["context"] = {**note, "line": evidence_line(note, turns, session.schema, lang)}
 
 
 def _refined(turns) -> dict:
@@ -288,13 +311,13 @@ def _refined(turns) -> dict:
     return next(turn for turn in reversed(turns) if turn.get("sql"))
 
 
-def _chart_text(wish: str, chart) -> str:
+def _chart_text(wish: str, chart, lang: str) -> str:
     """Koddan kurulan cümle: uyan tür söylenir, uymayanın gerekçesi grafikten olduğu gibi okunur."""
     if chart and chart.get("reason"):
         return chart["reason"]
     if wish == "table":
-        return t("ask.as_table")
-    return t("ask.chart_as", kind=t(f"ask.kind.{wish}"))
+        return t("ask.as_table", lang)
+    return t("ask.chart_as", lang, kind=t(f"ask.kind.{wish}", lang))
 
 
 def _note(session, payload: dict, note, turns) -> str | None:
@@ -311,7 +334,9 @@ def _note(session, payload: dict, note, turns) -> str | None:
         return reason
     if not (valid["uses_turns"] or valid["entities"] or valid["refines_sql_of"]):
         return None
-    payload["context"] = {**valid, "line": evidence_line(valid, turns, session.schema)}
+    payload["context"] = {
+        **valid, "line": evidence_line(valid, turns, session.schema, payload["answer_lang"])
+    }
     return None
 
 
@@ -344,6 +369,7 @@ def down_payload(
     username: str | None = None,
     conversations=None,
     conversation_id: str | None = None,
+    lang: str | None = None,
 ) -> dict:
     """Düşmüş bir veritabanının cevabı: arızanın cümlesi, model hiç koşmaz (R7-25).
 
@@ -357,14 +383,19 @@ def down_payload(
     şekilde yazılır ve payload ``conversation_id`` ile ``turn``i taşır. Ekran yoklukta
     ``#/c/<id>`` adresini açamaz, turların numarası da boşluksuz sürer; olmayan ya da başkasının
     konuşması burada da ``ConversationNotFound``dır.
+
+    Cevap üretilmediği için dil sorudan çözülmez: arızanın cümlesi arayüz dilinde okunur (R8-6).
     """
-    payload = _skeleton(question, choice, mode or "auto", session, asklog.new_audit_id(), [])
+    payload = _skeleton(
+        question, choice, mode or "auto", session, asklog.new_audit_id(), [],
+        lang or config.lang(),
+    )
     conversation_id, pending, _, _ = _thread(
         conversations, conversation_id, username, question, choice, payload["dataset"]
     )
     if conversation_id is not None:
         payload.update(conversation_id=conversation_id, turn=None, context=None)
-    _fail(payload, "db_down", DB_DOWN_MESSAGE)
+    _fail(payload, "db_down")
     if conversation_id is not None:
         payload["turn"] = _store(conversations, payload, conversation_id, pending)
     asklog.record_ask(_record(payload, source, username), session.ask_log)
@@ -372,7 +403,8 @@ def down_payload(
 
 
 def replay_payload(
-    session, audit_id: str, source: str = "web", username: str | None = None, scope=None
+    session, audit_id: str, source: str = "web", username: str | None = None, scope=None,
+    lang: str | None = None,
 ) -> dict:
     """Geçmişteki bir soruyu modelsiz açar (2026-10-25, Eren: "her soruyu baştan sorup cevap oluşturuyor").
 
@@ -384,28 +416,32 @@ def replay_payload(
     ``username`` soruyu yeniden soran kişinin adıdır: yeni satır ve denetim satırları onu taşır.
     ``scope`` arayanın hangi kayıtları gördüğünün süzgecidir (``asklog._ALL`` herkese açıktır);
     söylenmediğinde adın kendisidir, yani tek başına ``username`` hem arar hem yazar (R6-9).
+
+    Cevabın dili kayıtlı sorudan çözülür - ekran artık ne yazıyorsa değil (R8-6).
     """
     # ASSUMPTION: süzgeç söylenmediğinde adın kendisi süzgeç olur; adı olmayan bir çağrı ise
     # "kullanıcısız kaydı ara" demez, aramayı _ALL ile yapar (R6-9).
     who = username if scope is None else scope
     record = asklog.find_ask(audit_id, session.ask_log, username=asklog._ALL if who is None else who)
     if record is None or not record.get("question"):
-        payload = _skeleton("", None, "auto", session, asklog.new_audit_id(), [])
-        _fail(payload, "not_found", "Bu soru geçmişte bulunamadı.")
+        payload = _skeleton("", None, "auto", session, asklog.new_audit_id(), [], payload_lang("", lang))
+        _fail(payload, "not_found")
         return payload
+    answer_lang = payload_lang(record["question"], lang)
     if (record.get("dataset") or None) != (session.dataset.name if session.dataset else None):
-        payload = _skeleton(record["question"], None, "auto", session, asklog.new_audit_id(), [])
-        _fail(payload, "dataset", "Bu soru başka bir veri kümesinde sorulmuş; o kümeyle açın.")
+        payload = _skeleton(record["question"], None, "auto", session, asklog.new_audit_id(), [], answer_lang)
+        _fail(payload, "dataset")
         return payload
     if record.get("status") != "answered" or not record.get("sql"):
         return ask_payload(session, record["question"], choice=record.get("choice"), source=source,
-                           username=username)
+                           username=username, lang=lang)
 
     new_id = asklog.new_audit_id()
     started = time.perf_counter()
     payload = _skeleton(record["question"], record.get("choice"), record.get("mode") or "auto", session, new_id,
-                        ["Geçmişten açıldı: kayıtlı SQL yeniden çalıştırıldı, model SQL yazmadı."])
-    payload["steps"] = [{"tool": "replay", "ok": True, "summary": f"Geçmişteki soru ({audit_id}) yeniden çalıştırıldı."}]
+                        [t("ask.replay.note", answer_lang)], answer_lang)
+    payload["steps"] = [{"tool": "replay", "ok": True,
+                         "summary": t("ask.replay.step", answer_lang, audit_id=audit_id)}]
     _answer(session, record["question"], record["sql"], _audit_source(source, username, new_id), payload)
     payload["timings"]["total_s"] = round(time.perf_counter() - started, 3)
     asklog.record_ask(_record(payload, source, username), session.ask_log)
@@ -443,14 +479,19 @@ def _execute(session, sql: str, source: str, payload: dict) -> bool:
 
 
 def _report(session, question: str, payload: dict) -> None:
-    """Cevabın raporu: olgular ve grafik dönen satırlardan koddan, cümle anlatıcıdan (R5-6, R5-7, R5-9)."""
+    """Cevabın raporu: olgular ve grafik dönen satırlardan koddan, cümle anlatıcıdan (R5-6, R5-7, R5-9).
+
+    Üçü de cevabın dilinde kurulur (R8-6): ``answer_lang`` etiketleri, başlıkları ve cümleyi belirler.
+    """
+    lang = payload["answer_lang"]
     payload["facts"] = [
-        fact.to_dict() for fact in compute_facts(payload["columns"], payload["rows"])
+        fact.to_dict() for fact in compute_facts(payload["columns"], payload["rows"], lang)
     ]
-    payload["chart"] = chart_spec(payload["columns"], payload["rows"], question)
+    payload["chart"] = chart_spec(payload["columns"], payload["rows"], question, lang=lang)
     started = time.perf_counter()
     narration = narrate(
-        question, payload["columns"], payload["rows"], payload["facts"], session.narrator()
+        question, payload["columns"], payload["rows"], payload["facts"], session.narrator(),
+        lang=lang,
     )
     payload["answer_text"] = narration.text
     payload["narration_source"] = narration.source
@@ -463,10 +504,17 @@ def _clarify(payload: dict, clarification: dict) -> None:
     payload["clarification"] = clarification
 
 
-def _fail(payload: dict, kind: str, message: str) -> None:
-    """Başarısız cevap: hatanın adı ve Türkçe cümlesi, ekranda cevabın yerine okunur."""
+def _fail(payload: dict, kind: str, detail: str | None = None) -> None:
+    """Başarısız cevap: hatanın adı, cevabın dilindeki cümlesi ve teknik ayrıntısı (R8-3).
+
+    Ekranda okunan cümle kataloğun ``ask.fail.<kind>`` satırıdır; makinenin yazdığı ham metin
+    ``detail``da kalır - kullanıcı cümleyi, kanıt ayrıntıyı okur.
+    """
+    message = t(f"ask.fail.{kind}", payload["answer_lang"])
     payload["status"] = "failed"
     payload["error"] = {"kind": kind, "message": message}
+    if detail:
+        payload["error"]["detail"] = detail
     payload["answer_text"] = message
 
 

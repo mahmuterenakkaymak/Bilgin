@@ -25,7 +25,7 @@ BY_ID = {line["id"]: line for line in GOLDEN}
 
 # Contracts "AskPayload": hiçbir durum bu kümeden bir anahtarı eksik bırakamaz.
 PAYLOAD_KEYS = {
-    "status", "question", "choice", "answer_text", "narration_source", "chart", "facts",
+    "status", "question", "choice", "answer_lang", "answer_text", "narration_source", "chart", "facts",
     "columns", "rows", "row_count", "truncated", "sql", "tables_used", "rules_used",
     "masked_columns", "warnings", "notes", "mode", "dataset", "model", "timings",
     "audit_id", "clarification", "error", "steps",

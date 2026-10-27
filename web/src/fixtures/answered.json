@@ -2,6 +2,7 @@
   "status": "answered",
   "question": "Eylül 2026'da en çok satan 5 ürün hangileri; kodu, adı ve toplam satış miktarı nedir?",
   "choice": null,
+  "answer_lang": "tr",
   "answer_text": "Eylül 2026'da en çok satan ürün 2.480 adetle Siyah Çay 500 g oldu; ilk beş ürünün toplam satış miktarı 8.910 adet.",
   "narration_source": "llm",
   "chart": null,

@@ -2,6 +2,7 @@
   "status": "failed",
   "question": "Eylül 2026'da net satışımız ne kadar?",
   "choice": null,
+  "answer_lang": "tr",
   "answer_text": "Model endpoint'ine ulaşılamadı: http://127.0.0.1:8080/v1. Strata'nın açık olup olmadığına bakın, gerekirse NL2SQL_LLM_BASE_URL ile doğru adresi verin.",
   "narration_source": null,
   "chart": null,

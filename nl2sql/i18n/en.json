@@ -59,5 +59,22 @@
   "ask.as_table": "The result is shown as a table.",
   "ask.kind.line": "line",
   "ask.kind.bar": "bar",
-  "ask.kind.pie": "pie"
+  "ask.kind.pie": "pie",
+
+  "ask.fail.index": "The dataset index is not ready; the question could not be answered.",
+  "ask.fail.no_submission": "The question could not be answered; the model produced no usable query.",
+  "ask.fail.timeout": "The question could not be answered; the model ran out of time.",
+  "ask.fail.llm_error": "The model is not answering right now; please try again in a moment.",
+  "ask.fail.context_overflow": "The conversation outgrew the model's context; try again in a new conversation.",
+  "ask.fail.exec:policy": "The query did not pass the safety checks; this data cannot be shown.",
+  "ask.fail.exec:transpile": "The query could not be translated for this database.",
+  "ask.fail.exec:sql": "The query could not be run against the database.",
+  "ask.fail.exec:timeout": "The query ran out of time; try a narrower question.",
+  "ask.fail.not_found": "This question was not found in the history.",
+  "ask.fail.dataset": "This question was asked in another dataset; open it with that dataset.",
+  "ask.fail.db_down": "The database is unavailable right now; no answer can be produced. Tell your administrator.",
+
+  "ask.replay.note": "Opened from history: the stored query was run again, the model wrote no SQL.",
+  "ask.replay.step": "The stored question ({audit_id}) was run again.",
+  "ask.chart_only.step": "The query of turn {n} was run again, the model wrote no SQL."
 }

@@ -235,7 +235,10 @@ def _open(request: Request, card: dict) -> dict:
     session = _session(request)
     username = _name(request)
     audit_id = asklog.new_audit_id()
-    payload = ask._skeleton(card["question"], None, "auto", session, audit_id, [OPEN_NOTE])
+    payload = ask._skeleton(
+        card["question"], None, "auto", session, audit_id, [OPEN_NOTE],
+        ask.payload_lang(card["question"]),
+    )
     payload["steps"] = [
         {"tool": "replay", "ok": True, "summary": f"Hazır soru ({card['id']}) kayıtlı SQL ile açıldı."}
     ]

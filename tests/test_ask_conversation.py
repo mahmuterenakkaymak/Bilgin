@@ -26,7 +26,7 @@ Q2 = "Bunların son halleri ne kadar?"
 
 # Contracts "AskPayload" + "AskPayload (ext.)": depo üç anahtarı ekler, depoya koşmayan hiç eklemez.
 PAYLOAD_KEYS = {
-    "status", "question", "choice", "answer_text", "narration_source", "chart", "facts",
+    "status", "question", "choice", "answer_lang", "answer_text", "narration_source", "chart", "facts",
     "columns", "rows", "row_count", "truncated", "sql", "tables_used", "rules_used",
     "masked_columns", "warnings", "notes", "mode", "dataset", "model", "timings",
     "audit_id", "clarification", "error", "steps",

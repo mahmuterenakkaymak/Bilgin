@@ -59,5 +59,22 @@
   "ask.as_table": "Sonuç tablo olarak gösteriliyor.",
   "ask.kind.line": "çizgi",
   "ask.kind.bar": "çubuk",
-  "ask.kind.pie": "pasta"
+  "ask.kind.pie": "pasta",
+
+  "ask.fail.index": "Veri kümesinin indeksi hazır değil; soru yanıtlanamadı.",
+  "ask.fail.no_submission": "Soru yanıtlanamadı; model geçerli bir sorgu üretemedi.",
+  "ask.fail.timeout": "Soru yanıtlanamadı; model zaman sınırına takıldı.",
+  "ask.fail.llm_error": "Model şu an yanıt vermiyor; birazdan yeniden deneyin.",
+  "ask.fail.context_overflow": "Sohbetin bağlamı modelin sınırını aştı; yeni bir konuşmayla yeniden deneyin.",
+  "ask.fail.exec:policy": "Sorgu güvenlik denetimine takıldı; bu veri gösterilemiyor.",
+  "ask.fail.exec:transpile": "Sorgu bu veritabanına çevrilemedi.",
+  "ask.fail.exec:sql": "Sorgu veritabanında çalıştırılamadı.",
+  "ask.fail.exec:timeout": "Sorgu zaman sınırını aştı; lütfen daha dar bir soru deneyin.",
+  "ask.fail.not_found": "Bu soru geçmişte bulunamadı.",
+  "ask.fail.dataset": "Bu soru başka bir veri kümesinde sorulmuş; o kümeyle açın.",
+  "ask.fail.db_down": "Veritabanına şu an bağlanılamıyor; cevap üretilemiyor. Yöneticinize haber verin.",
+
+  "ask.replay.note": "Geçmişten açıldı: kayıtlı SQL yeniden çalıştırıldı, model SQL yazmadı.",
+  "ask.replay.step": "Geçmişteki soru ({audit_id}) yeniden çalıştırıldı.",
+  "ask.chart_only.step": "Tur {n} sorgusu yeniden çalıştırıldı, model SQL yazmadı."
 }

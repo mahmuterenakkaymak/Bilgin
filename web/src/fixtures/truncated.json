@@ -2,6 +2,7 @@
   "status": "answered",
   "question": "Geçen ayki her stok hareketinin fiş numarası ve bağlı faturanın genel toplamı nedir?",
   "choice": null,
+  "answer_lang": "tr",
   "answer_text": "Geçen ay 1234 stok hareketi listelendi; ekrandaki ilk satırlarda en yüksek fatura genel toplamı 8.920.",
   "narration_source": "llm",
   "chart": null,

@@ -2,6 +2,7 @@
   "status": "failed",
   "question": "En çok satan beş ürün hangisi?",
   "choice": null,
+  "answer_lang": "tr",
   "answer_text": "İndeks eski: `python -m nl2sql build-index` çalıştırın.",
   "narration_source": null,
   "chart": null,
