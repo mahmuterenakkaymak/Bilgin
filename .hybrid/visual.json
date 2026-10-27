@@ -505,7 +505,7 @@
         {"click": "#ask-button"},
         "wait:4",
         "shot:answer-chart-en",
-        {"click": "#evidence"},
+        {"click": "#evidence-toggle"},
         "wait:1",
         "shot:evidence-en",
         {"click": "button[data-lang='tr']"},
