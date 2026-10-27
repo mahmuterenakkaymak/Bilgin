@@ -13,7 +13,7 @@ import re
 
 import pytest
 
-from nl2sql import config
+from readme_text import readme_text
 
 HEADING = "## Konuşma: ardışık sorular"
 
@@ -50,7 +50,7 @@ FORBIDDEN_NAMES = ("Microsoft", "WideWorldImporters", "Wide World", "Tailspin", 
 
 
 def _readme() -> str:
-    return (config.ROOT / "README.md").read_text(encoding="utf-8")
+    return readme_text()
 
 
 def _section() -> str:

@@ -7,7 +7,7 @@ sayılır, o yüzden her işaret ayrı bir parametrik testte README.md'de aranı
 
 import pytest
 
-from nl2sql import config
+from readme_text import readme_text
 
 # README'de birebir geçmesi gereken işaretler (R4-14 ve 27B bölümü).
 README_MARKS = (
@@ -30,5 +30,5 @@ README_MARKS = (
 
 @pytest.mark.parametrize("mark", README_MARKS)
 def test_the_readme_documents_every_run4_mark(mark):
-    readme = (config.ROOT / "README.md").read_text(encoding="utf-8")
+    readme = readme_text()
     assert mark in readme, f"{mark} README'de yok"

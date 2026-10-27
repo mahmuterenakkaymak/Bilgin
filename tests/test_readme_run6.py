@@ -10,7 +10,7 @@ import re
 
 import pytest
 
-from nl2sql import config
+from readme_text import readme_text
 
 # README'de birebir geçmesi gereken işaretler (R6 kullanıcı/rol yüzeyi, harita ekranı, SQL Server).
 README_MARKS = (
@@ -27,7 +27,7 @@ README_MARKS = (
 
 
 def _readme() -> str:
-    return (config.ROOT / "README.md").read_text(encoding="utf-8")
+    return readme_text()
 
 
 @pytest.mark.parametrize("mark", README_MARKS)
