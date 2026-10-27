@@ -29,26 +29,25 @@ from nl2sql import config, datasets
 from nl2sql.engine._mssql import CONN_ENV
 from nl2sql.report.export import MEDIA_TYPES
 from nl2sql.schema_map import introspect, onboard, template, template_import
+from nl2sql.i18n import t
 from nl2sql.web.authz import current_user, require
+from nl2sql.web.lang import request_lang
 
 # Sözleşme "preview response": ekrana dönen alanlar, diske yazılan kaydın bir alt kümesidir.
 PREVIEW_FIELDS = ("dataset", "counts", "errors", "warnings", "db_check")
 # Sözleşme "template info": ``{"db_connection": bool}`` - düğme yalnız canlı bağlantı varsa görünür.
 # Sözleşme "template info"nun öteki yüzü: arayüzün indirdiği dolu örnek hangi adla doğar.
 SAMPLE_DATASET = "ornek_fatura"
-# R6-16: red cümleleri; .xlsx kararı ada değil içeriğe bakarak verilir.
-NOT_XLSX = "Yalnız .xlsx dosyası yüklenebilir."
-UNREADABLE = "Dosya okunamadı; Excel'in .xlsx biçiminde olduğundan emin olun."
-TOO_LARGE = (
-    f"Dosya çok büyük; en fazla {config.MAP_MAX_BYTES // (1024 * 1024)} MB yüklenebilir."
-)
-NO_PREVIEW = "Önizleme bulunamadı ya da süresi doldu."
-STILL_BROKEN = "Önizlemede düzeltilmemiş hata var; şablonu düzeltip yeniden yükleyin."
-NAME_TAKEN = "Bu ad zaten bir veri kümesi: {name}."
+# R6-16: red cümleleri kataloğundur ve yollar onu isteğin diliyle okur; .xlsx kararı ada değil
+# içeriğe bakarak verilir. Şu dört ad başka testlerin importıdır, o yüzden anahtarları değil
+# program dilinin cümlesini taşırlar.
+NOT_XLSX = t("map.not_xlsx")
+NO_PREVIEW = t("map.no_preview")
+STILL_BROKEN = t("map.still_broken")
 # R6-17: yoklama başarısız olsa da boş şablon verilir; başlık percent-kodludur, çünkü HTTP başlığı
 # Türkçe metin taşımaz. Aynı cümlenin tekrarı yoklama yapılmaz - ikinci bir giriş yok.
 NOTE_HEADER = "X-Bilgin-Note"
-DB_NOTE = "Salt okunur giriş tablo bilgisini okuyamadı (VIEW DEFINITION); boş şablon verildi."
+DB_NOTE = t("map.db_note")
 
 
 class PreviewBody(BaseModel):
@@ -76,14 +75,18 @@ def create_router() -> APIRouter:
         return {"db_connection": _db_connection()}
 
     @router.get("/api/schema-map/template.xlsx", dependencies=admin)
-    def download_template(from_db: bool = False) -> Response:
+    def download_template(request: Request, from_db: bool = False) -> Response:
         """Boş şablon; ``?from_db=1`` canlı iskeletle doldurulur, okunamazsa boş olan notla verilir."""
         if not (from_db and _db_connection()):
             return _xlsx(template.build_template(), config.TEMPLATE_FILENAME)
         try:
             return _xlsx(template.build_template(introspect.mssql_skeleton()), config.TEMPLATE_FILENAME)
         except introspect.IntrospectError:
-            return _xlsx(template.build_template(), config.TEMPLATE_FILENAME, note=DB_NOTE)
+            return _xlsx(
+                template.build_template(),
+                config.TEMPLATE_FILENAME,
+                note=t("map.db_note", _lang(request)),
+            )
 
     @router.get("/api/schema-map/sample.xlsx", dependencies=admin)
     def download_sample() -> Response:
@@ -95,12 +98,16 @@ def create_router() -> APIRouter:
     @router.post("/api/schema-map/preview", dependencies=admin)
     def preview(body: PreviewBody, request: Request) -> dict:
         """Yüklenen dosyanın kontrol raporu: tek yazdığı bekletilen önizleme kaydının kendisidir."""
-        data = _decode(body.content_b64)
+        lang = _lang(request)
+        data = _decode(body.content_b64, lang)
         if len(data) > config.MAP_MAX_BYTES:
-            raise HTTPException(status_code=413, detail=TOO_LARGE)
+            raise HTTPException(
+                status_code=413,
+                detail=t("map.too_large", lang, mb=config.MAP_MAX_BYTES // (1024 * 1024)),
+            )
         if not _is_xlsx(data):
-            raise HTTPException(status_code=422, detail=NOT_XLSX)
-        read = _read_upload(data, request)
+            raise HTTPException(status_code=422, detail=t("map.not_xlsx", lang))
+        read = _read_upload(data, request, lang)
         skeleton, note = _live_skeleton(read)
         errors, warnings, db_check = template_import.validate(read, skeleton)
         if note:
@@ -120,31 +127,42 @@ def create_router() -> APIRouter:
     @router.post("/api/schema-map/apply", dependencies=admin)
     def apply(body: ApplyBody, request: Request) -> dict:
         """Bekleyen raporu küme klasörüne çevirir ve indeksi arka plana bırakır (R6-16)."""
+        lang = _lang(request)
         preview = onboard.load_preview(body.preview_id)
         if preview is None:
-            raise HTTPException(status_code=404, detail=NO_PREVIEW)
+            raise HTTPException(status_code=404, detail=t("map.no_preview", lang))
         if preview.get("errors"):
-            raise HTTPException(status_code=409, detail=STILL_BROKEN)
+            raise HTTPException(status_code=409, detail=t("map.still_broken", lang))
         name = preview["dataset"]["name"]
         if datasets.name_taken(name):
-            raise HTTPException(status_code=409, detail=NAME_TAKEN.format(name=name))
+            raise HTTPException(status_code=409, detail=t("map.name_taken", lang, name=name))
         try:
-            onboard.apply_preview(preview, _username(request))
+            onboard.apply_preview(preview, _username(request), lang)
         except FileExistsError:
             # Rapor okunduğu anda ad boştu; arada biri aynı kümeyi kurmuşsa var olana dokunulmaz.
-            raise HTTPException(status_code=409, detail=NAME_TAKEN.format(name=name)) from None
-        jobs.start(body.preview_id, name, _embed(request), suggest=_suggest(request.app))
+            raise HTTPException(
+                status_code=409, detail=t("map.name_taken", lang, name=name)
+            ) from None
+        # İş parçacığının kendi isteği yok: cümlesinin dili onu başlatan yolun dilidir (R8-5).
+        jobs.start(
+            body.preview_id, name, _embed(request), suggest=_suggest(request.app), lang=lang
+        )
         return jobs.status(body.preview_id)
 
     @router.get("/api/schema-map/status/{preview_id}", dependencies=admin)
-    def status(preview_id: str) -> dict:
+    def status(preview_id: str, request: Request) -> dict:
         """Sözleşme "apply / status": hiç başlamamış bir işin aşaması yoktur, o yüzden 404."""
         job = jobs.status(preview_id)
         if job is None:
-            raise HTTPException(status_code=404, detail=NO_PREVIEW)
+            raise HTTPException(status_code=404, detail=t("map.no_preview", _lang(request)))
         return job
 
     return router
+
+
+def _lang(request: Request) -> str:
+    """Yolun arayüz dili: kişinin tercihi, yoksa tarayıcının başlığı, o da yoksa programın dili (R8-5)."""
+    return request_lang(request, current_user(request))
 
 
 def _suggest(app):
@@ -179,12 +197,12 @@ def _live_skeleton(read: dict) -> tuple[dict | None, str | None]:
         return None, str(exc)
 
 
-def _decode(content_b64: str) -> bytes:
+def _decode(content_b64: str, lang: str) -> bytes:
     """Gövdenin base64'ü; çözülemeyen bir metin zaten bir çalışma kitabı değildir."""
     try:
         return base64.b64decode(content_b64)
     except (binascii.Error, ValueError):
-        raise HTTPException(status_code=422, detail=NOT_XLSX) from None
+        raise HTTPException(status_code=422, detail=t("map.not_xlsx", lang)) from None
 
 
 def _is_xlsx(data: bytes) -> bool:
@@ -196,7 +214,7 @@ def _is_xlsx(data: bytes) -> bool:
         return False
 
 
-def _read_upload(data: bytes, request: Request) -> dict:
+def _read_upload(data: bytes, request: Request, lang: str) -> dict:
     """Baytlar geçici bir dosyada okunur: okuyucu bir yol ister, yüklemenin diske düşmesi gerekmez."""
     with tempfile.TemporaryDirectory() as folder:
         path = Path(folder) / "yukleme.xlsx"
@@ -209,7 +227,7 @@ def _read_upload(data: bytes, request: Request) -> dict:
         except template_import.TemplateError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from None
         except (InvalidFileException, zipfile.BadZipFile, OSError, ValueError, KeyError):
-            raise HTTPException(status_code=422, detail=UNREADABLE) from None
+            raise HTTPException(status_code=422, detail=t("map.unreadable", lang)) from None
 
 
 def _llm(request: Request):

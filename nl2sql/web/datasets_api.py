@@ -19,20 +19,23 @@ from nl2sql.app.session import SessionError, open_session
 from nl2sql.engine.login_script import DEFAULT_LOGIN, readonly_login_sql
 from nl2sql.index.search import load_search
 from nl2sql.index.store import META_FILE, MissingIndexError, StaleIndexError
+from nl2sql.i18n import t
 from nl2sql.start.seed import ensure_seeded
-from nl2sql.web.authz import require
+from nl2sql.web.authz import current_user, require
+from nl2sql.web.lang import request_lang
 
 # Sözleşme "settings": etkin kümenin adı kullanıcı deposunun ayarlarındadır, ``serve`` oradan okur.
 ACTIVE_SETTING = "active_dataset"
 # Sözleşme "switch": SQL Server kümesine geçişin duyurusu bu adresi ve bu ortam değişkenini taşır.
 LOGIN_SCRIPT_ENV = "NL2SQL_MSSQL_CONN"
-LOGIN_NOTICE = "Bu küme SQL Server'a bağlı: salt okunur girişi kurun ve sunucuyu {env} ile başlatın."
 # R6-16: haritadan kurulan küme betiği klasöründe taşır; eski kümelerde o dosya yoktur, üretilir.
 LOGIN_SCRIPT_FILE = "readonly_login.sql"
 # Bozuk bir klasör (yarıda kesilmiş bir apply, elle düzenlenmiş bir dosya) ekranı düşürmez: liste
 # o satırı okunamayan bir cümleyle, tek tek yollar ise 404/409 cümlesiyle söyler.
-INDEX_UNREADABLE = "Kümenin şeması okunamadığı için indeksi denetlenemedi."
-BROKEN_DATASET = "Veri kümesi okunamıyor: {name}. Klasördeki bir dosya eksik ya da bozuk."
+# R8-5: cümleler kataloğundur ve her yol onu isteğin diliyle okur; şu iki ad başka testlerin
+# importıdır, o yüzden anahtarları değil program dilinin cümlesini taşırlar.
+INDEX_UNREADABLE = t("datasets.index_unreadable")
+BROKEN_DATASET = t("datasets.broken")
 
 
 class ActiveBody(BaseModel):
@@ -50,13 +53,14 @@ def create_router() -> APIRouter:
     def datasets_list(request: Request) -> dict:
         """Kümeler ve hangisinin etkin olduğu; her satır indeksinin durumunu da taşır (R6-18)."""
         active = _active_name(request)
+        lang = _lang(request)
         items = []
         for item in datasets.all_datasets():
-            ds = _load(item["name"])
+            ds = _load(item["name"], lang)
             items.append({
                 **item,
                 "active": item["name"] == active,
-                "index": _index_state(ds),
+                "index": _index_state(ds, lang),
             })
         return {"active": active, "datasets": items}
 
@@ -71,11 +75,12 @@ def create_router() -> APIRouter:
         R7-23: geçilen küme SQL Server kümesiyse yürütücü bağlantı deposundaki kendi satırına
         kurulur, yani geçiş için sunucu yeniden başlatılmaz.
         """
+        lang = _lang(request)
         name = body.name.strip()
         if not name:
-            raise HTTPException(status_code=400, detail="Veri kümesi adı boş.")
+            raise HTTPException(status_code=400, detail=t("datasets.empty_name", lang))
         current = request.app.state.session
-        ds = _load(name)
+        ds = _load(name, lang)
         try:
             new = open_session(
                 dataset=name,
@@ -90,7 +95,9 @@ def create_router() -> APIRouter:
             raise HTTPException(status_code=409, detail=str(exc)) from None
         except (OSError, json.JSONDecodeError):
             # Klasördeki bir dosya eksik ya da bozuk: oturum kurulamaz, eski dünya yerinde kalır.
-            raise HTTPException(status_code=409, detail=BROKEN_DATASET.format(name=name)) from None
+            raise HTTPException(
+                status_code=409, detail=t("datasets.broken", lang, name=name)
+            ) from None
         with request.app.state.session_lock:
             request.app.state.session = new
         users = request.app.state.users
@@ -106,13 +113,14 @@ def create_router() -> APIRouter:
                 "display_name": ds.display_name,
                 "connection": ds.connection,
             },
-            "notice": _notice(ds),
+            "notice": _notice(ds, lang),
         }
 
     @router.get("/api/datasets/{name}/login-script.sql", dependencies=admin)
-    def login_script(name: str) -> Response:
+    def login_script(name: str, request: Request) -> Response:
         """Kümenin salt okunur giriş betiği: klasördeki varsa o, yoksa şemasından kurulur (R3-8)."""
-        ds = _load(name)
+        lang = _lang(request)
+        ds = _load(name, lang)
         stored = ds.root / LOGIN_SCRIPT_FILE
         try:
             sql = (
@@ -121,18 +129,35 @@ def create_router() -> APIRouter:
                 else readonly_login_sql(ds.schema(), DEFAULT_LOGIN)
             )
         except (OSError, json.JSONDecodeError):
-            raise HTTPException(status_code=409, detail=BROKEN_DATASET.format(name=name)) from None
+            raise HTTPException(
+                status_code=409, detail=t("datasets.broken", lang, name=name)
+            ) from None
         return Response(content=sql, media_type="text/plain; charset=utf-8")
 
     return router
 
 
-def _load(name: str) -> datasets.Dataset:
+def _lang(request: Request) -> str:
+    """Yolun arayüz dili: kişinin tercihi, yoksa tarayıcının başlığı, o da yoksa programın dili (R8-5)."""
+    return request_lang(request, current_user(request))
+
+
+def _load(name: str, lang: str) -> datasets.Dataset:
     """Kümenin tanımı; yoksa ekranın okuyacağı 404 (cümle hangi adın bilindiğini de sayar)."""
     try:
         return datasets.load_dataset(name)
-    except datasets.DatasetError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from None
+    except datasets.DatasetError:
+        # İstisnanın kendi cümlesi CLI'ınki ve yalnız Türkçe; yol onun yerine kataloğun aynı
+        # satırını koyar, o yüzden iki yüz de aynı şeyi söyler (R8-5).
+        raise HTTPException(
+            status_code=404, detail=t("datasets.unknown", lang, name=name, known=_known_names())
+        ) from None
+
+
+def _known_names() -> str:
+    """Kataloğun ``{known}`` alanı: iki kökteki küme klasörlerinin adları, sırasıyla."""
+    roots = (config.datasets_dir(), config.real_datasets_dir())
+    return ", ".join(sorted({n for base in roots for n in datasets.list_datasets(base)}))
 
 
 def _active_name(request: Request) -> str:
@@ -141,7 +166,7 @@ def _active_name(request: Request) -> str:
     return ds.name if ds else config.DEFAULT_DATASET
 
 
-def _index_state(ds: datasets.Dataset) -> dict:
+def _index_state(ds: datasets.Dataset, lang: str) -> dict:
     """Kümenin indeksi bu şema ve kurallarla yüklenebiliyor mu: ``_index_block``un küme okuyan hali."""
     try:
         load_search(ds.index_dir, ds.schema(), ds.rules(), ds.name)
@@ -154,16 +179,16 @@ def _index_state(ds: datasets.Dataset) -> dict:
     except (OSError, json.JSONDecodeError):
         # Şeması okunamayan bir küme (R6-16'nın yarım kalan koşumu) listeyi düşürmez: satır
         # "İndeks yok" olarak çıkar, sebebi ekranın göstereceği cümledir.
-        return {"exists": False, "fresh": False, "reason": INDEX_UNREADABLE}
+        return {"exists": False, "fresh": False, "reason": t("datasets.index_unreadable", lang)}
     return {"exists": True, "fresh": True, "reason": None}
 
 
-def _notice(ds: datasets.Dataset) -> dict | None:
+def _notice(ds: datasets.Dataset, lang: str) -> dict | None:
     """Geçişin duyurusu: yalnız SQL Server kümesi bir sonraki adımı gerektirir (R6-18)."""
     if ds.connection != "mssql":
         return None
     return {
         "login_script_url": f"/api/datasets/{ds.name}/login-script.sql",
         "env": LOGIN_SCRIPT_ENV,
-        "message": LOGIN_NOTICE.format(env=LOGIN_SCRIPT_ENV),
+        "message": t("datasets.login_notice", lang, env=LOGIN_SCRIPT_ENV),
     }

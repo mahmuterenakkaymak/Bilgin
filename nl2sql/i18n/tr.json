@@ -118,5 +118,24 @@
   "rules.label.tables": "Tablolar",
   "rules.label.markers": "İşaretçiler",
   "rules.unknown_table": "Şemada olmayan tablo: {table}.",
-  "rules.marker_uncompiled": "İşaretçi derlenmiyor (geçersiz düzenli ifade): {marker}"
+  "rules.marker_uncompiled": "İşaretçi derlenmiyor (geçersiz düzenli ifade): {marker}",
+
+  "datasets.empty_name": "Veri kümesi adı boş.",
+  "datasets.unknown": "Bilinmeyen veri kümesi: {name} (bilinenler: {known})",
+  "datasets.broken": "Veri kümesi okunamıyor: {name}. Klasördeki bir dosya eksik ya da bozuk.",
+  "datasets.index_unreadable": "Kümenin şeması okunamadığı için indeksi denetlenemedi.",
+  "datasets.login_notice": "Bu küme SQL Server'a bağlı: salt okunur girişi kurun ve sunucuyu {env} ile başlatın.",
+
+  "map.not_xlsx": "Yalnız .xlsx dosyası yüklenebilir.",
+  "map.unreadable": "Dosya okunamadı; Excel'in .xlsx biçiminde olduğundan emin olun.",
+  "map.too_large": "Dosya çok büyük; en fazla {mb} MB yüklenebilir.",
+  "map.no_preview": "Önizleme bulunamadı ya da süresi doldu.",
+  "map.still_broken": "Önizlemede düzeltilmemiş hata var; şablonu düzeltip yeniden yükleyin.",
+  "map.name_taken": "Bu ad zaten bir veri kümesi: {name}.",
+  "map.db_note": "Salt okunur giriş tablo bilgisini okuyamadı (VIEW DEFINITION); boş şablon verildi.",
+
+  "onboard.index_failed": "İndeks kurulamadı: {name} (build-index {code} ile döndü).",
+  "onboard.real_stub.doc": "{name} gerçek bir veritabanıdır: Bilgin şablonundan kuruldu, satırlar o veritabanında durur.\n\nBurada üretilecek ya da kurulacak bir şey yok: golden cevaplar, salt okunur girişle o veritabanında\nkoşan golden SQL'dir.",
+  "onboard.real_stub.build_db": "{name} kurulmaz: veritabanı zaten var, gereken yalnız salt okunur giriş.",
+  "onboard.real_stub.generate": "{name} üretilmez: satırlar gerçek veritabanından okunur."
 }

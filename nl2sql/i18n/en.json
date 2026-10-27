@@ -118,5 +118,24 @@
   "rules.label.tables": "Tables",
   "rules.label.markers": "Markers",
   "rules.unknown_table": "Table not in the schema: {table}.",
-  "rules.marker_uncompiled": "The marker does not compile (invalid regular expression): {marker}"
+  "rules.marker_uncompiled": "The marker does not compile (invalid regular expression): {marker}",
+
+  "datasets.empty_name": "The dataset name is empty.",
+  "datasets.unknown": "Unknown dataset: {name} (known: {known})",
+  "datasets.broken": "The dataset cannot be read: {name}. A file in its folder is missing or broken.",
+  "datasets.index_unreadable": "The index of the dataset could not be checked because its schema could not be read.",
+  "datasets.login_notice": "This dataset is bound to SQL Server: create the read-only login and start the server with {env}.",
+
+  "map.not_xlsx": "Only a .xlsx file can be uploaded.",
+  "map.unreadable": "The file could not be read; make sure it is in Excel's .xlsx format.",
+  "map.too_large": "The file is too large; at most {mb} MB can be uploaded.",
+  "map.no_preview": "The preview was not found or has expired.",
+  "map.still_broken": "The preview still has unfixed errors; correct the template and upload it again.",
+  "map.name_taken": "This name is already a dataset: {name}.",
+  "map.db_note": "The read-only login could not read the table metadata (VIEW DEFINITION); the blank template was given.",
+
+  "onboard.index_failed": "The index could not be built: {name} (build-index returned {code}).",
+  "onboard.real_stub.doc": "{name} is a real database: it was created from the Bilgin template, its rows live in that database.\n\nThere is nothing to produce or to build here: the golden answers are the golden SQL that runs in that database\nwith the read-only login.",
+  "onboard.real_stub.build_db": "{name} is not built: the database already exists, all it needs is the read-only login.",
+  "onboard.real_stub.generate": "{name} is not generated: its rows are read from the real database."
 }

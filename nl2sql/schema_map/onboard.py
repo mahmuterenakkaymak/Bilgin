@@ -22,6 +22,7 @@ from pathlib import Path
 
 from nl2sql import config
 from nl2sql.engine.login_script import readonly_login_sql
+from nl2sql.i18n import t
 from nl2sql.schema_map import rules_edit
 
 # Sözleşme "new dataset folder": klasördeki yedi dosya; adlarını üreten tek yer burası.
@@ -29,25 +30,20 @@ LOGIN_SCRIPT_FILE = "readonly_login.sql"
 REAL_MODULE = "real.py"
 # Sözleşme "new dataset folder": model istemeyen tanıtım sorusunun kalıbı.
 FAKE_FALLBACK = "SELECT COUNT(*) AS KAYIT_SAYISI FROM {table}"
-# Sözleşme "apply / status": iş parçacığının çökmesi ekransız kalmaz, cümle bellekte durur.
-INDEX_FAILED = "İndeks kurulamadı: {name} (build-index {code} ile döndü)."
 # Önizleme kimliği tarayıcıdan gelir; bu biçimin dışındaki bir metin diskte hiçbir yere bakmaz.
 PREVIEW_ID_RE = re.compile(r"[0-9a-f]{32}\Z")
 
-# real.py'nin gövdesi: wwi_real'in örneği gibi, kurulum ve üretim cümleleri Türkçe.
-_REAL_STUB = '''"""{name} gerçek bir veritabanıdır: Bilgin şablonundan kuruldu, satırlar o veritabanında durur.
-
-Burada üretilecek ya da kurulacak bir şey yok: golden cevaplar, salt okunur girişle o veritabanında
-koşan golden SQL'dir.
+# real.py'nin gövdesi: wwi_real'in örneği gibi; üç cümlesi kataloğundur, dili kümenin diliyle yazılır.
+_REAL_STUB = '''"""{doc}
 """
 
 
 def build_db(seed, db_path, sql_path):
-    raise SystemExit("{name} kurulmaz: veritabanı zaten var, gereken yalnız salt okunur giriş.")
+    raise SystemExit("{build}")
 
 
 def generate(seed):
-    raise SystemExit("{name} üretilmez: satırlar gerçek veritabanından okunur.")
+    raise SystemExit("{generate}")
 
 
 REFERENCES = {{}}
@@ -85,11 +81,12 @@ def load_preview(preview_id: str, now: datetime | None = None) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def apply_preview(preview: dict, username: str) -> Path:
+def apply_preview(preview: dict, username: str, lang: str = "tr") -> Path:
     """Önizlemeyi gerçek bir veri kümesi klasörüne çevirir ve değişimi günlüğe yazar.
 
     Ad doluysa ``FileExistsError`` yükselir - var olan kümenin tek baytına dokunulmaz. Yazma
-    yarıda kalırsa yalnız bu çağrının yarattığı klasör silinir.
+    yarıda kalırsa yalnız bu çağrının yarattığı klasör silinir. ``lang`` üretilen ``real.py``nin
+    dilidir: klasör bir daha dil değiştirmeyecek, o yüzden küme doğduğu dilde kalır.
     """
     name = preview["dataset"]["name"]
     folder = Path(config.real_datasets_dir()) / name
@@ -101,7 +98,7 @@ def apply_preview(preview: dict, username: str) -> Path:
         rules_edit.save_rules(preview.get("rules") or [], folder / "rules.json")
         _write_json(folder / "profile.json", {"name": name, "pairs": []})
         _write_text(folder / "golden.jsonl", "")
-        _write_text(folder / REAL_MODULE, _REAL_STUB.format(name=name))
+        _write_text(folder / REAL_MODULE, _real_stub(name, lang))
         _write_text(folder / LOGIN_SCRIPT_FILE, readonly_login_sql(schema, f"bilgin_{name}_ro"))
         _log_change(preview, username, name)
     except Exception:
@@ -117,18 +114,19 @@ class IndexJobs:
         self._lock = threading.Lock()
         self._jobs: dict[str, dict] = {}
 
-    def start(self, preview_id: str, name: str, embed: str, suggest=None) -> None:
+    def start(self, preview_id: str, name: str, embed: str, suggest=None, lang: str = "tr") -> None:
         """İşi kaydedip döner; indeks kurma iş parçacığında başlar.
 
         ``suggest`` indeks bittiğinde kümeyi çağıran kancadır (R7-20): yeni doğan kümenin
         başlangıç ekranı boş kalmasın. Kendi iş parçacığında koşan ayrı bir iş çağrılır, yani
-        önerinin hatası bu işin aşamasını değiştirmez.
+        önerinin hatası bu işin aşamasını değiştirmez. ``lang`` işin cümlesinin dilidir: iş
+        parçacığının kendi isteği olmadığı için dili onu başlatan yol taşır.
         """
         # ASSUMPTION: `writing` bu kayıttır; iş parçacığı build'e girerken `indexing`e geçer,
         # böylece sözleşmenin dört aşaması iki metotla kurulur.
         self._set(preview_id, name, "writing", None)
         threading.Thread(
-            target=self._run, args=(preview_id, name, embed, suggest), daemon=True
+            target=self._run, args=(preview_id, name, embed, suggest, lang), daemon=True
         ).start()
 
     def status(self, preview_id: str) -> dict | None:
@@ -137,7 +135,7 @@ class IndexJobs:
             job = self._jobs.get(preview_id)
             return dict(job) if job else None
 
-    def _run(self, preview_id: str, name: str, embed: str, suggest=None) -> None:
+    def _run(self, preview_id: str, name: str, embed: str, suggest=None, lang: str = "tr") -> None:
         # Geç import: şema katmanı, yalnız arka planda ihtiyaç duyduğu CLI'ı döngüye sokmasın.
         from nl2sql.cli import main as cli
 
@@ -146,7 +144,7 @@ class IndexJobs:
         try:
             code = cli.build_index(embed, dataset=name)
             if code != 0:
-                problem = INDEX_FAILED.format(name=name, code=code)
+                problem = t("onboard.index_failed", lang, name=name, code=code)
         except Exception as exc:  # iş parçacığı buradan öte geçemez; cümle ekrana ulaşmalı
             problem = str(exc) or exc.__class__.__name__
         self._set(preview_id, name, "failed" if problem else "done", problem)
@@ -161,6 +159,15 @@ class IndexJobs:
                 "phase": phase,
                 "message": message,
             }
+
+
+def _real_stub(name: str, lang: str) -> str:
+    """Klasöre yazılan ``real.py``: gövde sabit, üç cümlesi kataloğun ``lang`` satırları."""
+    return _REAL_STUB.format(
+        doc=t("onboard.real_stub.doc", lang, name=name),
+        build=t("onboard.real_stub.build_db", lang, name=name),
+        generate=t("onboard.real_stub.generate", lang, name=name),
+    )
 
 
 def _dataset_doc(preview: dict, name: str) -> dict:
