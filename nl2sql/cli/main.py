@@ -125,7 +125,8 @@ DETAIL_HEAD = re.compile(rf"^{TABLE_NAME} — ", re.MULTILINE)  # detay bloğunu
 JOIN_LINE = re.compile(r"\S+ = ")  # bir join satırı: A.X = B.Y (fk 1.0)
 WARNING_MARK = "⚠"
 VALUE_COUNT = re.compile(r"Değerler \((\d+)\)")
-BAD_REPEAT = "--repeat en az 1 olmalı."
+# R8-4: reddin cümlesi kataloğa taşındı; sabit yine durur - test onu buradan okur, değeri tr'nindir.
+BAD_REPEAT = t("cli.eval.bad_repeat", config.DEFAULT_LANG)
 # R8-10: ekranın satırları kataloğa taşındı; iki sabit yine de adlarıyla durur - app/session ve
 # testler onları buradan okur, yani değerleri program dilinin cümlesidir.
 NO_INDEX_NOTE = t("cli.ask.no_index", config.DEFAULT_LANG)
@@ -134,8 +135,8 @@ NO_INDEX_NOTE = t("cli.ask.no_index", config.DEFAULT_LANG)
 # (ölçülecek soru yoktur) ve R5-14'un metrik başlığı da orada durur.
 # R4-13: kapalı bir uç nokta bütün modeli düşürür; sebep satırı hem ekranda hem raporun
 # ``skipped``ında durur, yani okuyan hangi modelin neden ölçülmediğini rapordan da görür.
-MODES_WITHOUT_MODELS = "--modes yalnız --models ile kullanılır."
-MODEL_SKIPPED = "uç nokta yanıt vermiyor ({url}) — bu blok atlandı; GPU'da bu modeli açıp yeniden koşun."
+# R8-4: cümle kataloğa taşındı; sabit yine durur - test onu buradan okur, değeri tr'nindir.
+MODEL_SKIPPED = t("cli.compare.model_skipped", config.DEFAULT_LANG)
 # ASSUMPTION: hiçbir model koşmadıysa ortada ölçülen bir hücre yoktur; rapor yazılmadan çıkılır
 # (ölü uç noktanın kod 3'ü gibi - koşulmamış bir karşılaştırmanın raporu kullanıcıyı yanıltır).
 EXIT_NO_CELLS = 3
@@ -1019,7 +1020,7 @@ def compare_models_cmd(
     _utf8_stdout()
     lang = lang or _LANG
     if repeat < 1:
-        print(BAD_REPEAT)
+        print(_t("cli.eval.bad_repeat", lang))
         return EXIT_BAD_INPUT
     ds, code = _dataset(dataset)
     if code:
@@ -1066,7 +1067,7 @@ def compare_models_cmd(
             # açık bir sunucuya "GPU'da bu modeli açıp yeniden koşun" olmaz (R4-10, T151'in kapısı).
             reason = llm.key_missing_reason(profile.api_key_env)
             if not reason and ping(profile):
-                reason = MODEL_SKIPPED.format(url=profile.base_url)
+                reason = _t("cli.compare.model_skipped", lang, url=profile.base_url)
             if reason:
                 skipped[model] = reason
                 continue
@@ -2159,7 +2160,7 @@ def main(argv: list[str] | None = None) -> int:
             lang=args.lang,
         )
     if args.modes and not args.models:
-        print(MODES_WITHOUT_MODELS)
+        print(_t("cli.eval.modes_without_models"))
         return EXIT_BAD_INPUT
     if args.mode == "auto":
         print(_t("cli.eval.no_auto"))
@@ -2197,7 +2198,7 @@ def main(argv: list[str] | None = None) -> int:
             )
         if args.compare:
             if args.repeat < 1:
-                print(BAD_REPEAT)
+                print(_t("cli.eval.bad_repeat"))
                 return EXIT_BAD_INPUT
             return compare_modes(
                 lambda mode: make_client(args.llm, mode, ds, profile),
@@ -2431,7 +2432,9 @@ def _probe_ping(path: Path):
     def ping(conn_str: str, timeout: float | None = None) -> None:
         dataset = str(conn_str).removeprefix(PROBE_PREFIX)
         if _probe_read(path)["status"].get(dataset) == "down":
-            raise ConnectionError(f"[08001] {dataset} sunucusuna ulaşılamadı (probe dosyası).")
+            # ASSUMPTION: sahte sürücü cümlesidir - gerçek pyodbc hatası gibi sabit ve İngilizce;
+            # gerçek sürücü cümleleri de çevrilmediği için kataloğa girmez.
+            raise ConnectionError(f"[08001] {dataset} server unreachable (probe file).")
 
     return ping
 

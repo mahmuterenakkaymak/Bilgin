@@ -361,6 +361,8 @@
   "cli.eval.followup_chain": "  {id}  {passed}/{total} turns  context {mark}",
   "cli.eval.followup_total": "Total: turn {turn} · chain {chain} · context {context}",
   "cli.eval.report": "Report: {path}",
+  "cli.eval.bad_repeat": "--repeat must be at least 1.",
+  "cli.eval.modes_without_models": "--modes is only used with --models.",
 
   "eval.progress": "{id} {mark} {outcome} {tools} tools  {seconds} s  {tokens} tokens",
   "eval.golden_sql_failed": "Golden SQL could not run ({qid}): {reason}",
@@ -501,6 +503,7 @@
   "cli.compare.running": "{mode} running ...",
   "cli.compare.running_repeat": "{mode} running {attempt}/{repeat} ...",
   "cli.compare.repeat_line": "Repeat: each mode runs {repeat} times (noise measurement)",
+  "cli.compare.model_skipped": "the endpoint is not responding ({url}) — this block was skipped; open the model on the GPU and run again.",
   "cli.eval.compare_line": "{mode} {score}  context {peak}/{median}  tools {tools}  {seconds} s",
   "cli.eval_retrieval.duration": "Time: {seconds} s"
 }

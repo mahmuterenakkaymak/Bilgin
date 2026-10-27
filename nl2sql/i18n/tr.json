@@ -361,6 +361,8 @@
   "cli.eval.followup_chain": "  {id}  {passed}/{total} tur  bağlam {mark}",
   "cli.eval.followup_total": "Toplam: tur {turn} · zincir {chain} · bağlam {context}",
   "cli.eval.report": "Rapor: {path}",
+  "cli.eval.bad_repeat": "--repeat en az 1 olmalı.",
+  "cli.eval.modes_without_models": "--modes yalnız --models ile kullanılır.",
 
   "eval.progress": "{id} {mark} {outcome} {tools} araç  {seconds} sn  {tokens} token",
   "eval.golden_sql_failed": "Golden SQL çalıştırılamadı ({qid}): {reason}",
@@ -501,6 +503,7 @@
   "cli.compare.running": "{mode} koşuluyor ...",
   "cli.compare.running_repeat": "{mode} koşuluyor {attempt}/{repeat} ...",
   "cli.compare.repeat_line": "Tekrar: her mod {repeat} kez koşuluyor (gürültü ölçümü)",
+  "cli.compare.model_skipped": "uç nokta yanıt vermiyor ({url}) — bu blok atlandı; GPU'da bu modeli açıp yeniden koşun.",
   "cli.eval.compare_line": "{mode} {score}  bağlam {peak}/{median}  araç {tools}  {seconds} sn",
   "cli.eval_retrieval.duration": "Süre: {seconds} sn"
 }
