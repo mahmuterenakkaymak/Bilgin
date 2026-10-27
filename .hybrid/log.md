@@ -1924,3 +1924,81 @@ operable program or batch file.
 2026-10-27 22:11:01 | HANDS  | T427 try 2: M27 integration (no hand-made fakes): add tests/test_integration_m27.py (new file: real UserStore + real create_app + real wwi session with `make_client("fake")`: an admin sets `lang` en through PUT me -> E01 ask English answer, blank question 422 English, template download English -> fill its Tables/Columns sheets by openpyxl with one table -> preview (English messages) -> apply -> new dataset; the same content in the Turkish template applied as another dataset -> byte-identical schema.json/rules.json; a tr user on the same app sees today's Turkish texts; CLI `eval --lang en --llm fake --dataset wwi` 100 %), then run the whole suite and fix whatever is red
 2026-10-27 22:20:47 | ORCH   | T427: 5 older test(s) red at HEAD too - checking whether they are stale
 2026-10-27 22:22:45 | ORCH   | T427: stale tests updated automatically (T415, T416, T417, R8-12, R8-13) in 1199eb0: tests/test_cli_lang.py, tests/test_excel_fallback.py, tests/test_onboard_apply.py, tests/test_template_read.py
+2026-10-27 22:31:35 | ORCH   | T427: PASSED (hands)
+2026-10-27 22:31:35 | ORCH   | M27: whole-project checks
+2026-10-27 22:41:18 | ORCH   | M27: whole-project checks green (22 command(s))
+2026-10-27 22:41:18 | ORCH   | M27: screenshots for the visual review
+2026-10-27 22:52:37 | ORCH   | M27: page problem: landing-empty-state-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: ask-golden-answer-chart-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: ask-ambiguous-clarify-then-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: export-buttons-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: saved-and-history-sidebar-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: rules-screen-validation-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: dark-mode-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: logout-clears-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: users-screen-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: user-readonly-rules-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: admin-map-onboard-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 22:52:37 | ORCH   | M27: page problem: admin-map-onboard-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: admin-map-onboard-390: console error: Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: conversation-three-turns-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: conversation-chart-refine-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: new-conversation-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: start-sales-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: start-sales-390: console error: Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: start-purchasing-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: card-answer-followup-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: admin-ready-questions-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: admin-connections-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 22:52:37 | ORCH   | M27: page problem: admin-connections-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: db-dot-user-ok-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: db-dot-user-down-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: en-login-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 22:52:37 | ORCH   | M27: page problem: en-login-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: en-ask-chart-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 22:52:37 | ORCH   | M27: page problem: en-ask-chart-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: en-map-screen-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 22:52:37 | ORCH   | M27: page problem: en-map-screen-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: landing-empty-state-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: ask-golden-answer-chart-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: ask-ambiguous-clarify-then-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: export-buttons-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: saved-and-history-sidebar-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 22:52:37 | ORCH   | M27: page problem: saved-and-history-sidebar-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: rules-screen-validation-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: dark-mode-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: logout-clears-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: users-screen-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: users-screen-1366: console error: Failed to load resource: the server responded with a status of 409 (Conflict)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: user-readonly-rules-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: admin-map-onboard-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 22:52:37 | ORCH   | M27: page problem: admin-map-onboard-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: admin-map-onboard-1366: console error: Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: conversation-three-turns-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 22:52:37 | ORCH   | M27: page problem: conversation-three-turns-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: conversation-chart-refine-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: new-conversation-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: start-sales-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: start-sales-1366: console error: Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: start-purchasing-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: card-answer-followup-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: admin-ready-questions-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: admin-connections-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 22:52:37 | ORCH   | M27: page problem: admin-connections-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: db-dot-user-ok-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: db-dot-user-down-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: en-login-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 22:52:37 | ORCH   | M27: page problem: en-login-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: en-ask-chart-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 22:52:37 | ORCH   | M27: page problem: en-ask-chart-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:52:37 | ORCH   | M27: page problem: en-map-screen-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 22:52:37 | ORCH   | M27: page problem: en-map-screen-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 22:59:44 | BRAIN  | M27: visual review with local Strata (136 screenshots)
+2026-10-27 23:13:08 | BRAIN  | M27: visual review done - 6 fix task(s) added
+2026-10-27 23:13:34 | BRAIN  | M27: review with sonnet in the background - hands keep building
+2026-10-27 23:13:52 | HANDS  | T473 try 1: the visual run photographs whatever server already holds the port (M27 review 0): `scripts/visual_serve.py` passes `--port` straight to the `serve` child (line 211) without asking whether the port is taken, so a leftover process answers and the milestone review drives it - on 2026-10-27 the M27 run drove a server older than the tree (that server's `Accept-Language: en` answers `Oturum açmanız gerekiyor.`, a fresh process of the same commit answers `You need to sign in.`; its `/api/auth/me` has no `lang`; its `/api/start` returns `"label":"MUSTERI_KARTI"` while `_alias_label` returns "Musteri karti"), so no M27 English message, template or answer appears in any of the 136 frames and the map flow's red `Dosya okunamadı` is that old server rejecting its own sample workbook. Second run in a row (M26 review's caveat). Fix: before wiping `data/visual/` or launching anything, try to bind the port (a `socket` bind on the same address `serve` uses); if it is taken, print one line naming the port and exit 1 - nothing is deleted, no child is started. Add tests/test_visual_serve_port.py (new file: bind a socket to a free port, write a marker file into `data/visual/`, run `python scripts/visual_serve.py --port <that port>` with a 60 s timeout, assert a non-zero exit and that the output names the port, assert the marker file still exists, remove the marker)
+2026-10-27 23:19:21 | ORCH   | hands: new memory note visual-serve-port-guard.md - T473's port guard in scripts/visual_serve.py collides with test_serve_is_started_with_the_probe_file's hardcoded 8777, and the bind probe must stay SO_REUSEADDR-free.

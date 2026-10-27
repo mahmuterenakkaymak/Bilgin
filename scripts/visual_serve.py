@@ -24,6 +24,7 @@ import argparse
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -176,6 +177,20 @@ def _require_visual(path) -> Path:
     return target
 
 
+def port_free(port: int, host: str = config.SERVE_HOST) -> bool:
+    """``serve``ın bağlanacağı adres boşsa True; doluysa False.
+
+    Soket bilinçli olarak çıplak: Windows'ta ``SO_REUSEADDR`` bağlamayı kazanan portu boş gösterir
+    (uvicorn o seçeneği kendisi koyar), yani deneme tam da yakalamak istediği artığı kaçırır.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind((host, port))
+        except OSError:
+            return False
+    return True
+
+
 def prepare() -> Path:
     """Kum havuzunu baştan kurar ve yoklama dosyasının yolunu verir; ``serve`` henüz açılmaz.
 
@@ -199,6 +214,11 @@ def prepare() -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    # Önce port sorulur: portu bir artık tutuyorsa ``serve`` ona bağlanır ve inceleme ağaçtaki
+    # sürümü değil onu koşar, o yüzden burada hiçbir şey silinmeden çıkılır.
+    if not port_free(args.port):
+        print(f"Port {args.port} dolu: görsel dünya silinmedi, sunucu açılmadı; önce oradaki süreci kapatın.")
+        return 1
     # Hazırlığın kendi süreci de kum havuzunu görmeli: ``apply_preview`` ve ``build_index`` yolu
     # configden okur. Alt süreç aynı ortamı taşır, yani iki dünya bir daha ayrılmaz.
     os.environ["NL2SQL_APP_DB"] = str(app_db())
