@@ -1,4 +1,37 @@
 {
   "lang.tr": "Turkish",
-  "lang.en": "English"
+  "lang.en": "English",
+
+  "facts.row_count": "Row count",
+  "facts.total": "Total",
+  "facts.max": "Highest",
+  "facts.min": "Lowest",
+  "facts.mean": "Average",
+  "facts.top_item": "Top item",
+  "facts.top_share": "Top share",
+  "facts.last_period": "Last period ({period})",
+  "facts.previous_period": "Previous period ({period})",
+  "facts.change": "Change",
+  "facts.change_pct": "Change rate",
+
+  "chart.reason": "This result does not fit a {kind} chart: {missing}.",
+  "chart.kind.line": "line",
+  "chart.kind.bar": "bar",
+  "chart.kind.pie": "pie",
+  "chart.missing.rows": "a chart needs at least two rows",
+  "chart.missing.date": "there is no date or ordered column",
+  "chart.missing.dates": "there is more than one date column",
+  "chart.missing.number": "there is no numeric column",
+  "chart.missing.numbers": "there are more than three numeric columns",
+  "chart.missing.label": "there is no category or period column",
+  "chart.missing.slices": "there are too many slices",
+  "chart.missing.positive": "slice values must be positive",
+  "chart.problem.not_object": "The option is not an object.",
+  "chart.problem.no_series": "No series: there is no data array to draw.",
+  "chart.problem.series_type": "Unknown series type: {kind}",
+  "chart.problem.axis_missing": "Missing axis: {axis}",
+  "chart.problem.category_length": "Category count {count}, series length {length}",
+  "chart.problem.pie_point": "A pie slice is missing its name or value",
+  "chart.problem.not_finite": "Non-finite number: {value}",
+  "chart.problem.not_json": "The option cannot be read back as plain JSON"
 }

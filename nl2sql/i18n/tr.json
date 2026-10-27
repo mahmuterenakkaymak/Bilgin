@@ -1,4 +1,37 @@
 {
   "lang.tr": "Türkçe",
-  "lang.en": "İngilizce"
+  "lang.en": "İngilizce",
+
+  "facts.row_count": "Satır sayısı",
+  "facts.total": "Toplam",
+  "facts.max": "En yüksek",
+  "facts.min": "En düşük",
+  "facts.mean": "Ortalama",
+  "facts.top_item": "Öne çıkan",
+  "facts.top_share": "En yüksek pay",
+  "facts.last_period": "Son dönem ({period})",
+  "facts.previous_period": "Önceki dönem ({period})",
+  "facts.change": "Değişim",
+  "facts.change_pct": "Değişim oranı",
+
+  "chart.reason": "Bu sonuç {kind} grafiğe uygun değil: {missing}.",
+  "chart.kind.line": "çizgi",
+  "chart.kind.bar": "sütun",
+  "chart.kind.pie": "pasta",
+  "chart.missing.rows": "grafik için en az iki satır gerekir",
+  "chart.missing.date": "tarih ya da sıralı bir kolon yok",
+  "chart.missing.dates": "birden çok tarih kolonu var",
+  "chart.missing.number": "sayısal kolon yok",
+  "chart.missing.numbers": "üçten çok sayısal kolon var",
+  "chart.missing.label": "kategori ya da dönem kolonu yok",
+  "chart.missing.slices": "dilim sayısı çok fazla",
+  "chart.missing.positive": "dilimlerin değerleri pozitif olmalı",
+  "chart.problem.not_object": "Seçenek bir nesne değil.",
+  "chart.problem.no_series": "Seri yok: çizilecek bir veri dizisi bulunmuyor.",
+  "chart.problem.series_type": "Bilinmeyen seri türü: {kind}",
+  "chart.problem.axis_missing": "Eksik eksen: {axis}",
+  "chart.problem.category_length": "Kategori sayısı {count}, seri uzunluğu {length}",
+  "chart.problem.pie_point": "Pasta diliminde ad ya da değer eksik",
+  "chart.problem.not_finite": "Sonlu olmayan sayı: {value}",
+  "chart.problem.not_json": "Seçenek düz JSON olarak yazılıp okunamıyor"
 }

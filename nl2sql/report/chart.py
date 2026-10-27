@@ -2,9 +2,12 @@
 
 Tür büyük ölçüde dönen kolonlardan okunur; sorunun sözcükleri yalnız pay ve saçılım kararında
 söz sahibidir. Grafik çıkmayacaksa None döner — arayüz uydurma bir grafik çizmez. Option düz
-JSON'dur: işlev taşıyamayacağı için Türkçe sayı biçimi ``bilgin`` bloğunun adıyla anlatılır.
+JSON'dur: işlev taşıyamayacağı için sayı biçimi ``bilgin`` bloğunun adıyla anlatılır.
 Maske burada yeniden hesaplanmaz: maskeli bir kolonun hücresi metne dönmüştür, o yüzden sayı
 türü değildir ve zaten eksen çıkmaz.
+
+Grafiğin insanca cümlesi cevabın dilindendir (R8-3): reddin gerekçesi ``chart.*`` anahtarlarından
+kurulur; Türkçe cümleler eskisiyle bayt bayt aynıdır.
 """
 
 from __future__ import annotations
@@ -14,6 +17,7 @@ import math
 from decimal import Decimal
 
 from nl2sql import config
+from nl2sql.i18n import t
 from nl2sql.report import shape
 
 SERIES_TYPES = ("line", "bar", "pie", "scatter")
@@ -27,8 +31,8 @@ _SCATTER_WORDS = ("iliski", "korelasyon", "sacilim", "scatter")
 # değer kolonunun adında ya da soruda geçiyorsa yüzde, değilse sayı.
 _PERCENT_WORDS = ("oran", "yuzde", "percent", "ratio")
 
-# Red cümlesi bu adla kurulur: "Bu sonuç çizgi grafiğe uygun değil: <neyin eksik olduğu>."
-_FORCED_LABELS = {"line": "çizgi", "bar": "sütun", "pie": "pasta"}
+# Red cümlesi catalog'dan kurulur (chart.reason + chart.kind.* + chart.missing.*):
+# "Bu sonuç çizgi grafiğe uygun değil: <neyin eksik olduğu>."
 
 # Izgara boşlukları plot'un kendi payıdır: containLabel True, dönen adları bottom'un İÇİNE
 # yerleştirip plot'u ezdiği için kapatıldı (M20 görsel inceleme 2). Sol boşluk o yüzden sayısal
@@ -70,15 +74,22 @@ def _category_bottom(width: int) -> int:
     return math.ceil(reach + _CATEGORY_LABEL["lineHeight"] + 8)
 
 
-def chart_spec(columns: list[str], rows: list[tuple], question: str, kind: str | None = None) -> dict | None:
+def chart_spec(
+    columns: list[str],
+    rows: list[tuple],
+    question: str,
+    kind: str | None = None,
+    lang: str = "tr",
+) -> dict | None:
     """Sonucun grafiği: {"type", "option"} ya da çizilecek bir şey yoksa None.
 
     ``kind`` kullanıcının istediği türdür (PLAN R7-10): sonuç biçimi onu kaldırıyorsa mevcut
     üreticiyle o tür çizilir; kaldırmıyorsa kendiliğinden seçilen tür döner ve yanına neyin eksik
-    olduğunu söyleyen bir ``reason`` eklenir. "table" grafik değildir: None.
+    olduğunu söyleyen bir ``reason`` eklenir. "table" grafik değildir: None. ``lang`` gerekçe
+    cümlesinin dilidir (R8-3); option'ın kendisi metin taşımaz, sayıları arayüz biçimlendirir.
     """
     if kind is not None:
-        return _forced(columns, rows, question, kind)
+        return _forced(columns, rows, question, kind, lang)
     return _auto(columns, rows, question)
 
 
@@ -100,7 +111,7 @@ def _auto(columns, rows, question):
     return None
 
 
-def _forced(columns, rows, question, kind):
+def _forced(columns, rows, question, kind, lang):
     """İstenen tür: biçim onu kaldırıyorsa mevcut üreticiyle çizilir, kaldırmıyorsa auto + reason."""
     if kind == "table":
         return None
@@ -110,59 +121,60 @@ def _forced(columns, rows, question, kind):
     # ASSUMPTION: kendiliğinden seçilen grafik de yoksa {"type": None, "option": None} döner; arayüz
     # hiçbir şey çizmez, reason cümlesini gösterir (Contracts "chart_spec (ext.)" reason'ı taşır).
     auto = _auto(columns, rows, question) or {"type": None, "option": None}
-    return dict(auto, reason=f"Bu sonuç {_FORCED_LABELS[kind]} grafiğe uygun değil: {missing}.")
+    reason = t("chart.reason", lang, kind=t(f"chart.kind.{kind}", lang), missing=t(missing, lang))
+    return dict(auto, reason=reason)
 
 
 def _fit(kind, columns, rows, question):
-    """İstenen türün şartı: (çizilebiliyorsa spec, çizilemiyorsa neyin eksik olduğunun cümlesi)."""
+    """İstenen türün şartı: (çizilebiliyorsa spec, çizilemiyorsa neyin eksik olduğunun anahtarı)."""
     picked = shape.pick(columns, rows)
     dates, numbers, category = picked["date"], picked["number"], picked["category"]
     # Etiket kategori yoksa tek tarih kolonudur: aylık bir sonuç hem sütun hem pasta olur.
     label = category if category is not None else (dates[0] if len(dates) == 1 else None)
 
     if len(rows) <= 1:
-        return None, "grafik için en az iki satır gerekir"
+        return None, "chart.missing.rows"
     if kind == "line":
         if not dates:
-            return None, "tarih ya da sıralı bir kolon yok"
+            return None, "chart.missing.date"
         if len(dates) > 1:
-            return None, "birden çok tarih kolonu var"
+            return None, "chart.missing.dates"
         if not numbers:
-            return None, "sayısal kolon yok"
+            return None, "chart.missing.number"
         if len(numbers) > 3:
-            return None, "üçten çok sayısal kolon var"
+            return None, "chart.missing.numbers"
         return _line(columns, rows, dates[0], numbers, question), None
     if not numbers:
-        return None, "sayısal kolon yok"
+        return None, "chart.missing.number"
     if label is None:
-        return None, "kategori ya da dönem kolonu yok"
+        return None, "chart.missing.label"
     if kind == "bar":
         return _bar(columns, rows, label, numbers[0], question), None
     if len(rows) > config.CHART_PIE_MAX_PARTS:
-        return None, "dilim sayısı çok fazla"
+        return None, "chart.missing.slices"
     if not all(_positive(row[numbers[0]]) for row in rows):
-        return None, "dilimlerin değerleri pozitif olmalı"
+        return None, "chart.missing.positive"
     return _pie(columns, rows, label, numbers[0], question), None
 
 
 def validate_option(option) -> list[str]:
     """Option'un ECharts için hazır ve düz JSON olduğunu doğrular: sorun listesi, [] temiz demek."""
     if not isinstance(option, dict):
-        return ["Seçenek bir nesne değil."]
+        return [_problem("not_object")]
     series = option.get("series")
     if not isinstance(series, list) or not series:
-        return ["Seri yok: çizilecek bir veri dizisi bulunmuyor."]
+        return [_problem("no_series")]
 
     problems = []
     for item in series:
         kind = item.get("type") if isinstance(item, dict) else None
         if kind not in SERIES_TYPES:
-            problems.append(f"Bilinmeyen seri türü: {kind}")
+            problems.append(_problem("series_type", kind=kind))
 
     if any(_type_of(item) in CARTESIAN_TYPES for item in series):
         for axis in ("xAxis", "yAxis"):
             if not isinstance(option.get(axis), dict):
-                problems.append(f"Eksik eksen: {axis}")
+                problems.append(_problem("axis_missing", axis=axis))
 
     axis = option.get("xAxis")
     if isinstance(axis, dict) and axis.get("type") == "category":
@@ -170,25 +182,31 @@ def validate_option(option) -> list[str]:
         for item in series:
             data = item.get("data") if isinstance(item, dict) else None
             if isinstance(data, list) and len(data) != count:
-                problems.append(f"Kategori sayısı {count}, seri uzunluğu {len(data)}")
+                problems.append(_problem("category_length", count=count, length=len(data)))
 
     for item in series:
         if _type_of(item) != "pie":
             continue
         for point in item.get("data") or []:
             if not isinstance(point, dict) or "name" not in point or "value" not in point:
-                problems.append("Pasta diliminde ad ya da değer eksik")
+                problems.append(_problem("pie_point"))
 
     for value in _numbers(option):
         if not math.isfinite(value):
-            problems.append(f"Sonlu olmayan sayı: {value}")
+            problems.append(_problem("not_finite", value=value))
             break
 
     try:
         json.loads(json.dumps(option, allow_nan=False))
     except (TypeError, ValueError):
-        problems.append("Seçenek düz JSON olarak yazılıp okunamıyor")
+        problems.append(_problem("not_json"))
     return problems
+
+
+def _problem(key: str, **params) -> str:
+    """Doğrulama satırı: ekrana çıkmaz, yalnız tanıyı üreten okur (R8-3 "Stay"). Türkçe sabittir —
+    cümleler testlerde birebir karşılaştırılır; catalog'daki İngilizcesi hazır durur."""
+    return t(f"chart.problem.{key}", "tr", **params)
 
 
 def _line(columns, rows, date, numbers, question):

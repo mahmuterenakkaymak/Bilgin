@@ -5,6 +5,9 @@ hesaplanmaz: maskeli hücre çoktan metne dönmüştür, o yüzden sayı kolonu 
 toplanmaz. Boş hücre ortalamaya girmez ama satır sayısı satırdır; pay ile dönem değişimi
 yalnız anlamlı oldukları durumda yazılır — negatif toplamlada pay, sıfır önceki dönemde yüzde
 uydurulmaz.
+
+Olgunun cevabın dili de vardır (R8-3): adı ``facts.*`` anahtarının o dildeki metnidir, ``display``
+ı da ``fmt.format_*``ın aynı dille okunuşudur; Türkçe çıktı eskisiyle bayt bayt aynıdır.
 """
 
 from __future__ import annotations
@@ -12,6 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 
+from nl2sql.i18n import t
 from nl2sql.report import fmt, shape
 
 MEAN_DECIMALS = 2
@@ -19,7 +23,7 @@ MEAN_DECIMALS = 2
 
 @dataclass(frozen=True)
 class Fact:
-    """Tek bir özet: ne olduğu, kimi anlatığı, Türkçe okunuşu ve sayısı (Contracts Fact)."""
+    """Tek bir özet: ne olduğu, kimi anlatığı, cevabın dilindeki okunuşu ve sayısı (Contracts Fact)."""
 
     name: str
     label: str
@@ -39,16 +43,19 @@ class Fact:
         }
 
 
-def compute_facts(columns: list[str], rows: list[tuple]) -> list[Fact]:
-    """Sonucun olguları: satır sayısı, her sayı kolonunun toplamı/ucu/ortalaması, payı ve dönem değişimi."""
+def compute_facts(columns: list[str], rows: list[tuple], lang: str = "tr") -> list[Fact]:
+    """Sonucun olguları: satır sayısı, her sayı kolonunun toplamı/ucu/ortalaması, payı ve dönem değişimi.
+
+    ``lang`` cevabın dilidir: adlar catalog'dan, sayı yazımı ``fmt``in o dilinden gelir.
+    """
     picked = shape.pick(columns, rows)
-    facts = [Fact("row_count", "Satır sayısı", len(rows), fmt.tr_number(len(rows)))]
+    facts = [Fact("row_count", _label("row_count", lang), len(rows), fmt.format_number(len(rows), lang))]
     for index in picked["number"]:
-        facts += _column_facts(columns, rows, index, picked["category"], picked["date"])
+        facts += _column_facts(columns, rows, index, picked["category"], picked["date"], lang)
     return facts
 
 
-def _column_facts(columns, rows, index, category, dates):
+def _column_facts(columns, rows, index, category, dates, lang):
     """Tek sayı kolonunun özetleri; kolonun tamamı maskeliyse buraya zaten gelinmez."""
     column = columns[index]
     cells = [(row, _number(row[index])) for row in rows]
@@ -60,18 +67,18 @@ def _column_facts(columns, rows, index, category, dates):
     mean = round(total / len(numbers), MEAN_DECIMALS)
 
     facts = [
-        _number_fact("total", "Toplam", column, total),
-        _number_fact("max", _row_label(highest[0], category, dates), column, highest[1]),
-        _number_fact("min", "En düşük", column, lowest[1]),
-        Fact("mean", "Ortalama", mean, fmt.tr_number(mean, MEAN_DECIMALS), column),
+        _number_fact("total", column, total, lang),
+        _number_fact("max", column, highest[1], lang, _row_label(highest[0], category, dates, lang)),
+        _number_fact("min", column, lowest[1], lang),
+        Fact("mean", _label("mean", lang), mean, fmt.format_number(mean, lang, MEAN_DECIMALS), column),
     ]
     if category is not None:
-        facts += _share(filled, column, total, category)
-    facts += _periods(rows, index, column, dates)
+        facts += _share(filled, column, total, category, lang)
+    facts += _periods(rows, index, column, dates, lang)
     return facts
 
 
-def _share(filled, column, total, category):
+def _share(filled, column, total, category, lang):
     """En kalem ve payı: negatif değer ya da sıfır toplamda payın anlatılacak bir şeyi yoktur."""
     if not all(value >= 0 for _, value in filled) or total <= 0:
         return []
@@ -81,12 +88,12 @@ def _share(filled, column, total, category):
     item = _text(top_row[category])
     share = round(top_value / total * 100, fmt.PERCENT_DECIMALS)
     return [
-        Fact("top_item", "Öne çıkan", item, item, column),
-        Fact("top_share", "En yüksek pay", share, fmt.tr_percent(share), column, percent=True),
+        Fact("top_item", _label("top_item", lang), item, item, column),
+        _percent_fact("top_share", column, share, lang),
     ]
 
 
-def _periods(rows, index, column, dates):
+def _periods(rows, index, column, dates, lang):
     """Son iki dönemin değeri ve değişimi: tarih kolonuna göre sıralanınca sondaki iki satır."""
     if not dates:
         return []
@@ -104,25 +111,41 @@ def _periods(rows, index, column, dates):
     last_value = _number(last[index])
     change = last_value - previous_value
     facts = [
-        _number_fact("last_period", f"Son dönem ({_text(last[date])})", column, last_value),
-        _number_fact("previous_period", f"Önceki dönem ({_text(previous[date])})", column, previous_value),
-        _number_fact("change", "Değişim", column, change),
+        _number_fact("last_period", column, last_value, lang, _label("last_period", lang, period=_text(last[date]))),
+        _number_fact(
+            "previous_period",
+            column,
+            previous_value,
+            lang,
+            _label("previous_period", lang, period=_text(previous[date])),
+        ),
+        _number_fact("change", column, change, lang),
     ]
     if previous_value:
         pct = round(change / previous_value * 100, fmt.PERCENT_DECIMALS)
-        facts.append(Fact("change_pct", "Değişim oranı", pct, fmt.tr_percent(pct), column, percent=True))
+        facts.append(_percent_fact("change_pct", column, pct, lang))
     return facts
 
 
-def _number_fact(name, label, column, value) -> Fact:
-    return Fact(name, label, value, fmt.tr_number(value), column)
+def _label(name: str, lang: str, **params) -> str:
+    """Olgunun adı: catalog anahtarının son parçası olgunun adıyla aynıdır (facts.total, ...)."""
+    return t(f"facts.{name}", lang, **params)
 
 
-def _row_label(row, category, dates, word: str = "En yüksek") -> str:
+def _number_fact(name, column, value, lang, label: str | None = None) -> Fact:
+    return Fact(name, label or _label(name, lang), value, fmt.format_number(value, lang), column)
+
+
+def _percent_fact(name, column, value, lang) -> Fact:
+    return Fact(name, _label(name, lang), value, fmt.format_percent(value, lang), column, percent=True)
+
+
+def _row_label(row, category, dates, lang) -> str:
     """Ucun ait olduğu satırın adı: kategori hücresi, yoksa tarih hücresi (PLAN R5-7)."""
     # ASSUMPTION: PLAN etiketi "satırın kategori ya da tarih hücresi" diye veriyor; hangi özet
-    # olduğu anlaşılsın diye Türkçe sözcük hücreyle birlikte yazılır: "En yüksek (Çay)".
+    # olduğu anlaşılsın diye ad hücreyle birlikte yazılır: "En yüksek (Çay)" / "Highest (Çay)".
     index = category if category is not None else (dates[0] if dates else None)
+    word = _label("max", lang)
     if index is None or row[index] is None:
         return word
     return f"{word} ({_text(row[index])})"
