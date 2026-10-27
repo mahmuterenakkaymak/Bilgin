@@ -67,27 +67,46 @@ def _rules(as_of: str, schema_tool: str = "get_schema") -> str:
     return _RULES.format(as_of=as_of, schema_tool=schema_tool)
 
 
-def system_prompt(as_of: str, compact_schema: str) -> str:
+# R8-9: cevabın dili kural bloğunu çevirmez, modele tek bir satır eklenir. Satır açıklama
+# sorusunu da İngilizce istiyor, yoksa kullanıcı iki dilin karıştığı bir seçenek listesi görür.
+ANSWER_LANG_LINE = (
+    "Answer language: English - ask clarification questions and word their options in English."
+)
+
+
+def _lang_line(answer_lang: str) -> str:
+    return f"{ANSWER_LANG_LINE}\n" if answer_lang == "en" else ""
+
+
+def system_prompt(as_of: str, compact_schema: str, answer_lang: str = "tr") -> str:
     """The turn-one system message: rules plus the one-line-per-table schema the model starts from."""
-    return f"{_INTRO}{_rules(as_of)}ŞEMA ÖZETİ (ayrıntısı için get_schema)\n{compact_schema}\n"
+    return (
+        f"{_INTRO}{_rules(as_of)}ŞEMA ÖZETİ (ayrıntısı için get_schema)\n{compact_schema}\n"
+        f"{_lang_line(answer_lang)}"
+    )
 
 
-def full_prompt(as_of: str, schema: dict) -> str:
+def full_prompt(as_of: str, schema: dict, answer_lang: str = "tr") -> str:
     """`full` mode: every table in full detail in the prompt, so the model never has to look for one."""
     return (
         f"{_INTRO}{_rules(as_of)}"
         f"ŞEMA (bütün tablolar, tüm kolonları ve kod anlamları ile)\n{doc.full_text(schema)}\n"
+        f"{_lang_line(answer_lang)}"
     )
 
 
-def full_rules_prompt(as_of: str, schema: dict, rules: list[dict]) -> str:
+def full_rules_prompt(as_of: str, schema: dict, rules: list[dict], answer_lang: str = "tr") -> str:
     """`full_rules` mode: `full` plus every business rule written out."""
-    return f"{full_prompt(as_of, schema)}\nİŞ KURALLARI\n{rules_text(rules)}\n"
+    return (
+        f"{full_prompt(as_of, schema)}\nİŞ KURALLARI\n{rules_text(rules)}\n"
+        f"{_lang_line(answer_lang)}"
+    )
 
 
-def rag_prompt(as_of: str, schema: dict) -> str:
+def rag_prompt(as_of: str, schema: dict, answer_lang: str = "tr") -> str:
     """`rag` mode: the same rules, a search-first rule and only the table names."""
     return (
         f"{_INTRO}{_rules(as_of, 'get_table_details')}{_SEARCH_FIRST}\n"
         f"TABLO ADLARI (modül: tablolar)\n{doc.name_list(schema)}\n"
+        f"{_lang_line(answer_lang)}"
     )

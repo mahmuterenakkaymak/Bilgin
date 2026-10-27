@@ -104,17 +104,19 @@ def run_agent(
     timeout_s: float = config.AGENT_TIMEOUT_S,
     budget: int | None = None,
     history: list[dict] | None = None,
+    answer_lang: str = "tr",
 ) -> AgentRun:
     """Drive one question to a submitted SQL, a limit, or a model failure, in one mode; with a
     prompt budget, keep every request under it (R4-11); with a history, let the earlier turns say
-    what "bu müşteri" means (R7-4)."""
+    what "bu müşteri" means (R7-4); ``answer_lang="en"`` tells the model to answer in English
+    (R8-9), while the default leaves the prompt byte-identical to every earlier run."""
     started = time.perf_counter()
     deadline = started + timeout_s
     mode_def = modes.get_mode(mode)
     limit = mode_def.max_tool_calls
     run = AgentRun(question=question, mode=mode)
     audited = _Audited(executor, source)
-    ctx = _context(context, audited, schema, mode)
+    ctx = _context(context, audited, schema, mode, answer_lang)
     sent_tools = modes.mode_tools(ctx)
     messages = [
         {"role": "system", "content": modes.system_prompt(ctx)},
@@ -234,11 +236,14 @@ def run_agent(
     return finish("no_submission", TURN_STOP.format(turns=max_turns))
 
 
-def _context(context, audited, schema: dict, mode: str) -> modes.ToolContext:
+def _context(
+    context, audited, schema: dict, mode: str, answer_lang: str = "tr"
+) -> modes.ToolContext:
     """This run's dispatch world: the caller's index and graph, the audited executor, this mode.
 
     ``full_rules`` without a context is a wiring mistake, not a mode: an empty ``rules`` makes its
     system prompt identical to ``full``, so the A/B would measure the same arm twice. It raises.
+    ``answer_lang`` (R8-9) wins over the context's own, the way ``mode`` already does.
     """
     if context is None:
         if mode == "full_rules":
@@ -246,10 +251,15 @@ def _context(context, audited, schema: dict, mode: str) -> modes.ToolContext:
                 "full_rules modu bağlam istiyor: context.rules verilmedi; kuralsız bir full_rules "
                 "istemi full ile aynıdır."
             )
-        return modes.ToolContext(executor=audited, schema=schema, mode=mode)
+        return modes.ToolContext(
+            executor=audited, schema=schema, mode=mode, answer_lang=answer_lang
+        )
     # ASSUMPTION: bağlamın kendi şeması varsa o kazanır; run_agent'ın şema argümanı yalnız
     # bağlam verilmeyince devreye girer, böylece ikisi çelişirse sessiz olan yutulmaz.
-    return replace(context, executor=audited, schema=context.schema or schema, mode=mode)
+    return replace(
+        context, executor=audited, schema=context.schema or schema, mode=mode,
+        answer_lang=answer_lang,
+    )
 
 
 class _Audited:

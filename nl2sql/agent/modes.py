@@ -30,6 +30,9 @@ class ToolContext:
     # R5-10: ask_clarification yalnız açıkken görünen bir araçtır; kapalıyken araç listesi de sistem
     # istemi de Run 1-4 ile bayt aynıdır, yani eski parmak izleri ve ölçümler değişmez.
     clarify: bool = False
+    # R8-9: cevabın dili; "en" modun sistem istemine tek satır ekler, "tr" bayt bayt bugünküdür.
+    # ASSUMPTION: auto ayrı bir istem kurmaz, çözüldüğü modun builder'ından geçtiği için dili de oradan alır.
+    answer_lang: str = "tr"
 
 
 @dataclass(frozen=True)
@@ -43,15 +46,15 @@ class Mode:
 
 
 def _full_prompt(ctx: ToolContext) -> str:
-    return prompt.full_prompt(ctx.as_of, ctx.schema)
+    return prompt.full_prompt(ctx.as_of, ctx.schema, ctx.answer_lang)
 
 
 def _full_rules_prompt(ctx: ToolContext) -> str:
-    return prompt.full_rules_prompt(ctx.as_of, ctx.schema, ctx.rules)
+    return prompt.full_rules_prompt(ctx.as_of, ctx.schema, ctx.rules, ctx.answer_lang)
 
 
 def _rag_prompt(ctx: ToolContext) -> str:
-    return prompt.rag_prompt(ctx.as_of, ctx.schema)
+    return prompt.rag_prompt(ctx.as_of, ctx.schema, ctx.answer_lang)
 
 
 _SQL_TOOLS = [tools.RUN_SQL, tools.SUBMIT_SQL]
