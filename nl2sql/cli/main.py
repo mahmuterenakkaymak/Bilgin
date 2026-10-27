@@ -81,7 +81,7 @@ from nl2sql.index.summaries import table_summaries
 from nl2sql.policy import pii
 from nl2sql.report.facts import compute_facts
 from nl2sql.report.narrate import narrate
-from nl2sql.schema_map import build, doc, excel, introspect, merge
+from nl2sql.schema_map import build, doc, excel, introspect, merge, template
 from nl2sql.schema_map.rules import load_rules
 
 LLMS = ("fake", "openai")
@@ -1365,6 +1365,40 @@ def make_login_script(
     return 0
 
 
+def write_template(
+    out: str | Path,
+    dataset: str | None = None,
+    lang: str | None = None,
+) -> int:
+    """Doldurulacak boş şablonu ``out``a yazar; ``--dataset`` Tablolar/Kolonlar'ı o kümenin şemasıyla doldurur (R8-12).
+
+    Şablonun dili ``--lang``dır: sayfa adları, başlıklar, açılır listeler ve ``_bilgin``in ``lang``
+    satırı birlikte o dile döner, yani dosya kendi başına okunabilir. İskelet yalnız yapı taşır -
+    açıklamaları dolduracak kişi bilir (``introspect``in R3-4 ayrımı). Ekran kaç tablo ve kolonun
+    hazır geldiğini söyler; boş şablonda ikisi de sıfırdır.
+    """
+    _utf8_stdout()
+    ds, code = _dataset(dataset)
+    if code:
+        return code
+    _dataset_line(ds, lang)
+    skeleton = ds.schema() if ds else None
+    target = Path(out)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(template.build_template(skeleton, lang or _LANG))
+    tables = (skeleton or {}).get("tables") or []
+    print(
+        _t(
+            "cli.template.written",
+            lang,
+            tables=len(tables),
+            columns=sum(len(table.get("columns") or []) for table in tables),
+            path=out,
+        )
+    )
+    return 0
+
+
 def user_add(
     name: str,
     role: str,
@@ -1832,6 +1866,12 @@ def build_parser(lang: str) -> argparse.ArgumentParser:
     )
     _add_dataset_option(login_cmd, lang)
 
+    template_cmd = commands.add_parser(
+        "template", help=_h("template", lang), parents=[lang_parent]
+    )
+    template_cmd.add_argument("--out", required=True, help=_h("template_out", lang))
+    _add_dataset_option(template_cmd, lang)
+
     ask_cmd = commands.add_parser(
         "ask", help=_h("ask", lang), parents=[lang_parent]
     )
@@ -2081,6 +2121,8 @@ def main(argv: list[str] | None = None) -> int:
         return merge_map(args.excel, db_schema=args.db_schema, out=args.out)
     if args.command == "make-login-script":
         return make_login_script(login=args.login, **_given(dataset=args.dataset))
+    if args.command == "template":
+        return write_template(out=args.out, lang=args.lang, **_given(dataset=args.dataset))
     if args.command == "ask":
         from nl2sql.app.conversations import ConversationNotFound
 

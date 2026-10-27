@@ -158,6 +158,7 @@
   "map.still_broken": "The preview still has unfixed errors; correct the template and upload it again.",
   "map.name_taken": "This name is already a dataset: {name}.",
   "map.db_note": "The read-only login could not read the table metadata (VIEW DEFINITION); the blank template was given.",
+  "map.bad_lang": "Unknown language: {value}; it must be tr or en.",
 
   "onboard.index_failed": "The index could not be built: {name} (build-index returned {code}).",
   "onboard.real_stub.doc": "{name} is a real database: it was created from the Bilgin template, its rows live in that database.\n\nThere is nothing to produce or to build here: the golden answers are the golden SQL that runs in that database\nwith the read-only login.",
@@ -246,6 +247,8 @@
   "cli.help.ambiguous": "adds the dataset's ambiguous set to the golden questions and measures the clarification metrics",
   "cli.help.narrate": "narrates every submitted golden answer and counts the narrator's source",
   "cli.help.followups": "runs the dataset's follow-up question chains through the conversation after the golden run and measures the context",
+  "cli.help.template": "writes the blank fill-in template; --dataset fills the skeleton from that dataset's schema",
+  "cli.help.template_out": "template file to write",
 
   "cli.ask.model": "Model: {name} ({model}, budget {budget} tokens)",
   "cli.ask.no_index": "No index (or a stale one); running in full mode.",
@@ -326,6 +329,8 @@
   "cli.import_map.skipped": "↳ {sheet} row {row}: {reason}",
 
   "cli.introspect.written": "Skeleton: {tables} tables, {columns} columns -> {path}",
+
+  "cli.template.written": "Template: {tables} tables, {columns} columns -> {path}",
 
   "cli.map.excel": "Excel: {path}",
   "cli.map.database": "Database: {source}",

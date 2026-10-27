@@ -158,6 +158,7 @@
   "map.still_broken": "Önizlemede düzeltilmemiş hata var; şablonu düzeltip yeniden yükleyin.",
   "map.name_taken": "Bu ad zaten bir veri kümesi: {name}.",
   "map.db_note": "Salt okunur giriş tablo bilgisini okuyamadı (VIEW DEFINITION); boş şablon verildi.",
+  "map.bad_lang": "Bilinmeyen dil: {value}; tr ya da en olmalı.",
 
   "onboard.index_failed": "İndeks kurulamadı: {name} (build-index {code} ile döndü).",
   "onboard.real_stub.doc": "{name} gerçek bir veritabanıdır: Bilgin şablonundan kuruldu, satırlar o veritabanında durur.\n\nBurada üretilecek ya da kurulacak bir şey yok: golden cevaplar, salt okunur girişle o veritabanında\nkoşan golden SQL'dir.",
@@ -246,6 +247,8 @@
   "cli.help.ambiguous": "altın sorulara kümenin belirsiz setini de katıp netleştirme metriklerini ölçer",
   "cli.help.narrate": "gönderilen her altın cevabı anlatıp anlatıcının kaynağını sayar",
   "cli.help.followups": "altın koşumun ardına kümenin ardışık soru zincirlerini konuşmadan geçirip bağlamı ölçer",
+  "cli.help.template": "doldurulacak boş şablonu yazar; --dataset iskeleti o kümenin şemasından doldurur",
+  "cli.help.template_out": "yazılacak şablon dosyası",
 
   "cli.ask.model": "Model: {name} ({model}, bütçe {budget} token)",
   "cli.ask.no_index": "İndeks yok/eski; full modda çalışılıyor.",
@@ -326,6 +329,8 @@
   "cli.import_map.skipped": "↳ {sheet}.satır {row}: {reason}",
 
   "cli.introspect.written": "İskelet: {tables} tablo, {columns} kolon -> {path}",
+
+  "cli.template.written": "Şablon: {tables} tablo, {columns} kolon -> {path}",
 
   "cli.map.excel": "Excel: {path}",
   "cli.map.database": "Veritabanı: {source}",

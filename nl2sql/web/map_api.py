@@ -29,7 +29,7 @@ from nl2sql import config, datasets
 from nl2sql.engine._mssql import CONN_ENV
 from nl2sql.report.export import MEDIA_TYPES
 from nl2sql.schema_map import introspect, onboard, template, template_import
-from nl2sql.i18n import t
+from nl2sql.i18n import normalize_lang, t
 from nl2sql.web.authz import current_user, require
 from nl2sql.web.lang import request_lang
 
@@ -75,17 +75,24 @@ def create_router() -> APIRouter:
         return {"db_connection": _db_connection()}
 
     @router.get("/api/schema-map/template.xlsx", dependencies=admin)
-    def download_template(request: Request, from_db: bool = False) -> Response:
-        """Boş şablon; ``?from_db=1`` canlı iskeletle doldurulur, okunamazsa boş olan notla verilir."""
+    def download_template(
+        request: Request, from_db: bool = False, lang: str | None = None
+    ) -> Response:
+        """Boş şablon; dili ``?lang=`` > isteğin dili (R8-12). ``?from_db=1`` canlı iskeletle doldurulur,
+        okunamazsa boş olan notla verilir."""
+        lang = _query_lang(lang, request)
+        filename = config.TEMPLATE_FILENAMES[lang]
         if not (from_db and _db_connection()):
-            return _xlsx(template.build_template(), config.TEMPLATE_FILENAME)
+            return _xlsx(template.build_template(lang=lang), filename)
         try:
-            return _xlsx(template.build_template(introspect.mssql_skeleton()), config.TEMPLATE_FILENAME)
+            return _xlsx(
+                template.build_template(introspect.mssql_skeleton(), lang), filename
+            )
         except introspect.IntrospectError:
             return _xlsx(
-                template.build_template(),
-                config.TEMPLATE_FILENAME,
-                note=t("map.db_note", _lang(request)),
+                template.build_template(lang=lang),
+                filename,
+                note=t("map.db_note", lang),
             )
 
     @router.get("/api/schema-map/sample.xlsx", dependencies=admin)
@@ -163,6 +170,23 @@ def create_router() -> APIRouter:
 def _lang(request: Request) -> str:
     """Yolun arayüz dili: kişinin tercihi, yoksa tarayıcının başlığı, o da yoksa programın dili (R8-5)."""
     return request_lang(request, current_user(request))
+
+
+def _query_lang(lang: str | None, request: Request) -> str:
+    """İndirmenin dili: ``?lang=`` kişinin tercihinden önce gelir, çünkü indirilen dosya onun dili
+    taşır; tanınmayan bir değer susmaz, 422 alır (R8-12).
+
+    ASSUMPTION: bayrak hiç verilmediyse yol bugünkü gibi isteğin diline düşer, yani mevcut indirme
+    bağlantıları değişmez.
+    """
+    if lang is None:
+        return _lang(request)
+    known = normalize_lang(lang)
+    if known is None:
+        raise HTTPException(
+            status_code=422, detail=t("map.bad_lang", _lang(request), value=lang)
+        )
+    return known
 
 
 def _suggest(app):
