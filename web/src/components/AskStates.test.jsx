@@ -180,6 +180,8 @@ describe("bozuk durum örnekleri", () => {
     "conversation_id",
     "turn",
     "context",
+    // Updated automatically: R8-6 / T400 changed this contract (every payload carries answer_lang).
+    "answer_lang",
   ];
 
   it("her durumda aynı AskPayload anahtar kümesi taşınır", () => {

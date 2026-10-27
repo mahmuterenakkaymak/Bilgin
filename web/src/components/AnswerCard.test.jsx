@@ -55,6 +55,8 @@ const PAYLOAD_KEYS = [
   "conversation_id",
   "turn",
   "context",
+  // Updated automatically: R8-6 / T400 changed this contract (every payload carries answer_lang).
+  "answer_lang",
 ];
 
 // report/chart.chart_spec'in çıktısı: işlevi olmayan düz ECharts JSON'u + `bilgin` ipucu (R5-6).
