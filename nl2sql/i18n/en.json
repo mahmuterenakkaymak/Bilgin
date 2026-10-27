@@ -78,6 +78,12 @@
   "ask.replay.step": "The stored question ({audit_id}) was run again.",
   "ask.chart_only.step": "The query of turn {n} was run again, the model wrote no SQL.",
 
+  "checks.empty": "The result is empty: no record matches these conditions.",
+  "checks.all_null": "Every value in the '{col}' column is empty (NULL).",
+  "checks.top_limited": "The result was cut at the limit of {n} rows; there may be more.",
+  "checks.masked": "Masked: {cols} — personal data is not shown.",
+  "checks.fan_out": "After the join there are {joined} rows, the driving table {table} has {driving} rows ({ratio}x): totals may have multiplied.",
+
   "app.blank_question": "The question is empty.",
   "app.no_saved": "The saved question was not found.",
   "app.no_ask": "This question has no record.",

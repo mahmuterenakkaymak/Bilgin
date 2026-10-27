@@ -13,15 +13,7 @@ from sqlglot import exp, parse_one
 
 from nl2sql import config
 from nl2sql.engine.result import Budget, Result
-
-EMPTY = "Sonuç boş: bu koşullara uyan kayıt yok."
-ALL_NULL = "'{col}' kolonunun tüm değerleri boş (NULL)."
-TOP_LIMITED = "Sonuç {n} satırlık üst sınırda kesildi; tamamı daha fazla olabilir."
-MASKED = "Maskelendi: {cols} — kişisel veri gösterilmez."
-FAN_OUT = (
-    "Join sonrası {joined} satır, sürücü tablo {table} {driving} satır ({ratio}x): "
-    "toplamlar çoğalmış olabilir."
-)
+from nl2sql.i18n import t
 
 # Sayımların denetim kaydındaki adı: koşturanın sorgusu değil, denetimin kendi sorguları.
 CHECK_SOURCE = "checks"
@@ -39,32 +31,35 @@ class Warning:
         return {"code": self.code, "message": self.message, "column": self.column}
 
 
-def post_checks(sql: str, result: Result, executor=None) -> list[Warning]:
+def post_checks(sql: str, result: Result, executor=None, lang: str = "tr") -> list[Warning]:
     """Hata olmayan bir sonucun uyarıları: boş, tümü NULL, üst sınırda kesik, maskeli, katlanan join.
 
-    `executor` verilmezse fan_out ölçülemez; öteki dört denetim yine yerindedir.
+    `executor` verilmezse fan_out ölçülemez; öteki dört denetim yine yerindedir. Cümleler kataloğun
+    `lang` satırıdır (R8-3); uyarının `code`u dilden bağımsızdır, yani bir şıkkın adı çevrilmez.
     """
     if result.error is not None:
         return []
-    warnings = [] if result.row_count else [Warning("empty", EMPTY)]
-    warnings += _all_null(result)
+    warnings = [] if result.row_count else [Warning("empty", t("checks.empty", lang))]
+    warnings += _all_null(result, lang)
     if result.row_count == config.TOP_N:
-        warnings.append(Warning("top_limited", TOP_LIMITED.format(n=config.TOP_N)))
+        warnings.append(Warning("top_limited", t("checks.top_limited", lang, n=config.TOP_N)))
     if result.masked_columns:
         # ASSUMPTION: PLAN {cols} için ayraç vermiyor; payload'da tek satır okunduğu için virgül.
-        warnings.append(Warning("masked", MASKED.format(cols=", ".join(result.masked_columns))))
-    warning = _fan_out(sql, executor)
+        warnings.append(
+            Warning("masked", t("checks.masked", lang, cols=", ".join(result.masked_columns)))
+        )
+    warning = _fan_out(sql, executor, lang)
     if warning:
         warnings.append(warning)
     return warnings
 
 
-def _all_null(result: Result) -> list[Warning]:
+def _all_null(result: Result, lang: str) -> list[Warning]:
     """Dönen satırların her hücresi NULL olan her kolon için bir uyarı; tek dolu hücre yeter."""
     if not result.rows:
         return []
     return [
-        Warning("all_null", ALL_NULL.format(col=name), name)
+        Warning("all_null", t("checks.all_null", lang, col=name), name)
         for index, name in enumerate(result.columns)
         if all(row[index] is None for row in result.rows)
     ]
@@ -73,7 +68,7 @@ def _all_null(result: Result) -> list[Warning]:
 # ----------------------------------------------------------------- R5-5: katlanan join
 
 
-def _fan_out(sql: str, executor) -> Warning | None:
+def _fan_out(sql: str, executor, lang: str) -> Warning | None:
     """Joinli sayımın sürücü sayıma oranı eşiği aşıyorsa uyarı; ölçülemiyorsa hiçbir şey.
 
     Ölçüm iki `SELECT COUNT(*)`: birinde from+join+where'in satır sayısı, ötekinde sürücü
@@ -98,7 +93,9 @@ def _fan_out(sql: str, executor) -> Warning | None:
         return None
     return Warning(
         "fan_out",
-        FAN_OUT.format(
+        t(
+            "checks.fan_out",
+            lang,
             joined=joined,
             table=shape[2],
             driving=driving,

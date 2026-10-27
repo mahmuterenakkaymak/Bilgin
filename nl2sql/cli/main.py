@@ -546,7 +546,7 @@ def ask(
         # R3-6: maskelenen kolonlar tablonun altında adlarıyla söylenir; hangi değerin maskeli
         # olduğu okunabilsin diye, değerin kendisi asla ekrana çıkmadığı için.
         print(t("cli.ask.masked", lang, cols=", ".join(result.masked_columns)))
-    for warning in checks.post_checks(run.submitted_sql, result, executor):
+    for warning in checks.post_checks(run.submitted_sql, result, executor, answer_lang):
         print(f"{WARNING_MARK} {warning.message}")
     facts = compute_facts(result.columns, result.rows, answer_lang)
     sentence = narrate(asked, result.columns, result.rows, facts, llm, lang=answer_lang).text

@@ -472,8 +472,10 @@ def _execute(session, sql: str, source: str, payload: dict) -> bool:
     payload["tables_used"] = list(result.tables)
     payload["masked_columns"] = list(result.masked_columns)
     payload["rules_used"] = matching_rules(session.rules, sql)
+    # Uyarılar da cevabın dilinde okunur (R8-3): İngilizce bir cevabın uyarısı Türkçe kalmaz.
     payload["warnings"] = [
-        warning.to_dict() for warning in checks.post_checks(sql, result, session.executor)
+        warning.to_dict()
+        for warning in checks.post_checks(sql, result, session.executor, payload["answer_lang"])
     ]
     return True
 

@@ -78,6 +78,12 @@
   "ask.replay.step": "Geçmişteki soru ({audit_id}) yeniden çalıştırıldı.",
   "ask.chart_only.step": "Tur {n} sorgusu yeniden çalıştırıldı, model SQL yazmadı.",
 
+  "checks.empty": "Sonuç boş: bu koşullara uyan kayıt yok.",
+  "checks.all_null": "'{col}' kolonunun tüm değerleri boş (NULL).",
+  "checks.top_limited": "Sonuç {n} satırlık üst sınırda kesildi; tamamı daha fazla olabilir.",
+  "checks.masked": "Maskelendi: {cols} — kişisel veri gösterilmez.",
+  "checks.fan_out": "Join sonrası {joined} satır, sürücü tablo {table} {driving} satır ({ratio}x): toplamlar çoğalmış olabilir.",
+
   "app.blank_question": "Soru boş.",
   "app.no_saved": "Kayıtlı soru bulunamadı.",
   "app.no_ask": "Bu sorunun kaydı bulunamadı.",
