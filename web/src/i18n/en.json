@@ -1,5 +1,15 @@
 {
   "lang.en": "English",
   "lang.group": "Interface language",
-  "lang.tr": "Turkish"
+  "lang.tr": "Turkish",
+  "login.failed": "Sign-in failed.",
+  "login.lead": "Sign in to keep asking.",
+  "login.password": "Password",
+  "login.submit": "Sign in",
+  "login.submitting": "Signing in…",
+  "login.tagline": "Ask your database in plain language; Bilgin writes the SQL.",
+  "login.title": "Bilgin",
+  "login.username": "Username",
+  "root.brand": "Bilgin",
+  "root.unreachable": "The server could not be reached."
 }

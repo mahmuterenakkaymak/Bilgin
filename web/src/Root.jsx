@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import App from "./App.jsx";
 import LoginScreen from "./components/LoginScreen.jsx";
+import { useT } from "./i18n/index.js";
 import * as api from "./lib/api.js";
 import { EXPIRED_NOTE, afterLogin, boot } from "./lib/auth.js";
 
@@ -17,6 +18,7 @@ function currentHash() {
 // yaşadığı için çıkışta ya da oturum düşünce hepsi ekrandan kalkar; geriye yalnız kart kalır.
 // `initial` yalnız testin kapıyı belirli bir halden kurması için (renderToStaticMarkup effect çalıştırmaz).
 export default function Root({ initial = null }) {
+  const { t } = useT();
   const [state, setState] = useState(initial ?? { screen: "checking" });
 
   // Açılış tek bir `me` isteğidir: 401 giriş ekranıdır, oturum ise istenen adreste uygulama.
@@ -32,7 +34,7 @@ export default function Root({ initial = null }) {
           screen: "login",
           user: null,
           requested: currentHash(),
-          note: failure?.message || "Sunucuya ulaşılamadı.",
+          note: failure?.message || t("root.unreachable"),
         }),
       );
     return () => {
@@ -62,7 +64,7 @@ export default function Root({ initial = null }) {
   if (state.screen === "checking") {
     return (
       <div className="gate">
-        <span className="wordmark">Bilgin</span>
+        <span className="wordmark">{t("root.brand")}</span>
       </div>
     );
   }

@@ -1,5 +1,15 @@
 {
   "lang.en": "İngilizce",
   "lang.group": "Arayüz dili",
-  "lang.tr": "Türkçe"
+  "lang.tr": "Türkçe",
+  "login.failed": "Giriş yapılamadı.",
+  "login.lead": "Sormaya devam etmek için oturum açın.",
+  "login.password": "Parola",
+  "login.submit": "Giriş",
+  "login.submitting": "Giriş yapılıyor…",
+  "login.tagline": "Veritabanınıza Türkçe soru sorun; SQL'i Bilgin yazar.",
+  "login.title": "Bilgin",
+  "login.username": "Kullanıcı adı",
+  "root.brand": "Bilgin",
+  "root.unreachable": "Sunucuya ulaşılamadı."
 }
