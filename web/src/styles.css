@@ -1708,11 +1708,33 @@ main {
   margin-left: auto;
   color: var(--muted);
   content: "→";
+  transition: transform 0.15s ease;
 }
 
-.clarification-option:hover:not(:disabled) {
-  background: var(--surface);
+/* Hedef satırın kendisi: vurgu satıra biner, ok birkaç px kayarak "buraya bas" der — ucda
+   sabit duran ok, düğmenin yalnız kendisinin mi yoksa tüm satırın mı tıklanabilir olduğunu
+   söylemiyordu. Klavye imleci de aynı vurguyu alır. */
+.clarification-option:hover:not(:disabled),
+.clarification-option:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
   color: var(--accent);
+}
+
+.clarification-option:hover:not(:disabled)::after,
+.clarification-option:focus-visible::after {
+  transform: translateX(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clarification-option::after {
+    transition: none;
+  }
+
+  .clarification-option:hover:not(:disabled)::after,
+  .clarification-option:focus-visible::after {
+    transform: none;
+  }
 }
 
 .clarification-actions {
