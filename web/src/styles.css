@@ -497,12 +497,6 @@ main {
   cursor: default;
 }
 
-/* İndirme bir <a>: sekme yer değiştirmediği için "dosya istendi" bilgisini düğmenin kendisi verir. */
-.btn-downloaded {
-  border-color: var(--ok);
-  color: var(--ok);
-}
-
 /* Tema düğmesi başlıkta durur ve üç ad arasında (Sistem/Koyu/Açık) genişliği değişmez:
    başlık her tıkta yeniden akmasın, sıradaki düğme yerinden oynamasın. */
 .btn-theme {
@@ -1290,12 +1284,89 @@ main {
   font-size: 17px;
 }
 
+/* Cevabın iki işi iki ağırlıkta (M24 craft 1): beşi de aynı çerçeveli hap çıktığında veriyi almak
+   kartın varlık sebebi olarak panoya iğnelemekten farksız okunuyordu ve sıra 390'da 2/2/1
+   kırılıyordu. İndirme üstte tek çerçeveli bir ikili; iş düğmeleri ince çizginin altında soluk
+   metne iner. */
 .answer-actions {
+  display: grid;
+  gap: var(--space);
+  margin-top: calc(var(--space) * 2);
+}
+
+.answer-exports {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space) calc(var(--space) * 1.5);
-  margin-top: calc(var(--space) * 2);
+}
+
+/* İkili tek çerçevedir: çizgi ve köşeler taşıyıcıda, üyeler kendi kenarını çizmez — aralarındaki
+   tek dikey çizgi ikilinin bölüntüsüdür, iki ayrı düğmenin yan yana durduğu izlenimini vermez. */
+.answer-export-pair {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.answer-export {
+  padding: calc(var(--space) * 0.75) calc(var(--space) * 2);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.answer-export + .answer-export {
+  border-left: 1px solid var(--line);
+}
+
+.answer-export:hover {
+  color: var(--accent);
+}
+
+/* İndirme bir <a>: sekme yer değiştirmediği için "dosya istendi" bilgisini adının rengi verir.
+   Hover'dan sonra gelir: indirilen ad, üzerine gelince yeşilden vazgeçmez. */
+.answer-export.btn-downloaded {
+  color: var(--ok);
+}
+
+.answer-workflow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space) calc(var(--space) * 2);
+  padding-top: var(--space);
+  border-top: 1px solid var(--line);
+}
+
+/* Çerçevesi olmayan düğme kendi mürekkebinde durur: soluk metin bilgi notuna benziyor, vurgu
+   rengi ise yukarıdaki ikiliyle yarışıyor. */
+.answer-action {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.answer-action:hover:not(:disabled) {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.answer-action:disabled {
+  cursor: default;
+}
+
+/* İşin bittiği renginden okunur: "Kaydedildi"/"Panoya eklendi" yeşile döner. */
+.answer-action-done {
+  color: var(--ok);
 }
 
 .answer-actions-label {

@@ -145,64 +145,68 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
       <ChartView chart={payload?.chart} />
       <div className="answer-actions">
         {auditId && (
-          <>
+          <div className="answer-exports">
             <span className="answer-actions-label">Tamamını indir:</span>
-            {EXPORTS.map(([kind, label]) => (
-              <a
-                key={kind}
-                className={downloaded === kind ? "btn btn-downloaded" : "btn"}
-                id={`export-${kind}`}
-                href={api.exportUrl(auditId, kind)}
-                onClick={() => setDownloaded(kind)}
-              >
-                {downloaded === kind ? downloadedLabel(exportRows) : label}
-              </a>
-            ))}
-          </>
+            <span className="answer-export-pair">
+              {EXPORTS.map(([kind, label]) => (
+                <a
+                  key={kind}
+                  className={`answer-export${downloaded === kind ? " btn-downloaded" : ""}`}
+                  id={`export-${kind}`}
+                  href={api.exportUrl(auditId, kind)}
+                  onClick={() => setDownloaded(kind)}
+                >
+                  {downloaded === kind ? downloadedLabel(exportRows) : label}
+                </a>
+              ))}
+            </span>
+          </div>
         )}
-        <button
-          type="button"
-          id="save-question"
-          className="btn"
-          onClick={saveQuestion}
-          disabled={phase === "saving" || phase === "saved"}
-        >
-          {phase === "saving" ? "Kaydediliyor…" : phase === "saved" ? "Kaydedildi" : "Soruyu kaydet"}
-        </button>
-        {phase === "error" && <span className="answer-note">{note}</span>}
-        {auditId && (
+        <div className="answer-workflow">
           <button
             type="button"
-            id="pin-card"
-            className="btn"
-            onClick={pinCard}
-            disabled={pin.phase === "saving" || pin.phase === "done"}
+            id="save-question"
+            className={`answer-action${phase === "saved" ? " answer-action-done" : ""}`}
+            onClick={saveQuestion}
+            disabled={phase === "saving" || phase === "saved"}
           >
-            {pin.phase === "saving" ? "Ekleniyor…" : pin.phase === "done" ? "Panoya eklendi" : "Panoma ekle"}
+            {phase === "saving" ? "Kaydediliyor…" : phase === "saved" ? "Kaydedildi" : "Soruyu kaydet"}
           </button>
-        )}
-        {pin.phase === "error" && <span className="answer-note">{pin.note}</span>}
-        {reapproveId && auditId && (
-          <button
-            type="button"
-            id="ready-reapprove"
-            className="btn"
-            onClick={reapproveCard}
-            disabled={reapprove.phase === "saving" || reapprove.phase === "done"}
-          >
-            {reapprove.phase === "saving"
-              ? "Güncelleniyor…"
-              : reapprove.phase === "done"
-                ? "Kart güncellendi"
-                : "Bu SQL ile güncelle"}
-          </button>
-        )}
-        {reapprove.phase === "error" && <span className="answer-note">{reapprove.note}</span>}
-        {isAdmin && auditId && !reapproveId && !readyOpen && (
-          <button type="button" id="make-ready" className="btn" onClick={() => setReadyOpen(true)}>
-            Hazır soru yap
-          </button>
-        )}
+          {phase === "error" && <span className="answer-note">{note}</span>}
+          {auditId && (
+            <button
+              type="button"
+              id="pin-card"
+              className={`answer-action${pin.phase === "done" ? " answer-action-done" : ""}`}
+              onClick={pinCard}
+              disabled={pin.phase === "saving" || pin.phase === "done"}
+            >
+              {pin.phase === "saving" ? "Ekleniyor…" : pin.phase === "done" ? "Panoya eklendi" : "Panoma ekle"}
+            </button>
+          )}
+          {pin.phase === "error" && <span className="answer-note">{pin.note}</span>}
+          {reapproveId && auditId && (
+            <button
+              type="button"
+              id="ready-reapprove"
+              className={`answer-action${reapprove.phase === "done" ? " answer-action-done" : ""}`}
+              onClick={reapproveCard}
+              disabled={reapprove.phase === "saving" || reapprove.phase === "done"}
+            >
+              {reapprove.phase === "saving"
+                ? "Güncelleniyor…"
+                : reapprove.phase === "done"
+                  ? "Kart güncellendi"
+                  : "Bu SQL ile güncelle"}
+            </button>
+          )}
+          {reapprove.phase === "error" && <span className="answer-note">{reapprove.note}</span>}
+          {isAdmin && auditId && !reapproveId && !readyOpen && (
+            <button type="button" id="make-ready" className="answer-action" onClick={() => setReadyOpen(true)}>
+              Hazır soru yap
+            </button>
+          )}
+        </div>
       </div>
       {readyOpen && <ReadyQuestionForm payload={payload} onCancel={() => setReadyOpen(false)} />}
       <Evidence payload={payload} />
