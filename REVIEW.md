@@ -1,13 +1,12 @@
-# REVIEW M24 (T316-T331 + visual review T376-T382; range a283ad4^ -> b70e2c5)
+# REVIEW M25 (T332-T345; range 7fcebc1^ -> 22dc425, + working-tree tests/test_integration_m25.py)
 
-Whole-project checks: 19 suite/smoke commands pass; I re-read the diff against PLAN R7-16..R7-21 and the "ready question / start card / ready seed line / suggest job" contracts.
-
-- **BUG (T383)**: `StartCache` keys on the SQL digest only, but the cached payload embeds title/question/display; a `PUT /api/ready-questions/{id}` edit of those fields shows the old card on the board for up to 300 s.
-- **BUG (T384)**: personal-card unpin has a route and an `api.unpinCard`, but no component calls it; after 6 pins "Panoma ekle" 409s for good and only an admin can clean up.
-- Visual-review findings already queued: T376 (wwi has no ready seeds -> empty board, two flows die), T377 (phone chart labels/legend), T378 (second "Öneri iste" duplicates), T379 (alias labels), T380 (turn-count wording), T381-T382 (polish).
-- ASSUMPTIONs checked and holding: per-dataset personal-card cap (ready.py `_check_cap`), executor-owned policy filter for seeds (seed.py), label read from `executor._pii_schema` (SessionExecutor forwards it), personal pin needs a username (409 AUTH_OFF), open only via POST /open.
-- Contracts traced: start card keys vs StartCard/startCards.js (value/label/chart/columns/rows/error/refreshed_at/personal) match; suggest job keys match the screen's poll; ready create body never carries `sql`; ROUTE_ROLES rows match the real routes.
-- Risk: an error payload (e.g. DB briefly down) is cached 300 s for every user, refresh limited to 1/30 s per card.
-- Risk: `PUT /api/ready-questions/{id}` takes an untyped dict - `position: "x"`, empty `title`, or `business_role: null` on a seed row (created_by NULL, invisible to everyone, cap skipped) are accepted.
-- Risk: `SuggestJobs._jobs` and `StartCache._refreshed/_locks` never evict (bounded by use, slow growth).
-- Missing tests: edit-then-board freshness (T383), unpin UI (T384), PUT field validation, a second dataset switch not re-seeding, error-card caching.
+Whole-project checks: pytest 4 red / 5524 green, vitest 1 red. All 5 reds traced to commits (below); tests/test_integration_m25.py itself passes (6).
+- **STALE (T385)**: T377's `report/chart.py` edit (truncate, width 64, rotate 45, pie labels, no legend) landed inside cfc0fef (T378); T266/T368 pins in tests/test_chart.py and tests/test_chart_pie_legend.py (3 tests) still assert the old shape. Intended change, stale tests.
+- **STALE (T386)**: T379's `columnLabel` in ResultTable.jsx landed inside f6f2b0a (T380); AnswerCard.test.jsx:162 still expects the raw `SATIS_MIKTARI` header.
+- **BUG (T387)**: T343's pages `db-dot-user-ok`/`db-dot-user-down` end on `synthetic_erp`, the run opens on `wwi`; T370's restore-world test is right, the pages poison every later frame.
+- **BUG (T388)**: `mark_ok`/`mark_error` have no caller; `last_ok_at`/`last_error` (contract "connection (public)", "Son başarılı/Son hata" columns) are always null.
+- Process risk: T377 and T379 are still `[ ]` though their code is in HEAD (leaked into the T378/T380 commits); their accepts stay red until T385/T386 land. Do not re-implement them.
+- ASSUMPTIONs checked, holding: Encrypt/Trust default true (connections.py:36), only a power refuses a save (guard.py:67), saving the active dataset rebuilds the session (connections_api.py:91), DPAPI failure -> 409 (dpapi.py:109).
+- Contracts traced OK: health `db` keys vs DbStatus.jsx, guard report keys vs ConnectionsScreen, env source -> read_only_form.
+- Risk: `DbStatus._asked` only grows; admin error text is scrubbed by pattern, not by knowing the password.
+- Missing tests: DPAPI-unavailable path off Windows; a second kick during a running ping; a saved connection reaching a question on the already-open session beyond the integration file.
