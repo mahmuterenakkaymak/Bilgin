@@ -361,4 +361,37 @@ describe("ConnectionsScreen — denemek ve kaydetmek", () => {
     expect(container.querySelector("#conn-password").disabled).toBe(true);
     expect(container.querySelector("#conn-save").disabled).toBe(true);
   });
+
+  // Ölü bir sunucu isteği hiç yanıtlamayabilir: ekranın kendi bütçesi dolduğunda düğme geri
+  // gelir, cümle de beklemenin yerine geçer (T466).
+  it("yanıt vermeyen deneme bütçesi dolunca düğmeyi geri getirir ve cümlesini yazar", async () => {
+    api.connectionsTest.mockReturnValue(new Promise(() => {}));
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      await mount();
+      await click(container.querySelector('[data-conn-edit="wwi_real"]'));
+      await click(container.querySelector("#conn-test"));
+      expect(container.querySelector("#conn-test").textContent).toBe("Deneniyor…");
+      expect(container.querySelector("#conn-save").disabled).toBe(true);
+
+      await act(async () => {
+        vi.advanceTimersByTime(19000);
+      });
+      await settle();
+      expect(container.querySelector("#conn-test").textContent).toBe("Deneniyor…");
+      expect(container.querySelector("#conn-error")).toBeNull();
+
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+      });
+      await settle();
+
+      expect(container.querySelector("#conn-test").textContent).toBe("Bağlantıyı test et");
+      expect(container.querySelector("#conn-test").disabled).toBe(false);
+      expect(container.querySelector("#conn-save").disabled).toBe(false);
+      expect(container.querySelector("#conn-error").textContent).toContain("Sunucu 20 saniyede yanıt vermedi");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

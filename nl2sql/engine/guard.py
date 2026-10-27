@@ -9,10 +9,15 @@ the layers behind it, not the boundary.
 Every answer is one Turkish line for ``#conn-result``. A driver error is the report's single line
 and goes through ``connections.scrub`` first, since a driver quotes the connection string back.
 ``connect`` is the seam a test uses instead of a real SQL Server.
+
+The login is bounded: pyodbc waits forever by default, so an unreachable host used to leave the
+request - and the admin's form with it - open with no report at all. A timed-out login is a driver
+error like any other, which is to say an ordinary failed line.
 """
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterable
 
 from nl2sql import config
@@ -22,6 +27,9 @@ from nl2sql.schema_map import doc
 
 POWER_MESSAGE = "Bu giriş yazabiliyor ya da yönetebiliyor; salt okunur bir giriş kullanın."
 CONNECT_MESSAGE = "Bağlantı kurulamadı; sunucu, veritabanı ve giriş bilgilerini denetleyin."
+
+LOGIN_TIMEOUT_S = 5  # seconds the driver is given for the login before it is a failed line
+LOGIN_TIMEOUT_ENV = "NL2SQL_CONN_LOGIN_TIMEOUT_S"  # widened only for a genuinely slow link
 
 _DATABASE_PERMISSIONS = ("INSERT", "UPDATE", "DELETE", "ALTER", "EXECUTE")
 
@@ -131,4 +139,12 @@ def _connect(conn_str: str):
     """The real connector: pyodbc is imported lazily, the way the MSSQL backend imports it."""
     import pyodbc
 
-    return pyodbc.connect(conn_str)
+    return pyodbc.connect(conn_str, timeout=_login_timeout_s())
+
+
+def _login_timeout_s() -> int:
+    """Whole seconds of login patience; the env widens it, anything else falls back to the bound."""
+    try:
+        return max(1, int(os.environ.get(LOGIN_TIMEOUT_ENV, "") or LOGIN_TIMEOUT_S))
+    except ValueError:
+        return LOGIN_TIMEOUT_S

@@ -20,6 +20,12 @@ import {
 // Durum noktası arka plan yoklamasının cevabıdır (R7-25); istek hiçbir zaman onu beklemez.
 const STATE_LABELS = { ok: "Bağlı", down: "Erişilemiyor", unknown: "Denenmedi", none: "Kurulu değil" };
 
+// Denemenin kendi bütçesi (T466): erişilemeyen bir sunucu isteği hiç yanıtlamayabilir, ve o zaman
+// "Deneniyor…" ile kapalı Kaydet yöneticide kalır. Bütçe dolunca cümle sunucunun yerini tutar.
+// ASSUMPTION: bütçe yalnız denemeyi kapatır; Kaydet'in beklemesi sunucudaki login bağıyla sınırlıdır.
+const TEST_BUDGET_MS = 20000;
+const TEST_TIMEOUT_MESSAGE = `Sunucu ${TEST_BUDGET_MS / 1000} saniyede yanıt vermedi; bağlantıyı yeniden deneyin.`;
+
 function text(value) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -138,11 +144,26 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
     setBusy("test");
     setFailure("");
     setReport(null);
+    // Bütçe dolduysa deneme yönetici için bitmiştir: düğme geri gelir, cümle de beklemenin
+    // karşılığıdır. Sunucu o arada yanıt verirse cevap gösterilmez — sözü artık bütçenin.
+    let givenUp = false;
+    const timer = setTimeout(() => {
+      givenUp = true;
+      setBusy("");
+      setFailure(TEST_TIMEOUT_MESSAGE);
+    }, TEST_BUDGET_MS);
     api
       .connectionsTest(dataset, toPayload(form))
-      .then((payload) => setReport(payload ?? null))
-      .catch((rejected) => setFailure(rejected?.message || "Bağlantı denenemedi."))
-      .finally(() => setBusy(""));
+      .then((payload) => {
+        if (!givenUp) setReport(payload ?? null);
+      })
+      .catch((rejected) => {
+        if (!givenUp) setFailure(rejected?.message || "Bağlantı denenemedi.");
+      })
+      .finally(() => {
+        clearTimeout(timer);
+        if (!givenUp) setBusy("");
+      });
   };
 
   const save = () => {

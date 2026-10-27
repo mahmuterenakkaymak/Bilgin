@@ -13,6 +13,7 @@ import json
 import pytest
 
 from nl2sql import config
+from nl2sql.engine import guard
 from nl2sql.engine.guard import POWER_MESSAGE, readonly_guard
 
 PAROLA = "Gizli2026!parola"
@@ -170,3 +171,31 @@ def test_a_connect_error_carrying_the_password_is_one_scrubbed_line():
     assert "Login failed" in rapor["lines"][0]["message"]
     assert "PWD=***" in rapor["lines"][0]["message"]
     assert PAROLA not in json.dumps(rapor, ensure_ascii=False)
+
+
+# ------------------------------------------------------------------------------- beklemeyen bağdaç
+
+
+def test_the_connect_call_receives_the_bounded_login_timeout(monkeypatch):
+    """Ölü bir sunucu raporu hiç döndürmesin: bağdaç login zaman aşımıyla çağrılır (T466)."""
+    import pyodbc
+
+    cagrilan: list[dict] = []
+
+    def baglan(_dize, **secenek):
+        cagrilan.append(secenek)
+        return SahteSunucu()
+
+    monkeypatch.setattr(pyodbc, "connect", baglan)
+
+    assert readonly_guard(BAGLANTI, TABLOLAR, login_script_url=BETIK)["ok"] is True
+    assert cagrilan == [{"timeout": guard.LOGIN_TIMEOUT_S}]
+
+    # yavaş bir hat için tek başına genişletilir; sayı olmayan değer bağı geri verir
+    monkeypatch.setenv(guard.LOGIN_TIMEOUT_ENV, "12")
+    readonly_guard(BAGLANTI, TABLOLAR, login_script_url=BETIK)
+    assert cagrilan[-1] == {"timeout": 12}
+
+    monkeypatch.setenv(guard.LOGIN_TIMEOUT_ENV, "yavaş")
+    readonly_guard(BAGLANTI, TABLOLAR, login_script_url=BETIK)
+    assert cagrilan[-1] == {"timeout": guard.LOGIN_TIMEOUT_S}
