@@ -3228,6 +3228,20 @@ a.db-label:hover {
   font-size: 13px;
 }
 
+/* Dar kartta sığmayan başlık kelimenin ortasından kesilmesin ("QuantityC" değil "QuantityOn…"):
+   üç nokta hücreden daralan yazıya işler; yazar gibi yerleşen tablo ise başlığın bölünemez
+   genişliğinin altına inmiyor - kutu kayıyor, başlık kesiliyor. Kartın tablosu bu yüzden sabit
+   düzen: kolonlar kutuyu paylaşır, sığmayan başlık ve hücre üç nokta ile kırpılır. */
+.start-card-table .result-table {
+  table-layout: fixed;
+}
+
+.start-card-table th,
+.start-card-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .start-card-empty {
   margin: 0;
   color: var(--muted);

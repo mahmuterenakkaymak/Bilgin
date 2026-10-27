@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "../lib/api.js";
+import { columnLabel } from "../lib/chartFormat.js";
 import StartCard from "./StartCard.jsx";
 import StartScreen from "./StartScreen.jsx";
 
@@ -176,9 +177,18 @@ describe("StartCard", () => {
 
     const table = cardMarkup(TABLE);
     expect(table).toContain('data-display="table"');
-    expect(table).toContain(">ÜRÜN</th>");
+    expect(table).toContain(">Ürün</th>");
     expect(table).toContain(">Siyah Çay 500 g<");
     expect(table).toContain('<td class="num">2.480</td>');
+  });
+
+  // Panonun mini tablosu da thread ile aynı okunuşu okur (M26 inceleme 1): başlık columnLabel'ın
+  // döndürdüğüdür, çıplak SQL adı değil - ikisi küçük harfli adda zaten aynıdır, büyük harflide ayrılır.
+  it("mini tablonun başlığı columnLabel'ın kendi çıktısıdır", () => {
+    const columns = ["StockItemName", "QuantityOnHand"];
+    const table = cardMarkup({ ...TABLE, columns });
+    for (const name of columns) expect(table).toContain(`>${columnLabel(name)}</th>`);
+    expect(cardMarkup({ ...TABLE, columns: ["STOCK_ITEM_NAME", "ADET"] })).toContain(">Stock item name</th>");
   });
 
   it("yenilenme yazısı ve yenile düğmesi kartta durur, zamansız kartta satır yoktur", () => {

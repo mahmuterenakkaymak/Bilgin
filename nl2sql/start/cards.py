@@ -41,7 +41,7 @@ def card_result(executor, card: dict, source: str = "") -> dict:
     """Kartın yükü: SQL'i yürütür, ``display``e göre number/chart/table ya da hata cümlesi üretir.
 
     Yürütücü hatası kartın kendi cümlesidir (``error``); öteki kartlar bundan etkilenmez. Etiket,
-    tek sayının kolonunun şema açıklamasının başıdır - şemada karşılığı yoksa kolonun adı. Tablo
+    tek sayının kolonunun şema açıklamasının başıdır - şemada karşılığı yoksa alias'ın okunuşu. Tablo
     kartı ~380px kartta sığmayan kolonları değil, ölçüyü gösterir: bkz. ``_table_columns``.
     """
     result = executor.execute(card["sql"], Budget(max_rows=config.UI_MAX_ROWS), source)
@@ -157,7 +157,7 @@ def _number(value):
 
 
 def _column_label(executor, column: str) -> str:
-    """Kolonun şema açıklamasının başı; şemada karşılığı ya da açıklaması yoksa kolonun adı.
+    """Kolonun şema açıklamasının başı; şemada karşılığı ya da açıklaması yoksa alias'ın okunuşu.
 
     ASSUMPTION: imza yürütücüyü veriyor, şemayı ayrı söylemiyor - yürütücü kendi şemasını
     (``pii_schema``) taşıdığı için etiket oradan okunur.
@@ -168,7 +168,19 @@ def _column_label(executor, column: str) -> str:
             if field["name"].upper() == column.upper():
                 head = _SENTENCE.match(field["description"])
                 return (head.group(0) if head else field["description"]).strip().rstrip(".").strip()
-    return column
+    return _alias_label(column)
+
+
+def _alias_label(column: str) -> str:
+    """Alias'ın kart okunuşu: web kartının ``columnLabel``ı ile aynı kural (M26 inceleme 1).
+
+    Büyük harfli ad kelimeye döner ("MUSTERI_KARTI" → "Musteri karti"); içinde küçük harf taşıyan
+    ad elle yazılmış bir addır ve olduğundan farklı yazılmaz - thread'in kolon başlığı da böyledir.
+    """
+    if not column or any(ch.islower() for ch in column):
+        return column
+    text = " ".join(word for word in column.split("_") if word).lower()
+    return text[:1].upper() + text[1:]
 
 
 def _iso(timestamp: float) -> str:

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { columnLabel } from "../lib/chartFormat.js";
 import { formatCell, isNumericColumn } from "../lib/format.js";
 import { cardValueText, refreshedText } from "../lib/startCards.js";
 import ChartView from "./ChartView.jsx";
@@ -24,7 +25,7 @@ function MiniTable({ columns, rows }) {
           <tr>
             {names.map((name, index) => (
               <th key={`${index}-${name}`} scope="col" className={numeric[index] ? "num" : undefined}>
-                {name}
+                {columnLabel(name)}
               </th>
             ))}
           </tr>

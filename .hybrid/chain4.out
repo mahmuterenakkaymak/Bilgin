@@ -362,3 +362,81 @@
 2026-10-27 13:02:15 | ORCH   | hands: new memory note wwi-fake-fallback-is-q01.md - wwi's fake_fallback_sql is Q01's own SQL, so a fake-replay test on golden index 0 proves nothing about registration
 2026-10-27 13:03:06 | ORCH   | T401: PASSED (hands)
 2026-10-27 13:03:21 | HANDS  | T402 try 1: M26 integration (no hand-made fakes): add tests/test_integration_m26.py (new file: real `load_dataset("wwi")` -> real build_db(tmp) -> real open_session with `make_client("fake")` (the real fake, golden_en replay) -> real ask_payload: E01's English question -> status ok, `answer_lang` "en", every fact label from en.json, displays in en format, answer_text passes `check_text(..., lang="en")` and fails it for "tr" when it carries a grouped number; the same Turkish Q01 -> `answer_lang` "tr" and facts/answer identical to a run with NL2SQL_LANG unset; a forced foreign-format narration through the real narrate + guard falls back to the English template sentence), then run the whole suite and fix whatever is red
+2026-10-27 13:21:44 | ORCH   | hands: changed memory note nl2sql-preexisting-red-tests.md - Who may fix a red nl2sql test, and the standing reds' history — latest (2026-10-27, T402 run): pytest is CLEAN (5926 passed, 0 failed — the T345 chart/visual reds are closed), vitest has 2 standing reds, the two JS `PAYLOAD_KEYS` literals T400 left without `answer_lang` (AnswerCard.test.jsx:28, AskStates.test.jsx:153). The AskPayload key set is pinned in six places — grep PAYLOAD_KEYS before adding a payload key. Older reds (T317 login-body pin, T365 clarification pin, the CSS two-block red, the T361 vitest pair, test_visual_flows.py:212, AnswerCard.test.jsx:162) are closed. Re-verify before hunting a phantom red, and check the owning task before touching one.
+2026-10-27 13:22:27 | HANDS  | T402 try 2: M26 integration (no hand-made fakes): add tests/test_integration_m26.py (new file: real `load_dataset("wwi")` -> real build_db(tmp) -> real open_session with `make_client("fake")` (the real fake, golden_en replay) -> real ask_payload: E01's English question -> status ok, `answer_lang` "en", every fact label from en.json, displays in en format, answer_text passes `check_text(..., lang="en")` and fails it for "tr" when it carries a grouped number; the same Turkish Q01 -> `answer_lang` "tr" and facts/answer identical to a run with NL2SQL_LANG unset; a forced foreign-format narration through the real narrate + guard falls back to the English template sentence), then run the whole suite and fix whatever is red
+2026-10-27 13:30:59 | ORCH   | T402: 2 older test(s) red at HEAD too - checking whether they are stale
+2026-10-27 13:31:39 | ORCH   | T402: stale tests updated automatically (R8-6, T400) in 8b10d09: web/src/components/AnswerCard.test.jsx, web/src/components/AskStates.test.jsx
+2026-10-27 13:39:19 | ORCH   | T402: PASSED (hands)
+2026-10-27 13:39:19 | ORCH   | M26: whole-project checks
+2026-10-27 13:47:32 | ORCH   | M26: whole-project checks green (21 command(s))
+2026-10-27 13:47:33 | ORCH   | M26: screenshots for the visual review
+2026-10-27 13:58:56 | ORCH   | M26: page problem: landing-empty-state-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: ask-golden-answer-chart-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: ask-ambiguous-clarify-then-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: export-buttons-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: saved-and-history-sidebar-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: rules-screen-validation-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: dark-mode-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: logout-clears-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: users-screen-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: user-readonly-rules-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: admin-map-onboard-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: conversation-three-turns-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: conversation-chart-refine-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: new-conversation-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: start-sales-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: start-sales-390: console error: Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: start-purchasing-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: card-answer-followup-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: admin-ready-questions-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: admin-connections-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 13:58:56 | ORCH   | M26: page problem: admin-connections-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: db-dot-user-ok-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: db-dot-user-down-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: en-login-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 13:58:56 | ORCH   | M26: page problem: en-login-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: en-ask-chart-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 13:58:56 | ORCH   | M26: page problem: en-ask-chart-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: en-map-screen-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 13:58:56 | ORCH   | M26: page problem: en-map-screen-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: landing-empty-state-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: ask-golden-answer-chart-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: ask-ambiguous-clarify-then-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: export-buttons-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: saved-and-history-sidebar-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 13:58:56 | ORCH   | M26: page problem: saved-and-history-sidebar-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: rules-screen-validation-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: dark-mode-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: logout-clears-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: users-screen-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: users-screen-1366: console error: Failed to load resource: the server responded with a status of 409 (Conflict)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: user-readonly-rules-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: admin-map-onboard-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 13:58:56 | ORCH   | M26: page problem: admin-map-onboard-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: conversation-three-turns-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 13:58:56 | ORCH   | M26: page problem: conversation-three-turns-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: conversation-chart-refine-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: new-conversation-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: start-sales-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: start-sales-1366: console error: Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: start-purchasing-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: card-answer-followup-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: admin-ready-questions-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: admin-connections-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 13:58:56 | ORCH   | M26: page problem: admin-connections-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: db-dot-user-ok-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: db-dot-user-down-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: en-login-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 13:58:56 | ORCH   | M26: page problem: en-login-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: en-ask-chart-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 13:58:56 | ORCH   | M26: page problem: en-ask-chart-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 13:58:56 | ORCH   | M26: page problem: en-map-screen-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 13:58:56 | ORCH   | M26: page problem: en-map-screen-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 14:06:18 | BRAIN  | M26: visual review with local Strata (141 screenshots)
+2026-10-27 14:18:49 | BRAIN  | M26: visual review done - 6 fix task(s) added
+2026-10-27 14:19:19 | BRAIN  | M26: review with sonnet in the background - hands keep building
+2026-10-27 14:19:36 | HANDS  | T465 try 1: the board card is the only surface that shows raw SQL column names (M26 review 1): the number card's caption is `_column_label`'s fallback (nl2sql/start/cards.py:61, 159-168 - an alias that is not a schema column is returned as-is), so the demo's cards print "MUSTERI_KARTI", "NET_MIKTAR", "NET_CIRO", "BRUT_KAR", "GECIKEN_SATIR" under the headline number while the same value in a thread reads "Musteri karti" (T379's columnLabel); the card's mini table (web/src/components/StartCard.jsx:27) renders `{name}` raw too ("StockItemName") and the cell CSS clips "QuantityOnHand" to "QuantityC" mid-word with no ellipsis. Fix: the fallback passes the name through the same sentence-case rule the web card uses (underscores -> spaces, first letter up: "MUSTERI_KARTI" -> "Musteri karti"; a real schema description still wins), MiniTable renders `columnLabel(name)` from web/src/lib/chartFormat.js, and `.start-card-table th` gets `text-overflow: ellipsis`. The fallback is a formatted SQL name, not a catalog string - no new key. Add to tests/test_web_start_api.py (existing file - only these new cases may be added): a number card whose SQL aliases `COUNT(*) AS MUSTERI_KARTI` returns payload label "Musteri karti", and a card whose column is in the schema keeps its description. Add to web/src/components/StartScreen.test.jsx (existing file - only new cases): a table card with columns ["StockItemName","QuantityOnHand"] renders columnLabel's own output in the header, never the raw name.

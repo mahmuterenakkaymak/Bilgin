@@ -34,6 +34,8 @@ MONTHLY_SQL = (
     " FROM TBLSTHAR WHERE STHAR_HTUR = 'S' GROUP BY LEFT(STHAR_TARIH, 7) ORDER BY AY"
 )
 BAD_SQL = "SELECT YOK_SUTUNU FROM TBLSTSABIT"
+ALIAS_SQL = "SELECT COUNT(*) AS MUSTERI_KARTI FROM TBLCASABIT"
+SCHEMA_SQL = "SELECT MAX(STHAR_NF) AS STHAR_NF FROM TBLSTHAR WHERE STHAR_HTUR = 'S'"
 
 
 class CountingFake(fake.FakeLLM):
@@ -138,6 +140,25 @@ def test_start_renders_the_visible_cards_without_running_the_agent(world):
     assert all(c["refreshed_at"] for c in body["cards"])
     assert world.agent.calls == 0, "başlangıç ekranı modeli koşurmaz"
     assert_no_sql(body)
+
+
+def test_a_number_card_reads_its_alias_the_way_a_thread_reads_it(world):
+    card(world, "satis", "Müşteri sayısı", ALIAS_SQL)
+    client = as_user(world.app, "satis1")
+
+    body = client.get("/api/start").json()
+
+    assert body["cards"][0]["value"] is not None
+    assert body["cards"][0]["label"] == "Musteri karti"
+
+
+def test_a_card_whose_column_is_a_schema_column_keeps_the_description(world):
+    card(world, "satis", "En yüksek net birim fiyat", SCHEMA_SQL)
+    client = as_user(world.app, "satis1")
+
+    body = client.get("/api/start").json()
+
+    assert body["cards"][0]["label"] == "Hareketin net birim fiyatı (KDV hariç)"
 
 
 def test_each_business_role_gets_its_own_cards_plus_the_common_ones(world):
