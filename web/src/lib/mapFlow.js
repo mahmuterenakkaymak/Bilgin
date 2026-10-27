@@ -6,8 +6,20 @@ export const FAIL_MESSAGE = "İşlem tamamlanamadı.";
 export const INDEX_MESSAGE = "İndeks kurulamadı.";
 export const SWITCH_MESSAGE = "Veri kümesine geçilemedi.";
 
+// Cümlelerin ekranı kataloğunda (R8-20): indirgeyicinin dili yok, o yüzden hâlde Türkçeleri durur
+// — mapFlow.test.js onları bu haliyle dondurmuştur. Ekran bir cümleyi bu kayıtta arar: bulunursa
+// kendi dilinin anahtarından, bulunamazsa sunucunun cümlesi olduğu gibi yazılır.
+export const MESSAGE_KEYS = new Map([
+  [FAIL_MESSAGE, "map.failed"],
+  [INDEX_MESSAGE, "map.indexFailed"],
+  [SWITCH_MESSAGE, "map.switchFailed"],
+]);
+
 // Sözleşme "apply / status"un üç aşaması; başarısızlıkta ekran adımlar yerine cümleyi gösterir.
+// Adımların yazısı kataloğun anahtarlarıdır; PROGRESS_STEPS adım sayısının ve Türkçe yazının
+// kaydıdır — mapFlow.test.js onu bu haliyle dondurmuştur.
 export const PROGRESS_STEPS = ["Yazılıyor", "İndeks kuruluyor", "Hazır"];
+export const PROGRESS_STEP_KEYS = ["map.step.writing", "map.step.indexing", "map.step.done"];
 const PHASE_STEP = { writing: 0, indexing: 1, done: 2 };
 const PHASE_STATUS = { writing: "applying", indexing: "indexing", done: "done", failed: "failed" };
 

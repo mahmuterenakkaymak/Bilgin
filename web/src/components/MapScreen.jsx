@@ -1,8 +1,17 @@
 import { useEffect, useReducer, useRef, useState } from "react";
+import { useT } from "../i18n/index.js";
 import DatasetList from "./DatasetList.jsx";
 import * as api from "../lib/api.js";
 import { arrayBufferToBase64 } from "../lib/fileB64.js";
-import { NO_FILE_MESSAGE, canApply, initialMapState, mapReducer, progressSteps, shouldPoll } from "../lib/mapFlow.js";
+import {
+  MESSAGE_KEYS,
+  PROGRESS_STEP_KEYS,
+  canApply,
+  initialMapState,
+  mapReducer,
+  progressSteps,
+  shouldPoll,
+} from "../lib/mapFlow.js";
 
 // Veritabanı haritası ekranı (R6-19): şablonu al, doldur, geri yükle, denetime bak, küme yap.
 // Akışın bütün halleri lib/mapFlow.js'in indirgeyicisinde durur; burada yalnız okunur hâle
@@ -14,21 +23,21 @@ const MAX_WARNINGS = 20;
 // baytı ve duyuruyu döner), o yüzden sunucunun sabit adı burada da aynı şekilde duruyor.
 const TEMPLATE_FILENAME = "bilgin-veritabani-sablonu.xlsx";
 const SAMPLE_FILENAME = "ornek_fatura.xlsx";
-const NO_DB_MESSAGE = "Canlı veritabanı bağlantısı yok; karşılaştırma yapılmadı.";
 
+// Karelerin, adımların ve başlıkların yazısı kataloğunda (R8-20); burada yalnız sıraları duruyor.
 const COUNTS = [
-  ["tables", "Tablo"],
-  ["columns", "Kolon"],
-  ["pii", "Kişisel veri"],
-  ["deny", "Kapalı"],
-  ["references", "Referans"],
-  ["rules", "Kural"],
+  ["tables", "map.count.tables"],
+  ["columns", "map.count.columns"],
+  ["pii", "map.count.pii"],
+  ["deny", "map.count.deny"],
+  ["references", "map.count.references"],
+  ["rules", "map.count.rules"],
 ];
 
 const HOW_TO = [
-  ["İndir", "Boş şablonu indirin ya da dolu örnekle deneyin."],
-  ["Doldur", "Veri kümesi, Tablolar, Kolonlar ve İş kuralları sayfalarını doldurun."],
-  ["Yükle", "Dosyayı geri getirin; rapor temizse küme kendiliğinden kurulur."],
+  ["map.how1.title", "map.how1.text"],
+  ["map.how2.title", "map.how2.text"],
+  ["map.how3.title", "map.how3.text"],
 ];
 
 function text(value) {
@@ -82,6 +91,7 @@ function saveBlob(blob, filename) {
 
 // Denetim raporu: sayılar, hatalar, uyarılar ve canlı veritabanıyla karşılaştırmanın sözü.
 function Report({ preview }) {
+  const { t } = useT();
   const counts = preview.counts ?? {};
   const errors = issues(preview.errors);
   const warnings = issues(preview.warnings);
@@ -95,7 +105,7 @@ function Report({ preview }) {
     <div className="map-report" id="map-report">
       {name && (
         <p className="map-dataset">
-          Küme olacak: <strong>{display || name}</strong>
+          {t("map.willBe")} <strong>{display || name}</strong>
           {display && display !== name ? ` (${name})` : ""}
         </p>
       )}
@@ -106,25 +116,24 @@ function Report({ preview }) {
           // sözdür: kare kehribara döner ki sayı diğer beşinden ayrılsın (renk yeni değil).
           return (
             <div className={key === "pii" && value > 0 ? "map-stat is-warn" : "map-stat"} key={key}>
-              <dt>{label}</dt>
+              <dt>{t(label)}</dt>
               <dd>{value}</dd>
             </div>
           );
         })}
       </dl>
       <p className="map-stats-note" id="map-stats-note">
-        Kapalı: modelin hiçbir metnine düşmeyen kolonlar; sorgu onları göremez. Referans: bir kolonun hangi tabloya
-        bağlandığını söyler — cevaplar bu bağlantılar üzerinden kurulur.
+        {t("map.statsNote")}
       </p>
       {errors.length > 0 && (
         <div className="map-errors-wrap">
           <table className="map-errors" id="map-errors">
             <thead>
               <tr>
-                <th scope="col">Sayfa</th>
-                <th scope="col">Satır</th>
-                <th scope="col">Kolon</th>
-                <th scope="col">Sorun</th>
+                <th scope="col">{t("map.col.sheet")}</th>
+                <th scope="col">{t("map.col.row")}</th>
+                <th scope="col">{t("map.col.column")}</th>
+                <th scope="col">{t("map.col.message")}</th>
               </tr>
             </thead>
             <tbody>
@@ -154,13 +163,15 @@ function Report({ preview }) {
               <span>{issue.message}</span>
             </p>
           ))}
-          {extra > 0 && <p className="map-more">ve {extra} tane daha</p>}
+          {extra > 0 && <p className="map-more">{t("map.more", { count: extra })}</p>}
         </div>
       )}
       <p className="map-db" id="map-db">
         {check?.checked
-          ? `Canlı veritabanıyla karşılaştırıldı: ${differences ? `${differences} farklılık.` : "farklılık yok."}`
-          : text(check?.message) || NO_DB_MESSAGE}
+          ? differences
+            ? t("map.db.compared", { count: differences })
+            : t("map.db.noDiff")
+          : text(check?.message) || t("map.db.none")}
       </p>
     </div>
   );
@@ -202,13 +213,20 @@ export default function MapScreen({
   onActivate,
   onSwitch,
 }) {
+  const { t } = useT();
   const preview = state.preview;
   const blocked = state.status === "previewed" && issues(preview?.errors).length > 0;
   // İş başladıysa adım bandı konuşur. Reddin cümlesi geçişte her zaman, işte yalnız iş
   // başlamadıysa bu kartın altında durur — başladıysa sözü adım bandının yanındaki cümle söyler.
   const running = state.status === "applying" || Boolean(state.job);
+  // İndirgeyicinin kendi cümlesi arayüz dilinin kataloğundan okunur; sunucunun cümlesi geldiği
+  // dilde kalır.
+  const own = (message) => {
+    const key = MESSAGE_KEYS.get(message);
+    return key ? t(key) : message;
+  };
   const alert =
-    state.status === "switchError" || (state.status === "failed" && !state.job) ? text(state.error?.message) : "";
+    state.status === "switchError" || (state.status === "failed" && !state.job) ? own(text(state.error?.message)) : "";
   // Üç kartın sırası ekranın zaten bildiğinden okunur: şablon alındıysa 1 biter, küme kurulduysa
   // 2 biter ve sıra kümeler kartına geçer. Yeni bir hâl tutulmaz, yalnız aynı hâl üçe çevrilir.
   const taken = Boolean(state.filename);
@@ -222,34 +240,36 @@ export default function MapScreen({
   return (
     <section id="map-screen" className="screen map-screen">
       <div>
-        <h1 className="screen-title">Yeni veritabanı</h1>
-        <p className="screen-lead">Şablonu doldurun; Bilgin onu okuyup kendi veri kümenizi kursun.</p>
+        <h1 className="screen-title">{t("map.title")}</h1>
+        <p className="screen-lead">{t("map.lead")}</p>
       </div>
 
       <div className="card map-card" data-step-state={steps[0]}>
         <CardTitle n={1} step={steps[0]}>
-          Şablonu alın
+          {t("map.card1")}
         </CardTitle>
         <ol className="map-steps">
           {HOW_TO.map(([title, hint], index) => (
             <li className="map-step" key={title}>
               <span className="map-step-n">{index + 1}</span>
-              <span className="map-step-title">{title}</span>
-              <span className="map-step-text">{hint}</span>
+              <span className="map-step-title">{t(title)}</span>
+              <span className="map-step-text">{t(hint)}</span>
             </li>
           ))}
         </ol>
         <div className="map-actions">
+          {/* Şablonun adresi dili sorgu parametresinden okur (R8-12): <a> başlık gönderemez.
+            Ekran dili kullandığı için bağlantı dil değişince baştan kuruluyor. */}
           <a className="btn" id="map-template" href={api.mapTemplateUrl(false)} download>
-            Boş şablonu indir
+            {t("map.template")}
           </a>
           {info?.db_connection === true && (
             <button type="button" className="btn" id="map-template-db" onClick={onTemplateDb} disabled={downloading}>
-              {downloading ? "Veritabanı okunuyor…" : "Canlı veritabanından doldur"}
+              {downloading ? t("map.templateDbBusy") : t("map.templateDb")}
             </button>
           )}
           <button type="button" className="btn" id="map-try-sample" onClick={onSample} disabled={sampling}>
-            {sampling ? "Hazırlanıyor…" : "Örnek dolu şablonla dene"}
+            {sampling ? t("map.sampleBusy") : t("map.sample")}
           </button>
         </div>
         {note && (
@@ -265,10 +285,10 @@ export default function MapScreen({
 
       <div className="card map-card" data-step-state={steps[1]}>
         <CardTitle n={2} step={steps[1]}>
-          Doldurduğunuz dosyayı denetleyin
+          {t("map.card2")}
         </CardTitle>
         <label className="field-label" htmlFor="map-file">
-          Şablon dosyası (.xlsx)
+          {t("map.fileLabel")}
         </label>
         <div className="map-file-row">
           <input
@@ -279,7 +299,7 @@ export default function MapScreen({
             onChange={onFile}
           />
           <label className="btn map-file-btn" htmlFor="map-file">
-            Şablon seç…
+            {t("map.filePick")}
           </label>
           <span className="map-file-name" id="map-file-name">
             {fileName}
@@ -293,23 +313,23 @@ export default function MapScreen({
             onClick={onPreview}
             disabled={state.status === "previewing"}
           >
-            {state.status === "previewing" ? "Kontrol ediliyor…" : "Kontrol et"}
+            {state.status === "previewing" ? t("map.previewing") : t("map.preview")}
           </button>
         </div>
         {!state.filename && (
           <p className={state.status === "noFile" ? "map-hint is-alert" : "map-hint"} id="map-hint">
-            {NO_FILE_MESSAGE}
+            {t("map.nofile")}
           </p>
         )}
         {preview && <Report preview={preview} />}
         {state.status === "previewed" && (
           <div className="map-actions">
             <button type="button" id="map-apply" className="btn btn-primary" onClick={onApply} disabled={!canApply(state)}>
-              Oluştur
+              {t("map.apply")}
             </button>
             {blocked && (
               <p className="map-hint is-alert" id="map-apply-note">
-                Önce hataları düzeltin.
+                {t("map.applyBlocked")}
               </p>
             )}
           </div>
@@ -317,15 +337,15 @@ export default function MapScreen({
         {running && (
           <div className="map-progress" id="map-progress" role="status" aria-live="polite">
             {state.status === "failed" ? (
-              <p className="map-failure">{text(state.error?.message)}</p>
+              <p className="map-failure">{own(text(state.error?.message))}</p>
             ) : (
               <ol className="map-track">
-                {progressSteps(state.job?.phase).map((step) => (
-                  <li className={step.done ? "is-done" : step.active ? "is-active" : ""} key={step.label}>
+                {progressSteps(state.job?.phase).map((step, index) => (
+                  <li className={step.done ? "is-done" : step.active ? "is-active" : ""} key={PROGRESS_STEP_KEYS[index]}>
                     <span className="map-track-mark" aria-hidden="true">
                       {step.done ? "✓" : step.active ? "●" : "○"}
                     </span>
-                    {step.label}
+                    {t(PROGRESS_STEP_KEYS[index])}
                   </li>
                 ))}
               </ol>
@@ -333,13 +353,13 @@ export default function MapScreen({
             {state.status === "done" && (
               <div className="map-actions">
                 <button type="button" id="map-activate" className="btn btn-primary" onClick={onActivate} disabled={activating}>
-                  {activating ? "Geçiliyor…" : "Bu veri kümesine geç"}
+                  {activating ? t("dataset.activating") : t("map.activate")}
                 </button>
                 {/* Kurulan küme gerçek bir SQL Server'a bakıyorsa soru henüz koşulamaz: girişi
                   yönetici bu ekranın kendisinden doldurur (R7-27). */}
                 {text(state.preview?.dataset?.connection) === "mssql" && (
                   <a className="map-connection-link" id="map-connection-link" href="#/baglantilar">
-                    Şimdi bağlantıyı girin
+                    {t("map.connectionLink")}
                   </a>
                 )}
               </div>
@@ -348,8 +368,8 @@ export default function MapScreen({
         )}
         {state.status === "activated" && (
           <p className="map-done" id="map-activated">
-            “{state.activated}” etkin küme; sorular artık bu veritabanına koşuluyor.{" "}
-            <a href="#/">Sormaya dön</a>
+            {t("map.activated", { name: state.activated })}{" "}
+            <a href="#/">{t("map.backToAsk")}</a>
           </p>
         )}
         {alert && (
@@ -361,7 +381,7 @@ export default function MapScreen({
 
       <div className="card map-card" data-step-state={steps[2]}>
         <CardTitle n={3} step={steps[2]}>
-          Veri kümeleri
+          {t("map.card3")}
         </CardTitle>
         <DatasetList
           datasets={datasets}
@@ -381,6 +401,7 @@ export default function MapScreen({
 // `onSwitched` küme değiştiğini App'e söyler — başlık, kenar çubuğu ve örnekler aynı gerçeği
 // eski hâliyle söylemesin.
 export function MapFlow({ onSwitched }) {
+  const { t } = useT();
   const [state, dispatch] = useReducer(mapReducer, initialMapState);
   const [info, setInfo] = useState(null);
   const [list, setList] = useState(null); // {active, datasets} | null: henüz okunmadı
@@ -401,7 +422,7 @@ export function MapFlow({ onSwitched }) {
         setList({ active: text(data?.active), datasets: Array.isArray(data?.datasets) ? data.datasets : [] });
         setListError("");
       })
-      .catch((failure) => setListError(failure?.message || "Veri kümeleri okunamadı."));
+      .catch((failure) => setListError(failure?.message || t("map.listFailed")));
 
   useEffect(() => {
     // Düğme yalnız yoklanabilir bir SQL Server varsa kurulur; bilgi gelmezse hiç görünmez.
@@ -448,7 +469,7 @@ export function MapFlow({ onSwitched }) {
     file
       .arrayBuffer()
       .then((buffer) => runPreview(file.name, arrayBufferToBase64(buffer)))
-      .catch(() => dispatch({ type: "fail", kind: "read", message: "Dosya okunamadı; yeniden seçmeyi deneyin." }));
+      .catch(() => dispatch({ type: "fail", kind: "read", message: t("map.readFailed") }));
   };
 
   // Dolu örnek doğrudan denetime girer: kullanıcı şablonun nasıl dolduğunu rapor üstünden görür.
@@ -474,9 +495,9 @@ export function MapFlow({ onSwitched }) {
       .mapTemplateDownload(true)
       .then(({ blob, note: serverNote }) => {
         saveBlob(blob, TEMPLATE_FILENAME);
-        setNote({ tone: serverNote ? "warn" : "ok", text: serverNote ?? "Şablon indirildi." });
+        setNote({ tone: serverNote ? "warn" : "ok", text: serverNote ?? t("map.downloaded") });
       })
-      .catch((failure) => setNote({ tone: "error", text: failure?.message || "Şablon indirilemedi." }))
+      .catch((failure) => setNote({ tone: "error", text: failure?.message || t("map.downloadFailed") }))
       .finally(() => setDownloading(false));
   };
 
@@ -499,7 +520,7 @@ export function MapFlow({ onSwitched }) {
       onSwitched?.();
       return { ok: true };
     } catch (failure) {
-      return { ok: false, message: failure?.message || "Veri kümesine geçilemedi." };
+      return { ok: false, message: failure?.message || t("map.switchFailed") };
     } finally {
       setBusy("");
     }
