@@ -162,5 +162,20 @@
   "onboard.index_failed": "İndeks kurulamadı: {name} (build-index {code} ile döndü).",
   "onboard.real_stub.doc": "{name} gerçek bir veritabanıdır: Bilgin şablonundan kuruldu, satırlar o veritabanında durur.\n\nBurada üretilecek ya da kurulacak bir şey yok: golden cevaplar, salt okunur girişle o veritabanında\nkoşan golden SQL'dir.",
   "onboard.real_stub.build_db": "{name} kurulmaz: veritabanı zaten var, gereken yalnız salt okunur giriş.",
-  "onboard.real_stub.generate": "{name} üretilmez: satırlar gerçek veritabanından okunur."
+  "onboard.real_stub.generate": "{name} üretilmez: satırlar gerçek veritabanından okunur.",
+
+  "start.not_found": "Hazır soru bulunamadı.",
+  "start.bad_role": "Geçersiz iş rolü.",
+  "start.bad_display": "Geçersiz görünüm: number, chart ya da table olmalı.",
+  "start.personal_cap": "En fazla {n} kişisel kart ekleyebilirsiniz.",
+  "start.unknown_field": "Tanınmayan hazır soru alanı: {fields}.",
+  "start.no_ask": "Bu soru geçmişte bulunamadı.",
+  "start.no_job": "Öneri işi bulunamadı.",
+  "start.open_note": "Karttan açıldı: kayıtlı SQL yeniden çalıştırıldı, model SQL yazmadı.",
+  "start.open_step": "Hazır soru ({id}) kayıtlı SQL ile açıldı.",
+
+  "card.refresh_too_soon": "Bu kart az önce yenilendi; {n} sn sonra yeniden deneyin.",
+
+  "suggest.not_json": "Model önerileri yazmadı: yanıt bir JSON nesnesi değildi.",
+  "suggest.too_few": "Model hiçbir iş rolü için yeterli soru yazmadı."
 }

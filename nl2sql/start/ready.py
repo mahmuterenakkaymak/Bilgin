@@ -21,6 +21,7 @@ from pathlib import Path
 from nl2sql import config
 from nl2sql.app import asklog
 from nl2sql.engine.result import Budget
+from nl2sql.i18n import t
 from nl2sql.report import shape
 from nl2sql.report.chart import chart_spec
 
@@ -47,14 +48,6 @@ _UPDATABLE = ("title", "question", "sql", "display", "business_role", "position"
 EVERY_ROLE = "*"
 DISPLAYS = ("number", "chart", "table")
 
-NOT_FOUND_MESSAGE = "Hazır soru bulunamadı."
-BAD_ROLE_MESSAGE = "Geçersiz iş rolü."
-BAD_DISPLAY_MESSAGE = "Geçersiz görünüm: number, chart ya da table olmalı."
-CAP_MESSAGE = f"En fazla {config.PERSONAL_CARDS} kişisel kart ekleyebilirsiniz."
-
-# R6-9'un cümlesi: başkasının sorusu arayan için hiç yoktur, yani red 403 değil 404'tür.
-NO_ASK_MESSAGE = "Bu soru geçmişte bulunamadı."
-
 _CREATE = """
 CREATE TABLE IF NOT EXISTS ready_questions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,12 +67,25 @@ CREATE TABLE IF NOT EXISTS ready_questions (
 
 
 class ReadyError(Exception):
-    """Hazır soru işleminin reddi: mesajı ve HTTP durumuyla birlikte taşınır (R6-3'ün biçimi)."""
+    """Hazır soru işleminin reddi: mesajı ve HTTP durumuyla birlikte taşınır (R6-3'ün biçimi).
 
-    def __init__(self, message: str, status: int) -> None:
+    ``refused`` kataloğun anahtarıyla doğar: ``message`` eski çağıranların okuduğu cümledir ve her
+    zaman Türkçedir, HTTP yolu ise cümleyi isteğin dilinden anahtarıyla parametrelerini okuyarak
+    kurar (R8-5). Kataloğu olmayan red - yürütücünün kendi cümlesi - doğrudan açılır ve yolu da
+    onu olduğu gibi gösterir.
+    """
+
+    def __init__(self, message: str, status: int, key: str = "", **params) -> None:
         super().__init__(message)
         self.message = message
         self.status = status
+        self.key = key
+        self.params = params
+
+    @classmethod
+    def refused(cls, key: str, status: int, **params) -> "ReadyError":
+        """Kataloğun anahtarıyla red: cümlesi dilin kendisinden okunur, buradaki Türkçesidir."""
+        return cls(t(key, config.DEFAULT_LANG, **params), status, key, **params)
 
 
 class ReadyStore:
@@ -153,13 +159,13 @@ class ReadyStore:
         """
         unknown = sorted(set(fields) - set(_UPDATABLE))
         if unknown:
-            raise ReadyError(f"Tanınmayan hazır soru alanı: {', '.join(unknown)}", 422)
+            raise ReadyError.refused("start.unknown_field", 422, fields=", ".join(unknown))
         if "business_role" in fields:
             _check_role(fields["business_role"])
         if "display" in fields:
             _check_display(fields["display"])
         if self.get(id) is None:
-            raise ReadyError(NOT_FOUND_MESSAGE, 404)
+            raise ReadyError.refused("start.not_found", 404)
         if fields:
             sets = ", ".join(
                 f"{column} = ?" for column in _UPDATABLE if column in fields
@@ -186,7 +192,7 @@ class ReadyStore:
             if not conn.execute(
                 f"DELETE FROM ready_questions WHERE {' AND '.join(clauses)}", args
             ).rowcount:
-                raise ReadyError(NOT_FOUND_MESSAGE, 404)
+                raise ReadyError.refused("start.not_found", 404)
 
     def list_all(self, dataset: str, pending: bool | None = None) -> list[dict]:
         """Kümenin bütün satırları (yönetici ekranı): ``pending`` True onay bekleyenler, False onaylılar, None hepsi."""
@@ -256,7 +262,7 @@ class ReadyStore:
                 (dataset, created_by),
             ).fetchone()[0]
         if n >= config.PERSONAL_CARDS:
-            raise ReadyError(CAP_MESSAGE, 409)
+            raise ReadyError.refused("start.personal_cap", 409, n=config.PERSONAL_CARDS)
 
     def _now_iso(self) -> str:
         return datetime.fromtimestamp(self.clock(), timezone.utc).isoformat(timespec="seconds")
@@ -279,7 +285,7 @@ def approve_from_audit(
     """
     record = asklog.find_ask(audit_id, session.ask_log, username=scope)
     if record is None or not record.get("sql"):
-        raise ReadyError(NO_ASK_MESSAGE, 404)
+        raise ReadyError.refused("start.no_ask", 404)
     source = f"ready:{username}:{audit_id}" if username else f"ready:{audit_id}"
     result = session.executor.execute(record["sql"], Budget(max_rows=config.UI_MAX_ROWS), source)
     if result.error is not None:
@@ -344,12 +350,12 @@ def _check_role(business_role: str | None) -> None:
     if business_role is None or business_role == EVERY_ROLE:
         return
     if business_role not in config.BUSINESS_ROLES:
-        raise ReadyError(BAD_ROLE_MESSAGE, 422)
+        raise ReadyError.refused("start.bad_role", 422)
 
 
 def _check_display(display: str) -> None:
     if display not in DISPLAYS:
-        raise ReadyError(BAD_DISPLAY_MESSAGE, 422)
+        raise ReadyError.refused("start.bad_display", 422)
 
 
 def _dataset_of(session) -> str:

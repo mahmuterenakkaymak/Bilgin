@@ -162,5 +162,20 @@
   "onboard.index_failed": "The index could not be built: {name} (build-index returned {code}).",
   "onboard.real_stub.doc": "{name} is a real database: it was created from the Bilgin template, its rows live in that database.\n\nThere is nothing to produce or to build here: the golden answers are the golden SQL that runs in that database\nwith the read-only login.",
   "onboard.real_stub.build_db": "{name} is not built: the database already exists, all it needs is the read-only login.",
-  "onboard.real_stub.generate": "{name} is not generated: its rows are read from the real database."
+  "onboard.real_stub.generate": "{name} is not generated: its rows are read from the real database.",
+
+  "start.not_found": "The ready question was not found.",
+  "start.bad_role": "Invalid business role.",
+  "start.bad_display": "Invalid display: it must be number, chart or table.",
+  "start.personal_cap": "You can add at most {n} personal cards.",
+  "start.unknown_field": "Unknown ready question fields: {fields}.",
+  "start.no_ask": "This question was not found in the history.",
+  "start.no_job": "The suggestion job was not found.",
+  "start.open_note": "Opened from a card: the stored query was run again, the model wrote no SQL.",
+  "start.open_step": "The ready question ({id}) was opened with its stored query.",
+
+  "card.refresh_too_soon": "This card was just refreshed; try again in {n} s.",
+
+  "suggest.not_json": "The model did not write the suggestions: the reply was not a JSON object.",
+  "suggest.too_few": "The model did not write enough questions for any business role."
 }

@@ -25,16 +25,11 @@ from pydantic import BaseModel
 from nl2sql import config
 from nl2sql.app import ask, asklog
 from nl2sql.engine.result import Budget
+from nl2sql.i18n import t
 from nl2sql.start.cards import RefreshTooSoon
-# Sözleşme cümleleri deposunun kendi cümleleridir: olmayan kartla görülmeyen kart aynı şeyi söyler.
-from nl2sql.start.ready import NO_ASK_MESSAGE as NO_ASK, NOT_FOUND_MESSAGE as NO_CARD
 from nl2sql.start.ready import ReadyError, approve_from_audit, personal_from_audit
-from nl2sql.web.authz import AUTH_OFF, current_user, require
-
-# Kartın açılışı cevabın notunda da okunur: ``replay_payload``ınkiyle aynı biçim, kaynağı kart.
-OPEN_NOTE = "Karttan açıldı: kayıtlı SQL yeniden çalıştırıldı, model SQL yazmadı."
-# R7-20: öneri işi bellektedir; sunucu yeniden doğduğunda onun da aşaması yoktur.
-NO_JOB = "Öneri işi bulunamadı."
+from nl2sql.web.authz import current_user, require
+from nl2sql.web.lang import request_lang
 
 
 class PersonalBody(BaseModel):
@@ -97,9 +92,9 @@ def create_router() -> APIRouter:
         Kartların SQL'i önbellekten gelir ya da bir kez yürür - model hiçbir koşulda koşmaz.
         """
         cards = _store(request).list_for(_dataset(request), _role(request), _name(request))
-        cache = request.app.state.start_cache
+        cache, lang = request.app.state.start_cache, _lang(request)
         return {
-            "cards": [cache.get(card, _source(request)) for card in cards],
+            "cards": [cache.get(card, _source(request), lang) for card in cards],
             "business_role": _role(request),
         }
 
@@ -107,17 +102,20 @@ def create_router() -> APIRouter:
     def card_refresh(id: int, request: Request) -> dict:
         """Kartı bir daha koşar: TTL'i aşar, ama kart başına ``CARD_REFRESH_MIN_S``te birden fazlası
         429 - kaç saniye sonra yeniden denenacağı cümlede yazar."""
-        card = _visible_card(request, id)
+        lang = _lang(request)
+        card = _visible_card(request, id, lang)
         try:
-            payload = request.app.state.start_cache.refresh(card, _source(request))
+            payload = request.app.state.start_cache.refresh(card, _source(request), lang)
         except RefreshTooSoon as exc:
+            # Reddin cümlesini kartın kendisi kurar ve diliyle birlikte doğar: yol onu yazmaz.
             raise HTTPException(status_code=429, detail=str(exc)) from None
         return {"card": payload}
 
     @router.post("/api/start/cards/{id}/open", dependencies=user)
     def card_open(id: int, request: Request) -> dict:
         """Kartı konuşma olarak açar: kayıtlı SQL modelsiz yürür, tur yeni konuşmanın 1. turudur."""
-        return _open(request, _visible_card(request, id))
+        lang = _lang(request)
+        return _open(request, _visible_card(request, id, lang), lang)
 
     @router.post("/api/start/cards", dependencies=user)
     def card_pin(body: PersonalBody, request: Request) -> dict:
@@ -126,23 +124,25 @@ def create_router() -> APIRouter:
         Süzgeç arayanın adının kendisidir, yani başkasının kaydı onunki değildir (404); kotanın
         reddi de kartın yürüyüş hatası da ``ReadyError``ın durum ve cümlesidir.
         """
+        lang = _lang(request)
         username = _name(request)
         if username is None:
             # ASSUMPTION: kişisel kart bir kimlik ister - users kurulmadıysa kartın sahibi olmaz.
-            raise HTTPException(status_code=409, detail=AUTH_OFF)
-        with _rejected():
+            raise HTTPException(status_code=409, detail=t("auth.off", lang))
+        with _rejected(lang):
             card = personal_from_audit(
                 _session(request), _store(request), body.audit_id, username,
                 {"title": body.title, "display": body.display},
             )
-        return {"card": request.app.state.start_cache.get(card, _source(request))}
+        return {"card": request.app.state.start_cache.get(card, _source(request), lang)}
 
     @router.delete("/api/start/cards/{id}", dependencies=user)
     def card_unpin(id: int, request: Request) -> dict:
         """Kişisel kartı panodan çıkarır; rol kartı kişinin değildir, başkasınınki de yoktur (404)."""
-        if _visible_card(request, id)["business_role"] is not None:
-            raise HTTPException(status_code=404, detail=NO_CARD)
-        with _rejected():
+        lang = _lang(request)
+        if _visible_card(request, id, lang)["business_role"] is not None:
+            raise HTTPException(status_code=404, detail=t("start.not_found", lang))
+        with _rejected(lang):
             _store(request).delete(id, username=_name(request))
         return {"deleted": id}
 
@@ -157,7 +157,7 @@ def create_router() -> APIRouter:
     @router.post("/api/ready-questions", dependencies=admin)
     def ready_add(body: ReadyCreateBody, request: Request) -> dict:
         """Onay: SQL soru kaydından gelir ve yürütülür - yürümezse 422, satır yazılmaz (R7-17)."""
-        with _rejected():
+        with _rejected(_lang(request)):
             card = approve_from_audit(
                 _session(request), _store(request), body.audit_id, _name(request), asklog._ALL,
                 {
@@ -177,11 +177,12 @@ def create_router() -> APIRouter:
         Gövde ``ReadyStore``un bildiği alanlardan oluşur - ``sql`` bunların arasında değildir,
         yani istemcinin gönderdiği SQL 422dir, yeni bir onayın kaydı ise yürütülüp yazılır.
         """
+        lang = _lang(request)
         fields = dict(body)
         audit_id = fields.pop("audit_id", None)
-        with _rejected():
+        with _rejected(lang):
             if audit_id:
-                fields["sql"] = _reapproved_sql(request, audit_id)
+                fields["sql"] = _reapproved_sql(request, audit_id, lang)
                 fields["audit_id"] = audit_id
             card = _store(request).update(id, **fields)
         return {"ready_question": card}
@@ -189,7 +190,7 @@ def create_router() -> APIRouter:
     @router.delete("/api/ready-questions/{id}", dependencies=admin)
     def ready_delete(id: int, request: Request) -> dict:
         """Satırı siler; olmayan kimlik 404 (R7-17)."""
-        with _rejected():
+        with _rejected(_lang(request)):
             _store(request).delete(id)
         return {"deleted": id}
 
@@ -200,14 +201,16 @@ def create_router() -> APIRouter:
         Yalnız cevaplanan sorular satır olur, hepsi onaysızdır - yani hiçbirinin kartı ekranlarda
         görünmez, ta ki bir yönetici onu onaylayana kadar.
         """
-        return request.app.state.suggest.start(body.dataset.strip() or _dataset(request), _name(request))
+        return request.app.state.suggest.start(
+            body.dataset.strip() or _dataset(request), _name(request), _lang(request)
+        )
 
     @router.get("/api/ready-questions/suggest/{job_id}", dependencies=admin)
     def ready_suggest_status(job_id: str, request: Request) -> dict:
         """Sözleşme "suggest job": hiç başlamamış bir işin aşaması yoktur, o yüzden 404."""
         job = request.app.state.suggest.status(job_id)
         if job is None:
-            raise HTTPException(status_code=404, detail=NO_JOB)
+            raise HTTPException(status_code=404, detail=t("start.no_job", _lang(request)))
         return job
 
     return router
@@ -216,31 +219,44 @@ def create_router() -> APIRouter:
 # ------------------------------------------------------------------------------- internals
 
 
+def _lang(request: Request) -> str:
+    """Yolun arayüz dili: kişinin tercihi, yoksa tarayıcının başlığı, o da yoksa programın dili (R8-5)."""
+    return request_lang(request, current_user(request))
+
+
 @contextlib.contextmanager
-def _rejected():
-    """Deponun reddi HTTPye: durum ve cümle ``ReadyError``ın, yol ikisini de değiştirmez."""
+def _rejected(lang: str):
+    """Deponun reddi HTTPye: durumu yol olduğu gibi taşır, cümleyi isteğin dilinden kurar (R8-5).
+
+    Kataloğu olmayan red - yürütücünün kendi cümlesi - anahtarsız doğar; onun cümlesi zaten dildir.
+    """
     try:
         yield
     except ReadyError as exc:
-        raise HTTPException(status_code=exc.status, detail=exc.message) from None
+        detail = t(exc.key, lang, **exc.params) if exc.key else exc.message
+        raise HTTPException(status_code=exc.status, detail=detail) from None
 
 
-def _open(request: Request, card: dict) -> dict:
+def _open(request: Request, card: dict, lang: str) -> dict:
     """Kartın konuşması: ``replay_payload``ın biçimi, kaynağı kartın kendi SQL'i (R7-18).
 
     Ajan hiç koşmaz; anlatıcının çağrısı sayı bekçisinden aynı şekilde geçer. Tur konuşmaya
     yazıldıktan sonra günlük satırı da turu taşır, yani geçmişin satırı karttan açılan cevabı
     konuşmanın 1. turu olarak gösterir.
+
+    Cevabın dili sorudan çözülür, soru bir dil söylemiyorsa isteğin dili düşer (R8-6); not ve adım
+    cevabın diliyle kurulur - ``replay_payload``ın yaptığı gibi.
     """
     session = _session(request)
     username = _name(request)
     audit_id = asklog.new_audit_id()
+    answer_lang = ask.payload_lang(card["question"], lang)
     payload = ask._skeleton(
-        card["question"], None, "auto", session, audit_id, [OPEN_NOTE],
-        ask.payload_lang(card["question"]),
+        card["question"], None, "auto", session, audit_id, [t("start.open_note", answer_lang)],
+        answer_lang,
     )
     payload["steps"] = [
-        {"tool": "replay", "ok": True, "summary": f"Hazır soru ({card['id']}) kayıtlı SQL ile açıldı."}
+        {"tool": "replay", "ok": True, "summary": t("start.open_step", answer_lang, id=card["id"])}
     ]
     ask._answer(session, card["question"], card["sql"], ask._audit_source("web", username, audit_id), payload)
     conversations = request.app.state.conversations
@@ -253,12 +269,12 @@ def _open(request: Request, card: dict) -> dict:
     return payload
 
 
-def _reapproved_sql(request: Request, audit_id: str) -> str:
+def _reapproved_sql(request: Request, audit_id: str, lang: str) -> str:
     """Yeni onayın SQLi: yürütülür, hatası 422, yürüyen cümle satıra yazılır (R7-17)."""
     session = _session(request)
     record = asklog.find_ask(audit_id, session.ask_log, username=asklog._ALL)
     if record is None or not record.get("sql"):
-        raise HTTPException(status_code=404, detail=NO_ASK)
+        raise HTTPException(status_code=404, detail=t("start.no_ask", lang))
     result = session.executor.execute(
         record["sql"], Budget(max_rows=config.UI_MAX_ROWS), f"ready:{audit_id}"
     )
@@ -267,12 +283,12 @@ def _reapproved_sql(request: Request, audit_id: str) -> str:
     return record["sql"]
 
 
-def _visible_card(request: Request, id: int) -> dict:
+def _visible_card(request: Request, id: int, lang: str) -> dict:
     """Kullanıcının kartı: onaylı, bu kümenin ve onun gördüğü satır - ötekiler onun için yoktur."""
     for card in _store(request).list_for(_dataset(request), _role(request), _name(request)):
         if card["id"] == id:
             return card
-    raise HTTPException(status_code=404, detail=NO_CARD)
+    raise HTTPException(status_code=404, detail=t("start.not_found", lang))
 
 
 def _session(request: Request):

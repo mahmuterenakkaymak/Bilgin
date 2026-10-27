@@ -22,6 +22,7 @@ from decimal import Decimal
 
 from nl2sql import config
 from nl2sql.engine.result import Budget
+from nl2sql.i18n import t
 from nl2sql.report.chart import chart_spec
 from nl2sql.report.shape import NUMBER, column_kinds
 
@@ -32,17 +33,18 @@ _SENTENCE = re.compile(r"^\s*[^.]*\.")
 class RefreshTooSoon(Exception):
     """Kart ``CARD_REFRESH_MIN_S`` içinde yenilendi; ``seconds_left`` sn sonra yeniden denenmeli (R7-18)."""
 
-    def __init__(self, seconds_left: int) -> None:
-        super().__init__(f"Bu kart az önce yenilendi; {seconds_left} sn sonra yeniden deneyin.")
+    def __init__(self, seconds_left: int, lang: str | None = None) -> None:
+        super().__init__(t("card.refresh_too_soon", lang, n=seconds_left))
         self.seconds_left = seconds_left
 
 
-def card_result(executor, card: dict, source: str = "") -> dict:
+def card_result(executor, card: dict, source: str = "", lang: str | None = None) -> dict:
     """Kartın yükü: SQL'i yürütür, ``display``e göre number/chart/table ya da hata cümlesi üretir.
 
-    Yürütücü hatası kartın kendi cümlesidir (``error``); öteki kartlar bundan etkilenmez. Etiket,
-    tek sayının kolonunun şema açıklamasının başıdır - şemada karşılığı yoksa alias'ın okunuşu. Tablo
-    kartı ~380px kartta sığmayan kolonları değil, ölçüyü gösterir: bkz. ``_table_columns``.
+    Yürütücü hatasının cümlesi kataloğundur - kart, sohbetin aynı hatada söylediğini söyler (R8-5);
+    öteki kartlar bundan etkilenmez. Etiket, tek sayının kolonunun şema açıklamasının başıdır -
+    şemada karşılığı yoksa alias'ın okunuşu. Tablo kartı ~380px kartta sığmayan kolonları değil,
+    ölçüyü gösterir: bkz. ``_table_columns``.
     """
     result = executor.execute(card["sql"], Budget(max_rows=config.UI_MAX_ROWS), source)
     payload = {
@@ -53,7 +55,7 @@ def card_result(executor, card: dict, source: str = "") -> dict:
         "personal": card["business_role"] is None,
     }
     if result.error is not None:
-        payload["error"] = result.error.message
+        payload["error"] = t(f"ask.fail.exec:{result.error.kind}", lang)
         return payload
     columns, rows = result.columns, result.rows
     if card["display"] == "number":
@@ -69,7 +71,7 @@ def card_result(executor, card: dict, source: str = "") -> dict:
 
 
 class StartCache:
-    """Kart yüklerinin kısa ömürlü önbelleği: anahtar (küme, kart, SQL ve görünen özeti), tek uçuş kilidi.
+    """Kart yüklerinin kısa ömürlü önbelleği: anahtar (küme, kart, SQL ve görünen özeti, dil), tek uçuş kilidi.
 
     ``get`` TTL içindeki ikinci çağrıyı yürütmeden önbellekten döndürür; ``refresh`` TTL'i aşar ama
     kart başına ``CARD_REFRESH_MIN_S``'te birden fazlası ``RefreshTooSoon``dır. Yürütücü kurucuda bir
@@ -87,41 +89,42 @@ class StartCache:
         self._entries: dict[tuple, tuple[float, dict]] = {}
         self._refreshed: dict[tuple, float] = {}
 
-    def get(self, card: dict, source: str = "") -> dict:
+    def get(self, card: dict, source: str = "", lang: str | None = None) -> dict:
         """Kartın yükü: TTL içinde önbellekten, değilse tek uçuşla bir kez yürütülerek."""
-        key = self._key(card)
+        key = self._key(card, lang)
         with self._lock_for(key):
             entry = self._entries.get(key)
             if entry is not None and self._clock() - entry[0] < self._ttl:
                 return entry[1]
-            return self._store(key, card, source, self._clock())
+            return self._store(key, card, source, self._clock(), lang)
 
-    def refresh(self, card: dict, source: str = "") -> dict:
+    def refresh(self, card: dict, source: str = "", lang: str | None = None) -> dict:
         """TTL'i aşan yeniden yürütme; kart başına ``CARD_REFRESH_MIN_S``'te birden fazlası reddedilir."""
-        key, card_key = self._key(card), (card["dataset"], card["id"])
+        key, card_key = self._key(card, lang), (card["dataset"], card["id"])
         with self._lock_for(key):
             now = self._clock()
             last = self._refreshed.get(card_key)
             if last is not None:
                 left = config.CARD_REFRESH_MIN_S - (now - last)
                 if left > 0:
-                    raise RefreshTooSoon(math.ceil(left))
+                    raise RefreshTooSoon(math.ceil(left), lang)
             self._refreshed[card_key] = now
-            return self._store(key, card, source, now)
+            return self._store(key, card, source, now, lang)
 
     # ------------------------------------------------------------------ internals
 
-    def _store(self, key: tuple, card: dict, source: str, now: float) -> dict:
-        payload = dict(card_result(self._executor, card, source), refreshed_at=_iso(now))
+    def _store(self, key: tuple, card: dict, source: str, now: float, lang: str | None) -> dict:
+        payload = dict(card_result(self._executor, card, source, lang), refreshed_at=_iso(now))
         self._entries[key] = (now, payload)
         return payload
 
-    def _key(self, card: dict) -> tuple:
+    def _key(self, card: dict, lang: str | None = None) -> tuple:
         # Özet kartın görünenini de kapsar: PUT (audit_id) SQL'e dokunmadan başlığı ya da
-        # görünümü değiştirirse kartın eski yükü TTL boyunca tahtada kalmasın.
+        # görünümü değiştirirse kartın eski yükü TTL boyunca tahtada kalmasın. Dil de anahtardır:
+        # hatanın cümlesi onunla kurulur, yani bir dilin yükü ötekine TTL boyunca miras olmaz.
         meta = "\x00".join((card["sql"], card["title"], card["question"], card["display"]))
         digest = hashlib.sha256(meta.encode("utf-8")).hexdigest()
-        return (card["dataset"], card["id"], digest)
+        return (card["dataset"], card["id"], digest, lang)
 
     def _lock_for(self, key: tuple) -> threading.Lock:
         with self._guard:

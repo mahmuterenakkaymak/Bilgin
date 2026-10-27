@@ -22,13 +22,22 @@ from nl2sql import config
 from nl2sql.agent import fake
 from nl2sql.agent.llm import LLMError
 from nl2sql.app.ask import ask_payload
+from nl2sql.i18n import t
 from nl2sql.schema_map import doc
 from nl2sql.start.ready import suggest_display
 
 # Öneri koşumunun denetim satırının başı: soru günlüğünde cümleyi modelin yazdığı buradan okunur.
 SOURCE = "suggest"
-NOT_JSON = "Model önerileri yazmadı: yanıt bir JSON nesnesi değildi."
-TOO_FEW = "Model hiçbir iş rolü için yeterli soru yazmadı."
+# Kataloğun program dilindeki cümlesi: işin ``message``ı artık doğduğu dildedir, bu ad eski
+# çağıranların okuduğu Türkçesidir (R8-5).
+NOT_JSON = t("suggest.not_json")
+
+# Modelin okuduğu bölük başlıkları: öneriyi yazan modele gider, kullanıcıya hiç görünmez (R8-5).
+SECTIONS = {
+    "roles": "İŞ ROLLERİ (JSONun anahtarları bunlar):",
+    "tables": "TABLOLAR:",
+    "rules": "İŞ KURALLARI:",
+}
 
 # Modelin sözü sözlüktür, sayısı değil: SUGGEST_PER_ROLEın sınırı koddan kurulur, ısrardan değil.
 SYSTEM = f"""Sen bir ERP veritabanı için hazır sorular yazan bir asistansın. Sana iş rolleri, \
@@ -53,8 +62,11 @@ class SuggestError(Exception):
     """Önerinin kurulamadığı yer: cümlesi işin ``message``ı olarak ekrana çıkar."""
 
 
-def suggest_texts(schema: dict, rules: list, llm) -> dict[str, list[str]]:
+def suggest_texts(schema: dict, rules: list, llm, lang: str | None = None) -> dict[str, list[str]]:
     """Tek model çağrısıyla roller için soru cümleleri: ``{rol kodu: [soru]}``.
+
+    ``lang`` reddin cümlesinin dilidir - iş parçacığının kendi isteği yoktur, o yüzden dili işi
+    başlatan yoldan alır (R8-5); modelin okuduğu istek her dilde Türkçe kalır.
 
     Modelin yazdığı liste olduğu gibi kabul edilmez: boşlar ve tekrarlar atılır, ``SUGGEST_PER_ROLE``ın
     üstü kırpılır, altındakalınan rol hiç yoktur - yarım bir rolün tek sorusu panoya konacak bir
@@ -71,14 +83,14 @@ def suggest_texts(schema: dict, rules: list, llm) -> dict[str, list[str]]:
         raise SuggestError(str(exc)) from None
     raw = _json_object(content)
     if raw is None:
-        raise SuggestError(NOT_JSON)
+        raise SuggestError(t("suggest.not_json", lang))
     texts = {}
     for role in config.BUSINESS_ROLES:
         kept = _clean(raw.get(role))
         if kept:
             texts[role] = kept
     if not texts:
-        raise SuggestError(TOO_FEW)
+        raise SuggestError(t("suggest.too_few", lang))
     return texts
 
 
@@ -93,11 +105,15 @@ class SuggestJobs:
         self._lock = threading.Lock()
         self._jobs: dict[str, dict] = {}
 
-    def start(self, dataset: str, username: str | None = None) -> dict:
-        """İşi kaydedip iş parçacığını bırakır; sözleşmenin iş kaydını döndürür (route onu verir)."""
+    def start(self, dataset: str, username: str | None = None, lang: str | None = None) -> dict:
+        """İşi kaydedip iş parçacığını bırakır; sözleşmenin iş kaydını döndürür (route onu verir).
+
+        ``lang`` işin cümlesinin dilidir: iş parçacığı yolun bittiği yerde koşar, o yüzden dili
+        ondan devralır (R8-5).
+        """
         job_id = uuid.uuid4().hex
         self._set(job_id, dataset, "asking", 0, 0, None)
-        threading.Thread(target=self._run, args=(job_id, dataset, username), daemon=True).start()
+        threading.Thread(target=self._run, args=(job_id, dataset, username, lang), daemon=True).start()
         return self.status(job_id)
 
     def status(self, job_id: str) -> dict | None:
@@ -106,12 +122,12 @@ class SuggestJobs:
             job = self._jobs.get(job_id)
             return dict(job) if job else None
 
-    def _run(self, job_id: str, dataset: str, username: str | None) -> None:
+    def _run(self, job_id: str, dataset: str, username: str | None, lang: str | None = None) -> None:
         asked = stored = 0
         problem = None
         try:
             session = self.sessions(dataset)
-            texts = suggest_texts(session.schema, session.rules, _client(session))
+            texts = suggest_texts(session.schema, session.rules, _client(session), lang)
             # Defterin taşıdığı cümle yeniden aday değildir: aynı düğmeye ikinci basmak onay
             # bekleyenlerin üstüne ikiz satır yazmaz - satırın bir tek "Onayla"sı kalır (M24).
             known = {_key(row["question"]) for row in self.store.list_all(dataset)}
@@ -166,10 +182,10 @@ def _client(session):
 def _request(schema: dict, rules: list) -> str:
     """Modelin önüne konan dünya: roller, tablolar ve iş terimleri - kolon dökümü değil."""
     parts = [
-        "İŞ ROLLERİ (JSONun anahtarları bunlar):",
+        SECTIONS["roles"],
         "\n".join(f"- {code}: {display}" for code, display in config.BUSINESS_ROLES.items()),
         "",
-        "TABLOLAR:",
+        SECTIONS["tables"],
         doc.compact_text(schema),
     ]
     terms = [
@@ -178,7 +194,7 @@ def _request(schema: dict, rules: list) -> str:
         if rule.get("term")
     ]
     if terms:
-        parts += ["", "İŞ KURALLARI:", "\n".join(terms)]
+        parts += ["", SECTIONS["rules"], "\n".join(terms)]
     return "\n".join(parts)
 
 
