@@ -144,6 +144,9 @@
   "conn.guard_refused": "This login is not read-only; the connection was not saved.",
   "conn.not_mssql": "This dataset is not connected to SQL Server; there is no connection to enter.",
 
+  "session.no_db": "No database: {path}\nRun `python -m nl2sql build-db{ds}` first.",
+  "session.key_missing": "There is no API key: define the {env} environment variable.",
+
   "guard.power": "This login can write or administer; use a read-only login.",
   "guard.connect": "The connection could not be established; check the server, database and login details.",
   "guard.sysadmin": "This login is not a server administrator (sysadmin).",

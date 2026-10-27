@@ -92,7 +92,10 @@ def create_router() -> APIRouter:
                 connections=request.app.state.connections,
             )
         except SessionError as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from None
+            # R8-5: oturumun kendi cümlesi CLI'ınki ve yalnız Türkçe; anahtarı olan bir red
+            # kataloğun isteğin dilindeki satırıdır, olmayanı CLI cümlesiyle kalır.
+            detail = t(exc.key, lang, **exc.params) if exc.key else str(exc)
+            raise HTTPException(status_code=409, detail=detail) from None
         except (OSError, json.JSONDecodeError):
             # Klasördeki bir dosya eksik ya da bozuk: oturum kurulamaz, eski dünya yerinde kalır.
             raise HTTPException(

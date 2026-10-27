@@ -32,11 +32,24 @@ NO_DB = "Veritabanı yok: {path}\nÖnce `python -m nl2sql build-db{ds}` çalış
 
 
 class SessionError(Exception):
-    """Oturum kurulamadı; mesaj CLI'nin cümlesi, exit_code CLI'nin exit kodu (PLAN R5-1)."""
+    """Oturum kurulamadı; mesaj CLI'nin cümlesi, exit_code CLI'nin exit kodu (PLAN R5-1).
 
-    def __init__(self, message: str, exit_code: int) -> None:
+    ``key`` ve ``params`` aynı hatanın kataloğun anahtarıyla alanlarıdır (R8-5): web yolu anahtarı
+    olan bir reddi isteğin dilinde katalogdan okur; anahtarı olmayan istisna CLI'nin cümlesiyle
+    konuşmaya devam eder.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        exit_code: int,
+        key: str | None = None,
+        params: dict | None = None,
+    ) -> None:
         super().__init__(message)
         self.exit_code = exit_code
+        self.key = key
+        self.params = params or {}
 
 
 @dataclass
@@ -140,14 +153,23 @@ def open_session(
     if llm == "openai" and profile is not None:
         reason = key_missing_reason(profile.api_key_env)
         if reason:
-            raise SessionError(reason, 2)
+            raise SessionError(
+                reason,
+                2,
+                key="session.key_missing",
+                params={"env": profile.api_key_env},
+            )
     backend, conn_str = _connection(ds, connections, active)
     resolved_db = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
     # Bağlantısı çözülmüş bir SQL Server kümesi ölçümünü sunucudan alır: klasördeki SQLite
     # dosyası o oturumun koşulu değildir.
     if conn_str is None and _db_missing(resolved_db):
+        build_arg = dataset_arg(ds.name if ds else None)
         raise SessionError(
-            NO_DB.format(path=resolved_db, ds=dataset_arg(ds.name if ds else None)), 2
+            NO_DB.format(path=resolved_db, ds=build_arg),
+            2,
+            key="session.no_db",
+            params={"path": resolved_db, "ds": build_arg},
         )
     resolved_index = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
     schema = ds.schema() if ds else doc.load_schema()

@@ -193,7 +193,11 @@ def _rebuild(request: Request, name: str) -> None:
             connections=request.app.state.connections,
         )
     except SessionError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from None
+        # R8-5: anahtarı olan bir red kataloğun isteğin dilindeki satırıdır; anahtarsız bir
+        # istisnanın cümlesi CLI'ınki ve yalnız Türkçe, o yüzden onun yerine geçecek bir şey yok.
+        lang = _lang(request)
+        detail = t(exc.key, lang, **exc.params) if exc.key else str(exc)
+        raise HTTPException(status_code=409, detail=detail) from None
     with request.app.state.session_lock:
         request.app.state.session = new
 

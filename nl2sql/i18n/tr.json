@@ -144,6 +144,9 @@
   "conn.guard_refused": "Bu giriş salt okunur değil; bağlantı kaydedilmedi.",
   "conn.not_mssql": "Bu veri kümesi SQL Server'a bağlı değil; girilecek bir bağlantısı yok.",
 
+  "session.no_db": "Veritabanı yok: {path}\nÖnce `python -m nl2sql build-db{ds}` çalıştırın.",
+  "session.key_missing": "API anahtarı yok: {env} ortam değişkenini tanımlayın.",
+
   "guard.power": "Bu giriş yazabiliyor ya da yönetebiliyor; salt okunur bir giriş kullanın.",
   "guard.connect": "Bağlantı kurulamadı; sunucu, veritabanı ve giriş bilgilerini denetleyin.",
   "guard.sysadmin": "Bu giriş bir sunucu yöneticisi (sysadmin) değil.",
