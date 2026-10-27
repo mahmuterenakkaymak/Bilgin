@@ -18,9 +18,11 @@ const EXPORTS = [
 // reddin cümlesi düğmenin yanında okunur.
 const IDLE = { phase: "idle", note: "" };
 
-// İndirme geri bildirimi neyin indiğini de söyler: dosyanın kaç satır taşıdığı, ekrandaki
-// tablonun satır sayısıdır. Satırı olmayan cevapta sayı uydurulmaz, bugünün adı okunur.
-function downloadedLabel(rows) {
+// İndirme geri bildirimi düğmenin adını yemez: "Excel" Excel olarak kalır, sayı ikilinin yanındaki
+// nota düşer — ad değişirse ikinci düğmenin ne olduğunu kullanıcı hatırlamak zorunda kalıyor.
+// Dosyanın kaç satır taşıdığı ekrandaki tablonun satır sayısıdır; satırı olmayan cevapta sayı
+// uydurulmaz, "İndirildi" okunur.
+function downloadedNote(rows) {
   return rows > 0 ? `${formatNumber(rows)} satır indirildi` : "İndirildi";
 }
 
@@ -56,9 +58,14 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
   // fazlasını taşıyabilir, ama kartın bildiği ekrandaki satır sayısıdır.
   const exportRows = Array.isArray(payload?.rows) ? payload.rows.length : 0;
 
-  // İndirme bir <a>: sekme yer değiştirmediği için tek geri bildirim düğmenin kendisi. Ad 2 sn
-  // geri bildirimiyle (sayılıysa sayısıyla) kalır, sonra eski adına döner; kart kapanınca
-  // bekleyen sayaç bırakılır.
+  // Yeni cevap eski indirilenin haberini taşımaz: kart aynı düğümde yeni bir yük alınca not hemen
+  // kapanır, bekleyen sayaç ona bakmaz.
+  useEffect(() => {
+    setDownloaded("");
+  }, [auditId]);
+
+  // İndirme bir <a>: sekme yer değiştirmediği için tek geri bildirim notun kendisi. Not 2 sn
+  // okunur (sayılıysa sayısıyla), sonra kapanır; kart kapanınca bekleyen sayaç bırakılır.
   useEffect(() => {
     if (!downloaded) return undefined;
     const timer = setTimeout(() => setDownloaded(""), 2000);
@@ -141,10 +148,15 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
                   href={api.exportUrl(auditId, kind)}
                   onClick={() => setDownloaded(kind)}
                 >
-                  {downloaded === kind ? downloadedLabel(exportRows) : label}
+                  {label}
                 </a>
               ))}
             </span>
+            {downloaded && (
+              <span id="export-note" className="answer-export-note">
+                {downloadedNote(exportRows)}
+              </span>
+            )}
           </div>
         )}
         <div className="answer-workflow">

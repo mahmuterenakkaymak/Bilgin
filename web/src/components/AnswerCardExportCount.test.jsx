@@ -9,6 +9,8 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const noop = () => {};
 
+// ASSUMPTION: T362'nin dört vakası düğmenin ADININ değişmesini pinliyordu; T469 o değişimi
+// kusur sayıyor ve bu dosyayı adıyla istiyor, o yüzden vakalar aynı kapsamayı notun üstünden kuruyor.
 let container;
 let root;
 
@@ -25,6 +27,12 @@ function render(payload) {
   return container;
 }
 
+// Yeni cevap aynı kartın üstüne biner: ekran son cevabı aynı düğüme koyar, kart yeniden
+// kurulmaz. Notun kapanması da bu geçişe bağlıdır.
+function rerender(payload) {
+  act(() => root.render(<AnswerCard payload={payload} onSave={noop} />));
+}
+
 function click(node) {
   act(() => node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })));
 }
@@ -38,38 +46,64 @@ function rowsPayload(count) {
   };
 }
 
+// Sayının kendi öğesi: ikilinin yanında durur, düğmelerin içine girmez.
+function note(app) {
+  return app.querySelector(".answer-export-note");
+}
+
 afterEach(() => {
   act(() => root.unmount());
   container.remove();
 });
 
 describe("indirme geri bildiriminin satır sayısı", () => {
-  it("Excel düğmesi indirdiği satır sayısını adında taşır", () => {
+  it("Excel düğmesi indirdikten sonra da Excel'dir", () => {
     const app = render(rowsPayload(18));
     expect(app.querySelector("#export-xlsx").textContent).toBe("Excel");
 
     click(app.querySelector("#export-xlsx"));
 
-    expect(app.querySelector("#export-xlsx").textContent).toBe("18 satır indirildi");
-    // Sayı bir kez okunur: basılmayan düğme kendi adında kalır.
+    expect(app.querySelector("#export-xlsx").textContent).toBe("Excel");
+    // Adını koruyan ikilinin yanında sayı tek kez okunur.
     expect(app.querySelector("#export-csv").textContent).toBe("CSV");
+    expect(note(app)?.textContent).toBe("18 satır indirildi");
+  });
+
+  it("sayı ikilinin dışındaki kendi öğesinde durur", () => {
+    const app = render(rowsPayload(18));
+    click(app.querySelector("#export-xlsx"));
+
+    const element = note(app);
+    expect(element).not.toBeNull();
+    expect(app.querySelector(".answer-export-pair").contains(element)).toBe(false);
+    expect(element.textContent).toBe("18 satır indirildi");
   });
 
   it("kesik sonuçta sayı kartın gösterdiği satırdır, toplamın değil", () => {
     const app = render({ ...rowsPayload(50), row_count: 312, truncated: true });
     click(app.querySelector("#export-csv"));
-    expect(app.querySelector("#export-csv").textContent).toBe("50 satır indirildi");
+    expect(note(app)?.textContent).toBe("50 satır indirildi");
+    expect(app.querySelector("#export-csv").textContent).toBe("CSV");
   });
 
-  it("satırı olmayan cevapta ad bugünkü İndirildi'dir", () => {
+  it("satırı olmayan cevapta sayı uydurulmaz", () => {
     const app = render(rowsPayload(0));
     click(app.querySelector("#export-xlsx"));
-    expect(app.querySelector("#export-xlsx").textContent).toBe("İndirildi");
+    expect(note(app)?.textContent).toBe("İndirildi");
   });
 
   it("rows hiç yoksa da sayı uydurulmaz", () => {
     const app = render({ ...answered, rows: null });
     click(app.querySelector("#export-xlsx"));
-    expect(app.querySelector("#export-xlsx").textContent).toBe("İndirildi");
+    expect(note(app)?.textContent).toBe("İndirildi");
+  });
+
+  it("yeni cevap gelince önceki indirilenin notu kapanır", () => {
+    const app = render(rowsPayload(18));
+    click(app.querySelector("#export-xlsx"));
+    expect(note(app)).not.toBeNull();
+
+    rerender({ ...rowsPayload(4), audit_id: `${answered.audit_id}-2` });
+    expect(note(app)).toBeNull();
   });
 });

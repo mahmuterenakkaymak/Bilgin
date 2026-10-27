@@ -1430,6 +1430,13 @@ main {
   color: var(--ok);
 }
 
+/* Sayı ikilinin dışında, kendi öğesinde: düğmeler adını koruduğu için kaç satır indiği yanındaki
+   soluk sözden okunur. */
+.answer-export-note {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .answer-workflow {
   display: flex;
   flex-wrap: wrap;
