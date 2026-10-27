@@ -129,6 +129,86 @@ DB_CHECK_TIMEOUT_S = 3  # seconds the SELECT 1 is given
 CONN_ENV_PREFIX = "NL2SQL_MSSQL_CONN_"  # NL2SQL_MSSQL_CONN_<DATASET> overrides a stored connection
 CONN_TABLE_SAMPLE = 10  # tables of the map the read-only guard samples against the live database
 
+# ---------------------------------------------------------------- Run 8: language
+LANGUAGES = ("tr", "en")
+DEFAULT_LANG = "tr"
+FOLLOWUP_MARKERS_EN = (
+    "this",
+    "these",
+    "those",
+    "it",
+    "them",
+    "that",
+    "same",
+    "only",
+    "just",
+    "their",
+    "its",
+)  # English twins of FOLLOWUP_MARKERS
+DETECT_EN_WORDS = (
+    "the",
+    "what",
+    "when",
+    "where",
+    "which",
+    "who",
+    "how",
+    "many",
+    "much",
+    "is",
+    "are",
+    "was",
+    "were",
+    "of",
+    "for",
+    "and",
+    "with",
+    "from",
+    "show",
+    "list",
+    "tell",
+    "give",
+    "me",
+    "their",
+    "total",
+)  # English stopwords of detect_lang (R8-6)
+DETECT_TR_WORDS = (
+    "nedir",
+    "kaç",
+    "hangi",
+    "kim",
+    "kimin",
+    "ne",
+    "neden",
+    "nasıl",
+    "toplam",
+    "ortalama",
+    "en",
+    "için",
+    "ile",
+    "ve",
+    "veya",
+    "göster",
+    "listele",
+    "ver",
+    "bana",
+    "geçen",
+    "bu",
+    "şu",
+    "önce",
+    "sonra",
+    "daha",
+)  # Turkish stopwords of detect_lang (R8-6)
+TEMPLATE_FILENAMES = {
+    "tr": TEMPLATE_FILENAME,
+    "en": "bilgin-database-template.xlsx",
+}  # download name of the fill-in template, per language
+
+# ---------------------------------------------------------------- Run 8: Windows service
+SERVICE_NAME = "Bilgin"
+SERVICE_PORT = 8777
+SERVICE_HOME = r"C:\ProgramData\Bilgin"  # default NL2SQL_HOME of an installed service
+
 # ---------------------------------------------------------------- reference date
 # "geçen ay" / "bu yıl" are always relative to this date, never to the real clock.
 AS_OF = "2026-09-30"
@@ -239,6 +319,12 @@ def backend() -> str:
     if name not in BACKENDS:
         raise ValueError(f"NL2SQL_BACKEND='{name}' geçersiz; {list(BACKENDS)} olmalı.")
     return name
+
+
+def lang() -> str:
+    """Program language: NL2SQL_LANG when it names one of LANGUAGES, else DEFAULT_LANG."""
+    value = _env("NL2SQL_LANG", DEFAULT_LANG)
+    return value if value in LANGUAGES else DEFAULT_LANG
 
 
 def mapping_path(name: str) -> Path:
