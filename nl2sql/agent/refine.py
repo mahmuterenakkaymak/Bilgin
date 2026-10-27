@@ -18,6 +18,7 @@ ama işin yarı yolda başladığını söyleyecek olan anahtar kelime yine dete
 from __future__ import annotations
 
 from nl2sql import config
+from nl2sql.i18n import t
 from nl2sql.index.text import fold, tokens
 
 # R7-10: soruda geçerse anlaşılan grafik türü. Sözlük sırası, iki istek birden geçerse hangisinin
@@ -29,13 +30,34 @@ CHART_WISHES = {
     "table": ("tablo", "tablo olarak"),
 }
 
-# İsteğin etrafındaki dolgu: "grafiği ... yap/göster/çevir", "olarak", "olsun", "lütfen".
-CHART_FILLERS = ("grafik", "grafiği", "göster", "yap", "çevir", "olarak", "olsun", "lütfen")
+# İngilizce istekler CHART_WISHESin üstüne okunur: sözlüğün kendisi bir testle sabitlenmiştir ve
+# İngilizce karşılığı yalnız "table" için gerekir - "line", "bar", "pie" zaten İngilizce sözcükler.
+CHART_WISHES_EN = {"table": ("table", "as a table")}
+
+# İsteğin etrafındaki dolgu: "grafiği ... yap/göster/çevir", "olarak", "olsun", "lütfen" ve
+# İngilizce karşılıkları - "show it as a bar chart" istekle dolgu düşünce bir şey bırakmasın.
+CHART_FILLERS = (
+    "grafik",
+    "grafiği",
+    "göster",
+    "yap",
+    "çevir",
+    "olarak",
+    "olsun",
+    "lütfen",
+    "show",
+    "as",
+    "chart",
+    "make",
+    "please",
+    "it",
+)
 
 # İstek, dolgu ve önceki tura bağlayan işaretler düşünce geriye bir şey kalmıyorsa soru yeni bir
 # şey sormuyordur - sunum dışında.
 _NOTHING_LEFT = (
     {word for wishes in CHART_WISHES.values() for wish in wishes for word in wish.split()}
+    | {word for wishes in CHART_WISHES_EN.values() for wish in wishes for word in wish.split()}
     | set(CHART_FILLERS)
     | set(config.FOLLOWUP_MARKERS)
 )
@@ -73,7 +95,7 @@ ENTITY_NOUNS = {
 
 # Tekil işaret zamirleri: "bunlar / onlar" birden çok varlığa işaret eder, o yüzden tek bir varlık
 # sorulamaz - çoğulları FOLLOWUP_MARKERSda kalır, burada yalnız tekilleri sayılır.
-ENTITY_MARKERS = ("bu", "şu", "o")
+ENTITY_MARKERS = ("bu", "şu", "o", "this", "that")
 
 # Hal eki kökü bırakır ("müşteriye", "ürünün"), çoğul ek soruyu tek bir varlıktan çıkarır
 # ("müşterilerin", "carilerin") - neyle devam ettiği fark etmez, çoğul bir varlık sorulmaz.
@@ -83,20 +105,12 @@ ENTITY_PLURAL = ("ler", "lar")
 # orada varlık değil takvim geçiyor. Katlanmış halleri - sorunun kelimeleri de katlanmış gelir.
 ENTITY_PERIOD_WORDS = ("yil", "donem", "ay")
 
-# Şıkkın soracağı cümle: Türkçe hal eki kurala değil sözlüğe sığar.
-ENTITY_QUESTIONS = {
-    "müşteri": "Hangi müşteriyi kastediyorsunuz?",
-    "ürün": "Hangi ürünü kastediyorsunuz?",
-    "tedarikçi": "Hangi tedarikçiyi kastediyorsunuz?",
-    "fatura": "Hangi faturayı kastediyorsunuz?",
-}
-
 
 def chart_wish(question: str) -> str | None:
     """Soruda geçen grafik türü isteği: "line"|"bar"|"pie"|"table", hiç yoksa None."""
     words = tokens(question or "")
     for kind, wishes in CHART_WISHES.items():
-        if any(_mentions(words, tokens(wish)) for wish in wishes):
+        if any(_mentions(words, tokens(wish)) for wish in wishes + CHART_WISHES_EN.get(kind, ())):
             return kind
     return None
 
@@ -130,8 +144,13 @@ def refine_hint(question: str) -> str | None:
     return TOP_HINT if _top_wanted(words) else None
 
 
-def ambiguous_entity(question: str, turns: list[dict] | None, schema: dict | None) -> dict | None:
+def ambiguous_entity(
+    question: str, turns: list[dict] | None, schema: dict | None, lang: str = "tr"
+) -> dict | None:
     """Soru tekil bir işaretyle son cevabın çok değerli bir kolonuna mı bakıyor (PLAN R7-12).
+
+    Şıkkın cümlesi ``refine.which.<varlık>`` anahtarının ``lang``deki metnidir; zamir ve varlık
+    sözcükleri iki dilde de aynı sözlüklerden okunur.
 
     "Bu müşteriye başka ne sattık?" tek başına çözülmez: son turun satırlarında beş farklı cari
     kodu varsa hangisinin kastedildiğini yalnız kullanıcı bilir, model tahmin ederse uydurur - o
@@ -160,7 +179,7 @@ def ambiguous_entity(question: str, turns: list[dict] | None, schema: dict | Non
     if len(rows) < 2:
         return None
     return {
-        "question": ENTITY_QUESTIONS[noun],
+        "question": t(f"refine.which.{noun}", lang),
         "options": [f"{value} ({name})" if name else value for value, name in rows],
         "values": [value for value, _ in rows],
         "column": column,

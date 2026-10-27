@@ -44,5 +44,20 @@
   "chart.problem.category_length": "Kategori sayısı {count}, seri uzunluğu {length}",
   "chart.problem.pie_point": "Pasta diliminde ad ya da değer eksik",
   "chart.problem.not_finite": "Sonlu olmayan sayı: {value}",
-  "chart.problem.not_json": "Seçenek düz JSON olarak yazılıp okunamıyor"
+  "chart.problem.not_json": "Seçenek düz JSON olarak yazılıp okunamıyor",
+
+  "refine.which.müşteri": "Hangi müşteriyi kastediyorsunuz?",
+  "refine.which.ürün": "Hangi ürünü kastediyorsunuz?",
+  "refine.which.tedarikçi": "Hangi tedarikçiyi kastediyorsunuz?",
+  "refine.which.fatura": "Hangi faturayı kastediyorsunuz?",
+
+  "context.evidence.prefix": "Önceki cevaptan: ",
+  "context.evidence.query": "{n}. turun sorgusu temel alındı.",
+  "context.evidence.label": "değer",
+
+  "ask.chart_as": "Grafik {kind} olarak gösteriliyor.",
+  "ask.as_table": "Sonuç tablo olarak gösteriliyor.",
+  "ask.kind.line": "çizgi",
+  "ask.kind.bar": "çubuk",
+  "ask.kind.pie": "pasta"
 }

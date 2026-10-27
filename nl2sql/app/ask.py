@@ -23,6 +23,7 @@ from nl2sql.app import asklog
 from nl2sql.app.conversations import ConversationNotFound
 from nl2sql.engine import checks
 from nl2sql.engine.result import Budget
+from nl2sql.i18n import t
 from nl2sql.index.store import ForeignIndexError, MissingIndexError, StaleIndexError
 from nl2sql.report.chart import chart_spec
 from nl2sql.report.facts import compute_facts
@@ -31,9 +32,6 @@ from nl2sql.schema_map.rules import matching_rules
 
 # Adım özeti ekranda okunur; uzun bir araç cevabı payload'ı şişirmesin.
 STEP_CHARS = 300
-
-# R7-10: modelsiz sunum değişikliğinin cümlesi türü kullanıcının diliyle söylenir.
-_CHART_WORDS = {"line": "çizgi", "bar": "çubuk", "pie": "pasta", "table": "tablo"}
 
 # R5-2: indeksteki bir sorun koşumu düşürmez, cevabın hatası olur.
 INDEX_ERRORS = (MissingIndexError, StaleIndexError, ForeignIndexError)
@@ -295,8 +293,8 @@ def _chart_text(wish: str, chart) -> str:
     if chart and chart.get("reason"):
         return chart["reason"]
     if wish == "table":
-        return "Sonuç tablo olarak gösteriliyor."
-    return f"Grafik {_CHART_WORDS[wish]} olarak gösteriliyor."
+        return t("ask.as_table")
+    return t("ask.chart_as", kind=t(f"ask.kind.{wish}"))
 
 
 def _note(session, payload: dict, note, turns) -> str | None:

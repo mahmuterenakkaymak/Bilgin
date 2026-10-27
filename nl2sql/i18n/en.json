@@ -44,5 +44,20 @@
   "chart.problem.category_length": "Category count {count}, series length {length}",
   "chart.problem.pie_point": "A pie slice is missing its name or value",
   "chart.problem.not_finite": "Non-finite number: {value}",
-  "chart.problem.not_json": "The option cannot be read back as plain JSON"
+  "chart.problem.not_json": "The option cannot be read back as plain JSON",
+
+  "refine.which.müşteri": "Which customer do you mean?",
+  "refine.which.ürün": "Which product do you mean?",
+  "refine.which.tedarikçi": "Which supplier do you mean?",
+  "refine.which.fatura": "Which invoice do you mean?",
+
+  "context.evidence.prefix": "From the previous answer: ",
+  "context.evidence.query": "the query of turn {n} was used.",
+  "context.evidence.label": "value",
+
+  "ask.chart_as": "The chart is shown as a {kind} chart.",
+  "ask.as_table": "The result is shown as a table.",
+  "ask.kind.line": "line",
+  "ask.kind.bar": "bar",
+  "ask.kind.pie": "pie"
 }

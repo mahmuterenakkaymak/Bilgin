@@ -15,14 +15,13 @@ from decimal import Decimal
 
 from nl2sql import config
 from nl2sql.agent.budget import estimate_prompt
+from nl2sql.i18n import t
 from nl2sql.index.text import fold, tokens
 
 HISTORY_HEADER = "## Önceki turlar"
 ROW_SEPARATOR = " | "
 ROW_INDENT = "  "
 
-EVIDENCE_PREFIX = "Önceki cevaptan: "
-NOTE_LABEL_FALLBACK = "değer"
 _LABEL_CUT = re.compile(r"[;,.:(\n]")
 
 FOLLOWUP_RULES = (
@@ -67,13 +66,18 @@ def _cell(value):
 def followup_hints(question: str, schema: dict) -> dict:
     """Soru kendi başına mı okunuyor, yoksa önceki tura mı bağlı (PLAN R7-11).
 
-    ``markers`` ``FOLLOWUP_MARKERS``da soruda geçtiği sırayla duranlar - katlanmış tam kelime
-    eşitliği, "Ortalama" içindeki "o" işaret sayılmaz. ``table_noun`` sorunun bir tabloyu
-    adlandırdığını söyler; işaret varsa ama tablo adı yoksa soru tek başına okunamıyordur.
-    Katlama indeksle aynı ``fold``'dan geçer, aksi halde "Müşteri" ile "müşteri" ayrışırdı.
+    ``markers`` ``FOLLOWUP_MARKERS`` ile İngilizce ikizleri ``FOLLOWUP_MARKERS_EN``da soruda
+    geçtiği sırayla duranlar - katlanmış tam kelime eşitliği, "Ortalama" içindeki "o" işaret
+    sayılmaz. ``table_noun`` sorunun bir tabloyu adlandırdığını söyler; işaret varsa ama tablo adı
+    yoksa soru tek başına okunamıyordur. Katlama indeksle aynı ``fold``'dan geçer, aksi halde
+    "Müşteri" ile "müşteri" ayrışırdı.
     """
     words = tokens(question)
-    markers = [word for word in words if word in config.FOLLOWUP_MARKERS]
+    markers = [
+        word
+        for word in words
+        if word in config.FOLLOWUP_MARKERS or word in config.FOLLOWUP_MARKERS_EN
+    ]
     nouns = _table_words(schema)
     return {
         "markers": list(dict.fromkeys(markers)),
@@ -254,12 +258,15 @@ def validate_note(note: dict | None, turns: list[dict] | None) -> tuple[dict | N
     }, None
 
 
-def evidence_line(note: dict | None, turns: list[dict] | None, schema: dict | None) -> str | None:
+def evidence_line(
+    note: dict | None, turns: list[dict] | None, schema: dict | None, lang: str = "tr"
+) -> str | None:
     """Kullanıcıya gösterilen tek satırlık kanıt: hangi turun hangi değeri (PLAN R7-5).
 
-    Etiket şemadaki açıklamanın başıdır - teknik kolon adı ekrana çıkmaz, açıklama yoksa "değer"
-    kalır. Parantez değerin bulunduğu satırın diğer metin hücresi, yani kaydın adı; değer yalnız
-    SQL'de geçiyorsa parantez olmaz. Varlık yoksa kanıtın kendisi önceki sorgudur.
+    Satırın cümleleri ``context.evidence.*`` anahtarlarının ``lang``deki metnidir. Etiket
+    şemadaki açıklamanın başıdır - teknik kolon adı ekrana çıkmaz, açıklama yoksa ``lang``in
+    genel etiketi kalır. Parantez değerin bulunduğu satırın diğer metin hücresi, yani kaydın adı;
+    değer yalnız SQL'de geçiyorsa parantez olmaz. Varlık yoksa kanıtın kendisi önceki sorgudur.
     """
     note = note or {}
     entities = [item for item in (note.get("entities") or []) if isinstance(item, dict)]
@@ -267,15 +274,15 @@ def evidence_line(note: dict | None, turns: list[dict] | None, schema: dict | No
         number = note.get("refines_sql_of") or (note.get("uses_turns") or [None])[0]
         if number is None:
             return None
-        return f"{EVIDENCE_PREFIX}{number}. turun sorgusu temel alındı."
+        return t("context.evidence.prefix", lang) + t("context.evidence.query", lang, n=number)
     used = _used_turns(note, turns)
     parts = []
     for entity in entities:
         value = _text(entity.get("value"))
-        part = f"{_column_label(schema, _text(entity.get('column')))} {value}"
+        part = f"{_column_label(schema, _text(entity.get('column')), lang)} {value}"
         other = _row_hint(used, value)
         parts.append(f"{part} ({other})" if other else part)
-    return EVIDENCE_PREFIX + ", ".join(parts)
+    return t("context.evidence.prefix", lang) + ", ".join(parts)
 
 
 def _entity_reason(entity, used_turns: list[dict]) -> str | None:
@@ -330,7 +337,7 @@ def _row_hint(turns: list[dict], value: str) -> str | None:
     return None
 
 
-def _column_label(schema: dict | None, column: str) -> str:
+def _column_label(schema: dict | None, column: str, lang: str) -> str:
     """Kolonun ekrandaki adı: açıklamanın başı, cümle içinde küçükle başlar; teknik ad asla."""
     name = _name(column)
     for table in (schema or {}).get("tables", []):
@@ -339,8 +346,8 @@ def _column_label(schema: dict | None, column: str) -> str:
                 continue
             head = _description_head(item.get("description"))
             # yalnız baş harf küçülür: İngilizce açıklamadaki "ID" "ıd" olmasın
-            return fold(head[:1]) + head[1:] if head else NOTE_LABEL_FALLBACK
-    return NOTE_LABEL_FALLBACK
+            return fold(head[:1]) + head[1:] if head else t("context.evidence.label", lang)
+    return t("context.evidence.label", lang)
 
 
 def _description_head(description) -> str:
