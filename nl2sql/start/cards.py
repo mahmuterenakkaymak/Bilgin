@@ -4,8 +4,8 @@ Bir kart onaylı bir hazır sorunun kayıtlı SQL'idir; burada bir daha modele s
 okunur yürütücüden geçer. ``card_result`` tek kartın yükünü üretir: tek sayı ``number`` (değer +
 kolonun şema açıklamasının başı), grafiği olan sonuç ``chart``, ötekiler ``table``; yürütme hatası
 kartın kendi cümlesidir ve öteki kartları etkilemez. ``StartCache`` aynı kartı ``START_CACHE_S``
-içinde bir daha koşturmaz: anahtar (küme, kart, SQL özeti), tek uçuş için anahtar başına bir kilit
-- iki kullanıcı aynı TTL'de tek yürütme görür. "Yenile" TTL'i aşar ama kart başına
+içinde bir daha koşturmaz: anahtar (küme, kart, SQL ve görünen özeti), tek uçuş için anahtar
+başına bir kilit - iki kullanıcı aynı TTL'de tek yürütme görür. "Yenile" TTL'i aşar ama kart başına
 ``CARD_REFRESH_MIN_S``'te birden fazla değil.
 """
 
@@ -69,7 +69,7 @@ def card_result(executor, card: dict, source: str = "") -> dict:
 
 
 class StartCache:
-    """Kart yüklerinin kısa ömürlü önbelleği: anahtar (küme, kart, SQL özeti), tek uçuş kilidi.
+    """Kart yüklerinin kısa ömürlü önbelleği: anahtar (küme, kart, SQL ve görünen özeti), tek uçuş kilidi.
 
     ``get`` TTL içindeki ikinci çağrıyı yürütmeden önbellekten döndürür; ``refresh`` TTL'i aşar ama
     kart başına ``CARD_REFRESH_MIN_S``'te birden fazlası ``RefreshTooSoon``dır. Yürütücü kurucuda bir
@@ -117,8 +117,10 @@ class StartCache:
         return payload
 
     def _key(self, card: dict) -> tuple:
-        # SQL özeti anahtarda: onay SQL'i değişince (PUT audit_id) kartın eski yükü kullanılmaz.
-        digest = hashlib.sha256(card["sql"].encode("utf-8")).hexdigest()
+        # Özet kartın görünenini de kapsar: PUT (audit_id) SQL'e dokunmadan başlığı ya da
+        # görünümü değiştirirse kartın eski yükü TTL boyunca tahtada kalmasın.
+        meta = "\x00".join((card["sql"], card["title"], card["question"], card["display"]))
+        digest = hashlib.sha256(meta.encode("utf-8")).hexdigest()
         return (card["dataset"], card["id"], digest)
 
     def _lock_for(self, key: tuple) -> threading.Lock:
