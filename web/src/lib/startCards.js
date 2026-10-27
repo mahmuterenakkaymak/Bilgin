@@ -56,9 +56,9 @@ export function refreshedText(refreshedAt, now = new Date()) {
 
 // Kartın büyük değeri: yalnız sayı kartının. Grafik ve tablo kartlarının yükü kendi bileşeninden
 // çizilir, hata kartınınki cümlesidir — üçü de boş dize alır, ekrana "–" ya da "undefined" düşmez.
-export function cardValueText(card) {
+export function cardValueText(card, lang = "tr") {
   if (!card || card.error || card.display !== "number") return "";
-  return formatNumber(card.value);
+  return formatNumber(card.value, lang);
 }
 
 // ``start/ready.suggest_display``in karşılığı: 1x1 sayı "number", grafiği olan "chart", ötekiler

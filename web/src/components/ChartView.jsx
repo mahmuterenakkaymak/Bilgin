@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import * as echarts from "echarts";
+import { useT } from "../i18n/index.js";
 import { withFormatters } from "../lib/chartFormat.js";
 
 // Grafiğin renkleri kartın renkleriyle aynı tokenlardan okunur (T222): ECharts'ın varsayılan
@@ -50,12 +51,13 @@ function themeSeries(series, colors) {
 // Grafiği kod seçer (R5-6): option düz JSON gelir, Türkçe sayı biçimi burada işlevle eklenir;
 // burada hiçbir sayı yeniden hesaplanmaz. `chart` yoksa kutu da açılmaz, yer bırakılmaz.
 export default function ChartView({ chart }) {
+  const { lang } = useT();
   const box = useRef(null);
 
   useEffect(() => {
     if (!box.current) return undefined;
     const instance = echarts.init(box.current);
-    const paint = () => instance.setOption(withTheme(withFormatters(chart.option), palette(box.current)));
+    const paint = () => instance.setOption(withTheme(withFormatters(chart.option, lang), palette(box.current)));
     paint();
     // ECharts kutuyu açıldığı piksel genişliğinde tutar; kutu pencereden bağımsız daralır
     // (kenar çubuğu dolunca ana sütun kısalır), o yüzden gözlem pencerede değil kutuda.
@@ -73,7 +75,7 @@ export default function ChartView({ chart }) {
       dark.removeEventListener("change", paint);
       instance.dispose();
     };
-  }, [chart]);
+  }, [chart, lang]);
 
   if (!chart?.option) return null;
   return <div id="chart" className="chart" ref={box} />;

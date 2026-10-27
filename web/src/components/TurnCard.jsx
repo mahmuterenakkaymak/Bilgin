@@ -1,3 +1,4 @@
+import { useT } from "../i18n/index.js";
 import { columnLabel } from "../lib/chartFormat.js";
 import { formatCell, isNumericColumn } from "../lib/format.js";
 import AnswerCard from "./AnswerCard.jsx";
@@ -18,6 +19,7 @@ const COLLAPSED_ROWS = 5;
 // `isAdmin` ve `reapproveId` cevabın panonun diliyle konuşması içindir (R7-21): kartı yalnız canlı
 // tur açar, kayıtlı turda yürüyecek bir yük yoktur.
 export default function TurnCard({ turn, onExpand, onReplay, onChoose, onChange, onSave, isAdmin = false, reapproveId = null, isLast = false }) {
+  const { lang } = useT();
   const summary = turn?.summary ?? {};
   const columns = Array.isArray(summary.columns) ? summary.columns : [];
   const rows = Array.isArray(summary.rows) ? summary.rows : [];
@@ -97,7 +99,7 @@ export default function TurnCard({ turn, onExpand, onReplay, onChoose, onChange,
                 <tr key={rowIndex}>
                   {columns.map((_, index) => (
                     <td key={index} className={numeric[index] ? "num" : undefined}>
-                      {formatCell(row?.[index])}
+                      {formatCell(row?.[index], lang)}
                     </td>
                   ))}
                 </tr>

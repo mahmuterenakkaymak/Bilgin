@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import * as api from "../lib/api.js";
-import { chipFacts } from "../lib/facts.js";
+import { useT } from "../i18n/index.js";
+import { chipFacts, factValue } from "../lib/facts.js";
 import { formatNumber, formatSeconds } from "../lib/format.js";
 import { suggestDisplay } from "../lib/startCards.js";
 import ChartView from "./ChartView.jsx";
@@ -34,6 +35,7 @@ function downloadedNote(rows) {
 // yöneticiye formu açar. `reapproveId` yalnız bir kartın "SQL'i yeniden onayla"sından gelmiştir
 // — yani yöneticinin yolundan — ve o zaman formun yerine geçen "Bu SQL ile güncelle" durur.
 export default function AnswerCard({ payload, onSave, choice, isAdmin = false, reapproveId = null }) {
+  const { lang } = useT();
   const [phase, setPhase] = useState("idle"); // idle | saving | saved | error
   const [note, setNote] = useState("");
   const [downloaded, setDownloaded] = useState(""); // "" | csv | xlsx
@@ -52,6 +54,8 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
   // Seçilen anlam: sorunun birden çok okuması varsa hangisiyle koşulduğu cevapta da okunur.
   const chosen = typeof choice === "string" ? choice.trim() : "";
   // Kartın çip şeridi cevabın üç özeti; çipe girmeyen olgular kanıt panelinin altında listelenir.
+  // Olgunun okunuşu cevabın diliyle yazılmıştır (R8-3): arayüz dili farklıysa sayı orada okunur.
+  const answerLang = typeof payload?.answer_lang === "string" ? payload.answer_lang : "tr";
   const chips = chipFacts(payload?.facts);
 
   // ASSUMPTION: indirilen sayı kartın elindeki satırlardır — kesik bir sonuçta dosya daha
@@ -123,7 +127,7 @@ export default function AnswerCard({ payload, onSave, choice, isAdmin = false, r
           {chips.map((fact, index) => (
             <li key={`${index}-${fact.name ?? ""}`}>
               <span className="fact-label">{fact.label}</span>
-              <span className="fact-value">{fact.display}</span>
+              <span className="fact-value">{factValue(fact, lang, answerLang)}</span>
             </li>
           ))}
         </ul>

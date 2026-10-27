@@ -1,3 +1,4 @@
+import { useT } from "../i18n/index.js";
 import { columnLabel } from "../lib/chartFormat.js";
 import { formatCell, formatNumber, isNumericColumn } from "../lib/format.js";
 
@@ -6,6 +7,7 @@ import { formatCell, formatNumber, isNumericColumn } from "../lib/format.js";
 const VISIBLE_ROWS = 200;
 
 export default function ResultTable({ columns = [], rows = [], rowCount = 0, truncated = false }) {
+  const { lang } = useT();
   const names = Array.isArray(columns) ? columns : [];
   const list = Array.isArray(rows) ? rows : [];
   if (!list.length) return <p className="table-empty">Bu soruya uyan kayıt yok.</p>;
@@ -14,7 +16,7 @@ export default function ResultTable({ columns = [], rows = [], rowCount = 0, tru
   const total = Number.isFinite(rowCount) && rowCount > 0 ? rowCount : list.length;
   const note = truncated && (
     <p className="table-note">
-      İlk {formatNumber(shown.length)} satır gösteriliyor (toplam {formatNumber(total)}).
+      İlk {formatNumber(shown.length, lang)} satır gösteriliyor (toplam {formatNumber(total, lang)}).
     </p>
   );
 
@@ -26,7 +28,7 @@ export default function ResultTable({ columns = [], rows = [], rowCount = 0, tru
       <div className="result-block">
         <div id="result-single" className="result-single">
           <span className="result-single-label">{columnLabel(names[0])}</span>
-          <span className="result-single-value">{formatCell(list[0]?.[0])}</span>
+          <span className="result-single-value">{formatCell(list[0]?.[0], lang)}</span>
         </div>
         {note}
       </div>
@@ -53,7 +55,7 @@ export default function ResultTable({ columns = [], rows = [], rowCount = 0, tru
               <tr key={rowIndex}>
                 {names.map((_, index) => (
                   <td key={index} className={numeric[index] ? "num" : undefined}>
-                    {formatCell(row?.[index])}
+                    {formatCell(row?.[index], lang)}
                   </td>
                 ))}
               </tr>

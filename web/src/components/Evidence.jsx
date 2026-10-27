@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { chipFacts } from "../lib/facts.js";
+import { useT } from "../i18n/index.js";
+import { chipFacts, factValue } from "../lib/facts.js";
 import { formatCell, formatNumber, formatSeconds } from "../lib/format.js";
 
 // "Nasıl hesapladım": cevabın dayanakları — SQL, kullanılan tablolar ve kurallar, maskeler,
@@ -57,6 +58,7 @@ function timingsText(timings) {
 }
 
 export default function Evidence({ payload }) {
+  const { lang } = useT();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -75,6 +77,7 @@ export default function Evidence({ payload }) {
   const contextLine = typeof payload?.context?.line === "string" ? payload.context.line.trim() : "";
   // Kartın çip şeridi cevabın özetlerini taşır; panel çipe girmeyen okunur olguları listeler —
   // aynı olgu iki yerde birden okunmaz (chipFacts girdinin kendi referanslarını döndürür).
+  const answerLang = typeof payload?.answer_lang === "string" ? payload.answer_lang : "tr";
   const facts = Array.isArray(payload?.facts) ? payload.facts : [];
   const chips = chipFacts(facts);
   const rest = facts.filter((fact) => fact?.label && fact?.display && !chips.includes(fact));
@@ -157,7 +160,7 @@ export default function Evidence({ payload }) {
               {rest.map((fact, index) => (
                 <li key={`${index}-${fact.name ?? ""}`}>
                   <span className="fact-label">{fact.label}</span>
-                  <span className="fact-value">{fact.display}</span>
+                  <span className="fact-value">{factValue(fact, lang, answerLang)}</span>
                 </li>
               ))}
             </ul>

@@ -1,16 +1,23 @@
-// ECharts seçeneği JSON olarak geldiği için Türkçe sayı biçimi burada işlevle buluşur (PLAN R5-6):
+// ECharts seçeneği JSON olarak geldiği için sayı biçimi burada işlevle buluşur (PLAN R5-6):
 // yalnız biçimleyici eklenir, verinin ve seri tipinin kendisine dokunulmaz.
 import { formatNumber, formatPercent } from "./format.js";
 
-const FORMATS = { number: formatNumber, percent: formatPercent };
+// Biçimleyiciler dil ile kurulur: eksen, etiket ve tooltip aynı sayıyı arayüzün diliyle okur.
+function formatters(lang) {
+  return {
+    number: (value) => formatNumber(value, lang),
+    percent: (value) => formatPercent(value, lang),
+  };
+}
 
 // Başlığın boyutu kartın ölçeğinden: ECharts'ın varsayılan 18px kalın başlığı kartın içinde büyür.
 const TITLE = { fontSize: 14, fontWeight: 600 };
 
-export function withFormatters(option) {
+export function withFormatters(option, lang = "tr") {
   if (!option || typeof option !== "object") return option;
-  // ASSUMPTION: `bilgin` yoksa biçim "number"dır; seçenek yine de Türkçe okunur.
-  const format = FORMATS[option.bilgin?.value_format] ?? formatNumber;
+  const FORMATS = formatters(lang);
+  // ASSUMPTION: `bilgin` yoksa biçim "number"dır; seçenek yine de dilin okunuşuyla yazılır.
+  const format = FORMATS[option.bilgin?.value_format] ?? FORMATS.number;
   const measure = columnLabel(option.bilgin?.value_column);
   const next = { ...option };
   if (next.tooltip) next.tooltip = { ...next.tooltip, formatter: tooltipFormatter(format, next.tooltip.trigger) };

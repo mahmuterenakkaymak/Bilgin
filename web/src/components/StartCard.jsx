@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../i18n/index.js";
 import { columnLabel } from "../lib/chartFormat.js";
 import { formatCell, isNumericColumn } from "../lib/format.js";
 import { cardValueText, refreshedText } from "../lib/startCards.js";
@@ -13,6 +14,7 @@ import ChartView from "./ChartView.jsx";
 // Mini tablo: kartın kutusu kadar. Satırlar sunucuda kesilir (CARD_TABLE_ROWS); burada hiçbir
 // sayı yeniden hesaplanmaz, sütun yalnız Türkçe okunur.
 function MiniTable({ columns, rows }) {
+  const { lang } = useT();
   const names = Array.isArray(columns) ? columns : [];
   const list = Array.isArray(rows) ? rows : [];
   if (!names.length || !list.length) return <p className="start-card-empty">Bu soruya uyan kayıt yok.</p>;
@@ -35,7 +37,7 @@ function MiniTable({ columns, rows }) {
             <tr key={rowIndex}>
               {names.map((_, index) => (
                 <td key={index} className={numeric[index] ? "num" : undefined}>
-                  {formatCell(row?.[index])}
+                  {formatCell(row?.[index], lang)}
                 </td>
               ))}
             </tr>
@@ -48,12 +50,13 @@ function MiniTable({ columns, rows }) {
 
 // Kartın yükü üç biçimden biridir; hiçbirinde eksik alan ekrana "undefined" düşmez.
 function CardLoad({ card }) {
+  const { lang } = useT();
   if (card.error) return <p className="error-reason start-card-error-text">{card.error}</p>;
   if (card.display === "number") {
     const label = typeof card.label === "string" ? card.label.trim() : "";
     return (
       <div className="result-single start-card-number">
-        <span className="result-single-value start-card-value">{cardValueText(card)}</span>
+        <span className="result-single-value start-card-value">{cardValueText(card, lang)}</span>
         {label && <span className="result-single-label start-card-label">{label}</span>}
       </div>
     );
