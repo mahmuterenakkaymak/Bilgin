@@ -1,4 +1,5 @@
 import { useState } from "react";
+import LangToggle from "./LangToggle.jsx";
 
 // Giriş kartı: kararı (hangi ekran, hangi not) Root verir, ağ işini de oradan alır. Ekran
 // yalnız iki alanı, göndermeyi ve hatanın kendisini taşır; başarısız giriş formu kapatmaz.
@@ -25,6 +26,9 @@ export default function LoginScreen({ note = "", onLogin }) {
   return (
     <div className="gate">
       <form id="login-form" className="login-card" onSubmit={submit}>
+        {/* Kartı ilk kez açan da dilini seçebilsin: cümleler oturumdan önce çevrilir. Tercih
+            yerelde durur, girişten sonra kişinin kayıtlı dili onu ezer. */}
+        <LangToggle />
         {/* alt boş: işaret adın resmi, hemen altında "Bilgin" zaten okunuyor — iki kez söylenmez. */}
         <img className="login-mark" src="/assets/bilgin.svg" alt="" width="44" height="44" />
         <h1 className="login-title">Bilgin</h1>

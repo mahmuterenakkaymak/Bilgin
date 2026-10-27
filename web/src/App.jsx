@@ -6,6 +6,7 @@ import { ConnectionsFlow } from "./components/ConnectionsScreen.jsx";
 import { DbBanner, DbDot } from "./components/DbStatus.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import ErrorCard from "./components/ErrorCard.jsx";
+import LangToggle from "./components/LangToggle.jsx";
 import LoadingSteps from "./components/LoadingSteps.jsx";
 import { MapFlow } from "./components/MapScreen.jsx";
 import MastheadNav from "./components/MastheadNav.jsx";
@@ -15,6 +16,7 @@ import Sidebar from "./components/Sidebar.jsx";
 import StartScreen from "./components/StartScreen.jsx";
 import Thread from "./components/Thread.jsx";
 import UsersScreen from "./components/UsersScreen.jsx";
+import { useT } from "./i18n/index.js";
 import * as api from "./lib/api.js";
 import { NOT_ALLOWED_NOTE, ROLE_LABELS, canSee } from "./lib/auth.js";
 import { parseRoute } from "./lib/route.js";
@@ -516,6 +518,7 @@ export default function App({ user = null, onLogout = null, note = "" }) {
   // Cümlenin iki kaynağı var: kapınınki (prop) ve konuşmanın açılamaması. İkincisi burada durur,
   // çünkü onu yalnız soru ekranının akışı üretir.
   const [localNote, setLocalNote] = useState("");
+  const { setLang } = useT();
   // Adres ya bir ekrandır ya bir konuşma (`#/c/<id>`, R7-15); konuşmanın ekranı soru ekranıdır.
   // Rol kararı kapının girişiyle aynı: `#/kullanicilar` ile açan ya da yenileyen sıradan bir
   // kullanıcı yönetici defterini görmez, soru ekranına bir cümleyle düşer. Kullanıcı yoksa kabuk
@@ -530,6 +533,12 @@ export default function App({ user = null, onLogout = null, note = "" }) {
   // Kök nitelik seçili temayı taşısın: açılışta bir kez, her değişimde yeniden. main.jsx ilk
   // boyamadan önce aynı işi yaptığı için koyu teması olan açılışta açık bir kare görmez.
   useEffect(() => applyTheme(document, theme), [theme]);
+
+  // Kişinin kayıtlı dili açılış ya da girişle öğrenilir: main.jsx onu `me` gelmeden önce
+  // çözemediği için sıra burada tamamlanır (R8-15: me.lang > yerel tercih > tarayıcı).
+  useEffect(() => {
+    if (user?.lang) setLang(user.lang);
+  }, [user?.lang]);
 
   const cycleTheme = () => {
     const next = nextTheme(theme);
@@ -643,6 +652,8 @@ export default function App({ user = null, onLogout = null, note = "" }) {
         >
           {THEME_LABELS[theme]}
         </button>
+        {/* Dil de tema gibi görünümün kendisidir: cevabı değil, arayüzü çevirir. */}
+        <LangToggle user={user} />
         {/* Sözcük noktanın yanında: ipucu kümenin tamamına, adlandırma noktaya ait kalır. */}
         <span className="health" title={dot.tip}>
           <span className={`dot dot-${dot.tone}`} role="img" aria-label={dot.tip} />

@@ -507,6 +507,41 @@ main {
   font-size: 14px;
 }
 
+/* Dil düğmesi iki seçenekli tek grup: hangisinin etkin olduğu sözcükle değil, çukurlaşmış
+   düğmeyle okunur — TR ve EN yan yana durur, seçili olanı basılı görünür. İki dilin adı da
+   aynı rengi taşır; seçim tonla değil, zeminle söylenir (koyu temada da aynı tokenlar). */
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.lang-option {
+  padding: calc(var(--space) * 0.5) var(--space);
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.lang-option:hover {
+  color: var(--text);
+}
+
+.lang-option[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .examples {
   display: flex;
   flex-wrap: wrap;
@@ -1026,17 +1061,19 @@ main {
     scroll-margin-top: calc(var(--space) * 20);
   }
 
-  /* Başlık telefonda iki satır: üstte ad + veri seti çipi + tema + durum sözcüğü, altta gezinme +
-     kimlik + Çıkış. Kırım sarmaya bırakılmadı — flex-wrap'ta sırayı içeriğin genişliği belirliyor,
-     Çıkış'ın sığamadığı son satır kendi satırı oluyordu ve başlık üç satıra iniyordu
-     (landing-empty-state-390.png, users-screen-390.png). Izgara satırı kendisi yazar; DOM (ve
-     sekme) sırası değişmez, `order`/`::after` hilesine gerek kalmadığı için onlar kalktı. */
+  /* Başlık telefonda iki satır: üstte ad + veri seti çipi + tema + durum sözcüğü, altta dil
+     düğmesi + gezinme + kimlik + Çıkış. Kırım sarmaya bırakılmadı — flex-wrap'ta sırayı içeriğin
+     genişliği belirliyor, Çıkış'ın sığamadığı son satır kendi satırı oluyordu ve başlık üç satıra
+     iniyordu (landing-empty-state-390.png, users-screen-390.png). Izgara satırı kendisi yazar;
+     DOM (ve sekme) sırası değişmez, `order`/`::after` hilesine gerek kalmadığı için onlar kalktı.
+     Dil düğmesi alt satırın başına yazılıyor: iki sütun parmak hedefiyle ~96px ve başlığın tek
+     esnek payı üst satırdaki çip — gezinmenin payı değil, o zaten kaydırılıyor. */
   .masthead {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto auto auto;
     grid-template-areas:
-      "word chip theme db health"
-      "nav  nav  user out  out";
+      "word chip theme db   health"
+      "lang nav  user out   out";
     gap: calc(var(--space) * 0.75) var(--space);
   }
 
@@ -1075,6 +1112,18 @@ main {
 
   .btn-theme {
     grid-area: theme;
+  }
+
+  .lang-toggle {
+    grid-area: lang;
+  }
+
+  /* Dokunma hedefi: iki harfli kodun kendisi parmak ucuna sığmıyor, her seçenek 44px kareye
+     çıkar. Düğmenin içeriği zaten ortalandığı için yükseklik boşluğu iki yana pay eder. */
+  .lang-option {
+    min-width: 44px;
+    min-height: 44px;
+    padding-inline: var(--space);
   }
 
   .health {
@@ -2991,6 +3040,13 @@ a.db-label:hover {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+}
+
+/* Dil kartın köşesinde: oturumdan önce de seçilir, ama kartın konusu değil — o yüzden sağa
+   yaslı ve sessiz. Izgaranın payı işaretle arasını açmasın diye kendi payından yarım pay çeker. */
+.login-card .lang-toggle {
+  justify-self: end;
+  margin-bottom: calc(var(--space) * -0.5);
 }
 
 /* İşaret ile kelime tek blok okunur: ızgaranın payı ikisini ayırırdı, yarım pay geri çeker —
