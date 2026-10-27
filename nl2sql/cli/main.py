@@ -17,6 +17,7 @@ import getpass
 import json
 import math
 import os
+from collections.abc import Callable
 from decimal import Decimal
 import re
 import sqlite3
@@ -2195,24 +2196,36 @@ def serve(
     ensure_seeded(ReadyStore(users.path), users, ds, session.executor)
     # R6-9: kayıtlar kullanıcıyla aynı dosyadadır; ``saved_path`` söylenmezse kapı import anının
     # ``config.APP_DB_PATH``ine düşer ve ``NL2SQL_APP_DB``i aşarak ``data/bilgin.db``yi açar.
-    status = _db_status(connections, ds, db_probe_file)
-    status.start()
-    app = create_app(session, saved_path=users.path, users=users, connections=connections,
-                     dbstatus=status)
+    app = create_app(session, saved_path=users.path, users=users, connections=connections)
+    # M25 incelemesi: genel ``NL2SQL_MSSQL_CONN`` yalnız etkin kümenin olduğundan (R7-23) bekçi
+    # etkin kümenin adını sunucunun başlangıcından değil kapının o anki oturumundan almalıdır -
+    # aksi halde bir geçişten sonra eski küme yoklanmaya, yenisinin noktası hiç yanmamaya devam eder.
+    status = _db_status(connections, ds, db_probe_file,
+                        get_active=lambda: getattr(app.state.session.dataset, "name", None))
+    app.state.dbstatus = status
     if db_probe_file:
         # R7-26: bağlantı yoklaması da dosyaya sorar; guard'ın sorguladığı sunucu gerçek değildir.
         app.state.conn_connect = _probe_guard_connect(Path(db_probe_file))
+    status.start()
     run_server(app, host, port)
     return 0
 
 
-def _db_status(store: ConnectionStore, ds, db_probe_file: str | Path | None = None) -> DbStatus:
+def _db_status(
+    store: ConnectionStore,
+    ds,
+    db_probe_file: str | Path | None = None,
+    get_active: Callable[[], str | None] | None = None,
+) -> DbStatus:
     """Veritabanı bekçisi (R7-25): ``SELECT 1``i kendi iş parçacığı atar, istekler son cevabı okur.
 
     ``--db-probe-file`` verildiyse (R7-26) bekçi sunucuya değil dosyaya sorar - görsel inceleme ve
     duman testinin yeşil/kırmızı noktası bir SQL Server gerektirmez.
+
+    ``get_active`` etkin kümenin adını her yoklamada yeniden söyler (R7-23: genel bağlantı
+    değişkeni yalnız ona aittir); söylenmezse ``ds``nin adı, yani bekçinin doğduğu küme.
     """
-    active = ds.name if ds else None
+    active = get_active if get_active is not None else (lambda: ds.name if ds else None)
 
     def record(dataset: str, ok: bool, error: str | None) -> None:
         # Ekrandaki "Son başarılı"/"Son hata" satırları bağlantı satırında durur (R7-22): bekçinin
@@ -2225,7 +2238,7 @@ def _db_status(store: ConnectionStore, ds, db_probe_file: str | Path | None = No
     if db_probe_file:
         path = Path(db_probe_file)
         return DbStatus(_probe_resolve(path, store, active), ping=_probe_ping(path), record=record)
-    return DbStatus(lambda name: resolve_connection(name, store, active), record=record)
+    return DbStatus(lambda name: resolve_connection(name, store, active()), record=record)
 
 
 def _probe_read(path: Path) -> dict:
@@ -2237,13 +2250,13 @@ def _probe_read(path: Path) -> dict:
     return {"status": data.get("status") or {}, "guard": data.get("guard") or {}}
 
 
-def _probe_resolve(path: Path, store: ConnectionStore, active: str | None):
+def _probe_resolve(path: Path, store: ConnectionStore, active: Callable[[], str | None]):
     """Sayılan her küme bağlantılı sayılır (R7-26): nokta SQLite'a düşmez, yoklamanın cevabını bekler."""
 
     def resolve(dataset: str) -> dict:
         if str(dataset) in _probe_read(path)["status"]:
             return {"source": "probe", "conn_str": PROBE_PREFIX + str(dataset)}
-        return resolve_connection(dataset, store, active)
+        return resolve_connection(dataset, store, active())
 
     return resolve
 
