@@ -44,7 +44,7 @@ from nl2sql.agent.llm import (
 from nl2sql.agent.loop import AgentRun, Step, run_agent
 from nl2sql.agent.modes import MODES, ToolContext, get_mode
 from nl2sql.auth.bootstrap import dev_admin
-from nl2sql.auth.store import NOT_FOUND_MESSAGE, UserError, UserStore
+from nl2sql.auth.store import UserError, UserStore
 from nl2sql.cli.table import format_table
 from nl2sql.engine import checks, login_script
 from nl2sql.engine.connections import ConnectionStore, resolve as resolve_connection
@@ -64,6 +64,7 @@ from nl2sql.eval.runner import _tokens
 from nl2sql.graph.graph import build_graph
 from nl2sql.graph.profile import load_profile
 from nl2sql.i18n import normalize_lang, t
+from nl2sql.i18n.detect import detect_lang
 from nl2sql.index.docs import COLLECTIONS, build_documents
 from nl2sql.index.embed import EmbedError, make_embedder
 from nl2sql.index.search import build_search, load_search
@@ -118,11 +119,7 @@ PROBE_PREFIX = "PROBE:"
 STORED_LOST = "Not: kayıtlı veri kümesi {name} artık yüklenmiyor; varsayılan {default} sunuluyor."
 # Run 8: ``--dataset`` söylenmemişse sunulan dünya vitrin kümesidir; sentetik küme testin dünyasıdır.
 DEMO_DATASET = "wwi"
-PROSE = "yanıt"
 SQL_TOOLS = ("run_sql", "submit_sql")
-NO_ANSWER = "Cevap gönderilmedi: {}"
-# R4-11: kırpma görünmez bir olay değil; modelin hangi araç cevabını eksik gördüğü ekrandan okunmalı.
-TRIMMED = "✂ bağlam: {trimmed} araç cevabı kısaltıldı"
 
 # R2-14: arama araçlarının cevabı modele gider, ekrana değil; adımda kaç birim döndüğü ve
 # uyarısı durur. Araç adının sığacağı genişlik de modların araç listesinden gelir.
@@ -142,13 +139,10 @@ RUNNING = "{mode} koşuluyor ..."
 RUNNING_REPEAT = "{mode} koşuluyor {attempt}/{repeat} ..."
 REPEAT_LINE = "Tekrar: her mod {repeat} kez koşuluyor (gürültü ölçümü)"
 BAD_REPEAT = "--repeat en az 1 olmalı."
-NO_INDEX_NOTE = "İndeks yok/eski; full modda çalışılıyor."
-# R3-10: auto modun çözümü ekrana hem seçilen modu hem onu doğuran bağlam tahmini yazılır; eval
-# auto'yu kabul etmez, çünkü bir A/B ölçümünün hangi kolu ölçtüğü baştan belli olmalı. R4-12: eşiği
-# profilin penceresi belirlediği için --model ile o eşik de satıra girer; söylenmediğinde config'in
-# sabitidir, yani satır Run 3'te nasıl basılıyorsa öyledir.
-AUTO_LINE = "Mod: auto -> {mode} (bağlam tahmini {tokens} token{budget})"
-AUTO_BUDGET = " · bütçe {budget}"
+# R8-10: ekranın satırları kataloğa taşındı; iki sabit yine de adlarıyla durur - app/session ve
+# testler onları buradan okur, yani değerleri program dilinin cümlesidir.
+NO_INDEX_NOTE = t("cli.ask.no_index", config.DEFAULT_LANG)
+# R3-10: eval auto'yu kabul etmez, çünkü bir A/B ölçümünün hangi kolu ölçtüğü baştan belli olmalı.
 EVAL_NO_AUTO = "eval auto modu kabul etmez; modu açıkça seçin: full, full_rules, rag."
 # R5-12: --ambiguous iki durumda koşmaz — kümenin belirsiz seti yoksa sorulacak soru yoktur, ve
 # --compare üç modu koşar, oysa belirsiz set bir modun netleştirme davranışının ölçümüdür.
@@ -163,9 +157,6 @@ FOLLOWUP_TOTAL = "Toplam: tur {turn} · zincir {chain} · bağlam {context}"
 # R5-14: metrik bloğunun başlığı; satırlarını report.metrics_block kurar, yani ekran ile report.md
 # aynı altı ölçüyü söyler.
 METRICS_HEAD = "Metrikler:"
-# R4-10/R4-14: --model hangi uç noktayla ve hangi pencereyle koşulduğunu ilk satırda söyler; bütçe
-# pencerenin kendisidir, yani cevabın payı henüz düşülmemiş hali.
-MODEL_LINE = "Model: {name} ({model}, bütçe {budget} token)"
 # R4-13: kapalı bir uç nokta bütün modeli düşürür; sebep satırı hem ekranda hem raporun
 # ``skipped``ında durur, yani okuyan hangi modelin neden ölçülmediğini rapordan da görür.
 MODES_WITHOUT_MODELS = "--modes yalnız --models ile kullanılır."
@@ -176,11 +167,7 @@ EXIT_NO_CELLS = 3
 
 ENV_URL = "NL2SQL_LLM_BASE_URL"
 EMBED_ENV_URL = "NL2SQL_EMBED_BASE_URL"
-# R4-14: ``--dataset`` verilmişse kurulması söylenen veritabanı da o kümenindir; adsız hali
-# sentetik dünyanın dosyasını kurar, yani ikinci bir dünyayla çalışana hiçbir şey kazandırmaz.
-NO_DB = "Veritabanı yok: {path}\nÖnce `python -m nl2sql build-db{ds}` çalıştırın."
 NO_TAG = "Bu etiketle soru yok: {tag}"
-LLM_HINT = f"Öneri: Strata'nın açık olup olmadığına bakın; adres farklıysa {ENV_URL} ile doğruyu verin."
 EMBED_HINT = (
     f"Öneri: embedding sunucusunun açık olup olmadığına bakın; "
     f"adres farklıysa {EMBED_ENV_URL} ile doğruyu verin."
@@ -219,19 +206,8 @@ IMPORT_HINT = (
 BAD_SCHEMA = "Şema dosyası okunamadı: {path}"
 NO_DIFF = "Fark yok."
 
-# R3-6: maskelenen kolonlar tablonun altında adlarıyla söylenir; hangi değerin maskeli olduğu
-# okunabilsin diye, değerin kendisi asla ekrana çıkmadığı için.
-MASKED = "Maskelendi: {cols}"
-# R5-14: tablonun altındaki tek cümlelik cevap; sayıları bekçi onaylamış haliyle (R5-9).
-ANSWER = "Cevap: {text}"
-# R5-14: netleştirmenin ekranı — soru, numaralı şıklar ve seçimin hazır komutu; devamındaki tur
-# seçimi tek başına söyler, çünkü sorunun kendisi zaten ekranda duruyor.
-CLARIFY_HEAD = "Netleştirme: {question}"
+# R5-14: netleştirmenin numaralı şıkkı — şıkkın kendisi modelin verdiği metindir, yani çevrilmez.
 CLARIFY_OPTION = "  {n}. {option}"
-CLARIFY_HINT = 'Seçmek için: ask "{question}" --choice "{option}"'
-CHOICE_LINE = "Seçilen anlam: {option}"
-# R7-9: ``--new``/``--conversation`` ekranın son satırı: hangi konuşmanın kaçıncı turu olduğu.
-CONV_LINE = "Konuşma: {id} · tur {n}"
 
 # R3-5: eval hangi şema dosyasıyla ölçtüğünü canlı satırlardan önce söyler (imzanın başı, yani iki
 # koşunun aynı şemayı ölçüp ölçmediği ekrandan okunur); merge-map birleşik şemanın nereye yazıldığını.
@@ -245,24 +221,17 @@ DATASET_LINE = "Veri kümesi: {display_name} ({name})"
 # "şema söylenmedi" demek, yani kümenin kendi şemasının önüne geçmez (R4-4).
 FULL_SCHEMA = "full"
 
-# R6-8: ``user`` komutunun satırları. Parola hiçbir zaman argüman değildir, iki kez sorulur ve
-# uyuşmazsa hiçbir şey yazılmaz; ``list`` sözleşme "User (public)" alanlarını basar, yani karma
-# ekranın hiçbir yerine girmez.
-USER_COLUMNS = ("Kullanıcı", "Rol", "İş rolü", "Durum", "Son giriş")
-USER_ADDED = "✓ {username} eklendi (rol {role})."
-USER_ADDED_BUSINESS = "İş rolü: {business}."
-USER_PASSWD = "✓ {username} parolası değişti."
-USER_SET = "✓ {username}: rol {role}, {status}."
-USER_SET_BUSINESS = "✓ {username}: iş rolü {business}."
-NO_USERS = (
-    "Henüz kullanıcı yok: önce `python -m nl2sql user add <ad> --role admin` ile bir yönetici "
-    "oluşturun."
+# R6-8: ``user`` komutunun satırları kataloğun ``cli.user.*`` satırlarıdır. Parola hiçbir zaman
+# argüman değildir, iki kez sorulur ve uyuşmazsa hiçbir şey yazılmaz; ``list`` sözleşme
+# "User (public)" alanlarını basar, yani karma ekranın hiçbir yerine girmez.
+NO_USERS = t("cli.user.no_users", config.DEFAULT_LANG)  # serve da bu cümleyi söyler (R6-7)
+USER_COLUMN_KEYS = (
+    "cli.user.col_username",
+    "cli.user.col_role",
+    "cli.user.col_business_role",
+    "cli.user.col_status",
+    "cli.user.col_last_login",
 )
-PASSWORD_PROMPT = "Parola: "
-PASSWORD_REPEAT = "Parola (tekrar): "
-PASSWORD_MISMATCH = "Parolalar eşleşmiyor."
-ACTIVE = "etkin"
-INACTIVE = "pasif"
 
 
 def build_database(
@@ -438,6 +407,7 @@ def ask(
     choice: str | None = None,
     conversations=None,
     conversation_id: str | None = None,
+    lang: str = "tr",
 ) -> int:
     """Bir soru: modunu söyle, adımları işaretle ve gecikmesiyle dök, gönderilen SQL'i, tabloyu,
     uyarıları ve tek cümlelik cevabı göster.
@@ -472,20 +442,27 @@ def ask(
     konuşma yeni açılır, varsa yüklenir (bulunamazsa ``ConversationNotFound``) ve son turlar
     döngüye history olarak girer; tur konuşmaya yazılır ve ekranın son satırı ``Konuşma: <id> ·
     tur <n>`` olur. Verilmediğinde koşum Run 1'in halidir, uygulamaya hiçbir şey yazılmaz.
+
+    ``lang`` ekranın dilidir (R8-10): çerçevenin her satırı ``cli.ask`` kataloğundan o dilde gelir.
+    Cevabın dili yine sorunun dilidir (R8-6), yani ``--lang en`` Türkçe bir sorunun çevresini
+    İngilizce söyler; "tr" çıktısı bugünküyle bayt aynıdır.
     """
     _utf8_stdout()
+    # R8-6: cevabın dili sorunun dilidir; ``lang`` yalnız soru hiçbir dil söylemediğinde devreye
+    # girer. Çerçeve ``lang``ı, olgular ve anlatı ``answer_lang``i konuşur.
+    answer_lang = detect_lang(question, lang)
     ds, code = _dataset(dataset)
     if code:
         return code
     if dataset_line:
         _dataset_line(ds)
     if profile:
-        print(_model_line(profile))
+        print(_model_line(profile, lang))
     budget = _or(budget, profile.prompt_limit if profile else None)
     db_path = _or(db_path, ds.db_path if ds else None, config.DB_PATH)
     index_dir = _or(index_dir, ds.index_dir if ds else None, config.INDEX_DIR)
     if _db_missing(db_path):
-        return _no_db(db_path, ds.name if ds else None)
+        return _no_db(db_path, ds.name if ds else None, lang)
     schema = ds.schema() if ds else doc.load_schema()
     rules = ds.rules() if ds else load_rules()
     if mode == "auto":
@@ -497,6 +474,7 @@ def ask(
                 ds.as_of if ds else config.AS_OF,
                 ds.name if ds else None,
                 max_tokens=_auto_limit(profile),
+                lang=lang,
             )
         except ForeignIndexError as exc:
             # R4-8: başka dünyanın vektörleri düşülecek bir indeks değil, reddedilecek biridir.
@@ -508,7 +486,10 @@ def ask(
         pii_schema=schema,
     )
     try:
-        context = _context(mode, executor, schema, rules, index_dir, ds, clarify=not choice)
+        context = _context(
+            mode, executor, schema, rules, index_dir, ds,
+            clarify=not choice, answer_lang=answer_lang,
+        )
     except (MissingIndexError, StaleIndexError) as exc:
         return _index_failed(str(exc))
     # R7-9: ``--new``/``--conversation`` konuşmayı açar ya da yükler; miras turlar döngüye history
@@ -535,62 +516,68 @@ def ask(
     )
 
     if estimate is None:
-        print(f"Mod: {mode}")
+        print(t("cli.ask.mode", lang, mode=mode))
     else:
-        print(_auto_line(mode, estimate, _auto_limit(profile)))
-    print(f"Soru: {question}")
+        print(_auto_line(mode, estimate, _auto_limit(profile), lang))
+    print(t("cli.ask.question", lang, question=question))
     if choice:
-        print(CHOICE_LINE.format(option=choice))
+        print(t("cli.ask.choice", lang, option=choice))
     print()
     if run.steps:  # daha ilk turda düşen bir uç noktanın gösterecek adımı yok
-        print("Adımlar:")
+        print(t("cli.ask.steps", lang))
         for step in run.steps:
-            for line in _step_lines(step):
+            for line in _step_lines(step, lang):
                 print(line)
         print()
     if run.trimmed:
-        print(TRIMMED.format(trimmed=run.trimmed) + "\n")
+        # R4-11: kırpma görünmez bir olay değil; modelin hangi araç cevabını eksik gördüğü
+        # ekrandan okunmalı.
+        print(t("cli.ask.trimmed", lang, trimmed=run.trimmed) + "\n")
     if run.status == "llm_error":
-        return _llm_failed(run.stop_reason)
+        return _llm_failed(run.stop_reason, lang)
     if run.status == "needs_clarification":
-        for line in _clarify_lines(question, run.clarification):
+        for line in _clarify_lines(question, run.clarification, lang):
             print(line)
-        _cost(run)
+        _cost(run, lang)
         if conversations is not None:
             _conversation_line(
-                conversations, conversation_id, pending, question=question, choice=choice,
+                conversations, conversation_id, pending, lang=lang,
+                question=question, choice=choice,
                 status="needs_clarification", sql=None, columns=[], rows=[], row_count=0,
                 facts=[], answer_text="", clarification=run.clarification,
             )
         return 0
     if not run.submitted_sql:
-        print(NO_ANSWER.format(run.stop_reason or "submit_sql hiç çağrılmadı."))
-        _cost(run)
+        reason = run.stop_reason or t("cli.ask.no_submission", lang)
+        print(t("cli.ask.no_answer", lang, reason=reason))
+        _cost(run, lang)
         if conversations is not None:
             _conversation_line(
-                conversations, conversation_id, pending, question=question, choice=choice,
+                conversations, conversation_id, pending, lang=lang, question=question, choice=choice,
                 status="failed", sql=None, columns=[], rows=[], row_count=0, facts=[],
                 answer_text="", clarification=None,
             )
         return 1
 
-    print("Cevap SQL:")
+    print(t("cli.ask.sql_head", lang))
     print(run.submitted_sql)
-    print("\nSonuç:")
+    print("\n" + t("cli.ask.result_head", lang))
     result = executor.execute(run.submitted_sql, Budget(), AUDIT_SOURCE)
     print(format_table(result))
     if result.masked_columns:
-        print(MASKED.format(cols=", ".join(result.masked_columns)))
+        # R3-6: maskelenen kolonlar tablonun altında adlarıyla söylenir; hangi değerin maskeli
+        # olduğu okunabilsin diye, değerin kendisi asla ekrana çıkmadığı için.
+        print(t("cli.ask.masked", lang, cols=", ".join(result.masked_columns)))
     for warning in checks.post_checks(run.submitted_sql, result, executor):
         print(f"{WARNING_MARK} {warning.message}")
-    facts = compute_facts(result.columns, result.rows)
-    sentence = narrate(asked, result.columns, result.rows, facts, llm).text
-    print(f"\n{ANSWER.format(text=sentence)}")
+    facts = compute_facts(result.columns, result.rows, answer_lang)
+    sentence = narrate(asked, result.columns, result.rows, facts, llm, lang=answer_lang).text
+    print(f"\n{t('cli.ask.answer', lang, text=sentence)}")
     print()
-    _cost(run)
+    _cost(run, lang)
     if conversations is not None:
         _conversation_line(
-            conversations, conversation_id, pending, question=question, choice=choice,
+            conversations, conversation_id, pending, lang=lang, question=question, choice=choice,
             status="answered", sql=run.submitted_sql, columns=result.columns, rows=result.rows,
             row_count=len(result.rows), facts=[fact.to_dict() for fact in facts],
             answer_text=sentence, clarification=None,
@@ -660,10 +647,10 @@ def _conversation_turn(conversations, conversation_id, pending, **turn) -> int:
     return n if n is not None else conversations.add_turn(conversation_id, row)
 
 
-def _conversation_line(conversations, conversation_id, pending, **turn) -> None:
+def _conversation_line(conversations, conversation_id, pending, lang: str = "tr", **turn) -> None:
     """Turu konuşmaya yazar ve son satırı basar: ``Konuşma: <id> · tur <n>`` (R7-9)."""
     n = _conversation_turn(conversations, conversation_id, pending, **turn)
-    print(CONV_LINE.format(id=conversation_id, n=n))
+    print(t("cli.ask.conversation", lang, id=conversation_id, n=n))
 
 
 def evaluate(
@@ -1341,10 +1328,15 @@ def make_login_script(
     return 0
 
 
-def user_add(name: str, role: str, business_role: str = config.DEFAULT_BUSINESS_ROLE) -> int:
+def user_add(
+    name: str,
+    role: str,
+    business_role: str = config.DEFAULT_BUSINESS_ROLE,
+    lang: str = "tr",
+) -> int:
     """Yeni kullanıcı: parolayı iki kez sorar, uyuşmazsa hiçbir şey yazmadan çıkar (R6-8)."""
     _utf8_stdout()
-    password = _ask_password()
+    password = _ask_password(lang)
     if password is None:
         return EXIT_BAD_INPUT
     try:
@@ -1352,30 +1344,30 @@ def user_add(name: str, role: str, business_role: str = config.DEFAULT_BUSINESS_
             name, password, role, business_role=business_role
         )
     except UserError as exc:
-        print(exc.message)
+        print(_user_error(exc, lang))
         return EXIT_BAD_INPUT
-    print(USER_ADDED.format(username=user["username"], role=user["role"]))
-    print(USER_ADDED_BUSINESS.format(business=_business_label(user["business_role"])))
+    print(t("cli.user.added", lang, username=user["username"], role=user["role"]))
+    print(t("cli.user.added_business", lang, business=_business_label(user["business_role"])))
     return 0
 
 
-def user_list() -> int:
+def user_list(lang: str = "tr") -> int:
     """Bütün kullanıcılar: ad, rolleri, durum, son giriş; hiç yoksa ne yapılacağı söylenir (R6-8)."""
     _utf8_stdout()
     users = UserStore(config.app_db_path()).list_users()
     if not users:
-        print(NO_USERS)
+        print(t("cli.user.no_users", lang))
         return 0
     print(
         format_table(
             Result(
-                columns=list(USER_COLUMNS),
+                columns=[t(key, lang) for key in USER_COLUMN_KEYS],
                 rows=[
                     (
                         user["username"],
                         user["role"],
                         _business_label(user["business_role"]),
-                        ACTIVE if user["active"] else INACTIVE,
+                        _user_status(user, lang),
                         user["last_login_at"],
                     )
                     for user in users
@@ -1387,22 +1379,22 @@ def user_list() -> int:
     return 0
 
 
-def user_passwd(name: str) -> int:
+def user_passwd(name: str, lang: str = "tr") -> int:
     """Kullanıcının parolasını değiştirir; eski oturumları store kendisi düşürür (R6-8)."""
     _utf8_stdout()
     store = UserStore(config.app_db_path())
-    user = _user_by_name(store, name)
+    user = _user_by_name(store, name, lang)
     if user is None:
         return EXIT_BAD_INPUT
-    password = _ask_password()
+    password = _ask_password(lang)
     if password is None:
         return EXIT_BAD_INPUT
     try:
         store.update_user(user["id"], password=password)
     except UserError as exc:
-        print(exc.message)
+        print(_user_error(exc, lang))
         return EXIT_BAD_INPUT
-    print(USER_PASSWD.format(username=user["username"]))
+    print(t("cli.user.passwd", lang, username=user["username"]))
     return 0
 
 
@@ -1411,11 +1403,15 @@ def user_set(
     role: str | None = None,
     active: bool | None = None,
     business_role: str | None = None,
+    lang: str = "tr",
 ) -> int:
-    """Rolü, etkinliği ya da iş rolünü değiştirir; son etkin yöneticiyi store korur (R6-8, R7-16)."""
+    """Rolü, etkinliği ya da iş rolünü değiştirir; son etkin yöneticiyi store korur (R6-8, R7-16).
+
+    ``lang`` ekranın dilidir (R8-10): satırlar ``cli.user`` kataloğundan o dilde gelir.
+    """
     _utf8_stdout()
     store = UserStore(config.app_db_path())
-    user = _user_by_name(store, name)
+    user = _user_by_name(store, name, lang)
     if user is None:
         return EXIT_BAD_INPUT
     try:
@@ -1423,20 +1419,25 @@ def user_set(
             user["id"], **_given(role=role, active=active, business_role=business_role)
         )
     except UserError as exc:
-        print(exc.message)
+        print(_user_error(exc, lang))
         return EXIT_BAD_INPUT
     if business_role is not None:
         print(
-            USER_SET_BUSINESS.format(
-                username=updated["username"], business=_business_label(updated["business_role"])
+            t(
+                "cli.user.set_business",
+                lang,
+                username=updated["username"],
+                business=_business_label(updated["business_role"]),
             )
         )
         return 0
     print(
-        USER_SET.format(
+        t(
+            "cli.user.set",
+            lang,
             username=updated["username"],
             role=updated["role"],
-            status=ACTIVE if updated["active"] else INACTIVE,
+            status=_user_status(updated, lang),
         )
     )
     return 0
@@ -1447,20 +1448,30 @@ def _business_label(value: str) -> str:
     return config.BUSINESS_ROLES.get(value, value)
 
 
-def _ask_password() -> str | None:
+def _user_status(user: dict, lang: str) -> str:
+    """Etkinliğin ekrandaki sözü: ``etkin``/``pasif``, yani tablonun iki hali."""
+    return t("cli.user.active" if user["active"] else "cli.user.inactive", lang)
+
+
+def _user_error(exc: UserError, lang: str) -> str:
+    """Reddin cümlesi: store anahtarı ve parametreleri taşır (R8-5), ekran kendi dilinde kurar."""
+    return t(exc.key, lang, **exc.params)
+
+
+def _ask_password(lang: str = "tr") -> str | None:
     """Parolayı iki kez sorar; uyuşmazlık bir yazım hatasıdır, yani cümle ve None (R6-8)."""
-    password = getpass.getpass(PASSWORD_PROMPT)
-    if getpass.getpass(PASSWORD_REPEAT) != password:
-        print(PASSWORD_MISMATCH)
+    password = getpass.getpass(t("cli.user.password", lang))
+    if getpass.getpass(t("cli.user.password_repeat", lang)) != password:
+        print(t("cli.user.password_mismatch", lang))
         return None
     return password
 
 
-def _user_by_name(store: UserStore, name: str) -> dict | None:
-    """Adı kullanıcının ``id``sine çeviren okuma; yoksa store'un kendi cümlesi ekrana çıkar."""
+def _user_by_name(store: UserStore, name: str, lang: str = "tr") -> dict | None:
+    """Adı kullanıcının ``id``sine çeviren okuma; yoksa reddin cümlesi ekrana çıkar."""
     user = store.get_user(name)
     if user is None:
-        print(NOT_FOUND_MESSAGE)
+        print(t("auth.user_not_found", lang))
     return user
 
 
@@ -2005,8 +2016,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.json:
             try:
                 return _ask_json(args)
-            except ConversationNotFound as exc:
-                print(exc)
+            except ConversationNotFound:
+                print(t("conversations.not_found", args.lang))
                 return EXIT_BAD_INPUT
         ds, code = _dataset(args.dataset)
         if code:
@@ -2024,7 +2035,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             if mode == "auto":
                 mode, estimate = resolve_auto(
-                    *_auto_inputs(ds), max_tokens=_auto_limit(profile)
+                    *_auto_inputs(ds), max_tokens=_auto_limit(profile), lang=args.lang
                 )
             store, conversation_id = _conversation(args)
             return ask(
@@ -2035,6 +2046,7 @@ def main(argv: list[str] | None = None) -> int:
                 dataset_line=False,
                 conversations=store,
                 conversation_id=conversation_id,
+                lang=args.lang,
                 **_given(dataset=args.dataset, profile=profile, choice=args.choice),
             )
         except ForeignIndexError as exc:
@@ -2045,10 +2057,10 @@ def main(argv: list[str] | None = None) -> int:
             # düzeltmesi kullanıcının elinde olduğu için iz dökümü değil tek satır ve kod 2.
             print(exc)
             return EXIT_BAD_INPUT
-        except ConversationNotFound as exc:
+        except ConversationNotFound:
             # R7-9: --conversation bilinmeyen bir kimlik söylüyorsa düzeltmesi kullanıcının elinde:
             # konuşma yok, başkasının ya da başka bir kümede - tek cümle ve kod 2.
-            print(exc)
+            print(t("conversations.not_found", args.lang))
             return EXIT_BAD_INPUT
     if args.command == "serve":
         return serve(
@@ -2064,16 +2076,17 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.command == "user":
         if args.user_command == "list":
-            return user_list()
+            return user_list(args.lang)
         if args.user_command == "add":
-            return user_add(args.name, args.role, args.business_role)
+            return user_add(args.name, args.role, args.business_role, args.lang)
         if args.user_command == "passwd":
-            return user_passwd(args.name)
+            return user_passwd(args.name, args.lang)
         return user_set(
             args.name,
             role=args.role,
             active=None if not (args.activate or args.deactivate) else args.activate,
             business_role=args.business_role,
+            lang=args.lang,
         )
     if args.modes and not args.models:
         print(MODES_WITHOUT_MODELS)
@@ -2145,6 +2158,8 @@ def _ask_json(args) -> int:
     anahtar cümlesini ve kodunu oradan alır; ne küme satırı ne mod satırı basılır, auto'nun düşüş
     notu payload'ın ``notes``unda kalır. Yollar çağrı anında config'den okunur, yani test kendi tmp
     yolunu monkeypatch edebilir (``open_session``ın varsayılanları import'da bağlanıyor).
+
+    Dil ``--lang``dır (R8-10): payload'ın kendi cümleleri o dildedir, anahtar seti değişmez.
     """
     # R5-1: ``ask --json`` ile ``POST /api/ask`` aynı kapı; nl2sql.app içe yalnız burada girilir.
     from nl2sql.app.ask import ask_payload
@@ -2177,6 +2192,7 @@ def _ask_json(args) -> int:
         conversations=store,
         conversation_id=conversation_id,
         owner=None,
+        lang=args.lang,
     )
     # SQL Server returns DECIMAL/MONEY as Decimal and dates as date objects (SQLite never did); the API
     # side gets the same conversion from FastAPI's encoder.
@@ -2441,9 +2457,10 @@ def run_server(app, host: str, port: int) -> None:
     uvicorn.run(app, host=host, port=port)
 
 
-def _step_lines(step: Step) -> list[str]:
+def _step_lines(step: Step, lang: str = "tr") -> list[str]:
     """Adımın satırları: sıra, ✓/✗, araç, gecikme; reddedilen bir sorgu sebebini alt satırda taşır."""
-    head = f"  {step.n:>2} {'✓' if step.ok else '✗'} {step.tool or PROSE:<{TOOL_WIDTH}} {step.latency_ms:>5.0f} ms"
+    prose = t("cli.ask.prose", lang)
+    head = f"  {step.n:>2} {'✓' if step.ok else '✗'} {step.tool or prose:<{TOOL_WIDTH}} {step.latency_ms:>5.0f} ms"
     if not step.ok:
         return [head, f"       ↳ {step.summary}"]
     if not step.tool:
@@ -2453,11 +2470,11 @@ def _step_lines(step: Step) -> list[str]:
         # kaç kolon döndürdüğünü söylemeyi hak eder.
         note = _first_line(step.summary)
         return [f"{head} · {note}"] if note else [head]
-    notes = _search_notes(step.tool, step.summary)
+    notes = _search_notes(step.tool, step.summary, lang)
     return [head, *(f"       {line}" for line in notes)] if notes else [head]
 
 
-def _search_notes(tool: str, summary: str) -> list[str]:
+def _search_notes(tool: str, summary: str, lang: str = "tr") -> list[str]:
     """R2-14: arama aracının cevabı modele gider, ekrana kaç birim döndüğü ve uyarısı yazılır.
 
     Araç hiçbir şey bulamadıysa (eşleşen tablo yok, tek tablo, değer yok) kendi cümlesi gösterilir;
@@ -2469,16 +2486,16 @@ def _search_notes(tool: str, summary: str) -> list[str]:
         note = f"→ {', '.join(names)}" if names else ""
     elif tool == "get_table_details":
         count = len(DETAIL_HEAD.findall(summary))
-        note = f"→ {count} tablo" if count else ""
+        note = t("cli.ask.note_tables", lang, n=count) if count else ""
     elif tool == "find_join_path":
         joins = sum(1 for line in lines if JOIN_LINE.match(line))
-        note = f"→ {joins} join" if joins else ""
+        note = t("cli.ask.note_joins", lang, n=joins) if joins else ""
     elif tool == "search_rules":
         terms = [block.splitlines()[0].strip() for block in summary.split("\n\n") if block.strip()]
         note = f"→ {', '.join(terms)}" if terms else ""
     elif tool == "sample_values":
         found = VALUE_COUNT.search(summary)
-        note = f"→ {found.group(1)} değer" if found else ""
+        note = t("cli.ask.note_values", lang, n=found.group(1)) if found else ""
     else:
         return []
     warnings = [line for line in lines if line.startswith(WARNING_MARK)]
@@ -2487,7 +2504,7 @@ def _search_notes(tool: str, summary: str) -> list[str]:
     return [note, *warnings] if note else warnings
 
 
-def _clarify_lines(question: str, clarification: dict) -> list[str]:
+def _clarify_lines(question: str, clarification: dict, lang: str = "tr") -> list[str]:
     """R5-14: netleştirmenin satırları — soru, numaralı şıklar ve seçimin hazır komutu.
 
     Komut ilk şıkla kurulur: kopyalanıp yapıştırılınca çalışan bir satır, uydurma bir yer tutucudan
@@ -2495,18 +2512,26 @@ def _clarify_lines(question: str, clarification: dict) -> list[str]:
     """
     options = clarification["options"]
     return [
-        CLARIFY_HEAD.format(question=clarification["question"]),
+        t("cli.ask.clarify_head", lang, question=clarification["question"]),
         *(CLARIFY_OPTION.format(n=n, option=option) for n, option in enumerate(options, 1)),
         "",
-        CLARIFY_HINT.format(question=question, option=options[0]),
+        t("cli.ask.clarify_hint", lang, question=question, option=options[0]),
     ]
 
 
-def _cost(run: AgentRun) -> None:
+def _cost(run: AgentRun, lang: str = "tr") -> None:
     """Koşunun maliyeti: toplam token (nasıl bölündüğüyle birlikte) ve geçen süre."""
     total = run.total_prompt_tokens + run.total_completion_tokens
-    print(f"Token: {total} (istem {run.total_prompt_tokens} + cevap {run.total_completion_tokens})")
-    print(f"Süre: {run.elapsed_s:.1f} sn")
+    print(
+        t(
+            "cli.ask.token",
+            lang,
+            total=total,
+            prompt=run.total_prompt_tokens,
+            completion=run.total_completion_tokens,
+        )
+    )
+    print(t("cli.ask.time", lang, seconds=f"{run.elapsed_s:.1f}"))
 
 
 def _mapping_lines(mapping: dict) -> list[str]:
@@ -2652,6 +2677,7 @@ def resolve_auto(
     dataset: str | None = None,
     max_tokens: int | None = None,
     notify=print,
+    lang: str = "tr",
 ) -> tuple[str, int]:
     """``--mode auto``nun çözümü (R3-10): tam kurallı istem bütçeye sığıyorsa full_rules, sığmıyorsa rag.
 
@@ -2678,7 +2704,7 @@ def resolve_auto(
     except ForeignIndexError:
         raise
     except (MissingIndexError, StaleIndexError):
-        notify(NO_INDEX_NOTE)
+        notify(t("cli.ask.no_index", lang))
         return "full", estimate
     return "rag", estimate
 
@@ -2817,19 +2843,21 @@ def _profile_block(profile: ModelProfile | None) -> dict | None:
     }
 
 
-def _model_line(profile: ModelProfile) -> str:
+def _model_line(profile: ModelProfile, lang: str = "tr") -> str:
     """``ask``ın hangi modelle koştuğunu söyleyen satırı (R4-14); bütçe pencerenin kendisidir."""
-    return MODEL_LINE.format(
+    return t(
+        "cli.ask.model",
+        lang,
         name=profile.name,
         model=profile.model,
         budget=_grouped(profile.context_budget),
     )
 
 
-def _auto_line(mode: str, estimate: int, limit: int | None) -> str:
+def _auto_line(mode: str, estimate: int, limit: int | None, lang: str = "tr") -> str:
     """auto çözümü: tahmin her halükarda söylenir, eşik yalnız ``--model`` ile bilinir (R4-12)."""
-    budget = AUTO_BUDGET.format(budget=_grouped(limit)) if limit is not None else ""
-    return AUTO_LINE.format(mode=mode, tokens=_tokens(estimate), budget=budget)
+    budget = t("cli.ask.auto_budget", lang, budget=_grouped(limit)) if limit is not None else ""
+    return t("cli.ask.auto", lang, mode=mode, tokens=_tokens(estimate), budget=budget)
 
 
 def _auto_limit(profile: ModelProfile | None) -> int | None:
@@ -2899,12 +2927,12 @@ def _db_missing(db_path: str | Path) -> bool:
     return config.backend() == "sqlite" and not Path(db_path).exists()
 
 
-def _no_db(db_path: str | Path, dataset: str | None = None) -> int:
+def _no_db(db_path: str | Path, dataset: str | None = None, lang: str = "tr") -> int:
     """Eksik veritabanı bir sorgu hatası gibi düşmesin: tek cümle, ne yapılacağı, kod 2.
 
     ``dataset`` verildiğinde cümlenin söylediği ``build-db`` de o kümeyi kurar (R4-14).
     """
-    print(NO_DB.format(path=db_path, ds=dataset_arg(dataset)))
+    print(t("cli.ask.no_db", lang, path=db_path, ds=dataset_arg(dataset)))
     return EXIT_NO_DB
 
 
@@ -2928,11 +2956,11 @@ def _index_failed(reason: str) -> int:
     return EXIT_NO_INDEX
 
 
-def _llm_failed(reason: str) -> int:
+def _llm_failed(reason: str, lang: str = "tr") -> int:
     """Ölü uç nokta: adres ve sebep cümlesini llm.py üretir, eksik kalırsa öneri buradan eklenir."""
-    print(f"Hata: {reason}")
+    print(t("cli.ask.error", lang, reason=reason))
     if ENV_URL not in reason:
-        print(LLM_HINT)
+        print(t("cli.ask.llm_hint", lang, url=ENV_URL))
     return EXIT_LLM
 
 
