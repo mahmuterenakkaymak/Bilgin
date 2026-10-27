@@ -6,6 +6,11 @@ basamağın yarısı kadar tolerans vardır (config.NUMBER_TOLERANCE_UNITS); aks
 bir okuma olduğu hâlde reddedilirdi. Yüzde yüzde olgusuna denk düşer: sonuçta %12,3 yoksa anlatının
 %13'ü uydurmadır. Biçim de sayı kadar kesindir: `1,234.56` ve `12.5` İngilizce yazımdır, Türkçe
 ekrana çıkmaz; `STK001` ise sayı değil koddur, hiç sorulmaz.
+
+Bekçi cümlenin hangi dilde yazıldığını da bilir (R8-7): `extract_numbers(text, lang)` ve
+`check_text(..., lang)` İngilizce tarafında `1,234.56`, `1234.56`, `12.3%`, `-12.3%` okur. Öteki dilin
+biçimindeki sayı yabancıdır: değeri doğru olsa bile hiç eşleşmez ve geçmeyenlerin arasında yazar.
+Türkçe tarafının okunuşu dünle bayt bayt aynıdır.
 """
 
 from __future__ import annotations
@@ -21,10 +26,16 @@ _SCALES = {"bin": 1e3, "milyon": 1e6, "milyar": 1e9}
 # Türkçe binlik ayıracı: ilk küme 1-3 basamak, sonraki her küme tam üç. `12.5` bu yüzden geçmez.
 _TURKISH = re.compile(r"\d+|\d{1,3}(?:\.\d{3})+")
 
-# Aday sayı: işaret ve imleç sayının önünde, ölçek sözcüğü ardından. `(?<!\w)` harfe yapışık sayıyı
-# (STK001, Q3) baştan eler; ölçek sözcüğü tutmazsa sayı yine de tek başına alınır.
+# İngilizce yazım: virgüllü küme ya da ondalık nokta, ikisi karışık değil. `1.234,56` ve `12,3`
+# (virgülden sonra tam üç basamak değil) bu yüzden İngilizcede okunmaz.
+_ENGLISH = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?")
+
+# Aday sayı: işaret ve Türkçe yüzde imleci sayının önünde, İngilizce imleç ve ölçek sözcüğü ardından.
+# `(?<!\w)` harfe yapışık sayıyı (STK001, Q3) baştan eler; ölçek sözcüğü tutmazsa sayı yine de tek
+# başına alınır.
 _CANDIDATE = re.compile(
-    r"(?<!\w)(?P<sign>-)?(?P<percent>%)?(?P<core>\d[\d.,]*)(?:[ \t]*(?P<scale>bin|milyon|milyar))?",
+    r"(?<!\w)(?P<sign>-)?(?P<percent>%)?(?P<core>\d[\d.,]*)(?P<tail>%)?"
+    r"(?:[ \t]*(?P<scale>bin|milyon|milyar))?",
     re.IGNORECASE,
 )
 
@@ -50,11 +61,12 @@ class GuardResult:
     numbers: list[NumberToken]
 
 
-def extract_numbers(text: str) -> list[NumberToken]:
-    """Yazıdaki sayılar, metin sırasıyla: Türkçe biçimler, yüzdeler ve ölçek sözcükleriyle."""
+def extract_numbers(text: str, lang: str = "tr") -> list[NumberToken]:
+    """Yazıdaki sayılar, metin sırasıyla: dilin biçimleriyle, yüzdeler ve ölçek sözcükleriyle;
+    öteki dilin biçimi `format_error` ile işaretli gelir."""
     tokens = []
     for match in _CANDIDATE.finditer(text or ""):
-        token = _token(text, match)
+        token = _token(text, match, lang)
         if token is not None:
             tokens.append(token)
     return tokens
@@ -80,26 +92,32 @@ def allowed_values(columns: list[str], rows: list[tuple], facts, question: str) 
     return {"values": values, "percent": percents}
 
 
-def check_text(text: str, allowed: dict) -> GuardResult:
-    """Cümledeki her sayı izin listesinde olmak zorundadır; uymayanlar metin sırasıyla yazılır."""
-    numbers = extract_numbers(text)
+def check_text(text: str, allowed: dict, lang: str = "tr") -> GuardResult:
+    """Cümledeki her sayı izin listesinde olmak zorundadır; uymayanlar ve yabancı biçimli olanlar
+    metin sırasıyla yazılır."""
+    numbers = extract_numbers(text, lang)
+    # ASSUMPTION: Contracts'ın "rejected"i GuardResult.offending'dir; yabancı biçim de oraya yazar.
     offending = [token.raw for token in numbers if not _matches(token, allowed)]
     return GuardResult(ok=not offending, offending=offending, numbers=numbers)
 
 
-def _token(text: str, match) -> NumberToken | None:
+def _token(text: str, match, lang: str) -> NumberToken | None:
     """Adayın okunuşu; cümle noktası sayıya dahil değildir, harfe yapışık dize hiç sayı değildir."""
     core = match.group("core").rstrip(".,")
     following = text[match.start("core") + len(core) :][:1]
     if not core or following.isalpha():
         return None
     sign = match.group("sign")
-    percent = match.group("percent") is not None
+    # ASSUMPTION: yüzde imleci dilin kendi tarafındadır (tr "%12,3", en "12.3%"); Türkçede sonda
+    # duran imleç bugünkü gibi sayının parçası değildir. Ölçek sözcüğü iki dilde de aynı okunur.
+    percent = match.group("percent") is not None or (lang == "en" and match.group("tail") is not None)
     scale_text = match.group("scale")
-    raw = f"{sign or ''}{'%' if percent else ''}{core}"
+    raw = f"{sign or ''}{'%' if match.group('percent') else ''}{core}"
+    if lang == "en" and match.group("tail"):
+        raw += "%"
     if scale_text:
         raw += f" {scale_text}"
-    parsed = _parse(core)
+    parsed = _parse(core, lang)
     if parsed is None:
         return NumberToken(raw, percent=percent, format_error=True)
     value, decimals = parsed
@@ -107,8 +125,14 @@ def _token(text: str, match) -> NumberToken | None:
     return NumberToken(raw, (-value if sign else value) * scale, decimals, scale, percent)
 
 
-def _parse(core: str) -> tuple[float, int] | None:
-    """Türkçe yazımın okunuşu: ondalık virgül, binlik ayıracı nokta; İngilizce biçim None döner."""
+def _parse(core: str, lang: str) -> tuple[float, int] | None:
+    """Yazımın okunuşu: Türkçe ondalık virgül ve binlik nokta, İngilizce tam tersi; öteki dilin
+    biçimi bu dilde yabancıdır, None döner."""
+    if lang == "en":
+        if not _ENGLISH.fullmatch(core):
+            return None
+        head, _, fraction = core.partition(".")
+        return float(head.replace(",", "") + (f".{fraction}" if fraction else "")), len(fraction)
     head, comma, fraction = core.partition(",")
     if comma and not fraction.isdigit():
         return None
