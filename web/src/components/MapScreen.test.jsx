@@ -201,6 +201,30 @@ describe("MapScreen — denetim raporu", () => {
     expect(html).toContain("Canlı veritabanı bağlantısı yok; karşılaştırma yapılmadı.");
   });
 
+  // M24 craft 2: küme adı çakışması satırı olmayan bir sorun; "Satır: —" cümlesi okuyucuya
+  // ikinci, ilgisiz bir şikâyet gibi görünüyordu.
+  it("satırı ve kolonu olmayan sorun hücre etiketi yazmaz", () => {
+    const html = screen({
+      state: run([
+        LOADED[0],
+        LOADED[1],
+        {
+          type: "previewed",
+          preview: previewResponse({
+            errors: [
+              { sheet: "Veri kümesi", row: null, column: null, message: "Bu ad zaten bir veri kümesi: ornek_fatura." },
+            ],
+          }),
+        },
+      ]),
+    });
+    expect(html).toContain("Bu ad zaten bir veri kümesi: ornek_fatura.");
+    expect(html).not.toContain("map-cell-row");
+    expect(html).not.toContain("map-cell-col");
+    // hücreler yerinde: tablo geniş ekranda dört başlığın altında oturmaya devam ediyor
+    expect(html.match(/<td/g)).toHaveLength(4);
+  });
+
   it("temiz raporda Oluştur açıktır, uyarı bandı kurulmaz", () => {
     const html = screen({ state: run(LOADED) });
     expect(tag(html, "map-apply")).not.toContain("disabled");

@@ -1237,6 +1237,12 @@ main {
     font-weight: 600;
   }
 
+  /* Etiketini yitiren hücre burada söz değil: "—" yalnız geniş ekranda boş sütunun yerini tutuyor,
+     yığılmış hâlde tek başına bir çizgi olarak düşmemeli. */
+  .map-errors .map-cell-blank {
+    display: none;
+  }
+
   /* Konuşma akışı telefonda tek sütundur: soru balonu tüm genişliği alır - 85% payı ve sağa
      yaslanması uzun bir soruyu kelimelerinden bölüyordu - ve katlanmış turun tablosu kartın
      içinde yan kayar. nowrap hücreler 390px'de kartı aşıyor; akışın sağa taşması yerine tablo
@@ -2296,7 +2302,8 @@ main {
 }
 
 .map-cell-row,
-.map-cell-col {
+.map-cell-col,
+.map-cell-blank {
   color: var(--muted);
   white-space: nowrap;
 }

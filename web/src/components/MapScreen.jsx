@@ -41,8 +41,12 @@ function count(value) {
   return Number.isFinite(number) ? number : 0;
 }
 
+function blank(value) {
+  return value === null || value === undefined || value === "";
+}
+
 function cell(value) {
-  return value === null || value === undefined || value === "" ? "—" : String(value);
+  return blank(value) ? "—" : String(value);
 }
 
 // Seçilen dosyanın boyutu: bayt, KB ya da MB; ondalık Türkçe biçimde (2,5 KB).
@@ -127,8 +131,12 @@ function Report({ preview }) {
               {errors.map((issue, index) => (
                 <tr key={`${index}-${text(issue.sheet)}`}>
                   <td className="map-cell-sheet">{cell(issue.sheet)}</td>
-                  <td className="map-cell-row">{cell(issue.row)}</td>
-                  <td className="map-cell-col">{cell(issue.column)}</td>
+                  {/* Satırı/kolonu olmayan sorunda etiket düşer — "Satır: —" okuyucuya cümlenin
+                      üstünde ikinci bir sorun gibi okunuyordu (M24 craft 2). ASSUMPTION: hücre
+                      yerinde kalıyor, yalnız etiketini yitiriyor; <td> düşerse tablo geniş ekranda
+                      mesajı "Satır" başlığının altına kaydırıyor. */}
+                  <td className={blank(issue.row) ? "map-cell-blank" : "map-cell-row"}>{cell(issue.row)}</td>
+                  <td className={blank(issue.column) ? "map-cell-blank" : "map-cell-col"}>{cell(issue.column)}</td>
                   <td className="map-msg">{issue.message}</td>
                 </tr>
               ))}
