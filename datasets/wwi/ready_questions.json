@@ -1,0 +1,74 @@
+[
+  {
+    "business_role": "satis",
+    "title": "Bu yılın en çok ciro yapan 5 ürünü",
+    "question": "Bu yıl (2016) en çok ciro yapan 5 stok kalemi; adı ve cirosu (kredi notları hariç) nedir?",
+    "sql": "SELECT TOP 5 si.StockItemName, SUM(il.ExtendedPrice) AS CIRO FROM Sales.InvoiceLines il JOIN Sales.Invoices i ON i.InvoiceID = il.InvoiceID JOIN Warehouse.StockItems si ON si.StockItemID = il.StockItemID WHERE i.IsCreditNote = 0 AND i.InvoiceDate >= '2016-01-01' AND i.InvoiceDate < '2017-01-01' GROUP BY si.StockItemName ORDER BY CIRO DESC, si.StockItemName",
+    "display": "chart",
+    "position": 1
+  },
+  {
+    "business_role": "satis",
+    "title": "Satış temsilcisi bazında ciro",
+    "question": "Kredi notları hariç, bu yıl her satış temsilcisine atfedilen faturaların cirosu kişinin tam adıyla nedir?",
+    "sql": "SELECT p.FullName, SUM(il.ExtendedPrice) AS CIRO FROM Sales.Invoices i JOIN Sales.InvoiceLines il ON il.InvoiceID = i.InvoiceID JOIN Application.People p ON p.PersonID = i.SalespersonPersonID WHERE i.IsCreditNote = 0 AND i.InvoiceDate >= '2016-01-01' AND i.InvoiceDate < '2017-01-01' GROUP BY p.PersonID ORDER BY p.PersonID",
+    "display": "chart",
+    "position": 2
+  },
+  {
+    "business_role": "satin_alma",
+    "title": "Geciken satın alma satırları",
+    "question": "Beklenen teslimat tarihinden sonra teslim alınmış kaç satın alma satırı var?",
+    "sql": "SELECT COUNT(*) AS GECIKEN_SATIR FROM Purchasing.PurchaseOrderLines pol JOIN Purchasing.PurchaseOrders po ON po.PurchaseOrderID = pol.PurchaseOrderID WHERE pol.ReceivedDate > po.ExpectedDeliveryDate",
+    "display": "number",
+    "position": 1
+  },
+  {
+    "business_role": "satin_alma",
+    "title": "Eldeki stok miktarları",
+    "question": "Her stok kaleminin adı ve şu anki eldeki stok miktarı nedir?",
+    "sql": "SELECT si.StockItemName, h.QuantityOnHand FROM Warehouse.StockItemHoldings h JOIN Warehouse.StockItems si ON si.StockItemID = h.StockItemID ORDER BY si.StockItemName",
+    "display": "table",
+    "position": 2
+  },
+  {
+    "business_role": "muhasebe",
+    "title": "Toplam ciro (KDV hariç)",
+    "question": "Kredi notları hariç, faturalanan satışların KDV hariç toplam cirosu ne kadardır?",
+    "sql": "SELECT SUM(il.ExtendedPrice) AS CIRO FROM Sales.InvoiceLines il JOIN Sales.Invoices i ON i.InvoiceID = il.InvoiceID WHERE i.IsCreditNote = 0",
+    "display": "number",
+    "position": 1
+  },
+  {
+    "business_role": "muhasebe",
+    "title": "Müşteri hesap bakiyeleri",
+    "question": "Her müşterinin hesap bakiyesi (tüm hesap hareketlerinin toplamı) müşteri numarası ile birlikte ne kadardır?",
+    "sql": "SELECT ct.CustomerID, SUM(ct.AmountForTransaction) AS BAKIYE FROM Sales.CustomerTransactions ct GROUP BY ct.CustomerID ORDER BY ct.CustomerID",
+    "display": "table",
+    "position": 2
+  },
+  {
+    "business_role": "yonetim",
+    "title": "Brüt kâr",
+    "question": "Faturalanan satışların brüt kârı (satır kârlarının toplamı) ne kadardır?",
+    "sql": "SELECT SUM(il.LineProfit) AS BRUT_KAR FROM Sales.InvoiceLines il",
+    "display": "number",
+    "position": 1
+  },
+  {
+    "business_role": "yonetim",
+    "title": "Ülke bazında ciro",
+    "question": "Kredi notları hariç, faturaların faturalandığı müşterinin teslimat şehrinin ülkesine göre toplam cirosu nedir?",
+    "sql": "SELECT co.CountryName, SUM(il.ExtendedPrice) AS CIRO FROM Sales.Invoices i JOIN Sales.InvoiceLines il ON il.InvoiceID = i.InvoiceID JOIN Sales.Customers c ON c.CustomerID = i.BillToCustomerID JOIN Application.Cities ci ON ci.CityID = c.DeliveryCityID JOIN Application.Countries co ON co.CountryID = ci.CountryID WHERE i.IsCreditNote = 0 GROUP BY co.CountryName ORDER BY co.CountryName",
+    "display": "chart",
+    "position": 2
+  },
+  {
+    "business_role": "*",
+    "title": "Kayıtlı müşteri kartı sayısı",
+    "question": "Sistemde kayıtlı kaç farklı müşteri kartı vardır?",
+    "sql": "SELECT COUNT(DISTINCT c.CustomerID) AS MUSTERI_KARTI FROM Sales.Customers c",
+    "display": "number",
+    "position": 0
+  }
+]
