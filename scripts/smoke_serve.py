@@ -40,6 +40,16 @@ kimliği; aynı kimlikle sorulan takip sorusu tur 2 döner, yani kart bir daha s
 devam eden bir sohbettir. Ölçülen pano tohumlu bir kümenin panosudur, o yüzden ``--start`` ``--dataset``
 söylenmediğinde kümeyi kendisi söyler: ``serve``ın vitrin sırası hazır sorusu olmayan bir kümeye
 düşebilir ve boş bir pano dumanın geçmesi değildir.
+
+``--connections`` Run 7'nin bağlantı ekranını aynı sunucuda ama sunucusuz koşar (R7-22..R7-27):
+``serve`` yoklamayı geçici bir dosyadan okur (``--db-probe-file``), yani ne gerçek bir SQL Server ne bir
+sürücü gerekir. Yönetici ``PUT /api/connections/<küme>``i dosyanın ``sysadmin`` dediği sunucuyla dener:
+cevap 409'dur ve ``GET`` o kümeye hâlâ boş satır gösterir -- reddedilen bir bağlantının satırı yoktur.
+Aynı formu ``readonly`` dediği sunucuyla geçirdiğinde cevap 200'dür ve satır sırrın varlığını
+``has_secret``le söyler; parolanın kendisi -- betiğin bir kez ürettiği o değer -- görülen hiçbir cevap
+gövdesinde okunmaz. Son adım sağlık çipini bir kullanıcının gözünden okur: durum ``ok``, yöneticiye
+ayrılmış satırlar yok. Yoklanacak küme dosyada adıyla durmak zorunda olduğu için ``--connections`` da
+``--start`` gibi kümesini kendisi söyler.
 """
 
 from __future__ import annotations
@@ -74,6 +84,12 @@ HTTP_TIMEOUT_S = 60.0  # soru ajanı gerçekten koşuyor
 BOM = codecs.BOM_UTF8
 ASSET = re.compile(r"/assets/[^\s\"'<>]+")  # derlenmiş sayfanın yüklediği hashli dosyalar
 START_ROLE = "satis"  # --start panosunu süzer: tohum hazır soruların ilk rolü
+CONN_DATASET = "wwi_real"  # --connections'ın formu bir SQL Server kümesine yazılır (Run 4'ün gerçeği)
+CONN_DATABASE = "wwi"  # yoklama sunucu adı kadarını okur; veritabanının adı hiçbir şeyi değiştirmez
+PROBE_READONLY = "ro.local"  # yoklama dosyasının salt okunur girişi: kaydeden sunucu
+PROBE_SYSADMIN = "sa.local"  # yoklama dosyasının yönetici girişi: reddedilen sunucu
+
+BODIES: list[str] = []  # görülen her cevap gövdesi: --connections parolanın bunlarda kalmadığını ölçer
 
 
 class SmokeError(Exception):
@@ -86,23 +102,46 @@ def main(argv: list[str] | None = None) -> int:
     question = datasets.load_dataset(dataset).golden()[0]["question"]
     # ASSUMPTION: --start tohumlu bir küme ölçer; --dataset söylenmemişse küme betikten söylenir, çünkü
     # serve'ın kendi sırası hazır sorusu olmayan bir kümeye düşebilir ve boş pano dumanın geçmesi değildir.
-    served = dataset if args.start else args.dataset
+    # --connections da kümesini kendisi söyler: yoklama dosyası yoklanacak kümenin adını taşır.
+    served = dataset if (args.start or args.connections) else args.dataset
 
     fd, app_db = tempfile.mkstemp(suffix=".db")  # sunucunun boş kullanıcı dosyası, sonda silinir
     os.close(fd)
     password = secrets.token_urlsafe(16)  # bir kez üretilir; hiçbir satıra, günlüğe, hataya düşmez
-    server = _start_server(args.port, served, app_db, password)
+    probe = _write_probe(dataset) if args.connections else None
+    server = _start_server(args.port, served, app_db, password, probe)
     try:
         code = _run_steps(
             args.port, question, server, password,
             ui=args.ui, roles=args.roles, conversation=args.conversation, start=args.start,
+            connections=args.connections,
         )
     finally:
         log = _stop_server(server)
         Path(app_db).unlink(missing_ok=True)
+        if probe:
+            Path(probe).unlink(missing_ok=True)
     if code and log:
         print(log, file=sys.stderr)
     return code
+
+
+def _write_probe(dataset: str) -> str:
+    """Geçici yoklama dosyası (R7-26): sunucunun yerine geçen cevaplar, işi bitince silinir.
+
+    Adı söylenen küme ``ok`` durur ki sunulmakta olan dünyanın çipi de dosyadan okunsun; ``guard``
+    tarafında bir salt okunur, bir yönetici sunucu vardır -- kaydın iki yolu da oradan geçer.
+    """
+    fd, path = tempfile.mkstemp(prefix="db_probe_", suffix=".json")
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        json.dump(
+            {
+                "status": {dataset: "ok"},
+                "guard": {PROBE_READONLY: "readonly", PROBE_SYSADMIN: "sysadmin"},
+            },
+            handle,
+        )
+    return path
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -117,6 +156,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--start", action="store_true", help="başlangıç ekranını ve karttan açmayı da dener (R7-18)"
     )
+    parser.add_argument(
+        "--connections",
+        action="store_true",
+        help="bağlantı ekranını ve durum çipini de dener (R7-22..R7-27)",
+    )
     return parser.parse_args(argv)
 
 
@@ -129,6 +173,7 @@ def _run_steps(
     roles: bool = False,
     conversation: bool = False,
     start: bool = False,
+    connections: bool = False,
 ) -> int:
     """Adımlar sırayla; ilki tökezlerse durur, geçeni tek ✓ satırı olarak basar."""
     state: dict = {}
@@ -167,6 +212,16 @@ def _run_steps(
             ("başlangıç ekranı kartları", lambda: _check_start(port, state)),
             ("karttan açılan konuşma", lambda: _check_card_open(port, state)),
             ("kartın ikinci turu", lambda: _check_card_followup(port, state, question)),
+        ]
+    if connections:
+        # Form yöneticinin, çip herkesten okunur: yoklamanın sunucusu dosya, cevabı iki satır.
+        steps += [
+            ("yazabilen giriş 409", lambda: _check_guard_refused(opener, port, state)),
+            ("salt okunur girişin kaydı", lambda: _check_connection_saved(opener, port, state)),
+            ("parolanın hiçbir gövdede çıkmaması", lambda: _check_secret_unseen(port, state)),
+            ("yönetici kullanıcısı", lambda: _check_user_added(opener, port, state)),
+            ("kullanıcı girişi", lambda: _check_user_login(port, state)),
+            ("kullanıcının veritabanı çipi", lambda: _check_db_chip(port, state)),
         ]
     for name, step in steps:
         try:
@@ -429,6 +484,59 @@ def _check_card_followup(port: int, state: dict, question: str) -> str:
     return "tur 2 · aynı konuşma"
 
 
+def _check_guard_refused(opener, port: int, state: dict) -> str:
+    """Yazabilen bir giriş kaydedilmez: 409 düşer ve depoda satır kalmaz (R7-24).
+
+    Parola burada doğar -- reddin gövdesi de onu taşıyan bir gövde sayılsın diye yoklama ``sysadmin``
+    diyen sunucuya yazılır.
+    """
+    state["conn_password"] = secrets.token_urlsafe(16)  # bir kez; hiçbir cevap gövdesinde geçmeyecek
+    label = f"/api/connections/{CONN_DATASET}"
+    body = _conn_body(PROBE_SYSADMIN, "sa", state["conn_password"])
+    _expect(opener, _put_request(port, label, body), label, 409)
+    row = _get(opener, f"http://{HOST}:{port}{label}")
+    if row.get("server") or row.get("has_secret"):
+        raise SmokeError(f"reddedilen bağlantı depoda satır bıraktı: {row}")
+    return "409 · satır yok"
+
+
+def _check_connection_saved(opener, port: int, state: dict) -> str:
+    """Salt okunur giriş kaydedilir: 200 ve satır sırrın varlığını söyler, kendisini değil (R7-22)."""
+    label = f"/api/connections/{CONN_DATASET}"
+    body = _conn_body(PROBE_READONLY, "muhabir_ro", state["conn_password"])
+    payload = _send(opener, _put_request(port, label, body), label)
+    row = payload.get("connection") or {}
+    if row.get("server") != PROBE_READONLY or not row.get("has_secret"):
+        raise SmokeError(f"kayıt {row} döndü; sunucusu dolu ve has_secret true bir satır bekleniyor")
+    return f"{row['server']} · has_secret"
+
+
+def _check_secret_unseen(port: int, state: dict) -> str:
+    """Görülen her cevap gövdesi taranır: parolanın kendisi hiçbirinde okunmamalı (brief §4)."""
+    for body in BODIES:
+        if state["conn_password"] in body:
+            raise SmokeError("parola bir cevap gövdesinde okundu")
+    return f"{len(BODIES)} gövde temiz"
+
+
+def _check_db_chip(port: int, state: dict) -> str:
+    """Kullanıcının çipi: durum ok, nedeni yok -- nedeni ancak yönetici okur (R7-25).
+
+    İlk okuma yoklamayı bekletmez, yalnız ister: bekçi kendi turunu atana kadar burada bekleşilir.
+    """
+    deadline = time.monotonic() + HEALTH_TIMEOUT_S
+    while True:
+        db = _get(state["user_opener"], f"http://{HOST}:{port}/api/health").get("db") or {}
+        if db.get("state") == "ok":
+            break
+        if time.monotonic() >= deadline:
+            raise SmokeError(f"kullanıcının veritabanı çipi {db.get('state')}; ok bekleniyor")
+        time.sleep(POLL_S)
+    if "message_admin" in db or "connections_url" in db:
+        raise SmokeError("kullanıcı yöneticiye ayrılmış satırları okuyor")
+    return "ok · yönetici satırı yok"
+
+
 def _ask_turn(opener, port: int, question: str, state: dict) -> dict:
     """Zincirin bir turu: kimlik doğduysa gövde o kimlikle gider, cevaplanmayan tur dumanın tökezlemesidir."""
     payload = _send(
@@ -482,6 +590,27 @@ def _login_request(port: int, username: str, password: str) -> urllib.request.Re
     )
 
 
+def _conn_body(server: str, username: str, password: str) -> dict:
+    """Bağlantı formunun gövdesi: iki yoklama sunucusundan biri, SQL girişi ve parolanın kendisi."""
+    return {
+        "server": server,
+        "database": CONN_DATABASE,
+        "auth": "sql",
+        "username": username,
+        "password": password,
+    }
+
+
+def _put_request(port: int, label: str, body: dict) -> urllib.request.Request:
+    """Kaydetme isteği: formun o anki değerleri, yöneticinin çerez kavanozuyla gider."""
+    return urllib.request.Request(
+        f"http://{HOST}:{port}{label}",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="PUT",
+    )
+
+
 def _questions(opener, port: int) -> list[str]:
     """Geçmişin soruları, en yeni önce: geçmişin kimin olduğu sorusunun okunur cevabı."""
     payload = _get(opener, f"http://{HOST}:{port}/api/history")
@@ -505,10 +634,12 @@ def _send(opener, request, label: str, timeout: float = HTTP_TIMEOUT_S, raw: boo
         with opener.open(request, timeout=timeout) as response:
             content = response.read()
     except urllib.error.HTTPError as exc:
-        raise SmokeError(
-            f"{label} -> {exc.code}: {exc.read().decode('utf-8', 'replace')[:300]}"
-        ) from exc
-    return content if raw else json.loads(content.decode("utf-8"))
+        detail = exc.read().decode("utf-8", "replace")
+        BODIES.append(detail)  # reddin gövdesi de sırrı taşıyamaz
+        raise SmokeError(f"{label} -> {exc.code}: {detail[:300]}") from exc
+    text = content.decode("utf-8", "replace")
+    BODIES.append(text)
+    return content if raw else json.loads(text)
 
 
 def _expect(opener, request, label: str, code: int) -> str:
@@ -517,20 +648,22 @@ def _expect(opener, request, label: str, code: int) -> str:
         with opener.open(request, timeout=HTTP_TIMEOUT_S) as response:
             response.read()
     except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")
+        BODIES.append(detail)
         if exc.code != code:
-            raise SmokeError(
-                f"{label} -> {exc.code}: {exc.read().decode('utf-8', 'replace')[:300]}"
-            ) from exc
+            raise SmokeError(f"{label} -> {exc.code}: {detail[:300]}") from exc
         return f"{code}"
     raise SmokeError(f"{label} {code} yerine cevap verdi; kapı açık kalmış")
 
 
 def _start_server(
-    port: int, dataset: str | None, app_db: str, password: str
+    port: int, dataset: str | None, app_db: str, password: str, probe: str | None = None
 ) -> subprocess.Popen:
     argv = [sys.executable, "-m", "nl2sql", "serve", "--llm", "fake", "--port", str(port)]
     if dataset:
         argv += ["--dataset", dataset]
+    if probe:
+        argv += ["--db-probe-file", probe]  # R7-26: yoklamanın sunucusu yok, cevabı dosyada
     return subprocess.Popen(
         argv,
         cwd=ROOT,

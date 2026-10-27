@@ -954,3 +954,48 @@ SQL is a golden line or a hand-checked constant) but they are only *checked* aga
 moment, never run: a seed the guard refuses prints one line and drops, instead of becoming an error
 card. `wwi_real` ships 14 seeds across the five roles, so a fresh server pointed at the real database
 has something to show.
+
+## Veritabanı bağlantıları
+
+**Her veri kümesinin kendi bağlantısı vardır.** A SQL Server dataset's connection is a row in the app's
+own SQLite file (`data/bilgin.db`), filled in on a screen — `#/baglantilar`, admin — and the table
+lists one row per SQL Server dataset with its own dot, **Son başarılı** and **Son hata**. Switching the
+active dataset switches the database with it: the session's executor is rebuilt on the spot, no
+restart, and a dataset with no row keeps answering from whatever it was built on.
+
+**Parola ekrana hiç dönmez.** The password box says `değiştirmek için yazın` — an empty box **keeps**
+the stored password, it never clears it. What is stored is a **DPAPI** blob (Windows, local-machine
+scope, the dataset's own name as extra entropy), never the text. What that protects against is the file
+leaving the machine: a copied or backed-up app database, a commit and a log line all carry bytes that
+do not open on another computer, and one stolen blob cannot be replayed as another dataset's
+connection. No answer ever carries a password or a connection string — a row speaks of the secret only
+as `has_secret` — and a driver's own sentence, which quotes the connection string back, goes through
+`connections.scrub` before anyone reads it.
+
+**Ortam değişkeni kazanır.** `NL2SQL_MSSQL_CONN_<DATASET>` (the dataset name upper-cased) beats the
+stored row, and the generic `NL2SQL_MSSQL_CONN` beats it while it names the database the whole process
+is asking — the active dataset, on the mssql backend. Such a row carries an `Ortam değişkeninden`
+badge and its form opens read-only:
+`Bu bağlantı ortam değişkeninden geliyor; ekrandan değiştirilemez.`
+
+**Kaydetmeden önce sunucuya sorulur.** Neither `Bağlantıyı test et` nor `Kaydet` trusts the form: the
+login's own powers are read from the server — `sysadmin` and `db_owner` membership, the five
+database-level powers (`INSERT`, `UPDATE`, `DELETE`, `ALTER`, `EXECUTE`) and whether a sample of the
+map's own tables is readable. A login that writes or manages answers 409 with the report line by line
+and **no row is written**; a table the login cannot read is reported, not refused, because a map may
+name a table this database does not have. Every report ends with `Salt okunur giriş betiğini indir` —
+the dataset's own generated `login-script.sql`, the same script the map screen offers, so the fix is
+one download away.
+
+**Durum noktası hiçbir isteği bekletmez.** A background thread runs `SELECT 1` every `DB_CHECK_S` (60)
+over the datasets somebody actually reads, and again right after a saved connection or a connection
+error; what a screen shows is the last answer, never a new question. `#db-dot` (labelled *Veritabanı*)
+is that answer for every logged-in user — Bağlı / Erişilemiyor / Denenmedi / Kurulu değil — and while
+it is down a red `#db-banner` sits above the start, ask and thread screens. A user reads one generic
+sentence and nothing else:
+
+> `Veritabanına bağlanılamıyor, yöneticinize haber verin.`
+
+**An admin additionally gets** the driver's own text (`message_admin`, scrubbed) and the address of the
+screen that fixes it. A question asked while the state is down is refused before the model runs —
+`db_down` — because an answer built on rows that never arrived is worse than no answer.

@@ -131,3 +131,65 @@ def test_the_readme_documents_every_start_screen_mark(mark):
 @pytest.mark.parametrize("name", FORBIDDEN_NAMES)
 def test_the_start_section_names_no_third_party_product_or_company(name):
     assert name.lower() not in _start_section().lower(), f"{name} başlangıç ekranı bölümünde geçiyor"
+
+
+# Run 7'nin üçüncü yüzü: veritabanı bağlantıları (R7-22..R7-27). Aynı denetim, kendi başlığının
+# altında -- kümenin kendi yolu, DPAPI'nin neyi koruduğu, ortam değişkeninin önceliği, bekçinin
+# reddi ve durum noktasının kimin ne okuduğu.
+CONN_HEADING = "## Veritabanı bağlantıları"
+
+CONN_MARKS = (
+    "`data/bilgin.db`",
+    "`#/baglantilar`",
+    "**Son başarılı**",
+    "**Son hata**",
+    "`değiştirmek için yazın`",
+    "**DPAPI**",
+    "extra entropy",
+    "`has_secret`",
+    "`connections.scrub`",
+    "`NL2SQL_MSSQL_CONN_<DATASET>`",
+    "`NL2SQL_MSSQL_CONN`",
+    "`Ortam değişkeninden`",
+    "`Bu bağlantı ortam değişkeninden geliyor; ekrandan değiştirilemez.`",
+    "`Bağlantıyı test et`",
+    "`sysadmin`",
+    "`db_owner`",
+    "409",
+    "**no row is written**",
+    "`Salt okunur giriş betiğini indir`",
+    "`login-script.sql`",
+    "`DB_CHECK_S` (60)",
+    "`#db-dot`",
+    "`#db-banner`",
+    "`Veritabanına bağlanılamıyor, yöneticinize haber verin.`",
+    "`message_admin`",
+    "`db_down`",
+)
+
+
+def _conn_section() -> str:
+    """Bağlantılar bölümü: kendi başlığından bir sonraki başlığa (ya da dosyanın sonuna) kadar."""
+    lines = _readme().splitlines()
+    if CONN_HEADING not in lines:
+        pytest.fail(f"{CONN_HEADING} README'de yok")
+    start = lines.index(CONN_HEADING)
+    end = next(
+        (i for i, line in enumerate(lines[start + 1:], start + 1) if re.match(r"#\s\S", line)),
+        len(lines),
+    )
+    return "\n".join(lines[start:end])
+
+
+def test_the_readme_has_the_connections_heading():
+    assert CONN_HEADING in _readme().splitlines(), f"{CONN_HEADING} README'de başlık olarak yok"
+
+
+@pytest.mark.parametrize("mark", CONN_MARKS)
+def test_the_readme_documents_every_connections_mark(mark):
+    assert mark in _conn_section(), f"{mark} bağlantılar bölümünde yok"
+
+
+@pytest.mark.parametrize("name", FORBIDDEN_NAMES)
+def test_the_connections_section_names_no_third_party_product_or_company(name):
+    assert name.lower() not in _conn_section().lower(), f"{name} bağlantılar bölümünde geçiyor"
