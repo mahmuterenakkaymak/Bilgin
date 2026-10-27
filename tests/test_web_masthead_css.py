@@ -200,3 +200,93 @@ def test_the_nav_line_is_written_not_wrapped():
         assert effective(".nav-link").get("flex", "0 1 auto") in ("none", "0 0 auto"), (
             "bağlantı esneyebiliyor: uzun ad kendi içinde kırılıp satırı kabartıyor"
         )
+
+
+# ------------------------------------------------------------------ geniş ekran
+
+# Yöneticinin başlığının ikiyeindiği genişlik: sıradan bir dizüstü, telefon değil.
+WIDE_PX = 1200
+
+
+def lower_bound(condition: str) -> int | None:
+    """Koşulun alt sınırı px olarak; üst sınırlı (max-width) koşullar geniş ekran için işlemez."""
+    match = re.search(r"min-width:\s*(\d+)px", condition)
+    return int(match.group(1)) if match else None
+
+
+def wide_bodies(css: str) -> list[str]:
+    """Geniş ekranda gerçekten işleyen bloklar: alt sınırı genişliğe inen, üst sınırı onu kesmeyen."""
+    bodies = []
+    for condition, start, end in media_spans(css):
+        low = lower_bound(condition)
+        high = upper_bound(condition)
+        if low is None or low > WIDE_PX:
+            continue
+        if high is not None and high < WIDE_PX:
+            continue
+        bodies.append(css[start:end])
+    assert bodies, f"{STYLES.name} içinde {WIDE_PX}px'e çıkan bir min-width bloğu yok"
+    return bodies
+
+
+def effective_wide(selector: str) -> dict[str, str]:
+    """Geniş ekranda kazanan bildirimler: temeller, sonra işleyen media blokları, sıra ile."""
+    won: dict[str, str] = {}
+    for body in [base_css(CSS), *wide_bodies(CSS)]:
+        for selectors, decls in rules(body):
+            if selector in selectors:
+                won.update(decls)
+    return won
+
+
+def test_the_wide_head_is_one_row():
+    """`flex-wrap: wrap` telefonun iki satırlık ızgarası için yazıldı; geniş tarafın karşılığı
+    yazılmayınca altı bağlantı kimlik çipiyle Çıkış'ı kendi satırına indirdi ve her yönetici
+    ekranı iki satırlık başlık taşıdı (admin-ready-questions-ready-list-1366.png,
+    users-screen-users-table-1366.png) — 1366'da kırılma "başlığın bir parçası düşmüş" okunuyor.
+    Temelde sarma açık kaldığı için nowrap'u ancak 1200px'e çıkan bir blok verebilir.
+    """
+    head = effective_wide(HEAD)
+    assert head.get("display") == "flex", f"{HEAD} geniş ekranda ızgaraya dönmüş: {head}"
+    assert head.get("flex-wrap") == "nowrap", (
+        f"{HEAD} geniş ekranda hâlâ sarıyor: sığmayan parça kendi satırına düşüyor: {head}"
+    )
+
+
+def test_the_row_gives_its_shrink_room_to_the_nav():
+    """Sarma kapanınca sıra taşmaz, küçülmeye çalışır: küçülme hakkı olmayan taraf
+    (`min-width: auto`) payını vermez ve satır yine ikinci kata çıkar. Payı devralan gezinme
+    sığmayan bağlantıyı kendisi kaydırır; çipin tavanı yoksa uzayan ad satırı uzatır."""
+    nav = effective_wide(".masthead-nav")
+    assert nav.get("min-width") == "0", (
+        f".masthead-nav geniş ekranda küçülmüyor: payı kendine saklayan sıra taşar: {nav}"
+    )
+    assert nav.get("overflow-x") in ("auto", "scroll"), (
+        f"sığmayan bağlantı kaydırılmıyor, kırpılıyor: {nav}"
+    )
+    assert nav.get("flex-wrap", "nowrap") != "wrap", (
+        "gezinme kendi alanında sarmaya dönüyor: bağlantılar alt alta iniyor"
+    )
+    assert effective_wide(".masthead-nav .nav-link").get("flex", "0 1 auto") in ("none", "0 0 auto"), (
+        "bağlantı esneyebiliyor: uzun ad kendi içinde kırılıp satırı kabartıyor"
+    )
+    chip = effective_wide("#user-chip")
+    assert chip.get("max-width", "none") != "none", (
+        "kimlik çipinin tavanı yok: uzayan ad satırı uzatır, Çıkış yine sığmıyor"
+    )
+
+
+def test_no_wide_rule_drops_logout_onto_its_own_row():
+    """Çıkış'ın ikinci satıra inmesinin tek yolu satırın kendisinin açılması: sarmanın kapalı
+    olduğu bir flex sırasında onu oraya ancak tüm satırı isteyen bir pay taşır — `flex-basis:
+    100%` ya da `width: 100%` gibi. Geniş ekranda o payı hiçbir kural vermemeli."""
+    head = effective_wide(HEAD)
+    assert head.get("flex-wrap") == "nowrap", f"{HEAD} sarmaya açık: {head}"
+    out = effective_wide("#logout")
+    for prop in ("flex", "flex-basis", "width", "min-width"):
+        assert "100%" not in out.get(prop, ""), (
+            f"#logout {prop} ile tüm satırı istiyor: {out}"
+        )
+    assert out.get("display", "inline-block") != "block", (
+        f"#logout blok olarak diziliyor: {out}"
+    )
