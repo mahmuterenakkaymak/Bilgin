@@ -48,15 +48,19 @@ function ReadyRow({ row, busy, confirming, draft, handlers }) {
   const pending = !row.approved;
   const editing = Boolean(draft);
   const change = (name) => (event) => handlers.onField(name, event.target.value);
+  // Aday satırın başlığı önerinin kendi cümlesidir (ready.py başlığı sorudan uydurur): başlık
+  // sorunun aynısıysa gri satır basılmaz, yoksa onay kuyruğunun her satırı aynı cümleyi iki kez sayar.
+  const title = titleOf(row);
+  const question = String(row.question ?? "").trim();
 
   return (
     <li className="card ready-row" data-ready-id={row.id}>
       <div className="ready-row-main">
         <h3 className="ready-row-title">
-          {titleOf(row)}
+          {title}
           {pending && <span className="users-state ready-badge">Onay bekliyor</span>}
         </h3>
-        <p className="ready-row-question">{String(row.question ?? "")}</p>
+        {question && title !== question && <p className="ready-row-question">{question}</p>}
         <p className="ready-row-meta">
           {[displayLabel(row.display), `sıra ${count(row.position)}`, row.created_by ? String(row.created_by) : ""]
             .filter(Boolean)

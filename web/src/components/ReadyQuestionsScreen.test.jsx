@@ -308,6 +308,36 @@ describe("ReadyQuestionsScreen olayları", () => {
   });
 });
 
+describe("Satırın başlığı ile sorusu", () => {
+  // Satırın kendi ekranı: grup başlıkları ile not bantları saymaya karışmasın.
+  function rowHtml(row) {
+    const html = render(<ReadyQuestionsScreen rows={[row]} />);
+    return html.match(/<li class="card ready-row"[\s\S]*?<\/li>/)[0];
+  }
+
+  it("başlığı olmayan ya da başlığı sorusunun kendisi olan satır soruyu bir kez basar", () => {
+    const question = "Geçen ay net satışımız ne kadardı?";
+
+    const drafts = rowHtml(ready({ id: 7, title: question, question, approved: false }));
+    expect(drafts.split(question)).toHaveLength(2);
+    expect(drafts).not.toContain('class="ready-row-question"');
+    expect(drafts).toContain("Onay bekliyor");
+
+    const untitled = rowHtml(ready({ id: 8, title: "", question, approved: false }));
+    expect(untitled.split(question)).toHaveLength(2);
+    expect(untitled).toContain('class="ready-row-question"');
+  });
+
+  it("gerçek başlıklı satır başlığı ile soruyu iki ayrı satırda korur", () => {
+    const question = "Geçen ay net satışımız ne kadardı?";
+    const row = rowHtml(ready({ id: 9, title: "Ciro", question }));
+
+    expect(row).toContain("Ciro");
+    expect(row.split(question)).toHaveLength(2);
+    expect(row).toContain(`>${question}</p>`);
+  });
+});
+
 describe("Rol kapısı", () => {
   it("sıradan kullanıcı #/hazir-sorular ile açınca defter boyanmaz, gezinmede bağlantı yoktur", () => {
     window.location.hash = "#/hazir-sorular";
