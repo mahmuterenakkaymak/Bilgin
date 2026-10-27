@@ -3007,6 +3007,16 @@ a.db-label:hover {
   font-size: 14px;
 }
 
+/* Etikin cümlesi üstündekinin devamı: ızgaranın payı iki cümleyi ayırırdı, kendi payı kadar
+   geri çekilip lead'in altına bitişiyor. Lead'den küçüğü, sesi yükseltmiyor. */
+.login-tagline {
+  margin: calc(var(--space) * -1) 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 /* Not ile hata aynı kartta iki ayrı durumu söyler: biri uyarı, diğeri reddedilen giriş.
    Vurgu, dört yanı saran ton çizgisinin kalınlaşmış solu (T268): yalın border-left yuvarlak
    köşede kıvrılıp "Kullanıcı adı ya da parola hatalı."nın önüne parantez gibi düşüyordu. */

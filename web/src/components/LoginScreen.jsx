@@ -27,6 +27,11 @@ export default function LoginScreen({ note = "", onLogin }) {
       <form id="login-form" className="login-card" onSubmit={submit}>
         <h1 className="login-title">Bilgin</h1>
         <p className="login-lead">Sormaya devam etmek için oturum açın.</p>
+        {/* Kartın ne açtığını ilk kez gelen de bilsin: sabit bir cümle, adresi yok, veri seti
+            adı yok — ziyaretçi henüz kim olduğunu kanıtlamadı. */}
+        <p className="login-tagline" id="login-tagline">
+          Veritabanınıza Türkçe soru sorun; SQL'i Bilgin yazar.
+        </p>
         {note && <p className="login-note" id="login-note">{note}</p>}
         <div className="field">
           <label className="field-label" htmlFor="login-username">
