@@ -1495,3 +1495,69 @@ operable program or batch file.
 2026-10-27 04:22:39 | HANDS  | T331 try 2: M24 integration (no hand-made fakes): add tests/test_integration_m24.py (new file: real UserStore + real create_app + real session (fake from make_client) + real seeds on the built synthetic db: satis and satin_alma users see their role's cards + "*" cards, card SQL executed once for both inside the TTL (counting wrapper around the real executor), opening a card and asking a follow-up gives turn 2 with context.uses_turns [1], the admin approves a fresh answer as a card for satis and the satis user sees it next (after cache refresh), a user pins a personal card that the other user does not see, the agent client made zero calls for every /api/start) and run the whole suite + build
 2026-10-27 04:38:50 | ORCH   | T331: 1 older test(s) red at HEAD too - checking whether they are stale
 2026-10-27 04:39:19 | ORCH   | T331: stale tests updated automatically (T370) in 5b981e6: tests/test_visual_flows.py
+2026-10-27 04:47:55 | ORCH   | T331: PASSED (hands)
+2026-10-27 04:47:55 | ORCH   | M24: whole-project checks
+2026-10-27 04:55:50 | ORCH   | M24: whole-project checks green (19 command(s))
+2026-10-27 04:55:50 | ORCH   | M24: screenshots for the visual review
+2026-10-27 05:04:49 | ORCH   | M24: page problem: landing-empty-state-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: landing-empty-state-390: console error: Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: ask-golden-answer-chart-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: ask-ambiguous-clarify-then-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: export-buttons-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: saved-and-history-sidebar-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: rules-screen-validation-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: dark-mode-answer-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: login-deeplink-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: logout-clears-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: users-screen-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: user-readonly-rules-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: admin-map-onboard-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: conversation-three-turns-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: conversation-chart-refine-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: new-conversation-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: start-sales-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 05:04:49 | ORCH   | M24: page problem: start-sales-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: start-purchasing-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: card-answer-followup-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 05:04:49 | ORCH   | M24: page problem: card-answer-followup-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: admin-ready-questions-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: admin-connections-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 05:04:49 | ORCH   | M24: page problem: admin-connections-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: db-dot-user-ok-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: db-dot-user-down-390: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 05:04:49 | ORCH   | M24: page problem: db-dot-user-down-390: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: landing-empty-state-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: ask-golden-answer-chart-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: ask-ambiguous-clarify-then-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: export-buttons-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: saved-and-history-sidebar-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 05:04:49 | ORCH   | M24: page problem: saved-and-history-sidebar-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: rules-screen-validation-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: dark-mode-answer-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: login-deeplink-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: logout-clears-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: users-screen-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: users-screen-1366: console error: Failed to load resource: the server responded with a status of 409 (Conflict)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: user-readonly-rules-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: admin-map-onboard-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 05:04:49 | ORCH   | M24: page problem: admin-map-onboard-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: conversation-three-turns-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 05:04:49 | ORCH   | M24: page problem: conversation-three-turns-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: conversation-chart-refine-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: new-conversation-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: start-sales-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: start-sales-1366: console error: Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: start-purchasing-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: card-answer-followup-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: admin-ready-questions-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: admin-connections-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 05:04:49 | ORCH   | M24: page problem: admin-connections-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: db-dot-user-ok-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:04:49 | ORCH   | M24: page problem: db-dot-user-down-1366: TimeoutError: Page.click: Timeout 10000ms exceeded.
+2026-10-27 05:04:49 | ORCH   | M24: page problem: db-dot-user-down-1366: console error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+2026-10-27 05:10:26 | BRAIN  | M24: visual review with local Strata (125 screenshots)
+2026-10-27 05:21:19 | BRAIN  | M24: visual review done - 7 fix task(s) added
+2026-10-27 05:21:29 | BRAIN  | M24: review with sonnet in the background - hands keep building
+2026-10-27 05:21:44 | HANDS  | T376 try 1: the start board is empty on the dataset the product is shown on (M24 review 1): `datasets/wwi` has no `ready_questions.json` and no `files.ready_questions` in `datasets/wwi/dataset.json`, so `ensure_seeded` (nl2sql/start/seed.py:35) returns 0 and every role lands on "Panoda henüz kart yok" while `#/hazir-sorular` says "Henüz hazır soru yok." - Run 8 §2 requires `wwi` to carry the same fake-model coverage the flows use, and two visual flows die on the gap (`start-sales` clicks `button[data-card-refresh]`, `card-answer-followup` clicks `.start-card`; both time out at 390). Add `datasets/wwi/ready_questions.json` (2 lines per business role + 1 `*`, SQL taken from `datasets/wwi/golden.jsonl` so it runs on the wwi fixture, displays mixed so a number, a chart and a table all appear on the board) and `files.ready_questions` in `datasets/wwi/dataset.json`. Add to tests/test_ready_seed.py (existing file - only these new cases may be added): every dataset folder shipped in `datasets/` declares `files.ready_questions`; every line of wwi's file passes `policy.check` and runs on the built wwi db; its roles cover satis, satin_alma, muhasebe, yonetim and `*`
