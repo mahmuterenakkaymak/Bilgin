@@ -12,6 +12,7 @@
   <env key="NL2SQL_HOME" value="@HOME@" />
   <env key="NL2SQL_LANG" value="@LANG@" />
   <env key="NL2SQL_BACKEND" value="@BACKEND@" />
+  @MODEL_ENV@
   @DATASETS_ENV@
   <startmode>Automatic</startmode>
   <delayedAutoStart>true</delayedAutoStart>

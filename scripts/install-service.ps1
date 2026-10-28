@@ -53,6 +53,11 @@ $HealthUrl = "http://127.0.0.1:$Port/api/health"
 # The backend goes the same way: service-xml writes the NL2SQL_BACKEND the service starts with.
 $env:NL2SQL_HOME = $DataHome
 $env:NL2SQL_BACKEND = $Backend
+# ASSUMPTION: the profile the service will run is the one the environment names, and 'strata' is
+# the default the program itself falls back to (config.DEFAULT_LLM_MODEL). The service has no
+# shell to read it from, so the same name goes to service-check and into the XML it is installed
+# with: the key [secrets] seals below is that profile's key.
+$profileName = if ($env:NL2SQL_LLM_MODEL) { $env:NL2SQL_LLM_MODEL } else { 'strata' }
 
 function Step([string]$Id, [string]$Text) { Write-Output ('[{0}] {1}' -f $Id, $Text) }
 function StepWhat([string]$Id, [string]$Text) { Write-Output ('[{0}] WHATIF {1}' -f $Id, $Text) }
@@ -126,7 +131,7 @@ else {
 $check = $null
 if (-not $script:WhatIf) {
     try {
-        $check = & $PythonExe -m nl2sql service-check --dataset $Dataset --json 2>$null |
+        $check = & $PythonExe -m nl2sql service-check --dataset $Dataset --model $profileName --json 2>$null |
             Out-String | ConvertFrom-Json
     } catch { $check = $null }
 }
@@ -254,9 +259,6 @@ else {
 # ------------------------------------------------------------------ [secrets]
 # A Windows service has no environment to set a model key in (R8-21): the key becomes a
 # machine-scope DPAPI blob named after the variable, with the variable's name as its entropy.
-# ASSUMPTION: the profile the service will run is the one the environment names, and 'strata' is
-# the default the program itself falls back to (config.DEFAULT_LLM_MODEL).
-$profileName = if ($env:NL2SQL_LLM_MODEL) { $env:NL2SQL_LLM_MODEL } else { 'strata' }
 $keyEnv = ''
 $modelsPath = Join-Path $Repo 'config\models.json'
 if (Test-Path $modelsPath) {
@@ -315,10 +317,10 @@ else {
 # ------------------------------------------------------------------ [xml]
 if ($script:WhatIf) {
     StepWhat 'xml' ('would write ' + $ServiceXml + ' with the program itself; it is printed below')
-    Write-Output (& $PythonExe -m nl2sql service-xml --port $Port --dataset $Dataset --home $DataHome --lang $Lang | Out-String)
+    Write-Output (& $PythonExe -m nl2sql service-xml --port $Port --dataset $Dataset --home $DataHome --lang $Lang --model $profileName | Out-String)
 }
 else {
-    & $PythonExe -m nl2sql service-xml --port $Port --dataset $Dataset --home $DataHome --lang $Lang --out $ServiceXml |
+    & $PythonExe -m nl2sql service-xml --port $Port --dataset $Dataset --home $DataHome --lang $Lang --model $profileName --out $ServiceXml |
         Out-Null
     if ($LASTEXITCODE -ne 0) {
         Stop 'xml' 'the service XML could not be generated'

@@ -266,8 +266,10 @@
   "cli.help.service_check": "checks the model endpoint and the dataset's database connection; warnings only, exit code always 0",
   "cli.help.service_check_dataset": "dataset to check",
   "cli.help.service_check_json": "print the check as JSON",
+  "cli.help.service_check_model": "model profile to check; NL2SQL_LLM_MODEL when omitted",
   "cli.help.service_xml": "writes the WinSW XML of the Windows service; no secret goes into it",
   "cli.help.service_xml_home": "the service's data root (default %(default)s)",
+  "cli.help.service_xml_model": "the service's model profile; NL2SQL_LLM_MODEL when omitted",
   "cli.help.service_xml_out": "file the XML is written to; printed to stdout when omitted",
 
   "cli.paths.home": "Data root",

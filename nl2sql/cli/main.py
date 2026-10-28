@@ -1497,6 +1497,7 @@ def service_check(
     lang: str | None = None,
     connect=None,
     ping=llm.ping,
+    model: str | None = None,
 ) -> int:
     """Kurulumun iki yoklaması: modelin ucu açık mı, veritabanının girişi salt okunur mu (R8-23).
 
@@ -1506,6 +1507,8 @@ def service_check(
     ``--json`` Contracts ``service-check`` satırıdır. Bağlantı dizesi hiçbir satıra düşmez - yalnız
     kaynağının adı söylenir, guard'ın satırları da ``connections.scrub``tan geçer. ``connect``
     guard'ın bağdaç yeridir: testler oraya sahte bir sunucu koyar, ``ping`` de ``eval --compare``ınki.
+    ``model`` kurulumun mühürlediği profildir: söylenirse ucu ``config/models.json`` belirler, yani
+    servisin birazdan koşacağı profilin ucu yoklanır.
     """
     _utf8_stdout()
     lang = lang or _LANG
@@ -1516,13 +1519,13 @@ def service_check(
     except datasets.DatasetError as exc:
         print(exc)
         return EXIT_BAD_INPUT
-    model = _model_state(lang, ping)
+    state = _model_state(lang, ping, model)
     source, lines, ok = _connection_state(ds, lang, connect)
     if json_out:
         print(
             json.dumps(
                 {
-                    "model": model,
+                    "model": state,
                     "connection": {
                         "source": source,
                         "ok": ok,
@@ -1534,27 +1537,38 @@ def service_check(
             )
         )
         return 0
-    print(f"{_t('cli.check.model', lang)}: {_check_mark(model['ok'])} {model['message']}")
+    print(f"{_t('cli.check.model', lang)}: {_check_mark(state['ok'])} {state['message']}")
     print(f"{_t('cli.check.database', lang)} [{source}]:")
     for line in lines:
         print(f"  {_check_mark(line['ok'])} {line['message']}")
     return 0
 
 
-def _model_state(lang: str, ping) -> dict:
+def _model_state(lang: str, ping, model: str | None = None) -> dict:
     """Etkin profilin sağlığı: ``config.llm_settings()`` ucu, ``llm.ping``in kendi saati (R8-23).
 
     Sunucu bir Windows servisi olarak koştuğunda ``--model`` söylenmez, uç ortamdan gelir - yoklama
     de sunucunun birazdan gideceği uca bakar, yani ``Session.ping``in yokladığı profilin aynısına.
+    ``model`` söylendiğinde profil ``config/models.json``dan okunur: kurulum betiği anahtarı bir
+    profil için mühürlediyse ucu da o profilin ucu olur. Bilinmeyen bir ad uyarıdır, red değil -
+    çıkış kodu hep 0.
     """
-    settings = config.llm_settings()
-    profile = ModelProfile(name=settings.model, base_url=settings.base_url, model=settings.model)
+    if model:
+        try:
+            profile = get_profile(model)
+        except ProfileError as exc:
+            return {"ok": False, "message": str(exc)}
+    else:
+        settings = config.llm_settings()
+        profile = ModelProfile(
+            name=settings.model, base_url=settings.base_url, model=settings.model
+        )
     reason = ping(profile)
     if reason:
         return {"ok": False, "message": reason}
     return {
         "ok": True,
-        "message": _t("cli.check.model_ok", lang, model=settings.model, url=settings.base_url),
+        "message": _t("cli.check.model_ok", lang, model=profile.model, url=profile.base_url),
     }
 
 
@@ -1596,14 +1610,17 @@ def service_xml(
     home: str | Path,
     lang: str | None = None,
     out: str | Path | None = None,
+    model: str | None = None,
 ) -> int:
     """Kurulumun WinSW XML'ini üretir: şablonun doldurulmuş hali ekrana ya da ``--out``a (R8-22).
 
-    XML'in hiçbir satırı ortamdan gelmez - sunucunun ortamı dört addır ve bağın dizesiyle model
-    anahtarı onların arasında yoktur (R8-23). ``NL2SQL_DATASETS_DIR`` yalnız bugün koşan komutta
-    tanımlıysa yazılır: tanımsızken küme kod klasöründe kalır, yani servise ayrıca bir yol
-    söylemeye gerek yoktur. ``out`` söylenmediğinde çıktı boruya yazılabilir, o yüzden tek
-    cümlelik bir övgü de ancak dosya verildiğinde basılır.
+    XML'in hiçbir satırı sır taşımaz - bağın dizesiyle model anahtarı servisin ortamında değildir
+    (R8-23). ``NL2SQL_DATASETS_DIR`` yalnız bugün koşan komutta tanımlıysa yazılır: tanımsızken küme
+    kod klasöründe kalır, yani servise ayrıca bir yol söylemeye gerek yoktur. ``model`` de öyle:
+    ``--model`` söylenmezse bugün koşan komutun ``NL2SQL_LLM_MODEL``i alınır, çünkü kurulum betiği
+    model anahtarını hangi profil için mühürlediyse servisin de o adı okuması gerekir; ikisi de
+    yoksa servisin profili programın kendi varsayılanıdır. ``out`` söylenmediğinde çıktı boruya
+    yazılabilir, o yüzden tek cümlelik bir övgü de ancak dosya verildiğinde basılır.
     """
     _utf8_stdout()
     xml = winsw.render_xml(
@@ -1615,6 +1632,7 @@ def service_xml(
         lang=lang or _LANG,
         backend=config.backend(),
         datasets_dir=os.environ.get("NL2SQL_DATASETS_DIR") or None,
+        model=model or os.environ.get("NL2SQL_LLM_MODEL") or None,
     )
     if out is None:
         print(xml, end="")
@@ -2283,6 +2301,7 @@ def build_parser(lang: str) -> argparse.ArgumentParser:
         "--dataset", metavar="AD", required=True, help=_h("service_check_dataset", lang)
     )
     check_cmd.add_argument("--json", action="store_true", help=_h("service_check_json", lang))
+    check_cmd.add_argument("--model", metavar="PROFIL", help=_h("service_check_model", lang))
 
     xml_cmd = commands.add_parser(
         "service-xml", help=_h("service_xml", lang), parents=[lang_parent]
@@ -2290,6 +2309,7 @@ def build_parser(lang: str) -> argparse.ArgumentParser:
     xml_cmd.add_argument("--port", type=int, default=config.SERVE_PORT, help=_h("port", lang))
     _add_dataset_option(xml_cmd, lang)
     xml_cmd.add_argument("--home", default=str(config.HOME), help=_h("service_xml_home", lang))
+    xml_cmd.add_argument("--model", metavar="PROFIL", help=_h("service_xml_model", lang))
     xml_cmd.add_argument("--out", help=_h("service_xml_out", lang))
 
     return parser
@@ -2382,7 +2402,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "secret-set":
         return set_secret(args.env_name, args.lang)
     if args.command == "service-check":
-        return service_check(args.dataset, json_out=args.json, lang=args.lang)
+        return service_check(args.dataset, json_out=args.json, lang=args.lang, model=args.model)
     if args.command == "service-xml":
         return service_xml(
             port=args.port,
@@ -2390,6 +2410,7 @@ def main(argv: list[str] | None = None) -> int:
             home=args.home,
             lang=args.lang,
             out=args.out,
+            model=args.model,
         )
     if args.command == "ask":
         from nl2sql.app.conversations import ConversationNotFound

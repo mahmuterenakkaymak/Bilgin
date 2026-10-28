@@ -1,9 +1,10 @@
 """WinSW şablonunun doldurulması: ``deploy/windows/bilgin.xml`` -> kurulacak servisin XML'i (R8-22).
 
 Bir Windows servisinin ortamı XML'de yazar, o yüzden burada iki şey birden sabittir. Servisin
-ortamı dört anahtardır - NL2SQL_HOME, NL2SQL_LANG, NL2SQL_BACKEND ve istenirse
-NL2SQL_DATASETS_DIR - ve adı bir sır taşıdığını söyleyen bir anahtar şablona girse bile
-reddedilir: R8-23 gereği bağlantı dizesi uygulama veritabanında, model anahtarı
+ortamı üç anahtardır - NL2SQL_HOME, NL2SQL_LANG, NL2SQL_BACKEND - ve söylenirse ikisi daha
+yazılır: NL2SQL_LLM_MODEL, çünkü kurulum betiği model anahtarını hangi profil için mühürlediyse
+servis de o adı okumalıdır, ve NL2SQL_DATASETS_DIR. Adı bir sır taşıdığını söyleyen bir anahtar
+şablona girse bile reddedilir: R8-23 gereği bağlantı dizesi uygulama veritabanında, model anahtarı
 ``NL2SQL_HOME/secrets``ta DPAPI blobu olarak durur, ikisinin de XML'de işi yoktur. İkincisi,
 doldurulmamış bir boşluk servise bırakılamaz: ``@AD@`` biçimli bir metin çıktıda kalırsa
 fırlatılır, yani eksik bir parametre geç kurulmuş bir servis değil kurulmayan bir servis üretir.
@@ -27,6 +28,7 @@ SERVICE_NAME = "Bilgin"
 SERVICE_ACCOUNT = f"NT SERVICE\\{SERVICE_NAME}"
 HOST = "127.0.0.1"
 DATASETS_ENV_KEY = "NL2SQL_DATASETS_DIR"
+MODEL_ENV_KEY = "NL2SQL_LLM_MODEL"
 
 # R8-23: bu köklerden birini taşıyan bir env anahtarı, adı ne kadar masum görünürse görünsün,
 # XML'e girmemesi gereken bir değerin habercisidir.
@@ -45,12 +47,15 @@ def render_xml(
     lang: str,
     backend: str,
     datasets_dir: str | Path | None = None,
+    model: str | None = None,
 ) -> str:
     """Şablonu doldurur, kaçırılmış tek bir XML metni döndürür (R8-22).
 
     Servisin çalıştıracağı komut bugünkü ``serve``ın komut satırıdır: döngü adresi sabittir,
-    port ve küme kurulacak dünyanın ikisidir. ``datasets_dir`` söylenmediğinde o env satırı
-    hiç yazılmaz - küme kod klasöründe kaldığında servise ayrı bir yol söylemek gerekmez.
+    port ve küme kurulacak dünyanın ikisidir. ``datasets_dir`` ve ``model`` söylenmediğinde o
+    env satırı hiç yazılmaz - küme kod klasöründe kaldığında servise ayrı bir yol söylemek
+    gerekmez, profil de programın kendi varsayılanıdır. Bir profil adı sır değildir; anahtarın
+    kendisi ``NL2SQL_HOME/secrets``ta kalır.
     """
     home = Path(home)
     text = TEMPLATE_PATH.read_text(encoding="utf-8")
@@ -73,6 +78,12 @@ def render_xml(
         else f'  <env key="{DATASETS_ENV_KEY}" value="{escape(str(datasets_dir), _ENTITIES)}" />\n'
     )
     text = text.replace("  @DATASETS_ENV@\n", env)
+    model_env = (
+        ""
+        if model is None
+        else f'  <env key="{MODEL_ENV_KEY}" value="{escape(str(model), _ENTITIES)}" />\n'
+    )
+    text = text.replace("  @MODEL_ENV@\n", model_env)
     leftover = _LEFTOVER.search(text)
     if leftover:
         raise ValueError(f"şablonda boşluk kaldı: {leftover.group(0)}")
