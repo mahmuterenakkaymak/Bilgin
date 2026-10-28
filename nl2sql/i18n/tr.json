@@ -261,6 +261,8 @@
   "cli.help.template_out": "yazılacak şablon dosyası",
   "cli.help.paths": "kurulumun okuduğu her yolu adıyla söyler; sır ya da bağlantı dizesi yazılmaz",
   "cli.help.paths_json": "yolları JSON olarak yazdır",
+  "cli.help.secret_set": "model anahtarını sır klasörüne DPAPI ile yazar; anahtarı iki kez sorar",
+  "cli.help.secret_set_env": "anahtarın okunacağı ortam değişkeninin adı, ör. OPENAI_API_KEY",
 
   "cli.paths.home": "Veri kökü",
   "cli.paths.app_db": "Uygulama veritabanı",
@@ -274,6 +276,13 @@
   "cli.paths.secrets": "Gizli veri klasörü",
   "cli.paths.datasets": "Veri kümeleri",
   "cli.paths.onboard_dir": "Ekrandan yüklenen kümeler",
+
+  "cli.secret.key": "Model anahtarı: ",
+  "cli.secret.key_repeat": "Model anahtarı (tekrar): ",
+  "cli.secret.mismatch": "Anahtarlar eşleşmiyor.",
+  "cli.secret.empty": "Anahtar boş olamaz.",
+  "cli.secret.written": "Sır yazıldı: {path}",
+  "cli.secret.windows_only": "Sır klasörü DPAPI gerektirir ve yalnız Windows'ta çalışır; bu makinede {env} ortam değişkenini tanımlayın.",
 
   "cli.ask.model": "Model: {name} ({model}, bütçe {budget} token)",
   "cli.ask.no_index": "İndeks yok/eski; full modda çalışılıyor.",

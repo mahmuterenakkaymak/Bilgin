@@ -261,6 +261,8 @@
   "cli.help.template_out": "template file to write",
   "cli.help.paths": "prints every path the install reads, by name; never a secret or a connection string",
   "cli.help.paths_json": "print the paths as JSON",
+  "cli.help.secret_set": "writes a model key to the secrets folder with DPAPI; asks for the key twice",
+  "cli.help.secret_set_env": "name of the environment variable the key is read from, e.g. OPENAI_API_KEY",
 
   "cli.paths.home": "Data root",
   "cli.paths.app_db": "App database",
@@ -274,6 +276,13 @@
   "cli.paths.secrets": "Secret folder",
   "cli.paths.datasets": "Datasets",
   "cli.paths.onboard_dir": "Onboarded datasets",
+
+  "cli.secret.key": "Model key: ",
+  "cli.secret.key_repeat": "Model key (repeat): ",
+  "cli.secret.mismatch": "Keys do not match.",
+  "cli.secret.empty": "The key is empty.",
+  "cli.secret.written": "Secret written: {path}",
+  "cli.secret.windows_only": "The secrets folder needs DPAPI and works on Windows only; set the {env} environment variable on this machine.",
 
   "cli.ask.model": "Model: {name} ({model}, budget {budget} tokens)",
   "cli.ask.no_index": "No index (or a stale one); running in full mode.",

@@ -23,6 +23,7 @@ from pathlib import Path
 from openai import APIConnectionError, APIError, OpenAI
 
 from nl2sql import config
+from nl2sql.service.secrets import read_secret
 
 # Qwen-style reasoning blocks; an unterminated one runs to the end of the text.
 THINK_BLOCK = re.compile(r"<think(?:ing)?>.*?(?:</think(?:ing)?>|\Z)", re.DOTALL)
@@ -268,23 +269,38 @@ def key_missing_reason(api_key_env: str | None) -> str | None:
 
     The CLI asks this before it repeats an endpoint failure: a missing key is not a down server,
     and the advice it wants is the variable's name (PLAN R4-10). Naming no variable is no failure.
+    A Windows service has no environment to set the variable in, so the secrets folder answers the
+    same question (PLAN R8-21); the sentence still names the variable, because writing that blob is
+    what the operator does with the advice.
     """
     if not api_key_env:
         return None
-    value = os.environ.get(api_key_env)
-    if not value or not value.strip():
-        return f"API anahtarı yok: {api_key_env} ortam değişkenini tanımlayın."
-    return None
+    if _secret_value(api_key_env):
+        return None
+    return f"API anahtarı yok: {api_key_env} ortam değişkenini tanımlayın."
 
 
 def _api_key(api_key_env: str | None) -> str:
-    """Local endpoints take any key; a profile that names a variable requires it to be set."""
+    """Local endpoints take any key; a profile that names a variable requires it to be supplied."""
     if not api_key_env:
         return config.DEFAULT_LLM_API_KEY
-    reason = key_missing_reason(api_key_env)
-    if reason:
-        raise LLMError(reason)
-    return os.environ[api_key_env].strip()
+    value = _secret_value(api_key_env)
+    if value is None:
+        raise LLMError(key_missing_reason(api_key_env))
+    return value
+
+
+def _secret_value(env_name: str) -> str | None:
+    """Anahtarın değeri: önce ortam değişkeni, yoksa ``NL2SQL_HOME/secrets`` blobu (R8-21).
+
+    İkisi de yoksa - ya da boşsa - ``None``: "kurulu" sayılmaz, çünkü reddin cümlesi kullanıcının
+    bir sonraki adımını söyleyebilmeli.
+    """
+    value = os.environ.get(env_name)
+    if value and value.strip():
+        return value.strip()
+    stored = read_secret(env_name)
+    return stored.strip() if stored and stored.strip() else None
 
 
 def _tool_call(call) -> ToolCall:

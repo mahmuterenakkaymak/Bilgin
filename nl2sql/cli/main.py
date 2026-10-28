@@ -47,7 +47,7 @@ from nl2sql.agent.modes import MODES, ToolContext, get_mode
 from nl2sql.auth.bootstrap import dev_admin
 from nl2sql.auth.store import UserError, UserStore
 from nl2sql.cli.table import format_table
-from nl2sql.engine import checks, login_script
+from nl2sql.engine import checks, dpapi, login_script
 from nl2sql.engine.connections import ConnectionStore, resolve as resolve_connection
 from nl2sql.engine.dbstatus import DbStatus
 from nl2sql.engine.executor import LocalExecutor
@@ -83,6 +83,7 @@ from nl2sql.report.facts import compute_facts
 from nl2sql.report.narrate import narrate
 from nl2sql.schema_map import build, doc, excel, introspect, merge, template
 from nl2sql.schema_map.rules import load_rules
+from nl2sql.service.secrets import write_secret
 
 LLMS = ("fake", "openai")
 # ASSUMPTION: ölçüm aracının varsayılanı gerçek endpoint'tir; --llm fake model istemeyen ölçüm
@@ -1459,6 +1460,36 @@ def show_paths(json_out: bool = False, lang: str | None = None) -> int:
     return 0
 
 
+def set_secret(env_name: str, lang: str = "tr") -> int:
+    """Model anahtarını sır klasörüne yazar: iki kez sorar, ekrana yalnız yazdığı dosya yolu çıkar (R8-21).
+
+    Bir Windows servisinin ortam değişkeni yoktur, o yüzden anahtar ``NL2SQL_HOME/secrets``ta DPAPI
+    blobu olarak durur; anahtarın kendisi hiçbir satırda geçmez. DPAPI olmayan makinede hiçbir şey
+    yazılmaz - oranın yolu hâlâ ortam değişkenidir, reddin cümlesi onu söyler.
+    """
+    _utf8_stdout()
+    if not dpapi.available():
+        print(_t("cli.secret.windows_only", lang, env=env_name))
+        return EXIT_BAD_INPUT
+    value = _ask_secret(lang)
+    if value is None:
+        return EXIT_BAD_INPUT
+    print(_t("cli.secret.written", lang, path=write_secret(env_name, value)))
+    return 0
+
+
+def _ask_secret(lang: str = "tr") -> str | None:
+    """Anahtarı iki kez sorar; uyuşmazlık da boş cevap da bir yazım hatasıdır, yani cümle ve None."""
+    value = getpass.getpass(_t("cli.secret.key", lang))
+    if getpass.getpass(_t("cli.secret.key_repeat", lang)) != value:
+        print(_t("cli.secret.mismatch", lang))
+        return None
+    if not value.strip():
+        print(_t("cli.secret.empty", lang))
+        return None
+    return value
+
+
 def user_add(
     name: str,
     role: str,
@@ -2104,6 +2135,11 @@ def build_parser(lang: str) -> argparse.ArgumentParser:
     paths_cmd = commands.add_parser("paths", help=_h("paths", lang), parents=[lang_parent])
     paths_cmd.add_argument("--json", action="store_true", help=_h("paths_json", lang))
 
+    secret_cmd = commands.add_parser(
+        "secret-set", help=_h("secret_set", lang), parents=[lang_parent]
+    )
+    secret_cmd.add_argument("env_name", help=_h("secret_set_env", lang))
+
     return parser
 
 
@@ -2191,6 +2227,8 @@ def main(argv: list[str] | None = None) -> int:
         return write_template(out=args.out, lang=args.lang, **_given(dataset=args.dataset))
     if args.command == "paths":
         return show_paths(json_out=args.json, lang=args.lang)
+    if args.command == "secret-set":
+        return set_secret(args.env_name, args.lang)
     if args.command == "ask":
         from nl2sql.app.conversations import ConversationNotFound
 
