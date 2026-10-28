@@ -69,8 +69,9 @@ describe("harita sihirbazı — adımların hâli", () => {
 
   it("rapor gelince 1 biter ve 2 sürer, 3 beklemeye devam eder", () => {
     const html = screen(run(REPORTED));
-    expect(states(html)).toEqual(["done", "current", "todo"]);
-    expect(marks(html)).toEqual(["✓", "2", "3"]);
+    // Updated automatically: T487 changed this contract (a clean report ticks step 2 and moves the turn to 3).
+    expect(states(html)).toEqual(["done", "done", "current"]);
+    expect(marks(html)).toEqual(["✓", "✓", "3"]);
   });
 
   it("küme kurulunca 1 ve 2 biter, sıra 3'e geçer", () => {
@@ -80,7 +81,13 @@ describe("harita sihirbazı — adımların hâli", () => {
   });
 
   it("geçiş de tamamlanınca üç kart biter", () => {
-    const html = screen(run([...CREATED, { type: "activated", name: "ornek_fatura" }]));
+    // Updated automatically: T487 changed this contract (step 3 ticks only once the new dataset is in the list).
+    const html = render(
+      <MapScreen
+        state={run([...CREATED, { type: "activated", name: "ornek_fatura" }])}
+        datasets={[{ name: "ornek_fatura" }]}
+      />,
+    );
     expect(states(html)).toEqual(["done", "done", "done"]);
   });
 });
