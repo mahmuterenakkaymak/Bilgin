@@ -1088,3 +1088,82 @@ NL2SQL_BACKEND=mssql NL2SQL_MSSQL_CONN="<salt okunur giriş>" \
 
 What a test does guarantee stays the same: every question's golden SQL passes the policy against that
 dataset's own allowlist, so the run measures the model rather than a broken chain.
+
+## Windows service
+
+Bilgin runs as a Windows service (WinSW), so the box answers after a boot with nobody logged in. The
+service is the same `serve`: loopback only, the same login, the same read-only executor. WinSW is one
+executable the install script downloads and verifies, so nothing here adds a dependency.
+
+**Prerequisites** — the install script checks each one and stops on the first that fails:
+
+- an **elevated** Windows PowerShell 5.1 or PowerShell 7; a shell that is not one is refused;
+- the repository's own venv at `.venv\Scripts\python.exe`, dependencies installed (`uv sync`);
+- `127.0.0.1:8777` free, or another `-Port` given;
+- `NL2SQL_DEV_ADMIN_PASSWORD` unset at Machine *and* Process level — the development bootstrap has no
+  place in a service, so the install exits before changing anything while it exists;
+- the model endpoint reachable. The `model` and `connection` steps report what
+  `python -m nl2sql service-check --dataset NAME --json` answered, and only warn: an endpoint that is
+  down at install time is usually up before anyone asks a question.
+
+**One manual step, once.** WinSW is pinned to v2.12.0 and the script installs nothing it cannot
+verify, so `$WinSwSha256` at the top of `scripts\install-service.ps1` has to carry the SHA-256 of
+`WinSW-x64.exe` from the **official v2.12.0 release page**. While it is empty the `winsw` step stops
+with `fill in WinSwSha256 from the official release page` and nothing is downloaded or installed; a
+hash that does not match the file that arrived stops the install the same way.
+
+**Dry run first.** All three scripts take `-WhatIf`: every step prints with `WHATIF`, the install
+script prints the generated WinSW XML too, and nothing changes or downloads. The elevation check is
+reported under `-WhatIf` instead of stopping, so a dry run runs from an ordinary shell.
+
+```powershell
+# nothing is touched, the XML is printed
+powershell -ExecutionPolicy Bypass -File scripts\install-service.ps1 -WhatIf
+
+# install: HOME defaults to C:\ProgramData\Bilgin, the port to 8777
+powershell -ExecutionPolicy Bypass -File scripts\install-service.ps1 -Home C:\ProgramData\Bilgin -Port 8777 -Dataset wwi_real -Lang tr -Backend mssql
+
+# after a code change: stop, rebuild the UI only when something under web\ is newer, start, health
+powershell -ExecutionPolicy Bypass -File scripts\update-service.ps1 -Port 8777
+
+# remove the service; the data root survives unless -RemoveData says otherwise
+powershell -ExecutionPolicy Bypass -File scripts\uninstall-service.ps1
+```
+
+`-Home -Port -Dataset -Lang -Backend` are not only the install's: they become the `NL2SQL_HOME`,
+`NL2SQL_LANG` and `NL2SQL_BACKEND` the service starts with. `-Repo` names a checkout other than the
+one holding the script, `-CopyAppDb` brings the development `data\bilgin.db` and the dataset's built
+index over when `HOME` has neither, and `-RemoveData` is the only flag that deletes the data root —
+after asking for a `y` typed at the console. `update-service.ps1` fetches no code: the operator
+brings the new version over between the stop and the start, and the only build it runs is the UI,
+only when a file under `web\` is newer than `nl2sql\web\static\index.html`.
+
+**Where the data lives.** The service owns a data root — `NL2SQL_HOME`, `C:\ProgramData\Bilgin` by
+default — with `data\bilgin.db`, `logs\`, `index\`, `eval_out\`, `datasets\` and `secrets\` under it.
+`python -m nl2sql paths` prints each of those resolved, `--json` for a script, and never a variable's
+value or a connection string. WinSW's own wrapper log rolls by size under `HOME\logs`.
+
+**Connections are entered in the admin panel.** A dataset's SQL Server connection is a row of the app
+database, written on the **Database connections** screen (`#/baglantilar`) and stored as a DPAPI blob.
+That is the only route a service has: the XML the install writes carries exactly `NL2SQL_HOME`,
+`NL2SQL_LANG` and `NL2SQL_BACKEND`, and refuses any environment key whose name says
+`PASSWORD|KEY|SECRET|CONN|TOKEN` — a connection string never ends up in a service definition every
+administrator can read. Enter them once, in the browser the service serves.
+
+**Model keys go into the secrets folder**, for the same reason: `HOME\secrets\<ENV_NAME>.bin`, a
+machine-scope DPAPI blob whose entropy is the variable's own name. `python -m nl2sql secret-set
+UNSLOTH_API_KEY` writes one interactively and the install script offers to seal the key of the model
+profile itself; the folder's ACL leaves it readable by Administrators and `NT SERVICE\Bilgin` only.
+The program reads the environment variable first and the file second, so a development box that
+already has the variable set needs no secrets folder at all.
+
+**Manual check list** — the run nobody automates, because it reboots a machine:
+
+1. `-WhatIf` first: every step prints and `C:\ProgramData\Bilgin` stays exactly as it was.
+2. Fill `$WinSwSha256`, run the install, read its last line — that line is the URL.
+3. Open `http://127.0.0.1:8777`, log in, ask one question.
+4. **Reboot** the machine and open `http://127.0.0.1:8777` again: the service came up on its own,
+   with nobody logged in (automatic start, delayed).
+5. Run `scripts\uninstall-service.ps1` and check that `C:\ProgramData\Bilgin` is still there — the
+   users, the stored connections, the logs and the sealed keys outlive an uninstall, because a
+   reinstall should not start from zero.

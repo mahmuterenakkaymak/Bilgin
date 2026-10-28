@@ -1076,3 +1076,85 @@ NL2SQL_BACKEND=mssql NL2SQL_MSSQL_CONN="<salt okunur giriş>" \
 
 Bir testin güvence altına aldığı şey yine aynı: her sorunun altın SQL'i kümenin kendi allowlist'inden
 geçer, yani bu koşum modeli ölçer, bozuk bir zinciri değil.
+
+## Windows servisi
+
+Bilgin bir Windows servisi olarak (WinSW) çalışır; makine açıldığında kimse giriş yapmadan da kutu
+kendisi cevap verir. Servis aynı `serve`dır: yalnız loopback, aynı giriş, aynı salt okunur executor.
+WinSW tek bir çalıştırılabilir dosyadır ve kurulum betiği onu indirip doğrular, yani burada yeni bir
+bağımlılık eklenmez.
+
+**Ön koşullar** — kurulum betiği her birine bakar ve ilki tutmayanda durur:
+
+- **yükseltilmiş** bir Windows PowerShell 5.1 ya da PowerShell 7; öyle olmayan bir kabuk reddedilir;
+- depodaki `.venv\Scripts\python.exe` (bağımlılıklar `uv sync` ile kurulmuş);
+- `127.0.0.1:8777` boş, değilse başka bir `-Port` verilir;
+- `NL2SQL_DEV_ADMIN_PASSWORD` Machine ve Process düzeyinde kurulu **değil** — geliştirme önyüklemesinin
+  bir serviste yeri yoktur, o yüzden değişken duruyorsa betik hiçbir şeyi değiştirmeden çıkar;
+- model uç noktası erişilebilir. `model` ve `connection` adımları
+  `python -m nl2sql service-check --dataset NAME --json` çıktısını yazar ve yalnız uyarır: kurulumda
+  kapalı olan bir uç nokta soru sorulana kadar açılmış olur.
+
+**Tek elle adım, bir kez.** WinSW v2.12.0'a sabitlenmiştir ve betik doğrulayamadığı hiçbir şeyi
+kurmaz; bu yüzden `scripts\install-service.ps1` dosyasının başındaki `$WinSwSha256`'ya **resmî
+v2.12.0 sürüm sayfası**ndaki `WinSW-x64.exe` SHA-256 değeri yazılır. O boşken `winsw` adımı
+`fill in WinSwSha256 from the official release page` ile durur; hiçbir şey indirilmez de kurulmaz.
+İnen dosyanın hash'i tutmuyorsa kurulum aynı şekilde durur.
+
+**Önce denemesi.** Üç betik de `-WhatIf` alır: her adım `WHATIF` ile yazılır, kurulum betiği bir de
+üretilen WinSW XML'ini basar, hiçbir şey değişmez ya da inmez. Yetki denetimi `-WhatIf`te durdurmak
+yerine bildirilir, yani deneme sıradan bir kabuktan da koşulur.
+
+```powershell
+# hiçbir şeye dokunulmaz, XML yazdırılır
+powershell -ExecutionPolicy Bypass -File scripts\install-service.ps1 -WhatIf
+
+# kurulum: HOME varsayılan olarak C:\ProgramData\Bilgin, port 8777
+powershell -ExecutionPolicy Bypass -File scripts\install-service.ps1 -Home C:\ProgramData\Bilgin -Port 8777 -Dataset wwi_real -Lang tr -Backend mssql
+
+# kod değişince: durdur, web\ altındaki bir dosya daha yeniyse arayüzü kur, başlat, sağlığa bak
+powershell -ExecutionPolicy Bypass -File scripts\update-service.ps1 -Port 8777
+
+# servisi kaldır; veri kökü -RemoveData söylenmedikçe yerinde kalır
+powershell -ExecutionPolicy Bypass -File scripts\uninstall-service.ps1
+```
+
+`-Home -Port -Dataset -Lang -Backend` yalnız kurulumun değildir: servisin başladığı `NL2SQL_HOME`,
+`NL2SQL_LANG` ve `NL2SQL_BACKEND` olurlar. `-Repo` betiği tutan klasör dışındaki bir checkout'u söyler,
+`-CopyAppDb` `HOME`da ikisi de yoksa geliştirme `data\bilgin.db` dosyasını ve kümenin kurulmuş
+indeksini taşır. `-RemoveData` veri kökünü silen tek bayraktır ve önce kumanda bir `y` cevabı ister.
+`update-service.ps1` kod getirmez: yeni sürümü durdurma ile başlatma arasında operatör taşır, betiğin
+tek kurduğu şey arayüzdür ve o da yalnız `web\` altındaki bir dosya `nl2sql\web\static\index.html`
+dosyasından daha yeniyse yapılır.
+
+**Veri nerede.** Servisin kendi veri kökü vardır — `NL2SQL_HOME`, varsayılan `C:\ProgramData\Bilgin` —
+ve altında `data\bilgin.db`, `logs\`, `index\`, `eval_out\`, `datasets\` ile `secrets\` durur.
+`python -m nl2sql paths` hepsini çözülmüş haliyle yazdırır (bir betik okuyacaksa `--json`), hiçbir
+ortam değişkeninin değerini ya da bağlantı dizesini yazdırmaz. WinSW'in kendi günlüğü `HOME\logs`
+altında boyuta göre döner.
+
+**Bağlantılar yönetici panelinden girilir.** Bir SQL Server kümesinin bağlantısı uygulama
+veritabanının bir satırıdır; **Veritabanı bağlantıları** ekranından (`#/baglantilar`) girilir ve DPAPI
+blobu olarak saklanır. Bir servisin başka yolu yoktur: kurulumun yazdığı XML tam olarak
+`NL2SQL_HOME`, `NL2SQL_LANG` ve `NL2SQL_BACKEND` anahtarlarını taşır, adında
+`PASSWORD|KEY|SECRET|CONN|TOKEN` geçen hiçbir ortam anahtarını kabul etmez — böylece bir bağlantı
+dizesi her yöneticinin okuyabildiği bir servis tanımına düşmez. Bağlantılar bir kez, servisin
+sunduğu tarayıcıda girilir.
+
+**Model anahtarları sır klasörüne** gider, aynı sebeple: `HOME\secrets\<ENV_NAME>.bin`, entropy'si
+değişkenin kendi adı olan makine kapsamı bir DPAPI blobu. `python -m nl2sql secret-set
+UNSLOTH_API_KEY` bir tane etkileşimli yazar, kurulum betiği de model profilinin anahtarını kendisi
+mühürlemeyi önerir; klasörün ACL'ı okuma yetkisini yalnız Yöneticiler ve `NT SERVICE\Bilgin`e bırakır.
+Program önce ortam değişkenine, sonra dosyaya baktığı için değişkeni kurulu bir geliştirme
+makinesinin sır klasörüne hiç gerek duymaz.
+
+**Elle kontrol listesi** — kimsenin otomatikleştirmediği koşum, çünkü makine yeniden başlar:
+
+1. Önce `-WhatIf`: her adım yazılır ve `C:\ProgramData\Bilgin` olduğu gibi kalır.
+2. `$WinSwSha256` doldurulur, kurulum koşulur, son satır okunur — o satır URL'dir.
+3. `http://127.0.0.1:8777` açılır, giriş yapılır, bir soru sorulur.
+4. **Makineyi yeniden başlat** (reboot) ve `http://127.0.0.1:8777` adresini yeniden aç: servis kendi
+   kendine ayağa kalkmıştır, kimse giriş yapmadan (otomatik başlangıç, gecikmeli).
+5. `scripts\uninstall-service.ps1` koşulur ve `C:\ProgramData\Bilgin`in hâlâ yerinde olduğuna bakılır
+   — kullanıcılar, saklanan bağlantılar, günlükler ve mühürlü anahtarlar bir kaldırılmadan sağ çıkar,
+   çünkü yeniden kurulum sıfırdan başlamamalı.
