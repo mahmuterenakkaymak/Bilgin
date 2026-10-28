@@ -13,6 +13,9 @@ export function registerCatalog(lang, catalog) {
   catalogs[lang] = catalog ?? {};
 }
 
+// Boş katalog "henüz inmedi" demektir: içi boş bir dille boyamak cümle yerine anahtar gösterir.
+const hasCatalog = (code) => Object.keys(catalogs[code] ?? {}).length > 0;
+
 // İki ayrı sabit import: vite her kataloğu kendi chunk'ına yazar (R8-18 bundle taraması).
 export async function loadCatalog(lang) {
   const code = normalize(lang);
@@ -45,7 +48,21 @@ export function I18nProvider({ lang, children }) {
   // henüz seçim yoksa prop izlenir, böylece giriş sonrası me.lang de uygulanır.
   const [chosen, setChosen] = useState(null);
   const current = chosen ?? normalize(lang);
-  const value = useMemo(() => ({ lang: current, t: makeT(current), setLang: setChosen }), [current]);
+  // Dil, kataloğu geldiği an değişir: düğme de me.lang de aynı yoldan geçer (açılışın kendi
+  // indirmesi main.jsx'te). Katalogu inmemiş dile boyamak cümle yerine anahtar taşırdı, o yüzden
+  // indirme bitene kadar ekranda eski dil durur; reddedilen indirme de eski dilde bırakır.
+  const value = useMemo(
+    () => ({
+      lang: current,
+      t: makeT(current),
+      setLang: (code) => {
+        const next = normalize(code);
+        if (hasCatalog(next)) setChosen(next);
+        else loadCatalog(next).then(() => setChosen(next), () => {});
+      },
+    }),
+    [current],
+  );
   return createElement(I18nContext.Provider, { value }, children);
 }
 
