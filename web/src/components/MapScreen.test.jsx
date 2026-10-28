@@ -484,7 +484,8 @@ describe("App — Veritabanı haritası bağlantısı", () => {
     const admin = render(<App user={{ username: "admin", role: "admin" }} />);
     expect(admin).toContain('id="nav-map"');
     expect(admin).toContain('href="#/harita"');
-    expect(admin).toContain(">Veritabanı haritası</a>");
+    expect(admin).toContain('title="Veritabanı haritası"');
+    expect(admin).toContain(">Harita</a>");
 
     for (const app of [render(<App user={{ username: "analist", role: "user" }} />), render(<App />)]) {
       expect(app).not.toContain('id="nav-map"');

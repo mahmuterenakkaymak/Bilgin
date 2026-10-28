@@ -793,3 +793,6 @@
 2026-10-28 06:57:35 | ORCH   | final: whole-project checks
 2026-10-28 07:07:53 | ORCH   | final: whole-project checks RED: ['.venv\\Scripts\\python -m pytest -q', 'npm --prefix web test']
 2026-10-28 07:07:58 | BRAIN  | M29: review with sonnet
+2026-10-28 07:09:19 | ORCH   | M29: review also changed ['tests/test_integration_m29.py'] - stashed, not committed
+2026-10-28 07:09:42 | HANDS  | T488 try 1: stale pin: `tests/test_cli_lang.py` `TODAY_HELP["top"]` (test_tr_help_equals_todays_text[top], red at HEAD) lists the top-level subcommands as they were before M29; T447 added `paths`, T449 `service-check` and T450 `service-xml` (with their tr help lines), so the golden text is outdated, not the CLI. Update only that `TODAY_HELP["top"]` entry (and the parsers of the three new commands if the test needs them in PARSERS) to today's `python -m nl2sql --help` tr text; the en no-Turkish-letter test must stay green
+2026-10-28 07:11:16 | ORCH   | hands: changed memory note cli-help-golden-pin.md - tests/test_cli_lang.py's TODAY_HELP[\"top\"] pins the whole tr --help body, so adding any CLI subcommand turns test_tr_help_equals_todays_text[top] red until the golden gains the name and its help line.
