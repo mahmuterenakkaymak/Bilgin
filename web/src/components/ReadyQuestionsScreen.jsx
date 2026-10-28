@@ -36,6 +36,20 @@ function titleOf(row) {
   return String(row?.title ?? "").trim() || `#${row?.id ?? ""}`;
 }
 
+// "Yalnız bekleyenler" süzgecinin adresi: yol aynı kalır (route.js sorgu imini yok sayar), yalnız
+// `pending=1` işareti eklenir — yenileyince de aynı liste gelir, yoksa süzgeç bir tıklık olurdu.
+function readPendingFilter() {
+  if (typeof window === "undefined") return false;
+  const query = String(window.location.hash || "").split("?")[1] ?? "";
+  return new URLSearchParams(query).get("pending") === "1";
+}
+
+function writePendingFilter(on) {
+  if (typeof window === "undefined") return;
+  const path = String(window.location.hash || "").split("?")[0] || "#/hazir-sorular";
+  window.location.hash = on ? `${path}?pending=1` : path;
+}
+
 // İşin aşaması tek cümle: koşan soru ile aday satır sayısı ayrı ayrı okunur, yoksa "çalışıyor"
 // hiçbir şey söylemez.
 function jobText(job, t) {
@@ -59,7 +73,7 @@ function ReadyRow({ row, busy, confirming, draft, handlers }) {
   const question = String(row.question ?? "").trim();
 
   return (
-    <li className="card ready-row" data-ready-id={row.id}>
+    <li className="card ready-row" data-ready-id={row.id} data-ready-approved={pending ? undefined : "1"}>
       <div className="ready-row-main">
         <h3 className="ready-row-title">
           {title}
@@ -214,9 +228,17 @@ export default function ReadyQuestionsScreen({ rows = [], loading = false, error
   const [busyId, setBusyId] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
   const [draft, setDraft] = useState(null); // düzenlenen satırın alanları | null: form kapalı
+  const [onlyPending, setOnlyPending] = useState(readPendingFilter); // süzgecin hali adreste durur
 
   const list = (Array.isArray(rows) ? rows : []).filter((row) => row?.id !== undefined && row?.id !== null);
-  const groups = groupByRole(list, lang);
+  const pendingCount = list.reduce((total, row) => total + (row.approved ? 0 : 1), 0);
+  // Onay bekleyenler grubun başına geçer (M28 review 4): yöneticinin iş yapabildiği satırlar,
+  // onaylıların arasında kaybolmaz. Süzgeç açığıysa onaylı satır hiç listelenmez.
+  const visible = onlyPending ? list.filter((row) => !row.approved) : list;
+  const groups = groupByRole(visible, lang).map((group) => ({
+    ...group,
+    items: [...group.items].sort((a, b) => Number(Boolean(a.approved)) - Number(Boolean(b.approved))),
+  }));
 
   // Aday satırlar iş bittiğinde depoya yazılmış olur: işin sözü ekranda kalsın, liste baştan
   // okunsun, yoksa "9 aday eklendi" diyen ekranın altında dokuz satır görünmez.
@@ -339,8 +361,15 @@ export default function ReadyQuestionsScreen({ rows = [], loading = false, error
     onField: (name, value) => setDraft((current) => ({ ...current, [name]: value })),
   };
 
-  // Okuma hatasının cümlesi bantta durur; satır yuvası aynı sözü bir daha saymaz.
-  const emptyText = loading ? t("ready.empty.loading") : t("ready.empty.none");
+  const togglePending = () => {
+    const next = !onlyPending;
+    setOnlyPending(next);
+    writePendingFilter(next);
+  };
+
+  // Okuma hatasının cümlesi bantta durur; satır yuvası aynı sözü bir daha saymaz. Süzgeç her şeyi
+  // gizliyorsa "hiç soru yok" değil "bekleyen yok" okunur — onaylılar yerlerinde duruyor.
+  const emptyText = loading ? t("ready.empty.loading") : onlyPending ? t("ready.empty.filtered") : t("ready.empty.none");
 
   return (
     <section id="ready-screen" className="screen ready-screen">
@@ -359,6 +388,20 @@ export default function ReadyQuestionsScreen({ rows = [], loading = false, error
           {t("ready.suggest")}
         </button>
       </div>
+
+      {list.length > 0 && (
+        <button
+          type="button"
+          id="ready-filter-pending"
+          className="btn ready-filter"
+          aria-pressed={onlyPending}
+          title={t("ready.filter.title")}
+          onClick={togglePending}
+        >
+          {t("ready.filter.pending")}
+          <span className="ready-filter-count">{pendingCount}</span>
+        </button>
+      )}
 
       {job && (
         <p className="rules-note" id="ready-job" role="status">

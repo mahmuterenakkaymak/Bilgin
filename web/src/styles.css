@@ -3176,6 +3176,62 @@ a.db-label:hover {
   gap: calc(var(--space) * 0.5);
 }
 
+/* Onaylı satır tek satıra iner (M28 review 4): başlık ile künye aynı hizada, soru yinelenmez —
+   başlık zaten onun adı, rozet zaten yalnız onaysızda. DOM olduğu gibi kalır (aç/düzenle/sil ve
+   soru satırda duruyor), yalnız dizilim değişir; bu yüzden sınıf değil nitelik: dondurulmuş test
+   <li class="card ready-row"> öbeğini arıyor, sınıfa eklenen ad o örüntüyü kırardı. */
+.ready-row[data-ready-approved] {
+  align-items: center;
+}
+
+.ready-row[data-ready-approved] .ready-row-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 calc(var(--space) * 1.5);
+}
+
+.ready-row[data-ready-approved] .ready-row-question {
+  display: none;
+}
+
+.ready-row[data-ready-approved] .ready-row-title,
+.ready-row[data-ready-approved] .ready-row-meta {
+  margin: 0;
+}
+
+/* "Yalnız bekleyenler" süzgeci: başlığın altındaki sayım satırının yerini alan, listeyi gerçekten
+   süzen düğme. Basılı hali vurgulanır, yuvarlak rozek kaç satır beklediğini söyler. */
+.ready-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space) * 0.5);
+}
+
+.ready-filter[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.ready-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6em;
+  padding: 0 0.45em;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ready-filter[aria-pressed="true"] .ready-filter-count {
+  background: var(--surface);
+  color: var(--accent);
+}
+
 .ready-confirm {
   display: inline-flex;
   flex-wrap: wrap;
