@@ -126,13 +126,9 @@ function Report({ preview }) {
       </p>
       {errors.length > 0 && (
         <div className="map-errors-wrap">
-          {/* Telefon kartında yazıyı CSS üretiyor (R8-18): sözü değişken olarak buradan alır ki
-              arayüz İngilizceyken Türkçe kalmasın. */}
-          <table
-            className="map-errors"
-            id="map-errors"
-            style={{ "--cell-row": t("map.col.row"), "--cell-col": t("map.col.column") }}
-          >
+          {/* Telefon kartında hücre kendi sütun adını taşır (M28 review 3): söz kataloğun kendi
+              satırıdır, CSS'in ürettiği yazı değil — arayüz İngilizceyken Türkçe kalmaz. */}
+          <table className="map-errors" id="map-errors">
             <thead>
               <tr>
                 <th scope="col">{t("map.col.sheet")}</th>
@@ -149,8 +145,14 @@ function Report({ preview }) {
                       üstünde ikinci bir sorun gibi okunuyordu (M24 craft 2). ASSUMPTION: hücre
                       yerinde kalıyor, yalnız etiketini yitiriyor; <td> düşerse tablo geniş ekranda
                       mesajı "Satır" başlığının altına kaydırıyor. */}
-                  <td className={blank(issue.row) ? "map-cell-blank" : "map-cell-row"}>{cell(issue.row)}</td>
-                  <td className={blank(issue.column) ? "map-cell-blank" : "map-cell-col"}>{cell(issue.column)}</td>
+                  <td className={blank(issue.row) ? "map-cell-blank" : "map-cell-row"}>
+                    <span className="cell-label">{`${t("map.col.row")}: `}</span>
+                    {cell(issue.row)}
+                  </td>
+                  <td className={blank(issue.column) ? "map-cell-blank" : "map-cell-col"}>
+                    <span className="cell-label">{`${t("map.col.column")}: `}</span>
+                    {cell(issue.column)}
+                  </td>
                   <td className="map-msg">{issue.message}</td>
                 </tr>
               ))}

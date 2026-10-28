@@ -965,6 +965,13 @@ main {
   overflow-y: auto;
 }
 
+/* Yığılmış hücrenin sütun adı (M28 review 3): söz CSS'in ürettiği yazı değil, hücrenin kendi
+   öğesidir. Geniş ekranda sütun adını tablonun başlığı söylüyor, o yüzden burada susar; aşağıdaki
+   telefon bloğu iki sınıflı seçicisiyle sırayı değil özgüllüğü kazanarak geri açar. */
+.cell-label {
+  display: none;
+}
+
 @media (max-width: 720px) {
   /* ASSUMPTION: başlık 320/390'da flex-wrap ile zaten satırlara iniyor ve çip ellipsis'le kısalıyor
      (ölçüldü: taşma yok) — M17'deki "üst üste biniyor" izlenimi sayfanın 660px'e taşmasından geliyordu. */
@@ -1200,28 +1207,11 @@ main {
     box-shadow: none;
   }
 
-  .users-table .users-status::before {
-    content: var(--cell-status) ": ";
-    color: var(--text);
-    font-weight: 600;
-  }
-
-  .users-table .users-login::before {
-    content: var(--cell-login) ": ";
-    color: var(--text);
-    font-weight: 600;
-  }
-
   /* Rol ile iş rolü alt alta inince iki çıplak select birbirine karışıyor — "Yönetici" mi iş rolü
-     mü, telefon başlığı hiç göstermiyor. Adları hücrelerin kendisi taşır, Durum ve Son giriş gibi. */
-  .users-table .users-role::before {
-    content: var(--cell-role) ": ";
-    color: var(--text);
-    font-weight: 600;
-  }
-
-  .users-table .users-business::before {
-    content: var(--cell-business) ": ";
+     mü, telefon başlığı hiç göstermiyor. Adları hücrelerin kendisi taşır, Durum ve Son giriş gibi
+     (M28 review 3): `content: var(--cell-*)` derlenmiş sayfada düşüyordu, artık söz `.cell-label`. */
+  .users-table .cell-label {
+    display: inline;
     color: var(--text);
     font-weight: 600;
   }
@@ -1263,28 +1253,18 @@ main {
     box-shadow: none;
   }
 
-  .conn-table .conn-status::before {
-    content: var(--cell-status) ": ";
+  .conn-table .cell-label {
+    display: inline;
     color: var(--text);
     font-weight: 600;
   }
 
-  .conn-table .conn-target::before {
-    content: var(--cell-target) ": ";
-    color: var(--text);
-    font-weight: 600;
-  }
-
-  .conn-table .conn-success::before {
-    content: var(--cell-success) ": ";
-    color: var(--text);
-    font-weight: 600;
-  }
-
-  .conn-table .conn-failure::before {
-    content: var(--cell-failure) ": ";
-    color: var(--text);
-    font-weight: 600;
+  /* Söyleyecek sözü olmayan hücre yığılmış satırda hiç yer tutmaz: "—" yalnız geniş ekranda boş
+     sütunun yerini tutuyor, etiketini yitirmiş bir çizgi olarak alt alta düşmemeli (haritanın
+     `map-cell-blank` haliyle aynı söz). */
+  .conn-table .is-blank,
+  .users-table .is-blank {
+    display: none;
   }
 
   .conn-table .conn-actions {
@@ -1371,15 +1351,10 @@ main {
     margin-right: var(--space);
   }
 
-  .map-errors .map-cell-row::before {
-    content: var(--cell-row) ": ";
-    color: var(--muted);
-    font-weight: 600;
-  }
-
-  .map-errors .map-cell-col::before {
-    content: var(--cell-col) ": ";
-    color: var(--muted);
+  /* Satır/kolon adları da hücrenin kendi öğesi (M28 review 3); renk `.map-cell-row`'un devraldığı
+     soluk ton, yani geniş ekrandakiyle aynı. */
+  .map-errors .cell-label {
+    display: inline;
     font-weight: 600;
   }
 

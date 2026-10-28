@@ -270,17 +270,9 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
       </form>
 
       <div className="table-wrap">
-        {/* Telefon kartında yazıyı CSS üretiyor (R8-18): sözü değişken olarak buradan alır ki
-            arayüz İngilizceyken Türkçe kalmasın. */}
-        <table
-          className="users-table"
-          style={{
-            "--cell-status": t("users.col.status"),
-            "--cell-login": t("users.col.lastLogin"),
-            "--cell-role": t("users.col.role"),
-            "--cell-business": t("users.col.businessRole"),
-          }}
-        >
+        {/* Telefon kartında hücre kendi sütun adını taşır (M28 review 3): söz kataloğun kendi
+            satırıdır, CSS'in ürettiği yazı değil — arayüz İngilizceyken Türkçe kalmaz. */}
+        <table className="users-table">
           <thead>
             <tr>
               <th scope="col">{t("users.col.user")}</th>
@@ -316,6 +308,7 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
                     {String(user.username ?? "")}
                   </th>
                   <td className="users-role">
+                    <span className="cell-label">{`${t("users.col.role")}: `}</span>
                     <select
                       id={`user-role-${user.id}`}
                       className="field-input users-select"
@@ -337,6 +330,7 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
                     </select>
                   </td>
                   <td className="users-business">
+                    <span className="cell-label">{`${t("users.col.businessRole")}: `}</span>
                     {/* Alan kendi satırında kapalı: sunucu bu işe 403 diyor, tek tık boşuna denemez. */}
                     <select
                       id={`user-business-role-${user.id}`}
@@ -367,11 +361,16 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
                     </select>
                   </td>
                   <td className="users-status">
+                    <span className="cell-label">{`${t("users.col.status")}: `}</span>
                     <span className={user.active ? "users-state is-active" : "users-state is-passive"}>
                       {user.active ? t("users.status.active") : t("users.status.passive")}
                     </span>
                   </td>
-                  <td className="users-login" title={login ? undefined : t("users.neverLoggedIn")}>
+                  <td
+                    className={login ? "users-login" : "users-login is-blank"}
+                    title={login ? undefined : t("users.neverLoggedIn")}
+                  >
+                    <span className="cell-label">{`${t("users.col.lastLogin")}: `}</span>
                     {login || "—"}
                   </td>
                   <td className="users-actions">

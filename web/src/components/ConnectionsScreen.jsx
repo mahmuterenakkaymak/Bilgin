@@ -189,17 +189,9 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
       </div>
 
       <div className="table-wrap">
-        {/* Telefon kartında yazıyı CSS üretiyor (R8-18): sözü değişken olarak buradan alır ki
-            arayüz İngilizceyken Türkçe kalmasın. */}
-        <table
-          className="conn-table"
-          style={{
-            "--cell-status": t("conn.col.status"),
-            "--cell-target": t("conn.col.target"),
-            "--cell-success": t("conn.col.success"),
-            "--cell-failure": t("conn.col.error"),
-          }}
-        >
+        {/* Telefon kartında hücre kendi sütun adını taşır (M28 review 3): söz kataloğun kendi
+            satırıdır, CSS'in ürettiği yazı değil — arayüz İngilizceyken Türkçe kalmaz. */}
+        <table className="conn-table">
           <thead>
             <tr>
               <th scope="col">{t("conn.col.dataset")}</th>
@@ -225,6 +217,8 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
               const status = dot(item?.state);
               const ok = stamp(item?.last_ok_at, lang);
               const failureLine = text(item?.last_error);
+              const server = text(item?.server);
+              const database = text(item?.database);
               const state = t(status.key);
               return (
                 <tr key={name}>
@@ -237,15 +231,26 @@ export default function ConnectionsScreen({ connections = [], loading = false, e
                     )}
                   </th>
                   <td className="conn-status">
+                    <span className="cell-label">{`${t("conn.col.status")}: `}</span>
                     <span className={`db-dot db-dot-${status.tone}`} role="img" aria-label={state} />
                     {state}
                   </td>
-                  <td className="conn-target">
-                    <span className="conn-server">{cell(item?.server)}</span>
-                    <span className="conn-database">{cell(item?.database)}</span>
+                  <td className={server || database ? "conn-target" : "conn-target is-blank"}>
+                    <span className="cell-label">{`${t("conn.col.target")}: `}</span>
+                    <span className={server ? "conn-server" : "conn-server is-blank"}>{cell(item?.server)}</span>
+                    <span className={database ? "conn-database" : "conn-database is-blank"}>
+                      {cell(item?.database)}
+                    </span>
                   </td>
-                  <td className="conn-success">{ok || "—"}</td>
-                  <td className="conn-failure" title={failureLine || undefined}>
+                  <td className={ok ? "conn-success" : "conn-success is-blank"}>
+                    <span className="cell-label">{`${t("conn.col.success")}: `}</span>
+                    {ok || "—"}
+                  </td>
+                  <td
+                    className={failureLine ? "conn-failure" : "conn-failure is-blank"}
+                    title={failureLine || undefined}
+                  >
+                    <span className="cell-label">{`${t("conn.col.error")}: `}</span>
                     {failureLine || "—"}
                   </td>
                   <td className="conn-actions">
