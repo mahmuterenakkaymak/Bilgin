@@ -29,14 +29,16 @@ def _wide_terminal(monkeypatch):
 # Updated automatically: T417 changed this contract (the `template` subcommand joins the top-level help).
 # Bugünün (R8-5 öncesi) yardımı: Türkçe yardımın değişmediğini kanıtlayan altın metin.
 TODAY_HELP = {
+    # Updated automatically: T488 changed this contract (paths, secret-set, service-check and
+    # service-xml join the top-level help).
     "top": r"""usage: python -m nl2sql [-h]
-                        {build-db,build-index,eval-retrieval,import-map,introspect,diff-map,merge-map,make-login-script,template,ask,serve,user,eval}
+                        {build-db,build-index,eval-retrieval,import-map,introspect,diff-map,merge-map,make-login-script,template,ask,serve,user,eval,paths,secret-set,service-check,service-xml}
                         ...
 
 NL -> T-SQL ölçüm aracı.
 
 positional arguments:
-  {build-db,build-index,eval-retrieval,import-map,introspect,diff-map,merge-map,make-login-script,template,ask,serve,user,eval}
+  {build-db,build-index,eval-retrieval,import-map,introspect,diff-map,merge-map,make-login-script,template,ask,serve,user,eval,paths,secret-set,service-check,service-xml}
     build-db            sentetik veritabanını ve T-SQL betiğini kurar
     build-index         şema ve kurallardan arama indeksini kurar
     eval-retrieval      altın sorularında aramanın geri çağırmasını ölçer
@@ -51,6 +53,12 @@ positional arguments:
     serve               web API'sini ve arayüzü kendi makinesine bağlı çalıştırır
     user                kullanıcı hesaplarını listeler, açar, değiştirir
     eval                altın soruları koşar ve raporu yazar
+    paths               kurulumun okuduğu her yolu adıyla söyler; sır ya da bağlantı dizesi
+                        yazılmaz
+    secret-set          model anahtarını sır klasörüne DPAPI ile yazar; anahtarı iki kez sorar
+    service-check       model ucunu ve kümenin veritabanı bağlantısını yoklar; yalnız uyarı, çıkış
+                        kodu hep 0
+    service-xml         Windows servisinin WinSW XML'ini üretir; içine sır yazılmaz
 
 options:
   -h, --help            show this help message and exit
