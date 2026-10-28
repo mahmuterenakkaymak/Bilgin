@@ -39,8 +39,8 @@ REQUIRED_KEYS = ("name", "as_of", "builder", "generator", "references")
 # Zincir satırlarının liste alanları (PLAN R7-13); dosyada yazılmadığında boş kabul edilir.
 FOLLOWUP_LIST_FIELDS = ("uses_turns", "tags")
 
-# ``all_datasets``'in "root" etiketleri; ``_roots`` sırasıyla birebir eşleşir (PLAN R6-11).
-ROOT_LABELS = ("datasets", "real_datasets")
+# ``all_datasets``'in "root" etiketleri; ``_roots`` sırasıyla birebir eşleşir (PLAN R6-11, R8-20).
+ROOT_LABELS = ("datasets", "real_datasets", "home_datasets")
 
 
 class DatasetError(Exception):
@@ -178,12 +178,20 @@ def list_datasets(root: str | Path | None = None) -> list[str]:
 
 
 def _roots() -> list[Path]:
-    """Arama sırası (PLAN R6-11): üretilen kümelerin kökü, sonra ekrandan yüklenen gerçek kümelerin kökü."""
-    return [Path(config.datasets_dir()), Path(config.real_datasets_dir())]
+    """Arama sırası (PLAN R6-11, R8-20): üretilen kümelerin kökü, sonra ekrandan yüklenenlerin.
+
+    Üçüncü kök yalnız ``NL2SQL_HOME`` kuruluyken gelir: yüklemenin yazdığı ``HOME/datasets``.
+    O kurulmayken ``onboard_dir`` zaten ikinci köktür, o yüzden liste uzamaz.
+    """
+    roots = [Path(config.datasets_dir()), Path(config.real_datasets_dir())]
+    onboarded = config.onboard_dir()
+    if onboarded not in roots:
+        roots.append(onboarded)
+    return roots
 
 
 def all_datasets() -> list[dict]:
-    """İki kökteki veri kümeleri ad sırasıyla; ``root`` kümenin hangi kökten geldiğini söy.
+    """Köklerdeki veri kümeleri ad sırasıyla; ``root`` kümenin hangi kökten geldiğini söy.
 
     Aynı ad iki kökte de varsa ilk kök kazanır; ``path`` klasörün dizgi halidir, böylece
     öğe olduğu gibi JSON'a yazılabilir.
@@ -240,6 +248,9 @@ def _read(base: Path, name: str) -> Dataset:
     name = raw["name"]
     files = {**FILE_DEFAULTS, **(raw.get("files") or {})}
     outputs = raw.get("outputs") or {}
+    # Üretilen dosyalar ikiye ayrılır (PLAN R8-20): veritabanı ve T-SQL betiği kodla birlikte
+    # depoda durur, indeks ile ölçüm çıktısı koşan kurulumun HOME'una yazılır.
+    home = config.home_dir()
     golden_path = folder / files["golden"]
     return Dataset(
         name=name,
@@ -262,8 +273,8 @@ def _read(base: Path, name: str) -> Dataset:
         ready_questions_path=folder / files["ready_questions"] if files["ready_questions"] else None,
         db_path=config.ROOT / outputs.get("db", f"data/{name}.db"),
         mssql_script=config.ROOT / outputs.get("mssql_script", f"db/mssql/build_{name}.sql"),
-        index_dir=config.ROOT / outputs.get("index_dir", f"index/{name}"),
-        eval_out=config.ROOT / outputs.get("eval_out", f"eval_out/{name}"),
+        index_dir=home / outputs.get("index_dir", f"index/{name}"),
+        eval_out=home / outputs.get("eval_out", f"eval_out/{name}"),
         fake_fallback_sql=raw.get("fake_fallback_sql") or _first_golden_sql(golden_path),
         builder_ref=raw["builder"],
         generator_ref=raw["generator"],

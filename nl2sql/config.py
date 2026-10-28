@@ -256,18 +256,24 @@ ENABLE_THINKING = True
 
 # ---------------------------------------------------------------- paths
 ROOT = Path(__file__).resolve().parent.parent
+# ASSUMPTION: NL2SQL_HOME tek istisna, import'ta okunur (R8-20): bir Windows servisinin ortamı
+# modül import edilmeden önce kurulur; yazıların kökü de o anda belli olmak zorundadır.
+_HOME = (os.environ.get("NL2SQL_HOME") or "").strip()
+HOME = Path(_HOME) if _HOME else ROOT
+LOGS_DIR = HOME / "logs"
+SECRETS_DIR = HOME / "secrets"
 DB_PATH = ROOT / "data" / "test.db"
 MSSQL_SCRIPT = ROOT / "db" / "mssql" / "build_test_db.sql"
 SCHEMA_PATH = ROOT / "datasets" / "synthetic_erp" / "schema.json"
 GOLDEN_PATH = ROOT / "datasets" / "synthetic_erp" / "golden.jsonl"
 TRAPS_PATH = ROOT / "datasets" / "synthetic_erp" / "traps.jsonl"
-EVAL_OUT = ROOT / "eval_out"
-AUDIT_LOG = ROOT / "logs" / "audit.jsonl"
+EVAL_OUT = HOME / "eval_out"
+AUDIT_LOG = LOGS_DIR / "audit.jsonl"
 # ASSUMPTION: Run 2 paths sit here, not in the Run 2 block above, because they need ROOT.
 RULES_PATH = ROOT / "datasets" / "synthetic_erp" / "rules.json"
 PROFILE_PATH = ROOT / "datasets" / "synthetic_erp" / "profile.json"
 EXCEL_HEADERS_PATH = ROOT / "profiles" / "excel_headers.json"
-INDEX_DIR = ROOT / "index"
+INDEX_DIR = HOME / "index"
 # ASSUMPTION: Run 3 paths sit here for the same reason — they need ROOT.
 SCHEMA_DIR = ROOT / "schema"
 IMPORTED_PATH = SCHEMA_DIR / "imported.json"
@@ -280,13 +286,13 @@ LOGIN_SCRIPT_PATH = ROOT / "db" / "mssql" / "readonly_login.sql"
 DATASETS_DIR = ROOT / "datasets"
 MODELS_PATH = ROOT / "config" / "models.json"
 # ASSUMPTION: Run 5 paths sit here for the same reason — they need ROOT.
-APP_DB_PATH = ROOT / "data" / "bilgin.db"
-ASK_LOG = ROOT / "logs" / "asks.jsonl"
+APP_DB_PATH = HOME / "data" / "bilgin.db"
+ASK_LOG = LOGS_DIR / "asks.jsonl"
 STATIC_DIR = ROOT / "nl2sql" / "web" / "static"
 WEB_DIR = ROOT / "web"
 # ASSUMPTION: Run 6 paths sit here for the same reason — they need ROOT.
-MAP_PREVIEWS_DIR = ROOT / "data" / "map_previews"
-MAP_CHANGES_LOG = ROOT / "logs" / "map_changes.jsonl"
+MAP_PREVIEWS_DIR = HOME / "data" / "map_previews"
+MAP_CHANGES_LOG = LOGS_DIR / "map_changes.jsonl"
 REAL_DATASETS_DIR = ROOT / "real_datasets"
 
 # ---------------------------------------------------------------- env defaults
@@ -370,3 +376,20 @@ def app_db_path() -> Path:
 def real_datasets_dir() -> Path:
     """Real dataset root: NL2SQL_REAL_DATASETS_DIR when set, else REAL_DATASETS_DIR."""
     return Path(_env("NL2SQL_REAL_DATASETS_DIR", str(REAL_DATASETS_DIR)))
+
+
+def home_dir() -> Path:
+    """Kökü yazıların: ``NL2SQL_HOME`` kuruluyken HOME, değilken ROOT (PLAN R8-20).
+
+    Çağırmada okunur: ``HOME`` kurulmamışsa kök ``ROOT``tur, yani yolu testin taşıdığı
+    ``ROOT`` değil, sabitin kendisi belirlemiş olmaz.
+    """
+    return HOME if _HOME else ROOT
+
+
+def onboard_dir() -> Path:
+    """Kökü ekrandan yüklenen kümelerin: ``NL2SQL_REAL_DATASETS_DIR``, yoksa ``NL2SQL_HOME``
+    kuruluyken ``HOME/datasets``, yoksa ``real_datasets_dir()`` (PLAN R8-20)."""
+    if _env("NL2SQL_REAL_DATASETS_DIR", ""):
+        return real_datasets_dir()
+    return HOME / "datasets" if _HOME else REAL_DATASETS_DIR

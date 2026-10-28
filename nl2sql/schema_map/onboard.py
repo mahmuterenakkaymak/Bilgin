@@ -89,8 +89,8 @@ def apply_preview(preview: dict, username: str, lang: str = "tr") -> Path:
     dilidir: klasör bir daha dil değiştirmeyecek, o yüzden küme doğduğu dilde kalır.
     """
     name = preview["dataset"]["name"]
-    folder = Path(config.real_datasets_dir()) / name
-    folder.mkdir(exist_ok=False)
+    folder = Path(config.onboard_dir()) / name
+    folder.mkdir(parents=True, exist_ok=False)  # HOME/datasets ilk yüklemede daha doğmamıştır
     try:
         schema = _schema_doc(preview)
         _write_json(folder / "dataset.json", _dataset_doc(preview, name))
