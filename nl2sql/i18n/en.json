@@ -263,6 +263,9 @@
   "cli.help.paths_json": "print the paths as JSON",
   "cli.help.secret_set": "writes a model key to the secrets folder with DPAPI; asks for the key twice",
   "cli.help.secret_set_env": "name of the environment variable the key is read from, e.g. OPENAI_API_KEY",
+  "cli.help.service_check": "checks the model endpoint and the dataset's database connection; warnings only, exit code always 0",
+  "cli.help.service_check_dataset": "dataset to check",
+  "cli.help.service_check_json": "print the check as JSON",
 
   "cli.paths.home": "Data root",
   "cli.paths.app_db": "App database",
@@ -283,6 +286,12 @@
   "cli.secret.empty": "The key is empty.",
   "cli.secret.written": "Secret written: {path}",
   "cli.secret.windows_only": "The secrets folder needs DPAPI and works on Windows only; set the {env} environment variable on this machine.",
+
+  "cli.check.model": "Model",
+  "cli.check.database": "Database",
+  "cli.check.model_ok": "The endpoint answers: {model} ({url})",
+  "cli.check.sqlite": "This dataset uses SQLite; no SQL Server connection is needed.",
+  "cli.check.no_connection": "No connection defined; define one under Connections on the admin panel.",
 
   "cli.ask.model": "Model: {name} ({model}, budget {budget} tokens)",
   "cli.ask.no_index": "No index (or a stale one); running in full mode.",

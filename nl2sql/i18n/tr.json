@@ -263,6 +263,9 @@
   "cli.help.paths_json": "yolları JSON olarak yazdır",
   "cli.help.secret_set": "model anahtarını sır klasörüne DPAPI ile yazar; anahtarı iki kez sorar",
   "cli.help.secret_set_env": "anahtarın okunacağı ortam değişkeninin adı, ör. OPENAI_API_KEY",
+  "cli.help.service_check": "model ucunu ve kümenin veritabanı bağlantısını yoklar; yalnız uyarı, çıkış kodu hep 0",
+  "cli.help.service_check_dataset": "yoklanacak veri kümesi",
+  "cli.help.service_check_json": "yoklamayı JSON olarak yazdır",
 
   "cli.paths.home": "Veri kökü",
   "cli.paths.app_db": "Uygulama veritabanı",
@@ -283,6 +286,12 @@
   "cli.secret.empty": "Anahtar boş olamaz.",
   "cli.secret.written": "Sır yazıldı: {path}",
   "cli.secret.windows_only": "Sır klasörü DPAPI gerektirir ve yalnız Windows'ta çalışır; bu makinede {env} ortam değişkenini tanımlayın.",
+
+  "cli.check.model": "Model",
+  "cli.check.database": "Veritabanı",
+  "cli.check.model_ok": "Uç nokta yanıtlıyor: {model} ({url})",
+  "cli.check.sqlite": "Bu küme SQLite kullanıyor; SQL Server bağlantısı gerekmiyor.",
+  "cli.check.no_connection": "Bağlantı tanımlı değil; yönetim ekranında Bağlantılar bölümünden tanımlayın.",
 
   "cli.ask.model": "Model: {name} ({model}, bütçe {budget} token)",
   "cli.ask.no_index": "İndeks yok/eski; full modda çalışılıyor.",

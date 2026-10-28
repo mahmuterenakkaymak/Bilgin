@@ -47,7 +47,7 @@ from nl2sql.agent.modes import MODES, ToolContext, get_mode
 from nl2sql.auth.bootstrap import dev_admin
 from nl2sql.auth.store import UserError, UserStore
 from nl2sql.cli.table import format_table
-from nl2sql.engine import checks, dpapi, login_script
+from nl2sql.engine import checks, dpapi, guard, login_script
 from nl2sql.engine.connections import ConnectionStore, resolve as resolve_connection
 from nl2sql.engine.dbstatus import DbStatus
 from nl2sql.engine.executor import LocalExecutor
@@ -1490,6 +1490,105 @@ def _ask_secret(lang: str = "tr") -> str | None:
     return value
 
 
+def service_check(
+    dataset: str,
+    json_out: bool = False,
+    lang: str | None = None,
+    connect=None,
+    ping=llm.ping,
+) -> int:
+    """Kurulumun iki yoklaması: modelin ucu açık mı, veritabanının girişi salt okunur mu (R8-23).
+
+    Çıkış kodu her zaman 0: kurulum betiği bunu *uyarı* olarak okur. Kapalı bir uç nokta ya da
+    yazabilen bir giriş kurulacak servisin reddi değil, operatörün düzelteceği bir eksikliktir;
+    reddin kodu ``secret-set``in DPAPI'si gibi ancak koşulamayacak bir şey için ayrılır.
+    ``--json`` Contracts ``service-check`` satırıdır. Bağlantı dizesi hiçbir satıra düşmez - yalnız
+    kaynağının adı söylenir, guard'ın satırları da ``connections.scrub``tan geçer. ``connect``
+    guard'ın bağdaç yeridir: testler oraya sahte bir sunucu koyar, ``ping`` de ``eval --compare``ınki.
+    """
+    _utf8_stdout()
+    lang = lang or _LANG
+    # Ad zorunlu olduğu için küme doğrudan yüklenir: yoklanacak bir dünya olmayan bir yoklama,
+    # ``_dataset``in ``None``la döndüğü haliyle yarım bir sözlük üretirdi.
+    try:
+        ds = datasets.load_dataset(dataset)
+    except datasets.DatasetError as exc:
+        print(exc)
+        return EXIT_BAD_INPUT
+    model = _model_state(lang, ping)
+    source, lines, ok = _connection_state(ds, lang, connect)
+    if json_out:
+        print(
+            json.dumps(
+                {
+                    "model": model,
+                    "connection": {
+                        "source": source,
+                        "ok": ok,
+                        "lines": [line["message"] for line in lines],
+                    },
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+    print(f"{_t('cli.check.model', lang)}: {_check_mark(model['ok'])} {model['message']}")
+    print(f"{_t('cli.check.database', lang)} [{source}]:")
+    for line in lines:
+        print(f"  {_check_mark(line['ok'])} {line['message']}")
+    return 0
+
+
+def _model_state(lang: str, ping) -> dict:
+    """Etkin profilin sağlığı: ``config.llm_settings()`` ucu, ``llm.ping``in kendi saati (R8-23).
+
+    Sunucu bir Windows servisi olarak koştuğunda ``--model`` söylenmez, uç ortamdan gelir - yoklama
+    de sunucunun birazdan gideceği uca bakar, yani ``Session.ping``in yokladığı profilin aynısına.
+    """
+    settings = config.llm_settings()
+    profile = ModelProfile(name=settings.model, base_url=settings.base_url, model=settings.model)
+    reason = ping(profile)
+    if reason:
+        return {"ok": False, "message": reason}
+    return {
+        "ok": True,
+        "message": _t("cli.check.model_ok", lang, model=settings.model, url=settings.base_url),
+    }
+
+
+def _connection_state(ds, lang: str, connect) -> tuple[str, list[dict], bool | None]:
+    """Bağlantının kaynağı ve guard'ın satırları; SQLite kümesiyle bağlantısız yoklama dışıdır."""
+    if ds.connection != "mssql":
+        return "none", [_note(_t("cli.check.sqlite", lang))], None
+    where = resolve_connection(ds.name, ConnectionStore(config.app_db_path()), ds.name)
+    if where["source"] == "none":
+        return "none", [_note(_t("cli.check.no_connection", lang))], None
+    checked = guard.readonly_guard(where["conn_str"], _check_tables(ds), connect=connect, lang=lang)
+    return where["source"], checked["lines"], checked["ok"]
+
+
+def _check_tables(ds) -> list[str]:
+    """Guard'ın örnekleyeceği adlar: kümenin kendi allowlisti (R7-24).
+
+    Yarım kalmış bir harita (R6-16) yoklamayı düşürmez: örnek boş kalır, güç denetimleri yine sorulur.
+    """
+    try:
+        return sorted(doc.allowlist(ds.schema()))
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+def _note(message: str) -> dict:
+    """Guard satırı biçiminde bilgi: ne iyi ne kötü, yani işareti ``•`` (bağlantısı olmayan küme)."""
+    return {"check": "none", "ok": None, "message": message}
+
+
+def _check_mark(ok: bool | None) -> str:
+    """Yoklama satırının işareti: ✓ iyi, ✗ kötü, • bilgi."""
+    return "✓" if ok else ("✗" if ok is False else "•")
+
+
 def user_add(
     name: str,
     role: str,
@@ -2140,6 +2239,14 @@ def build_parser(lang: str) -> argparse.ArgumentParser:
     )
     secret_cmd.add_argument("env_name", help=_h("secret_set_env", lang))
 
+    check_cmd = commands.add_parser(
+        "service-check", help=_h("service_check", lang), parents=[lang_parent]
+    )
+    check_cmd.add_argument(
+        "--dataset", metavar="AD", required=True, help=_h("service_check_dataset", lang)
+    )
+    check_cmd.add_argument("--json", action="store_true", help=_h("service_check_json", lang))
+
     return parser
 
 
@@ -2229,6 +2336,8 @@ def main(argv: list[str] | None = None) -> int:
         return show_paths(json_out=args.json, lang=args.lang)
     if args.command == "secret-set":
         return set_secret(args.env_name, args.lang)
+    if args.command == "service-check":
+        return service_check(args.dataset, json_out=args.json, lang=args.lang)
     if args.command == "ask":
         from nl2sql.app.conversations import ConversationNotFound
 
