@@ -231,6 +231,10 @@ def _pie(columns, rows, category, number, question):
     # Ad, dilimin kendi çizgisiyle dışında okunur: kaydırmalı açıklama telefon genişliğinde beş adın
     # ikisini "1/5" sayfalayıcısının arkasına atıyordu (M24 görsel inceleme 2). Dilim küçülüp yerini
     # etiketlere bırakır; uzun ad sarar.
+    # Dış etiketin çakışma kuralı yoktu: beş ad yanındakinin üstüne basıp "62"yi tek başına bırakıyordu
+    # (M28 görsel inceleme 2). shiftY çakışanı düşeyde kaydırır; ızgaranın altı da kayan adların payı
+    # kadar büyür — aynı kategori sayısının sütunda aldığı alt boşluk kadar.
+    # ASSUMPTION: pastanın ekseni yok, ızgara burada yalnız adların altına kalan payı anlatır.
     series = [
         {
             "type": "pie",
@@ -238,11 +242,13 @@ def _pie(columns, rows, category, number, question):
             "radius": "40%",
             "center": ["50%", "44%"],
             "label": {"show": True, "width": 76, "overflow": "break", "lineHeight": 14},
+            "labelLayout": {"moveOverlap": "shiftY"},
             "labelLine": {"show": True, "length": 10, "length2": 6},
             "data": [{"name": _label(row[category]), "value": _value(row[number])} for row in rows],
         }
     ]
-    option = {"tooltip": {"trigger": "item"}, "series": series}
+    bottom = _category_bottom(_category_width(len(rows)))
+    option = {"tooltip": {"trigger": "item"}, "grid": dict(_GRID, bottom=bottom), "series": series}
     return _spec("pie", option, columns[number], columns[category], question)
 
 
