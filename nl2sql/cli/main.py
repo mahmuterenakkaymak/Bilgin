@@ -1399,6 +1399,66 @@ def write_template(
     return 0
 
 
+def path_report() -> dict:
+    """Sözleşmenin yolları (PLAN Contracts ``paths``): anahtar adı -> çözülmüş yol, ``datasets`` liste.
+
+    Anahtarlar ve sıraları sözleşmenin kendisidir - kurulum betiği ve README buradan okur. Değerler
+    çağrı anında config'den gelir, yani ``NL2SQL_HOME`` ile taşınanlar taşındığı haliyle çıkar.
+    """
+    return {
+        "home": str(config.HOME),
+        "app_db": str(config.app_db_path()),
+        "logs": str(config.LOGS_DIR),
+        "ask_log": str(config.ASK_LOG),
+        "audit_log": str(config.AUDIT_LOG),
+        "map_changes": str(config.MAP_CHANGES_LOG),
+        "map_previews": str(config.MAP_PREVIEWS_DIR),
+        "eval_out": str(config.EVAL_OUT),
+        "index": str(config.INDEX_DIR),
+        "secrets": str(config.SECRETS_DIR),
+        "datasets": [item["path"] for item in datasets.all_datasets()],
+        "onboard_dir": str(config.onboard_dir()),
+    }
+
+
+def show_paths(json_out: bool = False, lang: str | None = None) -> int:
+    """Her yolu adıyla ve çözülmüş haliyle söyler; ``--json`` Contracts ``paths`` şeklini verir (R8-20).
+
+    Ekranda yalnız yol durur: hiçbir ortam değişkeninin değeri, bağlantı dizesi ya da sır yazılmaz -
+    ``NL2SQL_HOME``ın kendisi değil çözdüğü yol görünür. ``lang`` etiketlerin dilidir (R8-11), yol
+    hiçbir dilde çevrilmez.
+    """
+    _utf8_stdout()
+    report = path_report()
+    if json_out:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0
+    labels = {
+        "home": _t("cli.paths.home", lang),
+        "app_db": _t("cli.paths.app_db", lang),
+        "logs": _t("cli.paths.logs", lang),
+        "ask_log": _t("cli.paths.ask_log", lang),
+        "audit_log": _t("cli.paths.audit_log", lang),
+        "map_changes": _t("cli.paths.map_changes", lang),
+        "map_previews": _t("cli.paths.map_previews", lang),
+        "eval_out": _t("cli.paths.eval_out", lang),
+        "index": _t("cli.paths.index", lang),
+        "secrets": _t("cli.paths.secrets", lang),
+        "datasets": _t("cli.paths.datasets", lang),
+        "onboard_dir": _t("cli.paths.onboard_dir", lang),
+    }
+    for key, value in report.items():
+        if key != "datasets":
+            print(f"{labels[key]}: {value}")
+        elif value:
+            print(f"{labels[key]}:")
+            for path in value:
+                print(f"  {path}")
+        else:
+            print(f"{labels[key]}: {NONE}")
+    return 0
+
+
 def user_add(
     name: str,
     role: str,
@@ -2041,6 +2101,9 @@ def build_parser(lang: str) -> argparse.ArgumentParser:
     _add_model_options(eval_cmd, lang)
     _add_dataset_option(eval_cmd, lang)
 
+    paths_cmd = commands.add_parser("paths", help=_h("paths", lang), parents=[lang_parent])
+    paths_cmd.add_argument("--json", action="store_true", help=_h("paths_json", lang))
+
     return parser
 
 
@@ -2126,6 +2189,8 @@ def main(argv: list[str] | None = None) -> int:
         return make_login_script(login=args.login, **_given(dataset=args.dataset))
     if args.command == "template":
         return write_template(out=args.out, lang=args.lang, **_given(dataset=args.dataset))
+    if args.command == "paths":
+        return show_paths(json_out=args.json, lang=args.lang)
     if args.command == "ask":
         from nl2sql.app.conversations import ConversationNotFound
 
