@@ -231,14 +231,20 @@ export default function MapScreen({
   const own = (message) => t(message);
   const alert =
     state.status === "switchError" || (state.status === "failed" && !state.job) ? own(text(state.error?.message)) : "";
-  // Üç kartın sırası ekranın zaten bildiğinden okunur: şablon alındıysa 1 biter, küme kurulduysa
-  // 2 biter ve sıra kümeler kartına geçer. Yeni bir hâl tutulmaz, yalnız aynı hâl üçe çevrilir.
+  // Üç kartın sırası ekranın zaten bildiğinden okunur ve her kart kendi işinin bitişinden tik
+  // alır: dosya seçilince 1, rapor hatasız dönünce 2, kurulan küme listeye düşünce 3. Yoksa bant
+  // süs gibi duruyordu — rapor temiz dönse de küme kurulsa da 2 ve 3 numarasında kalıyordu.
   const taken = Boolean(state.filename);
+  const checked = Boolean(preview) && issues(preview.errors).length === 0;
   const created = state.status === "done" || state.status === "activated";
+  // ASSUMPTION: tik yalnız işi biten kümenin listeye düşmesiyle yanar; önizlemenin adı henüz
+  // var olmayan bir kümenin adıyla aynıysa (aynı şablon ikinci kez) liste 3'ü yakmamalı.
+  const made = text(state.activated) || text(state.job?.name) || text(preview?.dataset?.name);
+  const listed = created && Boolean(made) && datasets.some((item) => text(item?.name) === made);
   const steps = [
     taken ? "done" : "current",
-    created ? "done" : taken ? "current" : "todo",
-    state.status === "activated" ? "done" : created ? "current" : "todo",
+    checked ? "done" : taken ? "current" : "todo",
+    listed ? "done" : created || checked ? "current" : "todo",
   ];
 
   return (
