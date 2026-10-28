@@ -266,6 +266,9 @@
   "cli.help.service_check": "checks the model endpoint and the dataset's database connection; warnings only, exit code always 0",
   "cli.help.service_check_dataset": "dataset to check",
   "cli.help.service_check_json": "print the check as JSON",
+  "cli.help.service_xml": "writes the WinSW XML of the Windows service; no secret goes into it",
+  "cli.help.service_xml_home": "the service's data root (default %(default)s)",
+  "cli.help.service_xml_out": "file the XML is written to; printed to stdout when omitted",
 
   "cli.paths.home": "Data root",
   "cli.paths.app_db": "App database",
@@ -292,6 +295,11 @@
   "cli.check.model_ok": "The endpoint answers: {model} ({url})",
   "cli.check.sqlite": "This dataset uses SQLite; no SQL Server connection is needed.",
   "cli.check.no_connection": "No connection defined; define one under Connections on the admin panel.",
+
+  "cli.xml.written": "WinSW XML written: {path}",
+
+  "service.display_name": "Bilgin - local data analyst",
+  "service.description": "Bilgin local data analyst: http://{host}:{port} (dataset: {dataset})",
 
   "cli.ask.model": "Model: {name} ({model}, budget {budget} tokens)",
   "cli.ask.no_index": "No index (or a stale one); running in full mode.",

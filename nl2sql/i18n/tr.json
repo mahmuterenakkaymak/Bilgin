@@ -266,6 +266,9 @@
   "cli.help.service_check": "model ucunu ve kümenin veritabanı bağlantısını yoklar; yalnız uyarı, çıkış kodu hep 0",
   "cli.help.service_check_dataset": "yoklanacak veri kümesi",
   "cli.help.service_check_json": "yoklamayı JSON olarak yazdır",
+  "cli.help.service_xml": "Windows servisinin WinSW XML'ini üretir; içine sır yazılmaz",
+  "cli.help.service_xml_home": "servisin veri kökü (varsayılan %(default)s)",
+  "cli.help.service_xml_out": "XML'in yazılacağı dosya; söylenmezse ekrana basılır",
 
   "cli.paths.home": "Veri kökü",
   "cli.paths.app_db": "Uygulama veritabanı",
@@ -292,6 +295,11 @@
   "cli.check.model_ok": "Uç nokta yanıtlıyor: {model} ({url})",
   "cli.check.sqlite": "Bu küme SQLite kullanıyor; SQL Server bağlantısı gerekmiyor.",
   "cli.check.no_connection": "Bağlantı tanımlı değil; yönetim ekranında Bağlantılar bölümünden tanımlayın.",
+
+  "cli.xml.written": "WinSW XML'i yazıldı: {path}",
+
+  "service.display_name": "Bilgin - yerel veri analisti",
+  "service.description": "Bilgin yerel veri analisti: http://{host}:{port} (veri kümesi: {dataset})",
 
   "cli.ask.model": "Model: {name} ({model}, bütçe {budget} token)",
   "cli.ask.no_index": "İndeks yok/eski; full modda çalışılıyor.",

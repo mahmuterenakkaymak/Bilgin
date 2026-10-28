@@ -83,6 +83,7 @@ from nl2sql.report.facts import compute_facts
 from nl2sql.report.narrate import narrate
 from nl2sql.schema_map import build, doc, excel, introspect, merge, template
 from nl2sql.schema_map.rules import load_rules
+from nl2sql.service import winsw
 from nl2sql.service.secrets import write_secret
 
 LLMS = ("fake", "openai")
@@ -1589,6 +1590,42 @@ def _check_mark(ok: bool | None) -> str:
     return "✓" if ok else ("✗" if ok is False else "•")
 
 
+def service_xml(
+    port: int,
+    dataset: str,
+    home: str | Path,
+    lang: str | None = None,
+    out: str | Path | None = None,
+) -> int:
+    """Kurulumun WinSW XML'ini üretir: şablonun doldurulmuş hali ekrana ya da ``--out``a (R8-22).
+
+    XML'in hiçbir satırı ortamdan gelmez - sunucunun ortamı dört addır ve bağın dizesiyle model
+    anahtarı onların arasında yoktur (R8-23). ``NL2SQL_DATASETS_DIR`` yalnız bugün koşan komutta
+    tanımlıysa yazılır: tanımsızken küme kod klasöründe kalır, yani servise ayrıca bir yol
+    söylemeye gerek yoktur. ``out`` söylenmediğinde çıktı boruya yazılabilir, o yüzden tek
+    cümlelik bir övgü de ancak dosya verildiğinde basılır.
+    """
+    _utf8_stdout()
+    xml = winsw.render_xml(
+        python_exe=sys.executable,
+        repo=config.ROOT,
+        home=home,
+        port=port,
+        dataset=dataset,
+        lang=lang or _LANG,
+        backend=config.backend(),
+        datasets_dir=os.environ.get("NL2SQL_DATASETS_DIR") or None,
+    )
+    if out is None:
+        print(xml, end="")
+        return 0
+    target = Path(out)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(xml, encoding="utf-8")
+    print(_t("cli.xml.written", lang, path=out))
+    return 0
+
+
 def user_add(
     name: str,
     role: str,
@@ -2247,6 +2284,14 @@ def build_parser(lang: str) -> argparse.ArgumentParser:
     )
     check_cmd.add_argument("--json", action="store_true", help=_h("service_check_json", lang))
 
+    xml_cmd = commands.add_parser(
+        "service-xml", help=_h("service_xml", lang), parents=[lang_parent]
+    )
+    xml_cmd.add_argument("--port", type=int, default=config.SERVE_PORT, help=_h("port", lang))
+    _add_dataset_option(xml_cmd, lang)
+    xml_cmd.add_argument("--home", default=str(config.HOME), help=_h("service_xml_home", lang))
+    xml_cmd.add_argument("--out", help=_h("service_xml_out", lang))
+
     return parser
 
 
@@ -2338,6 +2383,14 @@ def main(argv: list[str] | None = None) -> int:
         return set_secret(args.env_name, args.lang)
     if args.command == "service-check":
         return service_check(args.dataset, json_out=args.json, lang=args.lang)
+    if args.command == "service-xml":
+        return service_xml(
+            port=args.port,
+            dataset=args.dataset or config.DEFAULT_DATASET,
+            home=args.home,
+            lang=args.lang,
+            out=args.out,
+        )
     if args.command == "ask":
         from nl2sql.app.conversations import ConversationNotFound
 
