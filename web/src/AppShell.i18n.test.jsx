@@ -49,9 +49,9 @@ describe("yönetici kabuğu iki dilde", () => {
     for (const text of [
       ">Ask</a>",
       ">Rules</a>",
-      ">Database map</a>",
+      ">Map</a>",
       ">Connections</a>",
-      ">Ready questions</a>",
+      ">Ready</a>",
       ">Users</a>",
       ">System</button>",
       ">Unknown</span>",
@@ -71,9 +71,9 @@ describe("yönetici kabuğu iki dilde", () => {
     for (const text of [
       ">Sor</a>",
       ">Kurallar</a>",
-      ">Veritabanı haritası</a>",
+      ">Harita</a>",
       ">Bağlantılar</a>",
-      ">Hazır sorular</a>",
+      ">Hazır</a>",
       ">Kullanıcılar</a>",
       ">Sistem</button>",
       ">Bilinmiyor</span>",
@@ -111,7 +111,7 @@ describe("gezinme satırı iki dilde", () => {
   });
 
   it("Türkçe satır bugünkü adları veriyor", () => {
-    expect(nav("tr")).toContain(">Hazır sorular</a>");
+    expect(nav("tr")).toContain(">Hazır</a>");
     expect(render(<MastheadNav route="rules" user={ADMIN} />)).toBe(nav("tr"));
   });
 });

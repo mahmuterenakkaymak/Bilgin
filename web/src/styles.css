@@ -1858,6 +1858,18 @@ main {
   .sidebar {
     display: block;
   }
+
+  /* Run 8 gezinmeye Bağlantılar'ı ve TR/EN düğmesini de çağırdı: altı ad 1366'ya sığmadı ve
+     telefonun kaydırılan sırası maskeyle "Hazır sor"da kesti, gizli çubuk devamı da söylemedi —
+     sıradan bir dizüstünde bir ekran ulaşılmaz görünüyordu (en-map-screen-map-blank-1366.png,
+     admin-connections-connections-list-1366.png). Geniş tarafın satırı yazılmaz, sarar: sığmayan
+     bağlantı ikinci kata çıkar, hiçbir ad kesilmez. Telefonun uca koyduğu maske burada sönük. */
+  .masthead-nav {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
 }
 
 @media (min-width: 960px) {
@@ -1885,39 +1897,13 @@ main {
    geniş tarafın karşılığı yoktu. Yöneticinin altı bağlantısıyla kimlik çipi ve Çıkış kendi
    satırına düşüyor, her yönetici ekranı iki satırlık başlık taşıyordu
    (admin-ready-questions-ready-list-1366.png, users-screen-users-table-1366.png) — 1366 sıradan
-   bir dizüstü ve kırılma "başlığın bir parçası düşmüş" okunuyor. Satır burada da yazılır: sarma
-   kapalı, sıranın kendisi küçülme hakkını gezinmeye devreder (min-width: 0), sığmayan bağlantı
-   kaydırılır. Telefonun yazdığı uç maskesi deseni burada da geçerli — kesilen her etiketin
-   arkasında sönen bir kenar kalır, "Veritabanı harita" yazım hatası okunmaz. */
+   bir dizüstü ve kırılma "başlığın bir parçası düşmüş" okunuyor. Başlığın kendi satırı burada da yazılır: sarma
+   kapalı. Sığmayan adı gezinmenin içi ikinci kata çıkararak yerleşir (min-width: 720px), o yüzden
+   burada ne kaydırma çubuğu ne de uç maskesi var: "Veritabanı harita"
+   yazım hatası okunmaz. */
 @media (min-width: 1200px) {
   .masthead {
     flex-wrap: nowrap;
-  }
-
-  .masthead-nav {
-    min-width: 0;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    /* Odak halkası kutunun 4px dışına çiziliyor: pay içeride, taşma satırı kabartmasın. */
-    padding: 4px;
-    margin: -4px;
-    --fade-start: 0px;
-    --fade-end: 1.75rem;
-    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
-  }
-
-  .masthead-nav[data-overflow-start="true"] {
-    --fade-start: 1.75rem;
-  }
-
-  .masthead-nav[data-overflow-end="false"] {
-    --fade-end: 0px;
-  }
-
-  .masthead-nav::-webkit-scrollbar {
-    display: none;
   }
 
   /* Bağlantı esnerse uzun ad kendi içinde kırılıp satırı kabartıyor: telefonun kuralının aynısı. */

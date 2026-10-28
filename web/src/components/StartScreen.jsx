@@ -91,7 +91,7 @@ export default function StartScreen({
           {isAdmin && (
             <>
               {t("start.empty.adminBefore")}
-              <a href="#/hazir-sorular">{t("nav.ready")}</a>
+              <a href="#/hazir-sorular">{t("navfull.ready")}</a>
               {t("start.empty.adminAfter")}
             </>
           )}

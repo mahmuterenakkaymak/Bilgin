@@ -253,20 +253,20 @@ def test_the_wide_head_is_one_row():
     )
 
 
-def test_the_row_gives_its_shrink_room_to_the_nav():
-    """Sarma kapanınca sıra taşmaz, küçülmeye çalışır: küçülme hakkı olmayan taraf
-    (`min-width: auto`) payını vermez ve satır yine ikinci kata çıkar. Payı devralan gezinme
-    sığmayan bağlantıyı kendisi kaydırır; çipin tavanı yoksa uzayan ad satırı uzatır."""
+def test_the_wide_row_wraps_instead_of_scrolling():
+    """Run 8 gezinmeye Bağlantılar'ı ve TR/EN düğmesini de çağırdı: 1366'da altı ad sığmadı,
+    telefonun kaydırılan sırası maskeyle "Hazır sor"u yuttu ve gizli çubuk devamı da söylemedi
+    (en-map-screen-map-blank-1366.png, admin-connections-connections-list-1366.png) — sıradan bir
+    dizüstünde bir ekran ulaşılmaz görünüyordu. Geniş tarafta satır yazılmaz, sarar: sığmayan
+    bağlantı ikinci kata çıkar, hiçbir ad kesilmez. Kaydırma ve uç maskesi telefona kalır."""
     nav = effective_wide(".masthead-nav")
-    assert nav.get("min-width") == "0", (
-        f".masthead-nav geniş ekranda küçülmüyor: payı kendine saklayan sıra taşar: {nav}"
+    assert nav.get("flex-wrap") == "wrap", (
+        f".masthead-nav geniş ekranda sarmıyor: sığmayan bağlantı kesiliyor: {nav}"
     )
-    assert nav.get("overflow-x") in ("auto", "scroll"), (
-        f"sığmayan bağlantı kaydırılmıyor, kırpılıyor: {nav}"
+    assert nav.get("overflow-x", "visible") not in ("auto", "scroll"), (
+        f"geniş ekranda hâlâ kaydırılan satır var: {nav}"
     )
-    assert nav.get("flex-wrap", "nowrap") != "wrap", (
-        "gezinme kendi alanında sarmaya dönüyor: bağlantılar alt alta iniyor"
-    )
+    assert nav.get("mask-image", "none") == "none", f"geniş ekranda uç maskesi yanmış: {nav}"
     assert effective_wide(".masthead-nav .nav-link").get("flex", "0 1 auto") in ("none", "0 0 auto"), (
         "bağlantı esneyebiliyor: uzun ad kendi içinde kırılıp satırı kabartıyor"
     )
