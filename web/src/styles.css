@@ -972,6 +972,12 @@ main {
   display: none;
 }
 
+/* Hiç giriş yapmamış hesabın cümlesi de yalnız yığılmış satırda okunur: geniş ekranda sütunun
+   boşu çizgiyle duruyor, sözü başlığın altında zaten biliniyor (M28 craft 1). */
+.users-never {
+  display: none;
+}
+
 @media (max-width: 720px) {
   /* ASSUMPTION: başlık 320/390'da flex-wrap ile zaten satırlara iniyor ve çip ellipsis'le kısalıyor
      (ölçüldü: taşma yok) — M17'deki "üst üste biniyor" izlenimi sayfanın 660px'e taşmasından geliyordu. */
@@ -1209,10 +1215,14 @@ main {
 
   /* Rol ile iş rolü alt alta inince iki çıplak select birbirine karışıyor — "Yönetici" mi iş rolü
      mü, telefon başlığı hiç göstermiyor. Adları hücrelerin kendisi taşır, Durum ve Son giriş gibi
-     (M28 review 3): `content: var(--cell-*)` derlenmiş sayfada düşüyordu, artık söz `.cell-label`. */
+     (M28 review 3): `content: var(--cell-*)` derlenmiş sayfada düşüyordu, artık söz `.cell-label`.
+     Ad kontrolün üstünde küçük bir başlık (M28 craft 1): satıra yapışan etiket iki selectin
+     hangisinin uygulama hangisinin iş rolü olduğunu söylemiyordu. */
   .users-table .cell-label {
-    display: inline;
-    color: var(--text);
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--muted);
+    font-size: 13px;
     font-weight: 600;
   }
 
@@ -1265,6 +1275,24 @@ main {
   .conn-table .is-blank,
   .users-table .is-blank {
     display: none;
+  }
+
+  /* "Son giriş" istisna (M28 craft 1): hiç girmemiş hesabın söyleyecek sözü var — kataloğun
+     cümlesi, çizginin kendisi değil. Çizgi hücrenin çıplak yazısı, kendi öğesi yok; o yüzden
+     satırın yazısı sıfırlanıp sözü olan iki öğeye 13px olarak geri veriliyor. */
+  .users-table .users-never {
+    display: inline;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .users-table .users-login.is-blank {
+    display: block;
+    font-size: 0;
+  }
+
+  .users-table .users-login.is-blank .cell-label {
+    font-size: 13px;
   }
 
   .conn-table .conn-actions {

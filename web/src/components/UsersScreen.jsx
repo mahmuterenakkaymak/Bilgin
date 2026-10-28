@@ -371,6 +371,9 @@ export default function UsersScreen({ users = [], currentUser = null, loading = 
                     title={login ? undefined : t("users.neverLoggedIn")}
                   >
                     <span className="cell-label">{`${t("users.col.lastLogin")}: `}</span>
+                    {/* Çizgi geniş ekranda boş sütunun yerini tutuyor; yığılmış satırda aynı hücre
+                        kataloğun cümlesini söylüyor (M28 craft 1) — çıplak çizgi olarak inmiyor. */}
+                    {!login && <span className="users-never">{t("users.neverLoggedIn")}</span>}
                     {login || "—"}
                   </td>
                   <td className="users-actions">
