@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R3-6 yan kanal kümesi: tests/data/pii_bypass.jsonl gerçek kapıdan geçirilir.
 
 Maske ve filtre kuralları birim testlerinde ayrı ayrı ölçüldü; asıl soru ikisinin **executor'da**

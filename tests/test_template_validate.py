@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T248: doğrulama, yüklemenin uygulanmasını engelleyen kusurları raporlar (PLAN R6-15).
 
 Testler yazarın dolu örneğini openpyxl ile bozar - tek hücre, tek satır - ve bekler ki kusur

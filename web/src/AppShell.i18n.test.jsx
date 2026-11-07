@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // R8-17: başlık ve kabuk iki dilde. Yönetici kabuğu tr ve en'de aynı id kümesini boyamalı,
 // İngilizce başlıkta Türkçe harf kalmamalı, Türkçe çıktı bugünkü cümleleri harfi harfine
 // vermeli — App.test.jsx, Root.test.jsx ve UsersBusinessRole.test.jsx o cümleleri bekliyor.

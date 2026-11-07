@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T427: M27 entegrasyonu — dilin kendisi uçtan uca, elle kurulmuş tek parça olmadan (PLAN R8-5..R8-12).
 
 Kapı gerçek ``create_app``, hesaplar gerçek ``UserStore``, oturum gerçek ``open_session``, model

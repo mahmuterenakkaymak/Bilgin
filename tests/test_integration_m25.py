@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T345: M25 entegrasyonu — bağlantı, bekçi ve soru tek gerçek dünyada (PLAN R7-22..R7-25).
 
 Kurmaca tek parça yok: kullanıcılar gerçek ``UserStore``, bağlantılar gerçek ``ConnectionStore``

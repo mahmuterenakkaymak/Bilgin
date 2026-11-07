@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """The system prompts: the rules that decide whether a run is worth measuring.
 
 Four of them are load-bearing. The dialect and the reference date are what make "geçen ay"

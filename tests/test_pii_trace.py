@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """trace() her çıktı kolonunu gerçek kaynak kolonlarına kadar izler; izlenemeyen None döner (R3-6)."""
 
 from nl2sql.policy import pii

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-8: katlama tek dünya - doküman ile sorgu aynı harflere inmek zorunda.
 
 Türkçe büyük I iki yere düşer (I -> ı, İ -> i) ve `str.lower()` bunu bilmez; `İ`'yi `i̇`

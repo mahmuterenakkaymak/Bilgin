@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``eval --compare --models`` ``--repeat``i de doğrular (T161, PLAN R4-13; R3-11 kuralı).
 
 ``--repeat 0`` ``range(0)`` yüzünden her hücreyi boş koşup sıfırlarla dolu bir rapor yazıyordu ve

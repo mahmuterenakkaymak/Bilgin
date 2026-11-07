@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T303: M22 entegrasyonu - zincir gerçek kapıdan (PLAN R7-13).
 
 Burada elle kurulmuş senaryo yok: ``open_session(llm="fake")`` + ``make_client("fake")`` +

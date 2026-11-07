@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Follow-up ipuçları (PLAN R7-11): ``followup_hints(question, schema)``.
 
 İpucu iki şeyi ayırt eder: soruda önceki tura işaret eden bir kelime var mı, ve soru bir tabloyu

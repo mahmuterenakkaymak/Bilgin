@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T136: WWI veri kümesinin tanımı ve şeması (PLAN R4-9, R4-7).
 
 Kümenin Python'u (``builder.py``, ``reference.py``) T138-T142'de yazılacak; dataset.json'daki kod

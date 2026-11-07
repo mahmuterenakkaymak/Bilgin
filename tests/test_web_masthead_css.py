@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T272: telefon başlığı iki satır olmalı, üç değil (M19 görsel inceleme 7).
 
 T264 kimlik çipiyle Çıkış'ı gezinme satırına çağırdı, gelen yalnız durum sözcüğü oldu: `flex-wrap`

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // R8-15: katalog eşitliği, çevirinin düşüş zinciri ve dil sırası. Ekranlar anahtarlarını kendi
 // görevinde ekleyeceği için eşitlik testleri kayıttaki değil dosyadaki kataloglara bakar.
 import { createElement, Fragment } from "react";

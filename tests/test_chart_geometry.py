@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T276: telefon genişliğinde grafiğin çizim alanı kutunun içinde çökmesin (M20 görsel inceleme 2).
 
 ``containLabel: True`` dönen kategori adlarını ``grid.bottom``'un İÇİNE yerleştirir: 72px'lik alt

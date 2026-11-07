@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T462: netleştirme seçeneğinin satırı basılabilir görünmüyor (M25 işçilik 2).
 
 Üç seçenek, satırın mı yoksa ucundaki okun mu hedef olduğunu söylemeyen düz `.btn`ler

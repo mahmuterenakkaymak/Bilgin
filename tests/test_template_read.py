@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T246: okuyucu, yazarın ürettiğini eksiksiz geri okur (PLAN R6-14).
 
 Testler gerçek şablon baytları üzerinden gider: boş şablon, dolu örnek, elle değiştirilmiş tek

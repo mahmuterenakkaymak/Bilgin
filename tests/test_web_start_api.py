@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T321: başlangıç ekranının ve hazır soruların API kapıları (PLAN R7-17, R7-18).
 
 Dünya ``tests/test_ready_approve.py`` ile aynı - kopya, import değil: kurulmuş sentetik ERP,

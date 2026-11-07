@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 4 README'si: dataset/model yüzeyi ve 27B koşusu dokümanda geçmeli.
 
 ``test_smoke_run3``ün Run 4 karşılığı: dokümanda yazılı olmayan bir bayrak kullanıcının elinde yok

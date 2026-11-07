@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T176: sonucun grafiği ve seçeneğin doğrulanması (PLAN R5-6, Contracts ChartSpec).
 
 İddia şurada: çizilecek bir şey yoksa uydurma grafik yoktur — None döner. Tür kolonlardan okunur

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T67: TBLSTHAR_ARSIV açıklaması arşivin yalnız 2025 içerdiğini doğru söylüyor."""
 
 import re

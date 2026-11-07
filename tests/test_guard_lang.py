@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T395: Bekçi sayıyı dilinin biçimiyle okur (PLAN R8-7).
 
 İddia: İngilizce cevap `1,234.56`, `1234.56`, `12.3%`, `-12.3%` yazar ve bekçi bunları okur; aynı

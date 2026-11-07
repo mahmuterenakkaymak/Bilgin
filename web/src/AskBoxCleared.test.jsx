@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // Kutunun temizlenmesi bir olay işidir: cevap gelince kutu boşalmalı, netleştirme ve koşmayan
 // soru ise kutuda kalmalı ("Soruyu değiştir" oradaki metni düzenler). Ağ sahte — hangi yükün

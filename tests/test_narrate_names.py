@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Technical column names never reach the user's sentence (2026-10-25, real WideWorldImporters: "StateProvinceName
 olarak Texas ...", "GrossProfit toplamı"). A sentence that writes one is asked for once more with the names listed;
 if the second one still does, the template speaks. Plain Turkish words that happen to equal a column (`Ciro`)

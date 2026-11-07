@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // Defter hem işaret hem olay ister: grupların kurulması ve düğmelerin kimin için var olduğu SSR
 // ile okunur, tıklamalar, girdiği ve reddin cümlesi jsdom'da koşar. Satırlar sözleşme "ready

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T122: sentetik veri kümesi taşındı (PLAN R4-2) — yalnızca yollar değişti, baytlar aynı kaldı.
 
 Beş veri dosyası ``datasets/synthetic_erp/`` altına geçti. sha256 değerleri taşımadan önce

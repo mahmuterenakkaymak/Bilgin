@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T372: pano kartları kendi yüksekliğinde durur (M23 görsel inceleme 7).
 
 `#start` bir ızgaraydı ama `align-items` demiyordu, dolayısıyla ızgara maddeleri satırın en

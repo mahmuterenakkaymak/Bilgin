@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Background database status checker (PLAN R7-25).
 
 Every logged-in user sees a green or red "Veritabanı" dot, so somebody has to ask SQL Server

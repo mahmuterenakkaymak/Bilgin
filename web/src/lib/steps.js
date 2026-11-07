@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Yükleme adımlarının tek kaynağı (R5-18): sunucudan olay gelmez, etiket geçen süreye göre ilerler
 // ve son adımda durur — uzun bir soru ekranda "bitti" numarası yapmaz.
 // Ekrana yazılan şey STEP_KEYS'in katalog satırıdır (R8-18); STEPS adım sayısının ve Türkçe yazının

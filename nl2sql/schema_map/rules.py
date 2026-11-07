@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """İş kuralları: yükleyici ve modelin okuduğu metin biçimi.
 
 Kural, bir iş teriminin (ciro, net satış, geçen ay) bu şemada ne anlama geldiğini söyler; SQL'i

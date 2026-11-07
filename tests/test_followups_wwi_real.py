@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T304: ``wwi_real`` ardışık soru zincirleri (PLAN R7-13, Contracts "followup chain").
 
 Kümenin satırları gerçek WideWorldImporters'ta durur ve zincirler o sunucuda tur tur ancak

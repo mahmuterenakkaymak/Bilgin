@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``python -m nl2sql paths`` (PLAN R8-20, Contracts ``paths``): her yol adıyla ve çözülmuş haliyle.
 
 Üç şey sabitlenir: ``--json``ın anahtarları sözleşmenin satırıdır (kurulum betiği ve README onları

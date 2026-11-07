@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``NL2SQL_HOME`` (PLAN R8-20): kurulmayınca her yol Run 7 ile aynı, kurulunca yazıların kökü HOME.
 
 Yollar ``config`` import edilirken çözüldüğü için testler alt süreç koşar: ortam gerçek, modül

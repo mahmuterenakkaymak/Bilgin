@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T243: M19 entegrasyonu — roller elle kurulmuş sahte nesnelerle değil, gerçek dünyada sınanır.
 
 Depo gerçek ``UserStore``, kapı gerçek ``create_app``, dünya gerçek ``open_session``: mini

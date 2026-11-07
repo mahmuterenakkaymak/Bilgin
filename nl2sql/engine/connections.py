@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Database connections: one row per dataset in the app database (PLAN R7-22).
 
 A dataset's SQL Server connection is data the admin fills in on a screen, not a file someone

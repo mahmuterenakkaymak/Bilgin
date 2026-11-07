@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T472: duran kelimesi olmayan ya da Türkçe özel ad taşıyan İngilizce soruların Türkçe yanıtlanması (PLAN R8-6).
 
 İki boşluk ölçülüyor: iş sorusunun günlük kelimeleri (by, per, top, products...) sözlükte olmadığı için

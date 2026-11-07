@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Bağlam bütçesi: istem tahmini ve araç cevaplarının kısaltılması (PLAN R4-11).
 
 Tahmin karakter sayımıdır, ama testler formülü tekrarlamasın diye içerik uzunlukları

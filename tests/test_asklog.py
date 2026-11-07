@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T167: soru günlüğü (PLAN R5-4, Contracts "ask record" / "history item").
 
 Kayıt sözleşme alanları dışında hiçbir şey taşımaz - özellikle satır yok. Geçmiş en yeni önce

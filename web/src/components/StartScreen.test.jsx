@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // Pano hem işaret hem olay ister: kartın yükü üç biçimde boyanır, tıklaması konuşma açar,
 // "Yenile"nin 429'u kartın içinde okunur. Yapı SSR ile okunur; ağ ve olay jsdom'da koşar, o

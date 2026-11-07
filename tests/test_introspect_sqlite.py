@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T86: sqlite_skeleton over a real build_db file against the committed schema.json."""
 
 import sqlite3

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Şema haritası API'si: şablonun indirilmesi, yüklemenin önizlenmesi, küme yapılması (PLAN R6-16, R6-17).
 
 Üç indirme, iki yazma: şablon ile dolu örnek diskte durmaz, her istekte kurulur; önizleme tek bir

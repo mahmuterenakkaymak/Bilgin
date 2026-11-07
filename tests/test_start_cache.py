@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T320: kart sonuçları ve tek uçuş önbelleği (PLAN R7-18).
 
 Kart onaylı bir hazır sorunun kayıtlı SQL'idir; başlangıç ekranı onu salt okunur yürütücüden

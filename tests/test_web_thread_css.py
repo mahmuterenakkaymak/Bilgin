@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T311: konuşma akışının görünümü (PLAN R7-15, R6-19).
 
 Akışın bileşenleri T307-T310'da geldi (Thread.jsx, TurnCard.jsx, ConversationList.jsx,

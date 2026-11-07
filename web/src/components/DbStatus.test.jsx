@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Başlığın veritabanı çipi ve düşmüş veritabanının bandı SSR ile kuruluyor: noktanın tonu,
 // ipucunun kime ne söylediği ve bandın hangi halde açıldığı boya çıkmadan da okunur. Yoklamanın
 // kendisi sunucuda (tests/test_web_db_status.py), burada yalnız /api/health'ın `db` bloğunun

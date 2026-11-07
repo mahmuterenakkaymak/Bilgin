@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 4 config: dataset/model ayarları, dataset klasörü okuyucusu ve .gitignore kalıbı.
 
 ``datasets_dir()`` ``llm_settings`` gibi davranır: ``NL2SQL_DATASETS_DIR`` çağrı anında

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T334: bağlantının nereden geleceği sırası (PLAN R7-23).
 
 Bir veri setinin SQL Server bağlantısı dört yerden biridir: o veri setinin kendi ortam

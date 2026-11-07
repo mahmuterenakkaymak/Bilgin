@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 7'nin bağlantı dumanı: ``--connections`` formu gerçekten yokluyor mu, sırrı gerçekten gizliyor mu?
 
 Test sunucu açmaz; ``scripts/smoke_serve.py --connections``ı alt süreç olarak koşar, yani ölçtüğü şey

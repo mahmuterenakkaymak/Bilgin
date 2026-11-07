@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T369: kart tablosu sorunun ölçtüğü kolonu gösterir (M23 görsel inceleme 4).
 
 Kart ~380px genişliğinde, başlıklar ve hücreler ``nowrap``: son kolon kartın sağına sığıyor ama

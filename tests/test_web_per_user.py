@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T239: geçmiş, yeniden koşum, dışa aktarım ve kayıtlar kişinin kendi (PLAN R6-9).
 
 Dünya ``test_web_route_matrix`` ile aynı ama her test kendi tmp'sinde koşar: sorular tek günlüğe

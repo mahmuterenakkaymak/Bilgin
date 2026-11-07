@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T480: oturumun reddi İngilizce bir oturumda Türkçe konuşmuyor (PLAN R8-5).
 
 Dünya test_web_datasets_api'ninki: kurulmuş mini küme, sahte model, tmp günlükler. Veritabanı

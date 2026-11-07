@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R3-9 komşu genişletmesi: bulunan tablonun join komşuları bağlama kendiliğinden girer.
 
 İddia aramanın isabeti değil (o test_search.py'de) genişletmenin davranışı: komşular vuruşların

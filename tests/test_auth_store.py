@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T225: kullanıcı deposu (PLAN R6-3).
 
 Depo kayıtlı sorularla aynı SQLite dosyasını kullanır: kendi tablolarını açar, ``saved``

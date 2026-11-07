@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Golden soruların niyet incelemesi: tek markdown belgesinde soru + golden SQL + doğrular.
 
 Skor SQL'in neyi hesapladığını söyler; neyin *kastedildiğini* bir insan onaylaması gerekir. Bu belge

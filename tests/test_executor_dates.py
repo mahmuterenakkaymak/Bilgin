@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Tarih islevleri SQLite tarafinda SQL Server'in verdigi sayiyi ve metni vermeli.
 
 Kirilan yer ceviri adimiydi: policy T-SQL'i yeniden uretiyor, sqlglot DATEDIFF argumanlarini

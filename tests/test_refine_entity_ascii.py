@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T363: ``ambiguous_entity`` ASCII yazılmış kolon adlarında da şık sorar (PLAN R7-12).
 
 Eşik, sorunun Türkçe varlık sözcüğünü son turun kolon adlarıyla karşılaştırır; oysa gerçek

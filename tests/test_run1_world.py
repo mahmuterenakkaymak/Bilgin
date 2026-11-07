@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-1: the Run 1 world is frozen - seed 42 has one fingerprint, and schema.json owns the table keys."""
 
 import hashlib

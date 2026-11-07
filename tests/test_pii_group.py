@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R5-21 grup yan kanalı: tek kişilik departmanda maaş ortalaması maskelenir.
 
 Maske kuralı (R3-6) bir toplulaştırmayı yalnız COUNT için sayı bırakıyor; AVG/MAX/SUM maaş

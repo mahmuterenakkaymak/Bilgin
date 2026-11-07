@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T213: dar ekranda kural satırının düğmeleri (M17 görsel incelemesi, 390px).
 
 Görsel incelemede 390px'lik kural ekranında İşlem sütunu hiç yoktu: ``.rules-table``'ın

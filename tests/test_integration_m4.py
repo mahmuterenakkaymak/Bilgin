@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T46: M4 entegrasyonu — kurulu dünya Run 1 pin'ini tutar, şema eksiksiz kurulur, kurallar ve etiketler sorulara bağlı.
 
 Zincirin hiçbir halkası sahte değil: gerçek generator ve gerçek build_db. Altın SQL'lerin policy'den

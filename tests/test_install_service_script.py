@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``scripts/install-service.ps1`` (PLAN R8-23): betiğin kendisi Windows PowerShell ile koşulur.
 
 Kurulum betiği bir servisin makinesini değiştiren tek dosyadır, o yüzden testi de betiğin

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Cümleler sunucunun sözüdür (auth/store.py, auth/passwords.py): burada sabitlenmeleri, biri
 // arayüzde yeniden yazıldığında sunucuya da bakılmasını zorunlu kılsın.
 import { describe, expect, it } from "vitest";

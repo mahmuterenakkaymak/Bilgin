@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T329: başlangıç ekranının görünümü ve Run 7'nin dört akış sayfası (PLAN R7-21, R7-28).
 
 ``.hybrid/visual.json``ın dört sayfası (``start-sales``, ``start-purchasing``,

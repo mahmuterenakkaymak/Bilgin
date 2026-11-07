@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``user``: kullanıcı hesapları komut satırından (R6-8).
 
 Parola hiçbir komutun argümanı değildir: iki kez ``getpass``den geçer ve uyuşmazsa hiçbir satır

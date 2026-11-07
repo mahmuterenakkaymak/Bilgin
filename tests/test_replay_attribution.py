@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T274: yöneticinin yeniden koşumu yöneticiye yazılır (PLAN R6-9, Contracts "ask record (ext.)").
 
 Dünya ``test_integration_m19`` ile aynı — gerçek ``open_session``, gerçek ``UserStore``, gerçek

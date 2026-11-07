@@ -1,25 +1,42 @@
 {
- "tasks": 36,
- "first_try": 31,
- "local_retries": 9,
- "rescues": 3,
+ "tasks": 105,
+ "first_try": 96,
+ "local_retries": 12,
+ "rescues": 1,
  "failed": [
-  "T377",
-  "T379",
-  "T345"
+  "T455"
  ],
- "reviews": 3,
+ "reviews": 5,
  "checks": "red",
  "stale_updates": [
   {
-   "task": "T331",
-   "commit": "5b981e6",
+   "task": "T402",
+   "commit": "8b10d09",
    "tests": [
-    "tests/test_visual_flows.py::test_the_map_page_hands_the_dataset_it_found_back_to_the_next_page"
+    "web/src/components/AnswerCard.test.jsx",
+    "web/src/components/AskStates.test.jsx"
+   ]
+  },
+  {
+   "task": "T427",
+   "commit": "1199eb0",
+   "tests": [
+    "tests/test_cli_lang.py::test_tr_help_equals_todays_text[top]",
+    "tests/test_excel_fallback.py::test_default_profile_covers_the_canonical_fields_without_ambiguity",
+    "tests/test_onboard_apply.py::test_the_upload_writes_the_preview_and_nothing_else",
+    "tests/test_onboard_apply.py::test_the_rules_sheet_lands_in_rules_json",
+    "tests/test_template_read.py::test_the_rule_row_becomes_a_rule"
+   ]
+  },
+  {
+   "task": "T455",
+   "commit": "9670fae",
+   "tests": [
+    "web/src/components/MapScreenProgress.test.jsx"
    ]
   }
  ],
- "minutes": 585.6,
- "brain_calls": 19,
+ "minutes": 1321.9,
+ "brain_calls": 10,
  "brain": "cloud"
 }

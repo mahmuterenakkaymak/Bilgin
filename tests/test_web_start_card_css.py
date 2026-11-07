@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T476: telefonun pano kartı üçüncü satırı gliflerin ortasından kesiyor (M27 görsel inceleme 3).
 
 ``.start-card-table`` 140px'lik kutuya ``config.CARD_TABLE_ROWS`` satır sokuyor; 390'da 13px

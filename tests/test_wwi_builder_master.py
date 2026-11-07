@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T138: WWI üretecinin 1. bölümü - ana kayıtlar (PLAN R4-9).
 
 ``generate(seed)`` şemadaki her tabloya bir anahtar verir ve ana kayıtları doldurur. Buradaki

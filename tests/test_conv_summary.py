@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T286: ``turn_summary`` (PLAN R7-3, Contracts "TurnSummary").
 
 Özet, bir turun sonraki tura miras bıraktığı kadardır: en fazla ``CONV_KEEP_ROWS`` maskeli satır,

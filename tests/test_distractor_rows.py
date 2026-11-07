@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T69: DISTRACTOR_ROWS gerçekten dolgunun üst sınırıdır — varsayılan 0 iken yakın kopyalar
 dışındaki hiçbir distractor satır almaz (kurulum ekranı bunu şema-yalnız diye söyler),
 5 iken hiçbiri beşi geçmez.

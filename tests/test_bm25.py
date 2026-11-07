@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-8: BM25 üç şeyi doğru yapmalı — nadir terim daha ağır basar, uzun doküman cezalandırılır,
 eşitlik sırayı bozmaz.
 

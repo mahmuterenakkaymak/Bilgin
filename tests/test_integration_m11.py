@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T135: M11 entegrasyonu — iki dünya, aynı dört kapı.
 
 Elle yapılmış sahte parça yok: dünya her kümenin kendi ``builder``ı, kapı gerçek

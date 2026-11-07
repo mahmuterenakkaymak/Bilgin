@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 8 README'leri (R8-14): README.md İngilizce, README.tr.md Türkçe, ikisi aynı şeyi anlatıyor.
 
 Üç denetim: iki dosya **aynı komut kümesini** taşıyor - bir dilde yazılmayan komut o dildeki

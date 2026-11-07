@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T338: bağlantıların API'si (PLAN R7-22..R7-24, Contracts "connection (public)", "guard report").
 
 Sırrın sunucudan çıkmadığı burada ölçülür: parola yalnız ``PUT``la içeri girer, cevapların

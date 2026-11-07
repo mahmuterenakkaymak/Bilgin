@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import { useT } from "../i18n/index.js";
 
 // Hiç soru sorulmamış ekranın açılışı: iki cümle ve örnek çipler (R5-18).

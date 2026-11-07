@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Formun sunucudaki karşılığı: cümleler engine/connections.py ve web/connections_api.py ile
 // aynı yazılmak zorunda — biri değişirse öteki sessizce ayrı düşmesin diye burada tek tek
 // karşılaştırılıyorlar. Kaynağı: connections.py'nin NO_* / BAD_* sabitleri ve API'nin 409'ları.

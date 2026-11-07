@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """COUNT(*) under column DENY (2026-10-25, found on the restored WideWorldImporters).
 
 The read-only login DENYs every `pii`/`deny` column, and SQL Server then refuses `COUNT(*)` and

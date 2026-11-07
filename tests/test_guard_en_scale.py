@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """İngilizce ölçek bekçisi: `fmt.format_compact`'ın yazdığı "12.5K" okunur, uydurma "99.9K" geçmez
 (PLAN R8-7 / R8-8). Türkçe tarafın okunuşu aynı metinler için değişmez."""
 

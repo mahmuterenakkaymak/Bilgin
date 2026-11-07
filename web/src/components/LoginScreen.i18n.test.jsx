@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // R8-17: kartın ve kapının her cümlesi katalogdan. İki dil aynı id kümesini boyamalı, İngilizce
 // çıktıda Türkçe harf kalmamalı, Türkçe çıktı bugünkü cümleleri harfi harfine vermeli — kartı

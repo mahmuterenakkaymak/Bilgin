@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T227: kayıtlı sorular kullanıcının (PLAN R6-9, Contracts "saved row (ext.)").
 
 Run 5'in dosyası yerinde büyür: ``username`` kolonu sonradan eklenir, eski satır NULL kalır ve

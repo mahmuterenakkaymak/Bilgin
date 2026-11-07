@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T205: kısa bir iş terimi kelimenin içinde değil, başına başınaysa söylenmiştir (PLAN R3-9).
 
 "Kuruyemiş ürün grubunun bu yılki KDV hariç satış cirosu ..." kural yakalama açısından döviz

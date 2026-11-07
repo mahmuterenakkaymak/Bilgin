@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // Cevabın pano işleri hem işaret hem olay ister: düğmelerin kimin için kurulduğu SSR ile,
 // tıklaması, girdiği ve reddin cümlesi jsdom'da okunur. Grafikli yükler burada çizilmez —

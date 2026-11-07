@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """User-facing text from the catalogs: t(key, lang, **params), Turkish as the fallback (R8-2)."""
 
 from __future__ import annotations

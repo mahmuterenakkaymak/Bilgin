@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Kenar çubuklarının kısa zamanı (R8-19): "4 dk önce" / "4 min ago". Cümleler kataloğunda durduğu
 // için çeviriyi çağırandan alır — KAYITLILAR ve GEÇMİŞ aynı zamanı aynı cümleyle yazar.
 const MINUTE = 60_000;

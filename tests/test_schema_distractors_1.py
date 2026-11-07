@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-4 part 1: the Muhasebe/Banka/Çek-Senet tables that exist only to be walked past.
 
 A distractor has to look like the real thing - ERP-style name, the frequent columns, a

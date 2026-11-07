@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T90: merge.diff_map — harita ile veritabanının çeliştiği her yer (PLAN R3-5).
 
 İki üretici, bir şema: merge bu farkları atar, diff ise sayar. Testler elle kurulmuş şemalar

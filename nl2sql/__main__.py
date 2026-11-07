@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """`python -m nl2sql` giriş noktası: söz dizimi cli.main'de, çıkış kodu burada."""
 
 import sys

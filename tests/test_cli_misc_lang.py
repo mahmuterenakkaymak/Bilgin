@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T411: CLI'nin öteki komutları da çözülen dilde (PLAN R8-5, R8-11).
 
 ``ask`` ve ``user *`` T410'da kataloğa geçmişti; burada aynı kural kalan komutlara uygulanıyor:

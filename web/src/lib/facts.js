@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Kartın çip şeridi: olguların tamamı değil, cevabın üç özeti. Okunur okunuşu olmayan olgu çip
 // olmaz; tek hücrelik cevapta üç olgu aynı sayıyı söyler, şeritte bir kez okunur. Dönen öğeler
 // girdi dizisinin kendi referanslarıdır — kanıt paneli "çipte olmayanlar"ı bu kimlikle ayırır.

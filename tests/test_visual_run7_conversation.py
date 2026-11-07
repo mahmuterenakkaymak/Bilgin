@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T314: konuşma akışlarının seçicileri (PLAN R7-15).
 
 ``.hybrid/visual.json`` üç konuşma sayfasını M23 için şimdiden ilan etti. ``test_visual_flows.py``

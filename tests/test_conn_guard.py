@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T336: bağlantının salt okunur giriş olup olmadığı denetimi (PLAN R7-24, Contracts "guard report").
 
 Denetim sunucuya sorularak yapılır: giriş sysadmin ya da db_owner mı, veritabanı düzeyindeki beş

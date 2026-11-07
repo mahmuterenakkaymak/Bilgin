@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T400: cevabın dili payload'ın kendi alanında (PLAN R8-6, Contracts "AskPayload (ext.)").
 
 Dünya gerçek (``build_db`` ile kurulmuş sentetik ERP), model ``cli.make_client``ın gerçek sahtesi:

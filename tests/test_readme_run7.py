@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 7 README'si: konuşma — ardışık sorular, kanıt satırı, CLI bayrakları ve `eval --followups`.
 
 Aynı denetim Run 7'nin öteki bölümü için de koşar: ``## Başlangıç ekranı ve hazır sorular``

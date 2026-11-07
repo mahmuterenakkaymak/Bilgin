@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 3'ün duman testi: her komut depo kökünden gerçek bir alt süreç olarak koşar, hepsi kod 0.
 
 ``test_smoke_run2``nin Run 3 karşılığı; burada da hiçbir şey yer değiştirmez: veritabanı

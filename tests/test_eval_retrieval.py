@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T56: geri çağırma ölçütünün aritmetiği, raporu ve ekranı.
 
 Ölçüm aracının kendisi ölçülmeli: recall@k elle doğrulanmadıysa "RAG kazandı" satırının bir

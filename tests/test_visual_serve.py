@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T235: görsel inceleme kendi kum havuzunda koşar (PLAN R6-20).
 
 ``scripts/visual_serve.py`` tarayıcı akışının ``serve``ı: kullanıcıları kendisi açar, veriyi

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``--mode auto`` (T107, PLAN R3-10): bağlam tahminine göre modun kendiliğinden seçilmesi.
 
 Ölçüt tam kurallı sistem isteminin tahmini: bütçeye sığıyorsa full_rules, sığmıyorsa rag; rag'in

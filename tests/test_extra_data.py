@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T34: Run 2 ek verisi — FK'lar Run 1 tablolarına bağlanır, tohum deterministiktir, şekiller kurulur."""
 
 import datetime as dt

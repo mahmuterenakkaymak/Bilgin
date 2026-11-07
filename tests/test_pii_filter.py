@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Filtre yan kanalları (R3-6): maskelenen bir kolon sorgunun filtresi olamaz.
 
 Maske değeri göstermez ama aynı kolon üzerinden filtre sorulursa cevap değerin kendisine

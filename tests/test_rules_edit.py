@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R5-16: kural düzenleme - doğrulama, normalize, atomik kayıt.
 
 Testler commit'lenmiş datasets/synthetic_erp/rules.json'un bir tmp kopyası üzerinde çalışır; asıl

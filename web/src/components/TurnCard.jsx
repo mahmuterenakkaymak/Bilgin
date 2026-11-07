@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import { useT } from "../i18n/index.js";
 import { columnLabel } from "../lib/chartFormat.js";
 import { formatCell, isNumericColumn } from "../lib/format.js";

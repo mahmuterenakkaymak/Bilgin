@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T407: bağlantı ve veritabanı cümleleri isteğin dilinde (PLAN R8-5).
 
 Bağlantı ekranının dört yüzü de aynı cümleyi aynı dilden okur: yoklamanın satırları (``#conn-result``),

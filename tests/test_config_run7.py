@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 7 config (PLAN R7-1): konuşma, başlangıç ekranı ve veritabanı bağlantısı sabitleri.
 
 ``FOLLOWUP_MARKERS`` küçültülmüş metinle karşılaştırılır, o yüzden her öğe küçük harfli olmalı.

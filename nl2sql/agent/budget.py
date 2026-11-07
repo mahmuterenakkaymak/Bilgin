@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """The prompt budget: what a request costs before it is sent, and what gets cut when it does not.
 
 The endpoint reports token counts only after it has answered, and a request over a small model's

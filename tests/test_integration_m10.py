@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T109: M10 entegrasyonu — üç Run 3 yüzeyi gerçek parçalarla birlikte.
 
 Elle yapılmış sahte arama/rapor yok: ölçüm gerçek şema + gerçek kurallar + gerçek join graphı +

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Parola karması: standart kütüphane scrypt, dış bağımlılık yok.
 
 Saklanan biçim ``scrypt$n$r$p$salt_b64$hash_b64``; maliyet etkenleri kendi içinde taşındığı

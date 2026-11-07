@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T79: Excel okuyucu - başlık satırının bulunması, başlıklar ve sınırlı önizleme.
 
 Çalışma kitapları openpyxl ile tmp_path içinde kurulur (gerçek .xlsx fixture'ları T83'ün işi),

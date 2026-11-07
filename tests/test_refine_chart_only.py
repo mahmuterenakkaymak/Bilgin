@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T298: "Grafiği çubuk yap" modeli koşurmaz (PLAN R7-10).
 
 Dünya gerçek (``build_db`` ile kurulmuş sentetik ERP), ajan ve anlatıcı sayaçlı sahte: iddianın

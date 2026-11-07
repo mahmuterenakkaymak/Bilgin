@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T293: konuşmalar API'si (PLAN R7-8, Contracts "conversation item", "StoredTurn",
 "history item (ext.)", "ask body (ext.)").
 

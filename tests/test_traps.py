@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Tuzak testleri: her tuzak tohumda gerçekten kuruluyor mu ve saf SQL'i doğruldan saptırıyor mu?
 
 Naive SQL, aynı sorunun tuzak farkında olmayan hali: golden ile aynı sütun sayısını üretir,

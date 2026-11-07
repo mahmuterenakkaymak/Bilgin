@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T238: kullanıcının adı sorunun her halinde (PLAN R6-9, Contracts "ask record (ext.)", "audit source (ext.)").
 
 Aynı soru üç yerde görünür: soru günlüğünün satırı, o koşumun denetim satırları ve CLI'nin ``ask --json``ı.

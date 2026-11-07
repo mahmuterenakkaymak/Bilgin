@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """History is per dataset (2026-10-25): one ask log serves every dataset, but clicking another dataset's question
 sends it to the wrong database. `dataset=None` is the default dataset, whose records carry no name; leaving the
 argument out keeps the old behaviour (every record)."""

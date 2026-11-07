@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Private SQLite backend.
 
 By the time control reaches this module the policy has already approved the query and the

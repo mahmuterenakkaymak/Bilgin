@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T421: İngilizce soru Türkçe anlatılmış bir şemada aynı tablolara iniyor mu (PLAN R8-10).
 
 Ölçüm `eval-retrieval`ın kendisi: wwi şeması + wwi kuralları + FakeEmbedder bellekte, altın

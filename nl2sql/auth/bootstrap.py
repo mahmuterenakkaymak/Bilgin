@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Geliştirme yöneticisi: boş kullanıcı tablosuna bir kez admin sokan tek yol (PLAN R6-7).
 
 Parolanın değeri yalnız ortam değişkeninde durur; koda, konfigürasyona, günlüğe ve ekrana düşmez.

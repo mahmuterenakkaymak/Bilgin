@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``eval --ambiguous`` skoru: belirsiz set netleştirmeyi ölçer, kill-gate'in paydasına girmez.
 
 Skor üç yerde duruyor — report.json, report.md ve konsol — ve üçünün de aynı paydayı taşıması

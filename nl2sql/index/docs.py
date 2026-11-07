@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """İndeks dokümanları: şema ile kuralların aranabilir metni ve kaçak kontrolü (PLAN R2-16).
 
 Bir doküman retrieval'ın gördüğü tek şey; içinde eksik kalan kelimeyi model hiç bulamaz. Bu yüzden

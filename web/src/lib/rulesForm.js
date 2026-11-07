@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Kural formunun iki yüzü arasında çeviri: API kaydı (listeler) <-> form (tek satır metinler).
 // Zorunlu alan mesajları sunucudakiyle (schema_map/rules_edit.py) birebir aynı yazılır ki
 // kullanıcı boş formu göndermek için bir gidiş-gerişi beklemesin (R5-18). Mesajlar R8-20'de

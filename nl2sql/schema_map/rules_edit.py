@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Kural düzenleme: doğrulama, normalize ve atomik kayıt (PLAN R5-16).
 
 Bir iş kuralı elle ya da arayüzden değiştirilirken bağlandığı şemayla çelişmemeli: kimlik benzersiz,

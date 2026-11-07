@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Brief §4: hiçbir sır yerinden oynamaz - beş ortam sırrının değeri hiçbir çıktıda geçmez.
 
 R8-21 ile R8-23'ün ortak sözü tek cümledir: bağlantı dizesi uygulama veritabanında, model anahtarı

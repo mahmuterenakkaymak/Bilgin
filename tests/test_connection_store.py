@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T333: bağlantı deposu, bağlantı dizesi ve sır temizliği (PLAN R7-22).
 
 Depo, yöneticinin ekrandan doldurduğu SQL Server bağlantısının tek evidir; parola satırda

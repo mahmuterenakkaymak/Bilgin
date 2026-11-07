@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Which string literals of a source file still speak Turkish to a person (R8-4).
 
 A migration test asks of its own module: "is anything user-facing left?" Every string constant that

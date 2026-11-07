@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Cevabın sayıları: özetler koddan çıkar, anlatı onları uydurmaz (PLAN R5-7, Contracts Fact).
 
 Guard'ın izin listesi de arayüzün gösterdiği satır da buradan gelir. Maske burada yeniden

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T244: okuyucu şablonun ek alanlarını da taşır (PLAN R6-13).
 
 Zincir gerçek parçalardan geçer: `read_workbook` -> `fallback_mapping` -> `convert`. Şablonun

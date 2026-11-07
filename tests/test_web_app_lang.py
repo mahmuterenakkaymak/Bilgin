@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T404: app.py'nin red cümleleri, yedek sayfası ve Excel sayfasının adı isteğin dilinde (PLAN R8-5).
 
 Dünya test_web_api'ninki: kurulmuş mini küme, sahte model, tmp günlükler. Dil tek bir başlıkla

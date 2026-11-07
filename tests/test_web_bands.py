@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T268: kalın sol kenarlık yuvarlak köşede kıvrılıp yazının önüne düşüyor (M19 görsel inceleme 3).
 
 ``border-left: 3px solid`` + ``border-radius``: öteki üç kenar çizgisiz kalınca tarayıcı kalın solu

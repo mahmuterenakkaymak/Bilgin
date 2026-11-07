@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // T438 (R8-20): harita ekranının dört hâli iki dilde — boş ekran, hatalı rapor, iş sürerken, iş
 // bitti. İki dil aynı id kümesini boyar ve İngilizce çıktı Türkçe harf taşımaz. Verinin ve
 // sunucunun cümlesi çevrilmez (küme adı, sayfa/sütun adları, denetimin satırları), o yüzden

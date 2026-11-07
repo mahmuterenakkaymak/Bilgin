@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T120: depo kaydı — T101'in geçici dizini depoya süpürülmüştü.
 
 d702360 (T102) ``_t101check/`` scratch dizinini de depoya aldı: HEAD'den alınmış yedekler (schema.json,

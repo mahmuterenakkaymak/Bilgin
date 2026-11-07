@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T355: konuşmayı açan yol da kümeyi süzer (PLAN R7-2, R7-8).
 
 Dünya ``tests/test_web_conversations_api.py`` ile aynı - kurulmuş mini küme, sahte model, tmp

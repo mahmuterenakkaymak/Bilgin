@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T182: kural API'si + bayat indeks + yeniden kurma (PLAN R5-15, R5-16).
 
 Kural dosyası tmp'ye kopyalanmış mini kümesidir: API onu yazar, imza kayar, indeks bayatlar ve

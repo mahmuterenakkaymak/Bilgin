@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Model profilleri: ``config/models.json`` -> ``ModelProfile`` -> hazır istemci (PLAN R4-10).
 
 Bir profil modelin hangi uç noktada olduğunu, hangi adla çağrılacağını ve kaç token'lık bir

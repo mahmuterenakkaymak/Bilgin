@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T226: giriş, kilitlenme ve oturum (PLAN R6-4).
 
 Saat enjekte edilir: deneme penceresi, kilit süresi ve oturum ömrü gerçek zamanı beklemez.

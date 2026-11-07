@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import { defineConfig } from "vitest/config";
 
 // Built into the package FastAPI serves (config.STATIC_DIR); the dev server proxies the API of `serve`.

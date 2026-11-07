@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``eval --mode`` ve ``--tag``: her mod kendi klasörüne, her etiket kendi kümesine koşar (T63).
 
 Model yine FakeLLM; veritabanı, indeks, audit ve raporun hepsi tmp klasörde, yani test repoya

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R5-5'in ikinci yarısı: katlanan join uyarısı (PLAN Contracts Warning satırı).
 
 Oran gerçek veriden alınır: TBLFATUIRS sürücüyken TBLSTHAR'a cari üzerinden bağlanmak

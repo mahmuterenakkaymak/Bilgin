@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T416: iki dilin şablonu aynı okumaya çıkar (PLAN R8-12).
 
 Aynı içerik iki ayrı şablona yazılır - biri Türkçe başlıklarla, biri İngilizce - ve beklenen şey

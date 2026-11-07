@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // Konuşmayı kenar çubuğundan silmek adres, akış ve sonraki sorunun kimliği işidir: SSR bunları
 // çalıştırmaz, o yüzden jsdom'da App gerçekten monte ediliyor. Ağ ve onay kutusu sahte — hangi

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """WinSW şablonunun doldurulması: ``deploy/windows/bilgin.xml`` -> kurulacak servisin XML'i (R8-22).
 
 Bir Windows servisinin ortamı XML'de yazar, o yüzden burada iki şey birden sabittir. Servisin

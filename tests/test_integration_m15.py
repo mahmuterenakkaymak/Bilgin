@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T183: M15 entegrasyonu — iki gerçek dünya, gerçek indeks, rapor katmanının kendi hükmü.
 
 Dünya gerçek ``load_dataset``ın kendi builder'ı, indeks gerçek ``cli.build_index``i (FakeEmbedder),

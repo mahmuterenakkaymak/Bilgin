@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``eval --compare --models``: model x mod hücreleri tek raporda (T152, PLAN R4-13).
 
 İki pencere aynı altın soruları koşar: geniş bütçeli fakeA her moda sığar, dar bütçeli fakeB

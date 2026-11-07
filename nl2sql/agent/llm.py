@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """The one place that talks to the model, and the shapes it hands back to the loop.
 
 Everything the loop needs is here: a chat call that returns content plus tool calls, the

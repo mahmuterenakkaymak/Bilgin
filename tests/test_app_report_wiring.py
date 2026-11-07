@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T180: cevabın raporu her ekranda (PLAN R5-1, R5-9, R5-14).
 
 Dünya gerçek (``build_db`` ile kurulmuş sentetik ERP), model ``--llm fake``: payload'ın grafiği

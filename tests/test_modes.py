@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Mod başına araç listesi ve sistem istemi (PLAN R2-5, R2-6).
 
 İstem gerçek şema ve gerçek kurallarla kuruluyor: bu modülün ölçtüğü şey bağlamın boyutu ve

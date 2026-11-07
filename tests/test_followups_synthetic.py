@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T301: sentetik ardışık soru zincirleri ve yükleyicisi (PLAN R7-13, Contracts "followup chain").
 
 Burada ölçüm yok, kümenin sözleşmesi var: üç zincir, her turda çalışan bir golden SQL ve

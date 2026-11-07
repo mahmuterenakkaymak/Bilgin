@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Araç şemaları, dispatch'in modele gösterdiği metin ve sistem istemi.
 
 Burada sınanan şey sözleşmenin kendisi: modelin üç araçtan fazlasını görememesi, her aracın

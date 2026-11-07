@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Döngü mod farkındadır: sistem istemi, araç listesi ve sınır `get_mode`'dan gelir (T61).
 
 Model yine yok; rag yolunu `rag_replay` oynatıyor. Altındaki her şey gerçek: build_db ile kurulmuş

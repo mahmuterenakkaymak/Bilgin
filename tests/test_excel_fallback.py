@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T80: deterministik başlık eşleme - profiles/excel_headers.json ile LLM'siz mapping.
 
 Önizlemeler elle kurulur (okuyucunun kendi testi var); tek uçtan uca test gerçek bir çalışma

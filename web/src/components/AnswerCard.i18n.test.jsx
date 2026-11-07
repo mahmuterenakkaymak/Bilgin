@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // R8-18: cevap kartının kendi kabarı iki dilde — durum satırı, eyleme düğmeleri, tablonun alt
 // yazısı, kanıt başlıkları ve netleştirme kartı. İki dil aynı id kümesini boyamalı; İngilizce

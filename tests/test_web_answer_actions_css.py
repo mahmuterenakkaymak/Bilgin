@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T381: cevabın beş eylemi iki ağırlıkta (M24 craft 1).
 
 CSV, Excel, Soruyu kaydet, Panoma ekle ve Hazır soru yap aynı çerçeveli beş hap olarak

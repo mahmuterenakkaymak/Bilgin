@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Üç kart hep açık ve hep aynı hâlde kalıyordu: "Oluştur" başarılı olduktan sonra
 // "1 · Şablonu alın" dosya seçilmeden önce tam olarak nasıl görünüyorsa öyle görünüyordu.
 // Kart artık kendi numarasının üstünde ne kadar ilerlediğini söylüyor: data-step-state ve

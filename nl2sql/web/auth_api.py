@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Giriş, çıkış, "kimim" uçları ve yöneticinin kullanıcı defteri (PLAN R6-3, R6-5).
 
 Gövde sözleşme "me / login 200"dir: ``{username, role, business_role}``. Parola ve ham oturum

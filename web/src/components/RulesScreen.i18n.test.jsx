@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // T437 (R8-20): kural ekranının ve formunun kabarı iki dilde. İki dil aynı id kümesini boyar;
 // İngilizce çıktının kabarı Türkçe harf taşımaz — verinin kendisi (terim, eş anlamlı, tablo adı)

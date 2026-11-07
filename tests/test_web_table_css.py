@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T269: telefonda cevap tablosunun başlığı ortadan bölünmemeli (M19 görsel inceleme 4).
 
 Telefon bloğu ``.result-table th``'yu da hücrelerle birlikte sara alıyor, o yüzden her dar

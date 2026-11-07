@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // Kart ilk gelene ne açtığını söylemeli: etiketin cümlesi, formun iki alanı ve reddedilen
 // girişin yazılanı koruması burada okunur. Ağ işi Root'un, bileşen yalnız onLogin'i bekler —

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Read-only guardrail: the executor runs nothing that has not passed check().
 
 The rules read the sqlglot parse tree, never the text: comments, brackets, casing and

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T289: geçmişin ajan döngüsüne girişi (PLAN R7-4, R7-5).
 
 Geçmiş, tek system mesajının sonuna eklenen bloktur: kullanıcının çıplak sorusu değişmez, görünen

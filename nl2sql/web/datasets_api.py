@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Veri kümeleri API'si: liste, etkin kümeyi değiştirme, salt okunur giriş betiği (PLAN R6-18).
 
 Üç yol da yönetici ister (R6-5): etkin kümeyi değiştirmek sunucunun hangi veritabanına baktığını

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T70: TBLSTOKFIAT'da (ürün, fiyat tipi, geçerlilik tarihi) benzersizdir.
 
 R2-3 liste fiyatını "FIYAT_TIPI='S' satırlarının en son geçerlik tarihli olanı" diye tanımlıyor;

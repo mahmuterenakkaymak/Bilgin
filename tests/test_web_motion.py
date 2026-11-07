@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T215: cevabın gelişi bir olay, indirme düğmesi kendi haberini verir (M17 görsel incelemesi).
 
 Görsel incelemede ``export-buttons-after-export-390.png``, ``export-buttons-390.png`` ile pik pik

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // Kayıtlı turun "Yeniden çalıştır"ı yeni bir tur açmaz: cevap koşumun ait olduğu tura yerleşir ve
 // numarasını korur (PLAN R7-15, M23 review 1). App gerçekten monte ediliyor; ağ sahte.

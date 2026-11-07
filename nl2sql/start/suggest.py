@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Önerilen hazır sorular: model roller soru yazar, ajanın cevaplattıkları onaysız yatar (PLAN R7-20).
 
 Hazır sorunun normal yolu bir yöneticinin onayıdır; öneri ise adaydır. Model şemayı ve iş

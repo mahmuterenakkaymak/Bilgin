@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R5-20: tablo özeti üç girdinin kopyasıdır - uydurduğu bir cümle yok, sızdırdığı bir kolon yok.
 
 Özet, tablo dokümanının yanına yazılan ikinci bir ses: açıklama, anahtar kolonlar, işleyen kural

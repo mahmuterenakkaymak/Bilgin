@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T294: ``ask --new`` / ``ask --conversation`` (PLAN R7-9).
 
 Ekran ``ask``ı bir konuşmanın turu olabilir: ``--new`` konuşmayı açar, ``--conversation <id>``

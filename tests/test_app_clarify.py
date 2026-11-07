@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T186: netleştirme her yüzeyde (PLAN R5-11, R5-14).
 
 Dünya gerçek (``build_db`` ile kurulmuş sentetik ERP), model ``--llm fake``, belirsiz satır ise

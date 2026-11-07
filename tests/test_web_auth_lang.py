@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T405: kimlik ve küçük API modüllerinin red cümleleri isteğin dilinde (PLAN R8-5).
 
 Dünya test_web_auth ile aynı - kopya, import değil: kurulmuş mini küme, sahte model, tmp günlükler -

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Koşudan koşuya fark (Delight 5): ikinci rapor, ``latest``teki önceki koşuya göre yazılır.
 
 İki sahte koşu üst üste aynı dizine yazılıyor. Birincide karşılaştırılacak bir şey yok; ikincide

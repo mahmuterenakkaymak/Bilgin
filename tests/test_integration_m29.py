@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T455: M29 entegrasyonu — bir kurulumun yazıları gerçekten ``NL2SQL_HOME``un altında doğuyor (PLAN R8-20, R8-23).
 
 Elde elle kurulmuş tek sahte yok: sunucu ``python -m nl2sql serve --llm fake``ın kendi süreci,

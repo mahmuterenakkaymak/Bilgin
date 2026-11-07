@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T370: görsel koşu masayı hangi dünyada bırakırsa ikinci genişlik orada açılır (M23 incelemesi 5).
 
 ``scripts/visual_serve.py`` tek süreçtir: 1366px ve 390px koşuları aynı sunucuyu paylaşır, o yüzden

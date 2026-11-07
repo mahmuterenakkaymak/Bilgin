@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Başlığın veritabanı noktası ve düşmüş veritabanının bandı (PLAN R7-27).
 //
 // İkisi de /api/health'ın `db` bloğunu okur (Contracts "health db"): nokta arka plan

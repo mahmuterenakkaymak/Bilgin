@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-15 golden contract: her satır hangi etiketi, tabloyu ve kuralı iddia ettiğini kendisi söyler.
 
 Satırın beyanı SQL'in kendisiyle doğrulanır: etiketler sözlükten gelir, requires_tables

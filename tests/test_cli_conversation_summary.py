@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T353: ``ask --new/--conversation`` turunun özeti yürütülen satır sayısını da taşır (M21 review 1).
 
 Özet columns/rows/facts/clarificationdan kurulduğu için ``summary.row_count`` varsayılan 0'da

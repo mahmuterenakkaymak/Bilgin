@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Akışın iki görünümü tek adlandırmayı okumalı (M25 review 1): katlanmış turun başlık satırı
 // `SEHIR_SAYISI` yazıp hemen altında açılmış kart `Sehir sayisi` yazıyordu. Kartın tek etiketi
 // chartFormat.columnLabel'dır; katlanmış başlık da aynı işlevi okur.

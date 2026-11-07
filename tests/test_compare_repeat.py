@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Aynı modun tekrarları: gürültünün ölçülmesi ve kararın ortalamayla kurulması (T108, R3-11).
 
 Model yine yok; tekrarlar ``report._report`` ile kurulan sahte koşular. Dört şey görülüyor: karar

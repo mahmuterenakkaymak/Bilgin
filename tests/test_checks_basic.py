@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R5-3 Result.tables ve R5-5 uyarıların ilk dördü: boş, tümü NULL, üst sınırda kesik, maskeli.
 
 Dünya gerçek: ``build_db`` ile kurulmuş dosya, gerçek schema.json ve gerçek LocalExecutor, yani

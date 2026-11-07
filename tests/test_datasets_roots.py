@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T247: iki kökte veri kümeleri (PLAN R6-11) — ad araması, kök etiketi, ad çakışması.
 
 ``load_dataset`` adı artık önce ``datasets_dir()`` sonra ``real_datasets_dir()`` köklerinde

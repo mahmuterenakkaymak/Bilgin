@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Executor maskesi: pii kolonu kapıdan maskelenmiş çıkar, sayı olduğu gibi kalır (R3-6).
 
 Dünya gerçek: ``build_db`` ile kurulmuş dosya ve gerçek şema.json, yani maskelenen değer üreticinin

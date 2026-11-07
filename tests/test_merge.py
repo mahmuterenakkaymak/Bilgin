@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T89: merge_map — the DB decides what exists, the Excel map decides what it means (PLAN R3-5).
 
 Hand-built schemas only: this is the merge rule in isolation. The real producers (excel.convert,

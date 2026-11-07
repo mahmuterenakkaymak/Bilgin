@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import { useEffect, useReducer, useRef, useState } from "react";
 import { useT } from "../i18n/index.js";
 import DatasetList from "./DatasetList.jsx";

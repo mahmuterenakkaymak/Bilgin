@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T425: sunucunun tamamının literal taraması - R8-4'ün modül listesi tek yerde burada koşulur.
 
 Her geçiş görevi kendi modülüne "kullanıcıya Türkçe konuşan bir sabit kaldı mı?" diye sormuştu; bu

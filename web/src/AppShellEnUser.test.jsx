@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // T445: İngilizce bir kişinin kabuğu başlıkla sınırlı değil. AppShell.i18n.test.jsx başlığın
 // temizliğini ölçüyor; burası App'in tamamını ölçüyor - çekmece, pano ve soru kutusu da Türkçe
 // harf taşımamalı. Dil, kişinin kendi tercihi: main.jsx `me.lang`den çözdüğünü provider'a veriyor.

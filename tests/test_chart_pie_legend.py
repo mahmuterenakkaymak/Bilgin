@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T368: pastanın dilimleri telefon genişliğinde adını yitiriyor (M23 görsel inceleme 3).
 
 İddia: pasta seçeneğinde adlar dilimin dışında değil, kutunun altında kaydırılabilir bir

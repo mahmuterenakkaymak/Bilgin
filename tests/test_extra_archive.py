@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T35: 2025 stok arşivi ve muhasebe fişleri — tarih ve kodlar şema sınırında, fişler faturaya bağlı."""
 
 import re

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T212: soru ekranının ilk açılışı - yatay taşma ve simge (M17 görsel incelemesi).
 
 Görsel incelemede her ``ask-*.png`` 660px genişlikteydi (390px'te), oysa açılış ekranı 390'dı:

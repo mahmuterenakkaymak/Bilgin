@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """M2 entegrasyonu: kurulum -> LocalExecutor; model bütçesi ve saldırılar policy kapısında kalır.
 
 Burada sahte hiçbir parça yok: gerçek build_db ile üretilmiş SQLite dosyası, gerçek policy,

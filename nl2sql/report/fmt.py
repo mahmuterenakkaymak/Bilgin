@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Türkçe sayı yazımı: ekrana çıkan her sayının tek kaynağı (PLAN R5-6, R5-7).
 
 Değeri burası üretmez; SQL'in döndürdüğünü yalnız okunur kılar — binlik ayıracı nokta, ondalık

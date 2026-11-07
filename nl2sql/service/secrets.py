@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Model anahtarlarının sır klasörü: ``NL2SQL_HOME/secrets`` (PLAN R8-21).
 
 Bir Windows servisinin ortam değişkeni yoktur: WinSW XML'ine anahtar yazılmaz (R8-23), anahtar

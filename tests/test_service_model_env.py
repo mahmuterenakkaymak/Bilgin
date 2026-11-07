@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Servisin modeli: kurulumun profili servisin ortamına da yazılır (PLAN R8-22, R8-23).
 
 Kurulum betiği model anahtarını ``config/models.json``daki bir profil için mühürler, ama servis

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import { useState } from "react";
 import { useT } from "../i18n/index.js";
 import { chipFacts, factValue } from "../lib/facts.js";

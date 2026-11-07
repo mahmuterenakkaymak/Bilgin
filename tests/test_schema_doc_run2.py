@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-2/R2-5: kind and keywords stay off the model's screen; the Run 2 text forms and the token estimate."""
 
 import json

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T202: görsel akışların kaynakla birlikte yürümesi (PLAN R5-19).
 
 ``.hybrid/visual.json`` kilometre taşı görsel incelemesinin yürüdüğü listedir: tarayıcı oradaki

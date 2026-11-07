@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T305: ardışık soru zincirlerinin ölçümü gerçek kapıdan koşar (PLAN R7-14).
 
 ``run_followups`` zinciri ``ask_payload``ın içinden geçirir; her tur için runner'ın golden SQL

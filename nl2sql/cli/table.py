@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """How a result set looks on screen: aligned columns, Turkish numbers, friendly notices.
 
 Nothing here recomputes a value; the rows are exactly what the database returned and only their

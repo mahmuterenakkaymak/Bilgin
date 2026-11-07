@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T319: hazır sorunun SQL'i bir soru kaydından gelir (PLAN R7-17).
 
 İstemci hiç SQL göndermez: onay, soru günlüğündeki kaydın cümlesini aynı politika ve salt okunur

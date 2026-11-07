@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T296: grafik istekleri (PLAN R7-10).
 
 ``chart_wish`` soruda hangi grafik türünün istendiğini, ``chart_only`` sorunun *yalnızca* sunumu

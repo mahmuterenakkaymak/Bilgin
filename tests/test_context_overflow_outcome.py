@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Bağlam taşması her yerde aynı adı taşır: canlı satır, rapor, ask'ın çıktısı (PLAN R4-11, R4-14).
 
 Model yine yok; bütçe o kadar küçük seçiliyor ki hiçbir modun sistem isteme sığmıyor, yani döngü

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // T481: İngilizce arayüzün ekrana gerçekten ulaşıp ulaşmadığı. test-setup iki kataloğu da kayıtlı
 // getirdiği için hiçbir i18n testi "uygulama İngilizce kataloğu hiç indirmiyor" gerçeğini

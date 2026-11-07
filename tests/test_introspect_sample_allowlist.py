@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T113: ``--sample`` örnek sorguları yoklanan veritabanının kendi allowlist'i ile yürür (R3-14).
 
 Bir ERP kopyasında ilk adım introspect'tir; o anda schema.json bu veritabanını henüz

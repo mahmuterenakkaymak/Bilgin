@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 6 parola karması: scrypt biçimi, tuz, doğrulama ve yeni parola denetimi.
 
 Saklanan değer ``scrypt$n$r$p$salt_b64$hash_b64``; parçalar sabit sırada ve altı tanedir.

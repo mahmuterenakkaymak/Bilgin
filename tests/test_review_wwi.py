@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """WWI niyet inceleme belgesi: her soru kendi doğrularıyla yazılır, diskteki dosya bayatlamaz."""
 
 from __future__ import annotations

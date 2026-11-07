@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 5 config: arayüz/rapor sabitleri ve yeni yollar.
 
 ``APP_DB_PATH`` ``data/*.db`` kalıbına takılır (üretilen dosya, depoya girmez), ``ASK_LOG``

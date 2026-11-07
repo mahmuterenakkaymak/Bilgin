@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Hazır sorular: uygulamanın kendi SQLite dosyasında ``ready_questions`` (PLAN R7-17, R7-18).
 
 Bir hazır soru tek bir kümeye ve tek bir iş rolüne aittir; ``business_role`` ``*`` ise her rol

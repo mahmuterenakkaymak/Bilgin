@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T85: M7 entegrasyonu — depoya işlenmiş Excel fixture'larından şemaya, gerçek zincir.
 
 Burada elle yapılmış sahte yok: iki fixture gerçek ``read_workbook`` ile okunur, başlıkları gerçek

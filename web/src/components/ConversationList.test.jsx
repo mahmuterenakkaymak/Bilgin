@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // Konuşma listesi tıklama ve silme işidir: satır adrese yazar, silme onay ister. SSR bunları
 // çalıştırmaz, o yüzden jsdom'da gerçekten monte ediliyor. Ağ sahte — silme çağrısını test kuruyor.

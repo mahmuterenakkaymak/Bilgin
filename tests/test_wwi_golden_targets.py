@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T142: WWI golden kümesi R4-9 hedeflerini karşılar (PLAN R4-9).
 
 Altın küme bütün olarak sayılır: en az altı `needs_rule`, en az altı `multi_join`, en az dört

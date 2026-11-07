@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T417: şablonun indirme ve komut yolu (PLAN R8-12).
 
 Şablon iki kapıdan doğar: arayüzün indirdiği ``GET /api/schema-map/template.xlsx`` ve kullanıcının

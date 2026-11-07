@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as api from "./api.js";
 import { EXPIRED_NOTE, ROLE_LABELS, afterLogin, boot, canSee } from "./auth.js";

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T464: düşmüş veritabanında sorulan soru bir konuşma turudur (PLAN R7-8, R7-25).
 
 Dünya ``tests/test_health_db.py`` ile aynı - kopya, import değil: gerçek mini küme, tmp yollar,

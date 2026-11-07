@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T290: context notunun doğrulanması ve kanıt satırı (PLAN R7-5, Contracts "ContextNote").
 
 Not modelden gelir, kanıt konuşmadan: doğrulama, kullanılan turun kolonlarında ve maskeli

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T172: dışa aktarım (PLAN R5-16, Contracts export file).
 
 İddia dosyanın kendisinde: CSV BOM ile açılır, ``;`` ile ayrılır, ondalık virgül taşır ve ayracı,

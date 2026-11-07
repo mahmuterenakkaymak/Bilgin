@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T473: görsel koşu portu boşaltmadan başlamaz (M27 incelemesinin kırmızısı).
 
 ``scripts/visual_serve.py`` portu ``serve``a devretmeden önce kendisi dener: orada bir şey

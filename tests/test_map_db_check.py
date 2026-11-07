@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T282: yüklemenin kontrol raporu canlı veritabanıyla karşılaştırılır (PLAN R6-15, R6-16).
 
 Önizleme bugüne kadar ``validate``i iskeletsiz çağırıyordu, yani şablonun veritabanında olmayan

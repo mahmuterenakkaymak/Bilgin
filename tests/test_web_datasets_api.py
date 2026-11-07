@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T249: veri kümeleri API'si ve etkin kümenin değişmesi (PLAN R6-10, R6-11, R6-18).
 
 Dünya ``test_web_api`` ile aynı gerçeklikte ama üç kümeyle: tmp köküne kopyalanmış mini, onun

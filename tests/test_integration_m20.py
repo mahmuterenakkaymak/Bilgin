@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T257: M20 entegrasyonu — şablondan yeni veri kümesi, elle kurulmuş sahte nesneler olmadan.
 
 Depo gerçek ``UserStore``, kapı gerçek ``create_app``, dünya gerçek ``open_session``: akış

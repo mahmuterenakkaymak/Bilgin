@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T356: the commercial ERP product name appears nowhere a person reads (PLAN Run 8).
 
 The brand is held here only as the sha256 of its lower-cased form, so this file - itself a

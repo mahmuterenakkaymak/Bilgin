@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Koşu baştan sona: golden sorular gerçek yürütücüyle cevaplanıp skorlanır, rapor diske yazılır.
 
 Burada sahte olan tek şey model: FakeLLM senaryo oynatıyor, veritabanı build_db ile kurulmuş gerçek

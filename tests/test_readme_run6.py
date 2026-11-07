@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 6 README'si: kullanıcılar ve roller, oturum, geliştirme yöneticisi ve harita ekranı.
 
 ``test_readme_run5``in Run 6 karşılığı: dokümanda yazılı olmayan bir komut ya da düğme kullanıcının

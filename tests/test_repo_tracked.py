@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Depo kaydı: ``nl2sql/index`` izlenir, kökteki çalışma zamanı indeks klasörü izlenmez.
 
 İndeks paketinin yedi dosyası .gitignore'daki ``index/`` satırına takılıyordu; o satır çalışma

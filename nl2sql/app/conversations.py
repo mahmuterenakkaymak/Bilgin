@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Konuşmalar: uygulamanın kendi SQLite dosyasında conversations ve turns (PLAN R7-2).
 
 Bir konuşma tek bir kullanıcıya ve tek bir kümeye aittir; başkasının konuşması bu kapıdan hiç

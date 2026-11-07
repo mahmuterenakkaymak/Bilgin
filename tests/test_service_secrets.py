@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Sır klasörü: bir Windows servisi ortam değişkeni taşımadığı için anahtar dosyada durur (R8-21).
 
 Bloblar DPAPI ile mühürlüdür, o yüzden yaz/oku çifti yalnız Windows'ta koşar; öbür makine

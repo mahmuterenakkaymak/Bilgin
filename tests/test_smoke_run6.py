@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 6'nın onboarding dumanı: ``scripts/smoke_onboard.py`` şablondan yeni bir kümeye uçtan uca
 gidiyor mu?
 

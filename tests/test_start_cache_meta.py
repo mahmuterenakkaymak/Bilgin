@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T383: önbellek anahtarı kartın görünenünü de kapsar (PLAN R7-18).
 
 Kart yükü başlığı, soruyu ve görünümü de taşır; ``PUT /api/ready-questions/{id}`` bunları SQL'e

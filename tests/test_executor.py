@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Executor: policy içeri girer, çeviri sonra, backend en son; her deneme kuyruğa yazılır.
 
 Asıl güvenceler burada sınanır: public bir yöntem policy'yi atlayamaz, red Result.error

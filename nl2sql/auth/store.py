@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Kullanıcı hesapları: uygulamanın kendi SQLite dosyasında users ve settings.
 
 Parola kolonunda yalnız ``auth.passwords`` karması durur; dışarı giden her sözlük sözleşme

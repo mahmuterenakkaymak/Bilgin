@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-10: find_join_path en ucuz yolların birleşimini, join_text de aracın metnini verir.
 
 Üç iddia: köprü tablo istenmemiş olsa da yola girer; bir tablo çiftinde fk kenarı aynı çiftin

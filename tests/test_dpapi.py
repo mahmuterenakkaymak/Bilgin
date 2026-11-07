@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """DPAPI secret box: a stored password seals to its own dataset (PLAN R7-22)."""
 
 from __future__ import annotations

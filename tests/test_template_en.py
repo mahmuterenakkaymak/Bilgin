@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T415: şablonun İngilizce hâli (PLAN R8-12).
 
 Şablonun her dili `LABELS` sözlüğünden çıkar; test İngilizce dosyayı openpyxl ile açıp kullanıcının

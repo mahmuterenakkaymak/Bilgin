@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T322: hazır soru tohumları (PLAN R7-19).
 
 Tohum, kümenin klasöründeki ``ready_questions.json``dır ve SQL'i altın kaydın cümlesidir: başlangıç

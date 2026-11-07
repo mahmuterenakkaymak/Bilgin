@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-3: the six new data tables - generator, schema doc, rules and golden SQL agree on these."""
 
 import pytest

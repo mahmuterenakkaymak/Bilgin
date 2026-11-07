@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Ardışık soru zincirlerinin ölçümü: gerçek kapıdan, tur tur (PLAN R7-14, Contracts "followups report").
 
 Bir zincir tek sorunun tekrarı değildir: ikinci tur birincinin cevabına bakar, üçüncü onu daraltır.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T331: M24 entegrasyonu — başlangıç ekranı elle kurulmuş tek sahte parça olmadan koşuyor.
 
 Dünyanın her parçası kendi kapısından kurulur: kullanıcılar gerçek ``UserStore``, pano gerçek

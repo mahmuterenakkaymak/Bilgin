@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T339: sağlıkta veritabanı çipi, düşmüş veritabanında hızlı red, serve'in yoklama kurulumu (PLAN R7-25, R7-26).
 
 Dünya ``tests/test_web_api.py`` ile aynı - kopya, import değil: gerçek mini küme, sahte model,

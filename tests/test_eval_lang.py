@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T412: ``eval --lang`` — ölçümün dili, koşulan soruların dilidir (PLAN R8-11).
 
 İki şey birlikte çevrilir: hangi soruların koştuğu (``dataset.golden(lang)``) ve koşumun kendi

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """A model-free client that replays a scripted conversation.
 
 The loop asks the client one thing: "what does the model say next?". So a fake is a list of turns

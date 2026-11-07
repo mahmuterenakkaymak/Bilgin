@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Bağlantı formunun sunucudaki karşılığı: red cümleleri engine/connections.py ve
 // web/connections_api.py ile birebir aynı yazılır ki yönetici eksik formu göndermek için bir
 // gidiş-gerişi beklemesin. Denetleme sırası da oradakiyle aynı: sunucu adı, veritabanı, kimlik

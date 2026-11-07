@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Catalog hygiene (R8-4): no key without a reader, no Turkish letter in the English column, and the
 Turkish column still says the exact sentence every test writes down.
 

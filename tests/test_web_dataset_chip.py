@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T350: telefon başlığı etkin veri kümesini adıyla söylemeli (M21 görsel inceleme 5).
 
 #model-chip tek bir dizi basıyordu: ad + parantez içi + model birleşip tek metin oluyordu,

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """mask() her sınıfta satırı tanıtacak kadarını bırakır, ham değeri geri vermez (R3-6)."""
 
 import pytest

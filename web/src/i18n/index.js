@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // R8-15: çevirinin tek kaynağı yanındaki JSON katalogları. Provider'ı olmayan her ağaç
 // Türkçe kalır, böylece henüz taşınmamış hiçbir ekran ekranda boşluk göstermez.
 import { createContext, createElement, useContext, useMemo, useState } from "react";

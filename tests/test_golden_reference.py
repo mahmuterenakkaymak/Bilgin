@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import json
 import sqlite3
 from decimal import ROUND_HALF_UP, Decimal

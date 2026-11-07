@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Koşu modunu ve etiketini taşır: seçimi, skorları ve imzası (T62).
 
 Model yine yok; veritabanı, arama indeksi ve join graph gerçek. Üç şey bir arada görülüyor:

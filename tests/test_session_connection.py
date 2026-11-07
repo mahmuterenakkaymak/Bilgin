@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T335: oturumun kendi bağlantısı (PLAN R7-23).
 
 Bir SQL Server kümesinin yürütücüsü, ekrandan kaydedilmiş satıra kurulur; satır yoksa Run 6'ın

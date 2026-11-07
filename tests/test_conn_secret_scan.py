@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T340: sözleşme - parola sunucudan çıkmaz (brief §4, PLAN R7-22..R7-25).
 
 Burada ölçülen tek şey: sürücü parolayı bağlanamadığı her satırda geri yazar, biz de o satırı

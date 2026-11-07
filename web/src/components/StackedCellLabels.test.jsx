@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // T484 (M28 görsel incelemesi 3): telefonda bağlantı satırı "vitrin_kapali / ● Denenmedi / - / - / - / -"
 // okunuyordu — yığılmış hücrenin sütun adını CSS `content: var(--cell-*)` ile üretiyordu ve derlenmiş
 // sayfada o yazı düşüyordu. Etiket artık hücrenin kendi öğesi (`.cell-label`); söyleyecek sözü olmayan

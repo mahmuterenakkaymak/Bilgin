@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Sahte istemci: senaryonun geri çalınması, tur sırası ve uydurma ama tutarlı maliyet.
 
 Model burada hiç işin içinde değil; asıl mesele sahte istemcinin döngü için gerçek bir endpoint

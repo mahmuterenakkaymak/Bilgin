@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Delight 4: ekran koşu bitince değil, her soru bitince tek satır görüyor.
 
 Üç golden soru gerçek SQLite üzerinde FakeLLM ile koşuyor: callback'in sırası satırın koşu

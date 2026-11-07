@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T265: ``serve`` kayıtları kullanıcının yaşadığı dosyaya yazar (PLAN R6-1, R6-9).
 
 Kullanıcı deposu ``NL2SQL_APP_DB``den kuruluyor ama ``create_app``e ``saved_path`` verilmiyordu, o

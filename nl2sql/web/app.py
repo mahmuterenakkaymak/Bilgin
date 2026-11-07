@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Web API'si: tek kullanıcılık FastAPI uygulaması (PLAN R5-15).
 
 Yolların ardında ikinci bir hesap kitap yok: ``/api/ask`` ``ask_payload``ı çağırır, yani ekran ile

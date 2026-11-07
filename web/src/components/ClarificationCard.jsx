@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import { useT } from "../i18n/index.js";
 
 // Model iki okunuşu ayıramayınca sorar (R5-10): seçeneklerden biri sorunun üstüne eklenir ve

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Niyet inceleme belgesi: her golden sorusu doğrularıyla birlikte yazılır, diskteki dosya bayatlamaz."""
 
 from collections import Counter

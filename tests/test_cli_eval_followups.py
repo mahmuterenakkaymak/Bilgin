@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``eval --followups``: ardışık soru zincirlerinin ölçümü göründüğü her yerde (PLAN R7-14).
 
 Koşum yine FakeLLM iledir; veritabanı, audit, konuşma deposu ve raporun hepsi tmp klasörde, yani

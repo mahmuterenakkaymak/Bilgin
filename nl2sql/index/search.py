@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Karma arama: sözcük araması ile vektör benzerliğinin RRF altında birleştirilmesi (PLAN R2-8).
 
 Üç yöntem yan yana duruyor, çünkü fazın ölçümü bu üçünü karşılaştırmak için var: RAG'ın kalması

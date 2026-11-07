@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T129: mini fixture veri kümesi (PLAN R4-9 dosya düzeni, M11 entegrasyonu).
 
 Küme ``tests/fixtures/datasets/mini/`` klasöründe durur ve ``load_dataset``'ın kök parametresiyle

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T123: veri kümesi yükleyicisi (PLAN R4-1, R4-3) — klasör okuma, kod gönderimleri, hatalar.
 
 ``synthetic_erp`` gerçek klasöründen yüklenir ve yolları ``config`` ile aynı çıkmak zorundadır:

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """LocalExecutor: the single public door to the databases.
 
 The order is fixed here - policy, then transpile, then backend, then masking, then audit - so a

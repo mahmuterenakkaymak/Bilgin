@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """The guard every later i18n task has to pass: both catalogs carry the same keys and params."""
 
 import json

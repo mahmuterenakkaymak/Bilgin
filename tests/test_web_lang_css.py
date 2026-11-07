@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T442: uzun etiket satırı taşırmasın (PLAN R8-17).
 
 Telefon satırları Türkçe metne göre ölçüldü; iki dilli arayüzde İngilizcenin uzun adları aynı

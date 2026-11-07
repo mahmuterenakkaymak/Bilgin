@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T396: olgular ve grafiğin cümlesi cevabın dilinde (PLAN R8-3, Contracts Fact/chart_spec).
 
 İddia: aynı satırlar her iki dilde aynı olguları verir — ad, değer, kolon ve yüzde işareti

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T323: önerilen hazır sorular onaysız doğar, işin aşaması yoklanır (PLAN R7-20).
 
 Dünya ``tests/test_web_start_api.py`` ile aynı - kopya, import değil: kurulmuş sentetik ERP, gerçek

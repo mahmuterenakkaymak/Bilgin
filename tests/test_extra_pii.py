@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T95: Run 3'ün uydurma PII verisi (PLAN R3-7) — kontrol haneleri her satırda, Run 1/Run 2 ise aynı.
 
 Kişiler tamamen kurgudur; burada sayı değil yapı ölçülür: üretilen her TCKN/VKN 11 haneli kuralını,

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T459: telefon başlığında veritabanı noktasının kendi sözcüğü kalır (M25 görsel inceleme 4).
 
 `.db-status .db-label { display: none }` dar ekranda 10px'lik bir halkayı modelin yeşil noktasının

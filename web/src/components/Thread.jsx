@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import TurnCard from "./TurnCard.jsx";
 
 // Konuşmanın akışı (R7-15): her tur kendi soru balonu ve kartıyla bir satırdır; en alttaki soru

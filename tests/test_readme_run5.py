@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 5 README'si: web arayüzü, dışa aktarım, netleştirme ve yeni eval metrikleri dokümanda geçmeli.
 
 ``test_readme_run4``ün Run 5 karşılığı: dokümanda yazılı olmayan bir bayrak kullanıcının elinde yok

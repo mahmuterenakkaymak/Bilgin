@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // T486 (M28 görsel incelemesi, işçilik 1): telefonda kullanıcı satırının iki select'i çıplak
 // iniyordu — üstte "Kullanıcı", altta "Satış" — hangisinin uygulama rolü hangisinin iş rolü
 // söylemeden, ve hiç girmemiş hesap "Son giriş" yerinde tek başına bir çizgi taşıyordu. Ad artık

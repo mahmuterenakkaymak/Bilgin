@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T371: konuşma satırının başlığı kendi çizgisini alır (M23 görsel inceleme 6).
 
 `.side-text` zamanı, başlığı ve tur sayısını tek çizgiye diziyordu: `.side-label` ~18 karaktere

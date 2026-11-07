@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Opening a history entry without the model (2026-10-25, Eren: "geçmişteki her soruyu baştan sorup cevap
 oluşturuyor gibi"). The stored SQL runs again through the same policy and executor; the agent is never called.
 An entry without an answer is asked again, an entry of another dataset is refused, an unknown id fails.

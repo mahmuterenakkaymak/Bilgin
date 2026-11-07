@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Grafiğin kendisi: hangi sonucun hangi grafiği çizdiği (PLAN R5-6, Contracts ChartSpec).
 
 Tür büyük ölçüde dönen kolonlardan okunur; sorunun sözcükleri yalnız pay ve saçılım kararında

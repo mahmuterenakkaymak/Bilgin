@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T317: iş rolünün API kapıları (PLAN R7-16, Contracts "me / login 200" ve "users API").
 
 Dünya ``tests/test_web_users_api.py`` ile aynı - kopya, import değil: gerçek mini küme, sahte

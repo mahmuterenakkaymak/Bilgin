@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Raporun altı karesi tek liste ve tek stil: "Kişisel veri 1" — bir şablon sorgulanabilir bir
 // kümeye dönüşmeden önce bir ERP yöneticisini durdurması gereken sayı — "Referans 0" ile görsel
 // olarak aynı okunuyordu. Kare kehribara dönünce sayı ayrılıyor; Kapalı ve Referans'ın ne saydığı

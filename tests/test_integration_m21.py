@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T295: M21 entegrasyonu — tek konuşma, iki uç: ekranın üç turu, komut satırının dördüncüsü.
 
 Elle yapılmış sahte parça yok: hesaplar gerçek ``user add`` komutundan geçer (gerçek ``UserStore``,

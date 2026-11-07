@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 6'nın rol dumanı: ``--roles`` gerçek bir sunucuda rol kapılarını gerçekten koşuyor mu?
 
 Test sunucu açmaz; ``scripts/smoke_serve.py --roles``ı alt süreç olarak koşar, yani ölçtüğü şey

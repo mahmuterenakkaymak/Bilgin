@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T408: başlangıç ekranının ve hazır soruların cümleleri isteğin dilinde (PLAN R8-5).
 
 Dünya ``tests/test_web_start_api.py`` ile aynı gerçeklikte - kopya, import değil: kurulmuş sentetik

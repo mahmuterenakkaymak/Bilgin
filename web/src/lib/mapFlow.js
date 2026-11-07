@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Harita ekranının akışı (R6-19): tek durum ağacının indirgeyicisi. Ağ çağrıları burada değildir —
 // bileşen api'yi çağırıp sonucu eylem olarak getirir, böylece akış sahte zamanlayıcı olmadan test edilir.
 

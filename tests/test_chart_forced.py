@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T297: kullanıcının istediği grafik türü (PLAN R7-10, Contracts "chart_spec (ext.)").
 
 İddia: istenen tür sonucun biçimine uyuyorsa mevcut üreticiyle o tür çizilir ve ek bir şey

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T101: M9 entegrasyonu — maske tek kapıda, iki katman aynı kolonları sayıyor, altın küme yeşil.
 
 Elle yapılmış sahte yok: dünya gerçek ``build_db``, kapı gerçek ``LocalExecutor`` (pii işaretleri gerçek

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Join profili: hangi kolon adlarının aynı işi söylediği dosyada durur (PLAN R2-10).
 
 Bir ERP'de bir tablo cari kodu CARI_KOD, öteki CARI_KODU yazar; bu eşleşme Python'a gömülmez, çünkü

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """ORDER BY'da pii kolon, sonda gösterilse de reddedilir (R3-6).
 
 Maske ve sıralama ayrı işler: maske değerin kendisini gizler, ORDER BY ise o değerin sırasını

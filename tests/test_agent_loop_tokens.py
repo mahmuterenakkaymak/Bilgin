@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Token sayımı yanıt başına bir kez yapılır.
 
 Endpoint maliyeti araç çağrısı başına değil yanıt başına bildirir, ama döngü tek bir yanıtı her araç

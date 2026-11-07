@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // Akış hem işaret hem olay ister: katlanmış tura tıklamak açıyor, yani durum indirgeyicide
 // duruyor. Yapı SSR ile okunur; tıklama gereken iki test jsdom'da gerçekten monte edilir.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T316: kullanıcının iş rolü (PLAN R7-16, Contracts "User (ext.)").
 
 İş rolü Run 6'nın yetki rolünden (admin/user) ayrı bir şeydir: satışçı da yönetici olabilir.

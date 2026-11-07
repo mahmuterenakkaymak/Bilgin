@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T194: M16 entegrasyonu — Run 5'in üç yüzü aynı gerçek dünyada, elle kurulmuş tek sahte yok.
 
 Veritabanı kümenin kendi builder'ı, indeks gerçek ``cli.build_index``i (FakeEmbedder), istemci

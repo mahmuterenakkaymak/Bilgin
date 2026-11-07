@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // T241 (R6-19): yönetici olmayan kullanıcı kuralları yalnız okur. Ekran aynı liste, aynı bant;
 // içinde tek bir yazma düğmesi yoktur. SSR çıktısı aranır — olay yok, işaret yok.
 import { renderToStaticMarkup } from "react-dom/server";

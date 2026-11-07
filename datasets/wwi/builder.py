@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """WWI veri kümesinin üreteci (PLAN R4-9).
 
 Kendi RNG'sinden deterministik bir dünya kurar: ``random.Random(f"{seed}:wwi")`` aynı tohumu her

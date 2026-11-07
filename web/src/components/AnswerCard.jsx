@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import { useEffect, useState } from "react";
 import * as api from "../lib/api.js";
 import { useT } from "../i18n/index.js";

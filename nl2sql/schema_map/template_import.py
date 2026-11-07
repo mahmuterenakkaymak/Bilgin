@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Bilgin şablonunun okuyucusu: doldurulmuş dosyadan veri kümesi, şema ve kurallar (PLAN R6-14).
 
 Şablonun iki yüzü vardır: `Veri kümesi` ve `İş kuralları` Bilgin'in sabit biçimidir ve R6-12'nin

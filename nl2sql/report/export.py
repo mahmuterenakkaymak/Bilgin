@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Dışa aktarım dosyaları: bir cevabın satırları CSV ve XLSX olarak (PLAN R5-16).
 
 Satırlar yürütücünün döndürdükleridir: maske burada yeniden hesaplanmaz, hücreye olduğu gibi

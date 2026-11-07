@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R4-7 yan kanal kümesi WWI üzerinde: tests/data/pii_bypass_wwi.jsonl gerçek kapıdan geçirilir.
 
 R3-6 maskesi ve filtresi ERP şemasında ölçülmüştü; R4-5 tablo adını `Sales.Customers` yapınca

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // R8-19: kenar çubuğu ve konuşma akışı iki dilde — bölüm başlıkları, boş cümleler, silme onayı,
 // tur sayısı, kısa zaman ve katlanmış turun yeniden koşum notu. İki dil aynı id kümesini boyamalı;

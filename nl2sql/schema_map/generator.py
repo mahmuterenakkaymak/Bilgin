@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Synthetic ERP-style dataset: master cards, then the documents (invoices, movements, orders) that point at them."""
 
 from __future__ import annotations

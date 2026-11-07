@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T388: bekçinin her yoklaması bağlantı satırına işlenir (PLAN R7-22, Contracts "connection (public)").
 
 ``mark_ok``/``mark_error``, ``last_ok_at``/``last_error``ın tek yazarlarıdır; bekçi cevabı yalnız

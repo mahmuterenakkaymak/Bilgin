@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T389: wwi kümesinin tohum hazır soruları (PLAN R7-19).
 
 ``datasets/wwi``nin tohumu da altın kaydın cümlesidir: dört iş rolünün her birine iki kart, bir de

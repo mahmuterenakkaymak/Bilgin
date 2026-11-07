@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T159: bir `deny` kolon adı sample_values üzerinden modele sızmıyor (PLAN R4-7).
 
 `_column_names` tablonun tüm kolonlarını döndürdüğü için yanlış bir kolon sorulduğunda cevap

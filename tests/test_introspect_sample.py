@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T88: iskelete örnek değer ipuçları (R3-4).
 
 Veri ve kapı gerçek: ``build_db`` ile kurulmuş dosya, sorgular ``LocalExecutor`` üzerinden

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Salt okunur MSSQL giriş betiği (R3-8): kalıcı sınır parser değil, veritabanı yetkisidir.
 
 Python tarafındaki politika allowlist'i sorgudaki tablo adlarını okur; bir VIEW, SYNONYM ya da

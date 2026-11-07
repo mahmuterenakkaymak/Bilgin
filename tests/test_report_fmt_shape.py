@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T175: Türkçe sayı yazımı ve sonucun biçimi (PLAN R5-6, R5-7).
 
 İddia fmt tarafında: ekrandaki her sayı tek kaynaktan yazılır — binlik nokta, ondalık virgül,

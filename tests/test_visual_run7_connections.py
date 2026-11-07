@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T343: bağlantı akışları görsel dünyada kendi kümesini ve kendi yoklamasını bulur (PLAN R7-26, R7-28).
 
 ``scripts/visual_serve.py`` iki şeyi daha kurar: bekçiyle guard'ın sunucu yerine okuduğu

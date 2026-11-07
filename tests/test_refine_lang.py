@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T399: takibat ve sunum isteği İngilizce de okunuyor (PLAN R8-9).
 
 Eşikler kelime tablolarından okunduğu için İngilizce bir sorunun sunum değişikliği de modeli

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T187: belirsiz soru kümesi (PLAN R5-12, Contracts "ambiguous line").
 
 Burada ölçüm yok, kümenin sözleşmesi var: her okuma policy'den geçer ve kurulu dünyada çalışır,

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T394: sayıların dile göre yazımı (PLAN R8-7).
 
 fmt tek kaynak kalır: aynı sayı, dil anahtarıyla iki okunuşla yazılır. İngilizcede binlik ayıraç

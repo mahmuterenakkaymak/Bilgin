@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """README denetimlerinin okuduğu metin (R8-14): README.md + README.tr.md.
 
 İngilizce README yazıldığında işaret denetimleri tek dosyada kör kalmasın: iki metin tek bir dizide

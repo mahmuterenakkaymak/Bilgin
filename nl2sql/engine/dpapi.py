@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """DPAPI secret box (PLAN R7-22).
 
 A database password is kept only as a Windows DPAPI blob: the key lives in the machine's own

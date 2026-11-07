@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T444: İngilizce görsel akışlar (PLAN R8-25).
 
 ``.hybrid/visual.json``un üç İngilizce sayfası ``from: M28`` etiketli: ``test_visual_flows`` o

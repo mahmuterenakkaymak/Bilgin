@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T92: M8 entegrasyonu — gerçek SQLite iskeleti, gerçek Excel dönüşümü, gerçek merge/diff ve CLI.
 
 Elle yapılmış sahte yok: iskelet gerçek ``build_db`` dosyasından ``sqlite_skeleton`` ile, Excel tarafı

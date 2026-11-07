@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Belirsiz soruyu oynatan sahte: açıklama turu, devamının seçilen okunuşla cevaplanması (R5-11).
 
 Model burada da yok; sınanan şey sahtenin belirsiz soru karşısında *hangi turu* oynattığı. Bunun

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """İngilizce duman: ``--lang en`` gerçek bir sunucuda arayüz dilini gerçekten konuşturuyor mu?
 
 Test sunucu açmaz; ``scripts/smoke_serve.py --lang en``ı alt süreç olarak koşar, yani ölçtüğü şey

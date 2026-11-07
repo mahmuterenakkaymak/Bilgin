@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Golden sonuç ile tahminin karşılaştırılması: aynı veri mi, başka bir cevap mı?
 
 Burada sınanan karar, karşılaştırmanın neyi önemsediği: satırlar çok küme olarak eşleşir

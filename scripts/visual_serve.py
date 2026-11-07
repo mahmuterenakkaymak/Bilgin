@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Görsel inceleme sunucusu: ``serve``, ama gördüğü dünya ``data/visual/`` altındadır (PLAN R6-20).
 
 Kilometre taşı incelemesi tarayıcıdan akış koşuyor ve o akışın artık bir kullanıcısı var: giriş

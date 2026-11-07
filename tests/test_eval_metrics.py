@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Metrikler iki yerden doğrulanır: elle kurulmuş outcome listelerinden ve gerçek bir koşudan.
 
 Üst yarıda runner'ın kendisi hiç çalışmaz — QuestionResult'ları elle kurup her oranın elden

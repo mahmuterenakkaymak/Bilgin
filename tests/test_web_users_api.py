@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T240: yöneticinin kullanıcı defteri API'si (PLAN R6-3, R6-5; Contracts "users API").
 
 Dünya ``tests/test_web_auth.py`` ile aynı - kopya, import değil: gerçek mini küme, sahte model,

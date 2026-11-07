@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Bilgin'in Excel şablonu: boş hâli, iskeletle doldurulmuş hâli ve dolu örneği (PLAN R6-12, R8-12).
 
 Şablon, yeni bir veritabanını Bilgin'e tanıtırken doldurulan tek biçimdir; içe aktarma tarafı

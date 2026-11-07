@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Kart sonuçları ve kısa ömürlü önbellek: başlangıç ekranının kartları (PLAN R7-18).
 
 Bir kart onaylı bir hazır sorunun kayıtlı SQL'idir; burada bir daha modele sorulmaz, yalnız salt

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T354: konuşmanın sahibi iki uçta da adsızdır (M21 review 2, PLAN R7-2, R7-9).
 
 Ekran ``ask``ı konuşmayı NULL sahibiyle açar, ``--json``ınki ise sahibine makinedeki oturumun adını

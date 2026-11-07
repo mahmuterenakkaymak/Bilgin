@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T420: ``wwi`` İngilizce ardışık soru zincirleri (PLAN R8-10).
 
 ``followups_en.jsonl`` aynı kuralı zincirlerde izler: ``FE01..`` kimliği, tur tur çevrilmiş sorusu,

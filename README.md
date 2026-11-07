@@ -1167,3 +1167,17 @@ already has the variable set needs no secrets folder at all.
 5. Run `scripts\uninstall-service.ps1` and check that `C:\ProgramData\Bilgin` is still there — the
    users, the stored connections, the logs and the sealed keys outlive an uninstall, because a
    reinstall should not start from zero.
+
+## License
+
+Copyright © 2026 Mahmut Eren Akkaymak. Bilgin is **dual-licensed**:
+
+- **[GNU AGPL-3.0](LICENSE)** — free to use, change and share; if you run a modified version for users over a
+  network, you must publish its source under the same license.
+- **Commercial license** — for closed-source products, hosted services that keep their changes private, or
+  companies whose policy rules out AGPL. See [LICENSING.md](LICENSING.md) for how to ask.
+
+## Contributing
+
+Issues and pull requests are welcome. Contributions are accepted under a short Contributor License Agreement
+that keeps the dual licensing possible; see [CONTRIBUTING.md](CONTRIBUTING.md).

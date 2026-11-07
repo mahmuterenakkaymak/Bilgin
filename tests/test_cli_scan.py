@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T414: CLI taraması - ``nl2sql/cli/main.py``'de Türkçe kullanıcı satırı kalmadı (R8-4).
 
 ``user_literals`` yalnız model-facing bir sabiti affeder: ``sample_values`` aracının modele giden

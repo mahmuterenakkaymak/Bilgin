@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // T482: Run 8 altı bağlantıyı telefonun kaydırdığı sıraya çağırdı ve 1366'da maske "Hazır sor"u
 // yuttu — bir ekran ulaşılmaz görünüyordu. Adlar kısaldı, tam ad `title` ile erişim adına taşındı:

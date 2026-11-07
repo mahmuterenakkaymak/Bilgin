@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Başlangıç ekranının kartları (R7-21): kart yükünden ekrana çıkacak yazı burada kurulur, ağ
 // çağrıları api.js'de kalır. Sayının okunuşu lib/format.js'nin tek kaynağından gelir. Yazılar
 // R8-20'de kataloğa taşındı: her okuyan işlev `lang` alır, varsayılanı tr.

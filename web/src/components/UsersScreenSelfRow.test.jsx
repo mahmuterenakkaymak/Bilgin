@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Kendi satırının korunumu (M21 review 4): hangi satırın oturum sahibi olduğu, düğmenin
 // kalkması ve rolün onaydan geçmesi olay + etki ister — SSR ikisini de çalıştırmaz.
 // @vitest-environment jsdom

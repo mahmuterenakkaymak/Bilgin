@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Şablondan veri kümesine onboarding dumanı: yeni bir veritabanını uçtan uca tanıtır (PLAN R6-22).
 
 ``scripts/smoke_serve`` sunucunun varlığını ölçüyor; burada ölçülen şey haritanın kendisi --

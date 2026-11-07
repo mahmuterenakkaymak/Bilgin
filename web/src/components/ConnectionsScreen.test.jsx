@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Ekran SSR ile kuruluyor: tablonun işareti (hangi satırda hangi nokta, hangi satır okunur) boya
 // çıkmadan da okunur. Olaylar — satırı açmak, denemek, kaydetmek — ağ ister; onların karşılığı
 // sunucu tarafında (tests/test_web_connections_api.py) zaten koşuluyor, burada yalnız cevabın

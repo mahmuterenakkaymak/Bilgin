@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Derlenmiş arayüzde Türkçe yazı kalmadı mı (PLAN R8-18)?
 
 ``vite build`` çeviriyi iki chunk'a yazıyor: ``tr-*.js`` ve ``en-*.js``. Ana paket bunlardan

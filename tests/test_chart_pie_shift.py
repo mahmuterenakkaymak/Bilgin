@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T483: pastanın dış etiketleri birbirinin üstüne basıyor (M28 görsel inceleme 2).
 
 Beş kategorinin beşi de dilimin dışında etiket alıyor ama çakışma kuralı yok: telefon ve laptop

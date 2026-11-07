@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T285: konuşma deposu (PLAN R7-2).
 
 Depo kayıtlı sorular ve kullanıcılarla aynı SQLite dosyasını kullanır: kendi iki tablosunu açar,

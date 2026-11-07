@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T251: şema haritasının altı yönetici yolu (PLAN R6-16, R6-17).
 
 Ekranın haritadan kümeye giden yolu üç indirmeyle başlar (boş şablon, iskeletle dolu şablon, dolu

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``eval --schema`` ve ``merge-map``: ölçüm hangi şema dosyasıyla yapıldıysa odur (T91, PLAN R3-5).
 
 Model yine FakeLLM; veritabanı, indeks, audit ve raporun hepsi tmp klasörde, yani test repoya

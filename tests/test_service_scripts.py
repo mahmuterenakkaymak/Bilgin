@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``scripts/uninstall-service.ps1`` ve ``scripts/update-service.ps1`` (PLAN R8-23).
 
 İki betik de operatörün elinde; testleri de betiğin kendisini PowerShell ile koşar ve basılan

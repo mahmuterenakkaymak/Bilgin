@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Komut satırının baştan sona davranışı: kur, sor, koş.
 
 Model burada da FakeLLM; veritabanı, audit ve rapor yollarının hepsi tmp klasörde, yani test

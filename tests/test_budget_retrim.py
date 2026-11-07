@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Kırpılmış araç cevabı bir daha kırpılmaz (PLAN R4-11: kesim kalıcı, mesaj yerinde kalıyor).
 
 trim_tool_answers her taşan turda aynı transcript'i baştan ölçüyor; marker'ı zaten taşıyan bir

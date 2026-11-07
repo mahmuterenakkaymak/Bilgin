@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T166: Session + open_session (PLAN R5-1).
 
 ``open_session`` CLI'nin cümleleriyle doğrular: eksik veritabanı, bilinmeyen küme/profil ve

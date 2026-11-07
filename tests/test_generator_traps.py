@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T04: belge tablolarının şekli, tüm tablolar arası FK bütünlüğü ve tuzakların her tohumda kurulduğu."""
 
 import functools

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T337: veritabanı durum denetleyicisi (PLAN R7-25, Contracts "health db").
 
 Hiçbir istek denetim için beklemez: bir iş parçacığı ``DB_CHECK_S`` aralığıyla SELECT 1 atar,

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T403: isteğin dili (PLAN R8-5, Contracts "request lang", "me PUT").
 
 Dünya ``tests/test_web_auth.py`` ile aynı - kopya, import değil: gerçek mini küme, sahte model,

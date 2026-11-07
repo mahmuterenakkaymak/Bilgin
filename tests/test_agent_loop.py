@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Ajan döngüsü: mesaj akışı, adım kaydı, üç sınır ve LLM hatı.
 
 Burada model yok; FakeLLM senaryo oynatıyor, veritabanı gerçek (build_db ile kurulmuş SQLite

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import { useEffect, useState } from "react";
 import { useT } from "../i18n/index.js";
 import { STEP_KEYS, STEP_MS, stepAt } from "../lib/steps.js";

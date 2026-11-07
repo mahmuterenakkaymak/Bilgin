@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T283: bozuk bir veri kümesi klasörü tüm listeyi düşürür (M20 review 2).
 
 ``real_datasets/`` altındaki bir klasör yarım kalmış bir apply'ın (R6-16: ``dataset.json`` yazıldı,

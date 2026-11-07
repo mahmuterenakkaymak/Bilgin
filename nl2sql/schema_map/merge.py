@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Excel map + live DB skeleton -> one canonical schema doc: the merge of R3-5.
 
 Two producers, one schema. The database is what exists, so it owns existence, types, nullability and

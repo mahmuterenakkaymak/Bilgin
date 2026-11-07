@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // M28 craft 2: adım bandı yalnız 1. kartı yakıyordu — dosya denetlenip küme kurulduğu hâlde 2 ve 3
 // numarasında kalıyor, bant süs gibi okunuyordu. İşaret artık her kartın kendi işinin sonucundan
 // okunur: rapor hatasız döndü (2), kurulan küme kümeler listesinde göründü (3).

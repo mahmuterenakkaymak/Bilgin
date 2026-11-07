@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Kullanıcı formunun sunucudaki karşılığı: red cümleleri auth/store.py ve auth/passwords.py
 // ile aynı yazılır ki kullanıcı eksik formu göndermek için bir gidiş-gerişi beklemesin (R6-19).
 // Sunucu adı küçük harfe çevirip öyle denetliyor; burada da sıralama aynı, yoksa "Analit2"

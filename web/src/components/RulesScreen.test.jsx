@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // ASSUMPTION: ret akışı olay + etki ister, SSR ikisini de çalıştırmaz; jsdom bu yüzden devDependency.
 // @vitest-environment jsdom
 import { act } from "react";

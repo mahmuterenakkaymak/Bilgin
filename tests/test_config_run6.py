@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 6 config: doğrulma/oturum/limit ve şema haritası sabitleri, yeni yollar ve okuyucular.
 
 ``MAP_PREVIEWS_DIR`` ``data/`` altındadır ve elenir, ``MAP_CHANGES_LOG`` ``logs/`` ile birlikte

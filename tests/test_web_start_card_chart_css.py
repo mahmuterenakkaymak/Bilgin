@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T366: başlangıç panosundaki grafik kutusu (M23 görsel inceleme 1).
 
 Kartın grafiği 140px'lik kutuya başlıklı ve eğik etiketli bir opsiyon çiziyordu: başlık eksen

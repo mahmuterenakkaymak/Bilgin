@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """`rag` modunun arama araçlarının modele döndürdüğü metin (T59).
 
 İddia retrieval'ın isabeti değil — o test_search.py'de — iddia cevapların biçimi: arama bir tablo

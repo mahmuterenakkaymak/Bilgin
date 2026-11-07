@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T479: uyarılar cevabın dilinde okunur (PLAN R8-3: "error/warning sentences t(..., answer_lang)").
 
 Dünya test_checks_basic ile test_checks_fanout'un dünyası: ``build_db`` ile kurulmuş sentetik ERP,

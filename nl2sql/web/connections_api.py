@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Veritabanı bağlantıları API'si: ekrandan doldurulan, sırrı çıkmayan yollar (PLAN R7-22..R7-24).
 
 Dördü de yönetici ister (R6-5): bir sunucunun kapısını yazmak, o kümenin hangi veritabanına

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Yükleme dosyasının base64'ü (R6-19): /api/schema-map/preview gövdeyi base64 ister.
 // Dönüşüm dilimlerle yapılır — String.fromCharCode(...bytes) tek seferde on binlerce argüman
 // aldığı için çağrı yığınını taşırır; 0x8000 hem güvenli hem de base64'un 3'lü öbeğine böler.

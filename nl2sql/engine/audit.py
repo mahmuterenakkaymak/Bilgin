@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Audit trail: one JSON line per query the executor ran or refused.
 
 The entry is built field by field from the Result, never from the Result itself, so rows

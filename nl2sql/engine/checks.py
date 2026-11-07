@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Sonuç koştuktan sonra kullanıcıya söylenecekler (PLAN R5-5).
 
 Denetimler SQL'i değiştirmez ve cevabı düşürmez: bir şeyden emin değilse hiçbir şey eklemez.

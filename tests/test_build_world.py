@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T39: kurulu dünya — şemanın her tablosu iki hedefte de vardır, distractor satırları türe uygundur
 ve kurulum ekranı tablo sayılarını ile şema metninin bağlam maliyetini söyler.
 """

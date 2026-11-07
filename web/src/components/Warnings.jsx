@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Uyarılar: cevabın altındaki kehribar bant. Her uyarı kendi satırıdır; mesajı Python üretir
 // (engine/checks.py), burada yalnız okunur — boş liste bantı hiç kurmaz (R5-18).
 export default function Warnings({ warnings = [] }) {

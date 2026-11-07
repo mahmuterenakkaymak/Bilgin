@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """İsteğin dili: kişinin tercihi, tarayıcının başlığı, programın dili (PLAN R8-5).
 
 Tek kapı ``request_lang``: her yol arayüz metnini ondan sorar, böylece bir isteğin tüm cümleleri

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``deploy/windows/bilgin.xml`` şablonu ve ``python -m nl2sql service-xml`` (PLAN R8-22, R8-23).
 
 Kurulum betiği XML'i elle yazmaz, şablonun boşluklarını programın kendisine doldurur; test o

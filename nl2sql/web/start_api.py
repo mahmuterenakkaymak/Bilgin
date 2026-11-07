@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Başlangıç ekranı ve hazır sorular API'si (PLAN R7-17, R7-18).
 
 Kart onaylanmış bir hazır sorudur, yani bir daha modele sorulmayan bir cümledir: kullanıcının

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T299: belirsiz ardışık soru (PLAN R7-12).
 
 "Bu müşteriye başka ne sattık?" tek başına çözülmez: son turun satırlarında beş farklı cari varsa

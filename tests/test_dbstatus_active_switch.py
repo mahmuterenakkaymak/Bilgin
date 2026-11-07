@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T463: durum noktası sunucunun BAŞLADIĞI kümeyi değil o anki etkin kümeyi izler (PLAN R7-23, Contracts "health db").
 
 Genel ``NL2SQL_MSSQL_CONN`` yalnız etkin kümenin olduğundan bekçi etkin kümenin adını sunucunun

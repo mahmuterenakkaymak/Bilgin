@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Sohbette model koşmadan çözülen istekler (PLAN R7-10).
 
 Kullanıcı bazen yeni bir cevap istemez, gördüğü cevabın sunumunu değiştirir: "Grafiği çubuk yap".

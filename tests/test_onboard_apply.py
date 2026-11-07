@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T250: önizleme diskte bekler, uygulandığında klasör olur (PLAN R6-16).
 
 Bir şablon yüklemenin iki yüzü var: ekranda bekleyen kontrol raporu, diskte ise sıfırdan doğan bir

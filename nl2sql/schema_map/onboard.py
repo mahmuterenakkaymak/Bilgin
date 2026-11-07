@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Şablondan veri kümesine: önizlemenin bekletilmesi, uygulanması ve indeks işi (PLAN R6-16).
 
 İki adım, iki ayrı yüz: önizleme diske yazılan tek bir JSON'dır ve hiçbir veri kümesine dokunmaz;

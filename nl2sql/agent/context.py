@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Bir turun sonraki tura miras bıraktığı kadarı (PLAN R7-3, Contracts "TurnSummary").
 
 Konuşmanın bağlamı sonuçların tamamı değil, modelin bir sonraki soruyu anlaması için gereken

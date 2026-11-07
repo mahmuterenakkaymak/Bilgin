@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // Konuşma adres, olay ve iki soru arasında taşınan kimlik işidir: SSR hiçbiri çalıştırmaz, o
 // yüzden dosyanın ortamı jsdom ve App gerçekten monte ediliyor. Ağ sahte — hangi cevabın hangi

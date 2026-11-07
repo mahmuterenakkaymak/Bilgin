@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T169: ``ask --json`` (PLAN R5-14).
 
 Ekranın yerini tek bir JSON alır: stdout'un tamamı AskPayload'dır, yani ne ``Veri kümesi`` ne

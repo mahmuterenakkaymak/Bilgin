@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``merge-map``/``diff-map`` şema olmayan dosyayı kabul etmez (T115, PLAN R3-5).
 
 ``import-map``ın yazdığı eşleme dosyası da üst düzey bir JSON nesnesi, ama şema değil: ``sheets``

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T318: hazır soru deposu (PLAN R7-17, R7-18, Contracts "ready question").
 
 Kartın SQL'i satıra onaylayanın sorusundan yazılır; depo o SQL'i hiç üretmez ve değiştirmez.

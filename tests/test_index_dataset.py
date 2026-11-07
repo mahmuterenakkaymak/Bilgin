@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R4-8: bir indeks bir veri kümesinindir - mini kümesi üzerinde.
 
 İmza içeriği, `dataset` ise kime ait olduğunu söyler: `mini` için vektörlenmiş bir indeks

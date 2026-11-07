@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T410: ``ask`` ve ``user *`` ekranı çözülen dilde (PLAN R8-5, R8-10).
 
 Çerçeve ``cli.ask.*``/``cli.user.*`` kataloğundan ``--lang``da gelir; cevabın dili yine sorunun

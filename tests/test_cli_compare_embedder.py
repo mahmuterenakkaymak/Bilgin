@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``eval --compare`` embedder değişince rag'in eski koşusunu yeniden kullanmaz (T74).
 
 README kullanıcıya ``NL2SQL_EMBED_MODEL`` değiştirip indeksi yeniden kurmayı söylüyor; içerik imzası

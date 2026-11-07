@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 2 ek verisi: fiyat geçmişi, günlük döviz kuru, cari şubesi, kampanya, arşiv ve muhasebe fişleri.
 
 Run 1 akışından bağımsız kendi rastgele akışıyla çalışır; Run 1 satırlarını ve Run 1 rng'sini

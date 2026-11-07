@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 2 golden sorularının (Q11-Q40) doğruları: saf Python, DB'ye dokunmaz.
 
 eval/reference.py'nin sonunda REFERENCES'a birleştirilir. Buradaki hiçbir fonksiyon golden SQL'i

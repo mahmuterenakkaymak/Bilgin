@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R5-20 kararı: özet bacağı aramada kalıyor mu — ölçümün kendisi test altında.
 
 Kural ölçümden önce sabitlendi (PLAN R5-20): `config.TABLE_SUMMARIES` iki kümenin *ikisinde de*

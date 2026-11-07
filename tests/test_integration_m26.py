@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T402: M26 entegrasyonu — İngilizce cevap uçtan uca, elle yapılmış tek parça olmadan (PLAN R8-3..R8-10).
 
 Küme gerçek ``load_dataset("wwi")``, dosyalar kümenin kendi builder'ının tmp'de kurdukları, oturum

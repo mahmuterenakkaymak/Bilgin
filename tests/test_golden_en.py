@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T401: İngilizce altın küme, Türkçe kümenin birebir çevirisidir (PLAN R8-10).
 
 ``golden_en.jsonl`` satırı = Türkçe satırın ``id``'si ``E01..``, ``source_id``'si aynı sıradaki

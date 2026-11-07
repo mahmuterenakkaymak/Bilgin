@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // İş rolü (R7-16): yöneticinin defterinden geçer, başlıktaki çip de onu söyler. Seçili hal ve
 // sütunun yeri SSR ile okunur; eklemenin gövdesi, değişimin isteği ve kendi satırındaki kapama
 // olay ister, o yüzden ekran jsdom'da da kuruluyor.

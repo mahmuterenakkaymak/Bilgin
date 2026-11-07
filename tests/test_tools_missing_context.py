@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Eksik bağlam düşürmez: araçlar red dönerir, kuralı olmayan full_rules ise koşmaz (T72).
 
 `ToolContext` arama indeksini ve join graph'ını `None` doğuruyor, runner ile CLI da bugün bağlam

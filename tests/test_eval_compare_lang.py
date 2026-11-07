@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T413: compare ve follow-up ölçümlerinin dili (R8-12).
 
 Karşılaştırma, model-karşılaştırma ve geri çağırma ekranı ile markdown'ı artık kataloğun

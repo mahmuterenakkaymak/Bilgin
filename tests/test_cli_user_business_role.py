@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T317: ``user`` komutunda iş rolü (PLAN R7-16).
 
 Dünya ``tests/test_cli_user.py`` ile aynı - kopya, import değil: ``NL2SQL_APP_DB`` testin kendi

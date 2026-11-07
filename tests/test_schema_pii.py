@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T94: şema belgesindeki PII işaretleri (PLAN R3-6/R3-7).
 
 `pii` yalnızca şema belgesinde durur: maskeleme şemadan yapılır, modelin okuduğu metne ise

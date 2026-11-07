@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Which language a question was typed in: Turkish letters and stopwords, scored rather than guessed (R8-6)."""
 
 from __future__ import annotations

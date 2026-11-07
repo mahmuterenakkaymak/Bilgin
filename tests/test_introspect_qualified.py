@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T127: qualified names survive both introspection paths (PLAN R4-6).
 
 A SQLite file stores a table's whole name as one identifier, so a qualified build reads back

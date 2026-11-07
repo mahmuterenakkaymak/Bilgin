@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Oturum kapısının kararları: kim hangi ekranı görür, girişten sonra nereye düşülür.
 // Ağ işi yok: `api` içeri sokulur, böylece kararlar sahte bir kapıyla da sınanır.
 import { makeT } from "../i18n/index.js";

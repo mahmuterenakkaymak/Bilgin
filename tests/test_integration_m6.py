@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T66: M6 entegrasyonu — zincirin tamamı ``eval --compare`` yolundan, tmp yollarda.
 
 Halkaların hiçbiri taklit: gerçek 40 altın soruyu modun kendi kaydı (``fake.for_golden``) gerçek bir

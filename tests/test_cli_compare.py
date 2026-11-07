@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``eval --compare``: üç mod aynı sorularda, tek raporda (T65).
 
 Model yine FakeLLM ve her mod kendi kaydını oynatıyor; veritabanı, indeks, audit ve raporların

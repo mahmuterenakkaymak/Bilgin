@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T478: ilk ekranın örnek çipleri yer tutucu gibi duruyor (M27 zanaat 2).
 
 ``.example-chip`` ``border: 1px dashed`` + ``background: var(--bg)`` çiziliyor, kesik çizgi yalnız

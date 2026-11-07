@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Windows servis bölümü (R8-20..R8-23): iki README de aynı kurulum sayfasını taşıyor.
 
 Servis bir kez kurulur ve sonra elle yoklanır; betik adları, `-WhatIf`, `-RemoveData`,

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T419: ``wwi_real`` İngilizce altın ve zincir kümeleri (PLAN R8-10).
 
 Küme yalnız gerçek SQL Server'da koştuğu için İngilizce satırlar burada ölçülmez; sözleşmeleri

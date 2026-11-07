@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``eval --ambiguous`` ve ``--narrate``: sayıların göründüğü her yer (R5-12, R5-13, R5-14).
 
 Koşum yine FakeLLM iledir; veritabanı, audit ve raporun hepsi tmp klasörde, yani test repoya hiçbir

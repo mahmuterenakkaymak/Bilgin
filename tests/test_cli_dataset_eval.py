@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``ask``, ``eval`` ve ``eval --compare`` için ``--dataset``: ölçüm kümenin dünyasıyla yapılır (R4-4).
 
 Küme adı verilince şema, kurallar, join profili, altın sorular, veritabanı, indeks, rapor klasörü

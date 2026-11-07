@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """MONTH/YEAR/DAY, DATEPART ve LEFT SQLite'ta da SQL Server'in cevabini vermeli.
 
 Kirilan yer ceviri adimi: sqlglot MONTH(TARIH)'i MONTH(DATE(TARIH)) olarak birakiyordu,

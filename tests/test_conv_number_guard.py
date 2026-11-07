@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T292: Bekçi ikinci turun sayılarını birinci turdan almaz (PLAN R7-6, brief §4).
 
 Dünya gerçek (``build_db`` ile kurulmuş sentetik ERP) ve cevap gerçek ``ask_payload``dan gelir;

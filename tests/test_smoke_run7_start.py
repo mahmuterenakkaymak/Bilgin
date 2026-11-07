@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 7'nin pano dumanı: ``--start`` gerçek bir sunucuda başlangıç ekranını gerçekten dolduruyor mu?
 
 Test sunucu açmaz; ``scripts/smoke_serve.py --start``ı alt süreç olarak koşar, yani ölçtüğü şey betiğin

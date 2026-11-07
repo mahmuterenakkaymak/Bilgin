@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Golden soruların doğruları: aynı Dataset'ten saf Python ile hesaplanır, DB'ye dokunmaz.
 
 Ürün kodu bu modülü hiç import etmez; yalnız testler ve eval karşılaştırması kullanır.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // R8-18: soru akışının kendi cümleleri iki dilde — kutu, adımlar, hata kartı ve uyarı bandı. İki dil
 // aynı id kümesini boyamalı, İngilizce çıktıda Türkçe harf kalmamalı, Türkçe çıktı bugünkü cümleleri

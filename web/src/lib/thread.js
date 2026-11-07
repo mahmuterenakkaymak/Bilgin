@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Konuşmanın akışı (PLAN R7-15): kayıtlı turlar, yolda olan soru ve cevabın kendi turuna yerleşmesi.
 // Tur alanları sunucunun adlarıdır (answer_text, summary, audit_id); indirgeyici yalnız kendi
 // anahtarlarını ekler: stored, pending, expanded, collapsed. Böylece kart hem kaydı hem canlı yükü

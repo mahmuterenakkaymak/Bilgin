@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import { useEffect, useState } from "react";
 import App from "./App.jsx";
 import LoginScreen from "./components/LoginScreen.jsx";

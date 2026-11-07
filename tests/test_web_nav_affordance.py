@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T346: kaydırılan gezinme satırı devamı olduğunu kendisi söylemeli (M21 görsel inceleme 1).
 
 390px'te sıra bilerek kaydırılıyor: `overflow-x: auto`, çubuğu hem `scrollbar-width: none` hem

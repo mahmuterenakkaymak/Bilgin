@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Mini veri kümesi: Satış/Depo şemalı dört tablonun deterministik satırları ve kurulumu.
 
 WWI kurulana kadar M11 testleri bu küçük dünyayı okur (PLAN R4-9 dosya düzeni): nitelikli tablo

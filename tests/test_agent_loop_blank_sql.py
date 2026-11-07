@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Boş bir sorgu ve olmayan bir araç cevap sayılmaz; döngü modeli yeniden denemeye bırakır.
 
 tools.dispatch boş bir SQL'e ve tanınmayan bir araç adına sabit başlangıçlı bir red cümlesiyle

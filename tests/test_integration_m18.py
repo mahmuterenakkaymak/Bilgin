@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T236: M18 entegrasyonu — kapının arkasında elle kurulmuş tek sahte yok.
 
 Kullanıcı CLI'nin kendi ``user add``i (parolayı ``getpass``ten iki kez sorar), dosya tmp'deki

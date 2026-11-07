@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Sonucun biçimi: kolonlar ne tür ve grafik hangisini çizer (PLAN R5-6).
 
 Tür dönen değerlerden anlaşılır, sorulan sözcüklerden değil; o yüzden aynı sonuç her koşumda aynı

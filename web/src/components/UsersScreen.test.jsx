@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Ekran SSR ile kuruluyor: tablonun işareti (hangi rol seçili, hangi düğme hangi sözcüğü
 // söylüyor) boya çıkmadan da okunur. Olaylar — ekleme, pasifleştirme — ağ ister; onların
 // karşılığı sunucu tarafında (tests/test_web_users_api.py) zaten koşuluyor.

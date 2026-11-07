@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T365: seçilen şıkkın değeri şıkkın içinden geri okunmaz (PLAN R7-12).
 
 ``_chosen`` varlığı ``"<değer> (ad)"`` biçimindeki şıkkı ilk " ("e keserek buluyordu; oysa değerin

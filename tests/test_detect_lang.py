@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T392: sorunun hangi dille yazıldığının ayırt edilmesi (PLAN R8-6).
 
 Ölçülen iki im var: Türkçe harfler ikişer, duran kelimeler birer puan. Türkçe harfin iki sayılmasının

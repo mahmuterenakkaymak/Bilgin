@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T393: kullanıcıya hâlâ Türkçe konuşan sabitlerin taranması (PLAN R8-4).
 
 Geçiş testleri kendi modüllerine "kullanıcıya dönük bir şey kaldı mı?" diye sorar. Türkçe harf yazan

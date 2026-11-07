@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T288: context block ve kırpma (PLAN R7-4, Contracts "history turn").
 
 Blok üç turun sırayla sorusu, SQL'i, kolonları ve örnek satırlarıdır; bütçe daralınca önce en eski

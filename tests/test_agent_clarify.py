@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """ask_clarification: aracın kendisi, döngüdeki yeri ve istemdeki kuralı (PLAN R5-10).
 
 Model yok; senaryoyu FakeLLM oynatıyor, veritabanı gerçek (build_db ile kurulmuş SQLite üzerinde

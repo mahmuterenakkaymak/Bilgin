@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T139: WWI üretecinin 2. bölümü - işlem tabloları ve tuzaklar (PLAN R4-9).
 
 Sınır: üretilen satırların şemayla sözleşmesi (anahtarlar şema kolonlarıyla sırayla aynı, her

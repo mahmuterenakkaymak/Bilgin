@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 4'ün duman testi: iki dünya da depo kökünden gerçek bir alt süreç olarak koşar, hepsi kod 0.
 
 ``test_smoke_run3``ün Run 4 karşılığı; farkı ``--dataset``: aynı beş komut hem ``synthetic_erp``i

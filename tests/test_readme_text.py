@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``readme_text`` (R8-14): iki README alt alta, olmayan dosya metne girmeden.
 
 İşaret denetimleri bu yardımcıya geçtikçe birliğin kendisi burada ölçülür: README.md önde ve

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``python -m nl2sql service-check`` (PLAN R8-23, Contracts ``service-check``).
 
 Kurulum betiği bu yoklamayı *uyarı* olarak okur, o yüzden üç şey sabitlenir: kapalı bir uç nokta ya

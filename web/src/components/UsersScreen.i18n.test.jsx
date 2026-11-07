@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // T439 (R8-20): kullanıcı defterinin, ekleme formunun ve kendi satırının iki dili. İki dil aynı
 // id kümesini boyar; İngilizce kabuk Türkçe harf taşımaz — hesap adları, rollerin kodları ve

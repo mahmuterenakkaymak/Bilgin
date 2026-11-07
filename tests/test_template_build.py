@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T245: şablonu programın kendisi üretir (PLAN R6-12).
 
 Şablon bir dosyadan okunmaz, her indirmede üretilir; bu yüzden testler üretilen baytları tekrar

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Geri çağırma ölçümü: altın sorunun tablosu aramanın ilk k vuruşunun içinde mi?
 
 Fazın kuralı "ölçülen kazanç yoksa RAG yok"; bu modül o ölçümün arama tarafıdır. Üç yöntem yan

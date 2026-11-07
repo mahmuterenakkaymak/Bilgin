@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Kümenin tohum hazır soruları: ilk açılışta bir kez deposuna yazılır (PLAN R7-19).
 
 Bir hazır soru normalde bir yöneticinin onayladığı sorudur; tohum satırı ise kümenin klasöründeki

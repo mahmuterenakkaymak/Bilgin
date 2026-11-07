@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // Öneri kuyruğunun düzeni (M28 review 4): her rol grubunda onay bekleyenler öne geçer, "Yalnız
 // bekleyenler" süzgeci onaylı kartları belgeden kaldırır ve halini adrese yazar. Sıra ile süzgeç

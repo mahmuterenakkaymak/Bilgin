@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Kullanıcının düzeltebileceği iki arıza: veritabanı kurulmamış, uç nokta ölü.
 
 İkisinde de ekranda iz dökümü değil tek bir cümle durmalı: dosya yoksa hangi yolun boş olduğu ve

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R3-9 eş anlamlı genişletmesi: kullanıcının dediği kelime ile tablonun dediği kelime aynı değil.
 
 İddia aramanın isabeti değil (o test_search.py'de) genişletmenin davranışı: sorgudaki iş terimi

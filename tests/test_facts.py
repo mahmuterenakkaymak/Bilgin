@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T177: Cevabın sayıları koddan çıkar (PLAN R5-7, Contracts Fact).
 
 İddia: anlatının kullanabileceği her özet burada elle hesaplanmış değerlerle bulunur — toplam,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // T440 (R8-20): panonun kartları, boş pano cümlesi ve hazır soru defterinin iki dili. İki dil aynı
 // id kümesini boyar; İngilizce kabuk Türkçe harf taşımaz — kart başlıkları, soruları, sütun adları

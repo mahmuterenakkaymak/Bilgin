@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Read-only guard for a SQL Server connection (PLAN R7-24).
 
 Before a connection is stored, the database itself is asked what the login can do: ``sysadmin``

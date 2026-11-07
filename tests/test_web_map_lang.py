@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T406: veri kümesi ve harita API'lerinin cümleleri isteğin dilinde (PLAN R8-5).
 
 Dünya test_web_map_api ve test_web_datasets_api ile aynı gerçeklikte - kopya, import değil:

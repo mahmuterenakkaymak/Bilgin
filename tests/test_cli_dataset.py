@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``--dataset``: komutun her varsayılanı kümenin kendi tanımıdır (R4-4, R4-14).
 
 Küme adı verilince tohum, şema, kurallar, profil, altın sorular ve indeks klasörü config'den

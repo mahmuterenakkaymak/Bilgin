@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R8-13 (T418): kuralın İngilizce eş anlamlıları - doğrulama, API, indeks, genişletme.
 
 İddia çeviri değil erişilebilirlik: İngilizce sorulan bir soru, Türkçe karşılığı kuralın

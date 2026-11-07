@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T77 (R3-1): altın kümenin tümü tek yerde ölçülür — policy, çeviri, executor ve Python doğrusu.
 
 Q11-Q20 / Q21-Q30 / Q31-Q40 için üç ayrı dosyanın aynı üç kontrolü tekrarlaması kaldırıldı: tek

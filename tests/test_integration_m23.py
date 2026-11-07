@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T315: M23 entegrasyonu — zincir, threadin okunuşu ve replay tek gerçek kapıda (PLAN R7-13, R7-14).
 
 Elle kurulmuş sahte parça yok: oturum ``open_session``dan, model ``cli.make_client``ın altın kaydı,

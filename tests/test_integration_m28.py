@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T445: M28 entegrasyonu — dil akışının dört ucu da gerçek parçalarla koşuyor (PLAN R8-25).
 
 Elde elle kurulmuş tek sahte yok: sayfa ``npm --prefix web run build``in gerçek çıktısı, kapı gerçek

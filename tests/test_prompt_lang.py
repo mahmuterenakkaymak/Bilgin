@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Cevabın dili ajana tek satırla iner (PLAN R8-9).
 
 İki iddia sınanıyor: Türkçe istem bugün neyse odur, İngilizce istem ise onunla aynı ve sonda tek

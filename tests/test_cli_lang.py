@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """CLI'nin dili (R8-5): ``--lang {tr,en}`` üst parserda ve her alt komutta; yardım metni katalogdan.
 
 Test üç şeyi sabitler: İngilizce yardım Türkçe harf taşımaz, Türkçe yardım bugünle aynı metindir

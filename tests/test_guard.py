@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T178: Anlatının sayıları sonuçta yoksa cümle geçmez (PLAN R5-8, Contracts GuardResult).
 
 İddia: bekçi Türkçe yazılmış doğru sayıları geçirir, uydurulanı ve yanlış yuvarlananı yakalar.

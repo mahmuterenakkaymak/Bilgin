@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T302: sahte istemci zincir turunu önceki sorularından tanır (PLAN R7-13).
 
 Zincirin ikinci turu kendi sorusuyla değil, kendinden önce hangi soruların sorulduyla ayırt

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T364: ``ambiguous_entity`` tek bir varlığı işaret etmeyen soruya şık sormaz (PLAN R7-12).
 
 Eşik "soruda tekil zamir ve bir varlık sözcüğü geçiyor"a bakıyordu; o yüzden "Bu ay hangi ürün en

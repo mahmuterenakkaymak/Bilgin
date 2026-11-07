@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Did the predicted query answer the question, or did it not?
 
 Two different queries can answer one question with different aliases, so column names and their

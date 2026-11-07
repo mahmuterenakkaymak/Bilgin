@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T397: anlatı cevabın dilinde (PLAN R8-8): aynı bekçi, aynı şablon, İngilizce kural listesi.
 
 İddia: `lang="en"` anlatıcıya SYSTEM'in kural kural ikizini, satırları İngilizce okunuşla ve

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """İndeksin diske yazılıp okunması ve bayatlığın reddedilmesi (PLAN R2-9).
 
 Bir indeks iki parçalı: dokümanlar ve onlarla aynı sıradaki vektörler. Sıra bozulursa skor

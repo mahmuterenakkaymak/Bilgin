@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T291: ``ask_payload`` bir konuşmanın turu (PLAN R7-7, Contracts "AskPayload (ext.)", "ask record (ext.)").
 
 Dünya gerçek (``build_db`` ile kurulmuş sentetik ERP), model senaryolu sahte: her koşum sıradaki

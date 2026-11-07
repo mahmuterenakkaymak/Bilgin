@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Bir koşunun sayıları: doğruluk, cevaplanan oranı ve netleştirme davranışı (PLAN R5-12).
 
 Runner her soruya tek bir outcome ve submit edilip edilmediğini bırakır; burada o alanlar toplanır,

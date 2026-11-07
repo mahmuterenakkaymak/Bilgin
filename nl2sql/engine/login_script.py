@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Read-only MSSQL login script (PLAN R3-8).
 
 The Python policy allowlist reads the table names a query mentions; a VIEW, SYNONYM or

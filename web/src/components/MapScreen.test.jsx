@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Ekran SSR ile kuruluyor: indirgeyicinin her hali sunucuya çıkmadan işaretine bakılarak
 // okunur. Ağın kendisi (yükleme, küme kurma, geçiş) sunucu tarafında tests/test_web_map_api.py
 // ve tests/test_web_datasets_api.py'de koşuluyor; burada yalnız o cevabın ekranda ne yazdığı var.

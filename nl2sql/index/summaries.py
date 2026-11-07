@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Tablo özetleri: bir tablonun aranabilir tek cümlelik tanıtımı (PLAN R5-20).
 
 Tablo dokümanı kolon kolon her şeyi sayar; özet ise tablonun ne işe yaradığını tek nefeste söyler:

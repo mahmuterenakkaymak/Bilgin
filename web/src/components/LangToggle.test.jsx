@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // @vitest-environment jsdom
 // Dil düğmesi tek başına bir ekran değil, giriş kartıyla başlığın ortak tek kontrolü: hangisinin
 // seçili olduğu, seçimin nereye yazıldığı ve oturum varsa sunucuya da söylenmesi burada okunur.

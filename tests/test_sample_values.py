@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """`sample_values` aracının cevabı ve nerede durduğu (T60).
 
 İki iddia var: cevap kolondaki gerçek farklı değerler (executor ve veritabanı gerçek, yani

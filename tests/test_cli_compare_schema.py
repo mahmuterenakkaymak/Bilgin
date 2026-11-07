@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``eval --compare --schema``: üç mod da adıyla verilen şemayla ölçer (T112, PLAN R3-5).
 
 Model yine FakeLLM; veritabanı, indeks, audit ve raporların hepsi tmp klasörde, yani test repoya

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Konuşmalar API'si: liste, tek konuşma, silme (PLAN R7-8).
 
 Üç yol da oturum ister (R6-5) ve yalnız oturum sahibinin konuşmalarını görür: başkasının

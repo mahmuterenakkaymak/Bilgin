@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """check() "TOP n enforced" diyorsa hiçbir mevcut sınır tavanı atlatamaz."""
 
 import sqlite3

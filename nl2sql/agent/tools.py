@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """The tools the model may ask for, and the short text each one answers with.
 
 The model never sees a Result object: it sees the columns, the first rows and the total row

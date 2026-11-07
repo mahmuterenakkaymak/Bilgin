@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T300: takibat ipuçları ve tek başına okunan soru (PLAN R7-11).
 
 "Sadece Texas" modeli koşmaya bırakır - ortada yeni bir veri isteği vardır - ama nereden
