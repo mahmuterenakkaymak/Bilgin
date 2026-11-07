@@ -14,13 +14,13 @@ import sys
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import llm
-from nl2sql.cli import main as cli
-from nl2sql.engine import dpapi
-from nl2sql.service import secrets
+from bilgin import config
+from bilgin.agent import llm
+from bilgin.cli import main as cli
+from bilgin.engine import dpapi
+from bilgin.service import secrets
 
-ENV = "NL2SQL_TEST_MODEL_KEY"
+ENV = "BILGIN_TEST_MODEL_KEY"
 KEY = "sk-test-4f9c2e7a1b"
 
 WINDOWS = pytest.mark.skipif(sys.platform != "win32", reason="DPAPI yalnız Windows'ta vardır")
@@ -72,7 +72,7 @@ def test_a_written_blob_is_read_back(home):
 @WINDOWS
 def test_a_missing_file_is_no_secret_and_logs_nothing(home, caplog):
     with caplog.at_level(logging.WARNING):
-        assert secrets.read_secret("NL2SQL_TEST_ABSENT_KEY", home=home) is None
+        assert secrets.read_secret("BILGIN_TEST_ABSENT_KEY", home=home) is None
 
     assert caplog.records == []
 

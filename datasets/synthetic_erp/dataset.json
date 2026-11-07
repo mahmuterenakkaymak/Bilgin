@@ -16,8 +16,8 @@
     "followups": "followups.jsonl",
     "ready_questions": "ready_questions.json"
   },
-  "builder": "nl2sql.schema_map.build:build_db",
-  "generator": "nl2sql.schema_map.generator:generate",
+  "builder": "bilgin.schema_map.build:build_db",
+  "generator": "bilgin.schema_map.generator:generate",
   "references": "eval.reference:REFERENCES",
   "fake_fallback_sql": "SELECT TOP 20 STOK_KODU, STOK_ADI FROM TBLSTSABIT ORDER BY STOK_KODU",
   "outputs": {

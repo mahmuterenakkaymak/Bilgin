@@ -20,13 +20,13 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.index.store import FileStore, StaleIndexError, content_hash
-from nl2sql.report import guard
-from nl2sql.report.chart import validate_option
-from nl2sql.web.app import create_app
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.index.store import FileStore, StaleIndexError, content_hash
+from bilgin.report import guard
+from bilgin.report.chart import validate_option
+from bilgin.web.app import create_app
 
 DATASETS = ("synthetic_erp", "wwi")
 # M15'in indeksi gerçek: altın kayıt diskteki sahte vektör uzayının üstünde oynanır.
@@ -107,7 +107,7 @@ def editable(tmp_path, monkeypatch, capsys):
     root = tmp_path / "datasets"
     shutil.copytree(datasets.load_dataset(name).root, root / name)
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(root))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(root))
     ds = datasets.load_dataset(name)
     ds.db_path.parent.mkdir(parents=True, exist_ok=True)
     ds.build_db(db_path=ds.db_path, sql_path=tmp_path / f"{name}.sql")

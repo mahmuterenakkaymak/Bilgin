@@ -13,11 +13,11 @@ import re
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
-from nl2sql.eval import runner
-from nl2sql.i18n import t
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.cli import main as cli
+from bilgin.eval import runner
+from bilgin.i18n import t
+from bilgin.schema_map import build
 
 GOLDEN = runner.load_golden()
 BY_ID = {line["id"]: line for line in GOLDEN}
@@ -32,12 +32,12 @@ EN_FRAME = ("Question:", "Answer SQL:", "Result:", "Steps:", "Tokens:", "Time:")
 
 @pytest.fixture
 def project(tmp_path, monkeypatch):
-    """Yollar tmp'ye çevrilir: ``ask`` çağrı anında config'den, konuşma deposu ``NL2SQL_APP_DB``den okur."""
+    """Yollar tmp'ye çevrilir: ``ask`` çağrı anında config'den, konuşma deposu ``BILGIN_APP_DB``den okur."""
     monkeypatch.setattr(config, "DB_PATH", tmp_path / "test.db")
     monkeypatch.setattr(config, "INDEX_DIR", tmp_path / "index")
     monkeypatch.setattr(config, "AUDIT_LOG", tmp_path / "audit.jsonl")
     monkeypatch.setattr(config, "ASK_LOG", tmp_path / "asks.jsonl")
-    monkeypatch.setenv("NL2SQL_APP_DB", str(tmp_path / "app.db"))
+    monkeypatch.setenv("BILGIN_APP_DB", str(tmp_path / "app.db"))
     return tmp_path
 
 

@@ -11,7 +11,7 @@ model picks is the eval's job.
 
 import pytest
 
-from nl2sql.schema_map import doc
+from bilgin.schema_map import doc
 
 NEW_MODULES = {"Sabit Kıymet", "Kalite", "Lojistik"}
 

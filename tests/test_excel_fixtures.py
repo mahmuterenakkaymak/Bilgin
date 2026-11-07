@@ -12,8 +12,8 @@ tipler, bazı açıklamalar silinmiş; tablo ve kolon adları aynı kalmalı.
 import json
 from pathlib import Path
 
-from nl2sql import config
-from nl2sql.schema_map.excel import convert, fallback_mapping, read_workbook
+from bilgin import config
+from bilgin.schema_map.excel import convert, fallback_mapping, read_workbook
 
 FIXTURES = Path(__file__).parent / "fixtures"
 TIDY = str(FIXTURES / "map_erp_style.xlsx")

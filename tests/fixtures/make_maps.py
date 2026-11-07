@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 FIXTURES = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-from nl2sql import config  # noqa: E402
+from bilgin import config  # noqa: E402
 
 SCHEMA_PATH = config.SCHEMA_PATH
 

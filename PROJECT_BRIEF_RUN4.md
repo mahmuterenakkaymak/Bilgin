@@ -40,7 +40,7 @@ nothing leaves the machine.
 
 **In (Run 4):**
 
-- **Dataset abstraction** (`nl2sql/datasets/`): a dataset = a folder `datasets/<name>/` with `dataset.json` (display
+- **Dataset abstraction** (`bilgin/datasets/`): a dataset = a folder `datasets/<name>/` with `dataset.json` (display
   name, dialect, connection kind, default schema), `schema.json`, `rules.json`, `profile.json` (join hints, ERP
   knowledge), `golden.jsonl`, a builder for the test database and a reference module that computes each golden answer
   independently in Python. Move the current synthetic set into `datasets/synthetic_erp/` (paths only - content
@@ -66,7 +66,7 @@ nothing leaves the machine.
     golden-vs-reference check runs for this dataset as for the synthetic one.
   - PII classes for `Application.People` (FullName, EmailAddress, PhoneNumber; HashedPassword and PhotoPath denied)
     and customer phone/fax/address; the PII bypass cases re-run on WWI names.
-- **Model profiles** (`config/models.json`, read by `nl2sql/agent/llm.py`): name -> base URL, model id, API key
+- **Model profiles** (`config/models.json`, read by `bilgin/agent/llm.py`): name -> base URL, model id, API key
   environment variable (never the key itself), context budget in tokens, max output tokens, optional sampling.
   Shipped profiles: `strata` (Flash-Next, http://127.0.0.1:8080/v1, large budget), `qwen27b-24k` and `qwen27b-16k`
   (Qwen3.8-27B on Unsloth Studio, http://127.0.0.1:8888/v1, key in `UNSLOTH_API_KEY`, budgets 24576 / 16384).

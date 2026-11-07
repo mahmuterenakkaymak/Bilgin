@@ -12,9 +12,9 @@ dokunulmadan kaldığı.
 
 import json
 
-from nl2sql import config
-from nl2sql.agent import budget
-from nl2sql.schema_map import doc
+from bilgin import config
+from bilgin.agent import budget
+from bilgin.schema_map import doc
 
 MARKER = "… (bağlam bütçesi için kısaltıldı: {n} karakter)"
 

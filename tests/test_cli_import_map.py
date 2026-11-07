@@ -12,10 +12,10 @@ import json
 
 import openpyxl
 
-from nl2sql.agent.fake import FakeLLM
-from nl2sql.agent.llm import ChatResponse
-from nl2sql.cli import main as cli
-from nl2sql.schema_map import excel
+from bilgin.agent.fake import FakeLLM
+from bilgin.agent.llm import ChatResponse
+from bilgin.cli import main as cli
+from bilgin.schema_map import excel
 
 HEADERS = ["TABLO", "KOLON", "TİP", "AÇIKLAMA", "REFERANS", "DEĞER", "NULL", "MODÜL"]
 

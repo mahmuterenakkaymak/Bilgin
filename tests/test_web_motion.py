@@ -18,7 +18,7 @@ import subprocess
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 # Kartın girişi: bekleme değil işaret - 150-200ms aralığının dışına çıkmaz.
 MIN_MS, MAX_MS = 150, 200

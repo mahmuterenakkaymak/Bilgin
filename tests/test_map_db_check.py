@@ -19,15 +19,15 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.schema_map import introspect
-from nl2sql.schema_map.template import filled_example_workbook
-from nl2sql.web import map_api
-from nl2sql.web.app import create_app
-from nl2sql.web.map_api import STILL_BROKEN
+from bilgin import config
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.schema_map import introspect
+from bilgin.schema_map.template import filled_example_workbook
+from bilgin.web import map_api
+from bilgin.web.app import create_app
+from bilgin.web.map_api import STILL_BROKEN
 
 FIXTURE = Path(__file__).parent / "fixtures" / "datasets" / "mini"
 PAROLA = "Bilgin2026!t282"
@@ -45,8 +45,8 @@ def client(tmp_path, monkeypatch, capsys):
     (tmp_path / "real_datasets").mkdir()
     shutil.copytree(FIXTURE, tmp_path / "datasets" / "mini")
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path / "datasets"))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(tmp_path / "datasets"))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
     monkeypatch.setattr(config, "MAP_PREVIEWS_DIR", tmp_path / "map_previews")
     monkeypatch.setattr(config, "MAP_CHANGES_LOG", tmp_path / "logs" / "map_changes.jsonl")
     assert cli.build_database(dataset="mini") == 0
@@ -134,7 +134,7 @@ def test_a_table_only_the_database_has_is_a_warning(client, monkeypatch):
 
 
 def test_a_server_that_cannot_be_read_still_reports_the_upload(client, monkeypatch):
-    broken = "SQL Server yoklanamadı; NL2SQL_MSSQL_CONN ortam değişkenini ve sunucuyu denetleyin."
+    broken = "SQL Server yoklanamadı; BILGIN_MSSQL_CONN ortam değişkenini ve sunucuyu denetleyin."
     calls = live(monkeypatch, raises=broken)
 
     response = upload(client, filled_example_workbook("db_kopuk", connection="mssql"))

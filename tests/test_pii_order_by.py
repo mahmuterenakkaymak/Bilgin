@@ -11,9 +11,9 @@ reddedilen sorgunun maskesi hiç çalışmaz - politika veritabanına dokunmadan
 
 import pytest
 
-from nl2sql import config
-from nl2sql.policy import pii, policy
-from nl2sql.schema_map import doc
+from bilgin import config
+from bilgin.policy import pii, policy
+from bilgin.schema_map import doc
 
 SCHEMA = doc.load_schema()
 ALLOWED = doc.allowlist(SCHEMA)

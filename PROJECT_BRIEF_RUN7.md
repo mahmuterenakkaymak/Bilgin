@@ -4,14 +4,14 @@
 > düzenlenebilmeli. 'Son satışın tutarı ne?' -> 'Bu müşteriye başka ne sattık?' Tek session'da üst üste soru-cevap
 > olmalı." Added the same day: "Açılışa hazır sorulardan / genel geçer sorulardan bir başlangıç ekranı; hazır sorular
 > login olan kullanıcının rolüne göre (satışçı mı, satın almacı mı, muhasebeci mi, yönetici mi) değişsin." Runs after Run 6 (users, roles, sessions, per-user history, onboarding a new database from a template),
-> before Run 8 (English, Windows service). Product name **Bilgin** (package and CLI stay `nl2sql`). Never write the
+> before Run 8 (English, Windows service). Product name **Bilgin** (package and CLI stay `bilgin`). Never write the
 > names of a specific commercial ERP product or of the owner's company in code, docs, UI text or test data.
 
 ## 0. Input from earlier runs
 
 - Read `.hybrid/report.json`, `REVIEW.md`, `README.md` (Run 3-6 sections), `docs/BILGIN-TEKNIK-DOKUMAN.md` and
   `PROJECT_BRIEF_RUN6.md` first. Today every question is independent: `ask_payload(session, question, mode, choice)`
-  (`nl2sql/app/ask.py`) runs the agent loop (`nl2sql/agent/loop.py`) with no memory of the previous answer; the UI
+  (`bilgin/app/ask.py`) runs the agent loop (`bilgin/agent/loop.py`) with no memory of the previous answer; the UI
   shows one answer card at a time; history replay (`POST /api/replay/{audit_id}`) reruns a stored SQL without the
   model. Clarification (`needs_clarification` + `choice`) is the only two-step exchange.
 - Kept: the LLM never owns a number (number guard, facts by code), no technical column names in sentences, every
@@ -58,9 +58,9 @@ earlier turn was a plain answer or a report (table + chart).
   their stored answer cards, no re-run), `DELETE /api/conversations/{id}`. History (Run 6) groups by conversation;
   replaying a turn reruns its stored SQL as today. CLI: `ask "..." --conversation ID` and `ask --new`, `--json`
   carries `conversation_id`.
-- **Follow-up context for the agent** (`nl2sql/agent/context.py` or next to the loop): for turn n > 1 the agent gets
+- **Follow-up context for the agent** (`bilgin/agent/context.py` or next to the loop): for turn n > 1 the agent gets
   a compact block of the last `CONV_TURNS` (3) turns - each question, its SQL, its columns and the kept rows - inside
-  the same token budget (`nl2sql/agent/budget.py`): older turns are dropped first, then rows, never the current
+  the same token budget (`bilgin/agent/budget.py`): older turns are dropped first, then rows, never the current
   question; `context_overflow` stays the only failure. The prompt tells the model: resolve "bu / bunlar / o müşteri /
   aynı dönem / sadece X / bunu" from these turns, reuse the earlier SQL as the starting point when the user refines
   a report, and never copy a number from an earlier turn into the answer - every number in the new answer must come
@@ -145,8 +145,8 @@ earlier turn was a plain answer or a report (table + chart).
     string; `PUT` accepts a new password or keeps the stored one when the field is empty. The password never appears in
     logs, the ask/audit log, error messages (driver errors are scrubbed of `PWD=`/`Password=` before they are stored or
     shown) or test snapshots.
-  - **Environment variable still wins**: `NL2SQL_MSSQL_CONN_<DATASET>` (upper-case dataset name) or, for the active
-    dataset, `NL2SQL_MSSQL_CONN` override the stored connection (the Windows service and development keep working);
+  - **Environment variable still wins**: `BILGIN_MSSQL_CONN_<DATASET>` (upper-case dataset name) or, for the active
+    dataset, `BILGIN_MSSQL_CONN` override the stored connection (the Windows service and development keep working);
     the screen shows "Ortam değişkeninden" and the form is read-only for that dataset.
   - **Read-only guard before saving** (admin "Bağlantıyı test et" and on every save): connect with the given values
     and refuse to save - with a Turkish explanation - when the login is too powerful: `IS_SRVROLEMEMBER('sysadmin') = 1`,

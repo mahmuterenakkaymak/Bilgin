@@ -14,18 +14,18 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app.session import open_session
-from nl2sql.auth import store as store_module
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.i18n import t
-from nl2sql.i18n.scan import user_literals
-from nl2sql.web import auth_api as auth_api_module
-from nl2sql.web import authz as authz_module
-from nl2sql.web import conversations_api as conversations_module
-from nl2sql.web import saved as saved_module
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.app.session import open_session
+from bilgin.auth import store as store_module
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.i18n import t
+from bilgin.i18n.scan import user_literals
+from bilgin.web import auth_api as auth_api_module
+from bilgin.web import authz as authz_module
+from bilgin.web import conversations_api as conversations_module
+from bilgin.web import saved as saved_module
+from bilgin.web.app import create_app
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 
@@ -62,7 +62,7 @@ REJECTIONS = (
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     cli.build_database(dataset="mini")
     return tmp_path
 

@@ -10,8 +10,8 @@ böylece her test bozuk kabul ettiği tam yapıyı kendi satırlarıyla söyler.
 import openpyxl
 import pytest
 
-from nl2sql import config
-from nl2sql.schema_map.excel import SheetError, read_workbook
+from bilgin import config
+from bilgin.schema_map.excel import SheetError, read_workbook
 
 HEADERS = ["TABLO", "KOLON", "TİP", "AÇIKLAMA"]
 

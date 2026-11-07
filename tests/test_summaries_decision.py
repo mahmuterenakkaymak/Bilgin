@@ -10,14 +10,14 @@ yönü de tutuyor: karar yanlışsa sabit, belge yanlışsa sayılar kırılır.
 gerçekten aramaya geçtiği — `search_schema` cevabı hangi bacakten geliyorsa o bacağın tablosunu taşır.
 """
 
-from nl2sql import config
-from nl2sql.agent import modes, tools
-from nl2sql.datasets import load_dataset
-from nl2sql.eval import retrieval
-from nl2sql.graph.graph import build_graph
-from nl2sql.graph.profile import load_profile
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import Hit, build_search
+from bilgin import config
+from bilgin.agent import modes, tools
+from bilgin.datasets import load_dataset
+from bilgin.eval import retrieval
+from bilgin.graph.graph import build_graph
+from bilgin.graph.profile import load_profile
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import Hit, build_search
 
 DATASETS = ("synthetic_erp", "wwi")
 DECISION = config.ROOT / "eval" / "SUMMARIES.md"

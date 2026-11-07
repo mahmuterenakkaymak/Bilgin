@@ -10,12 +10,12 @@ elle kurulmuş bir korpus: hedef tablo eş anlamlıyla yazılmışsa ham "ciro" 
 bulur - gerçek şemada bu iki kelime zaten aynı metinde durduğu için kanıt burada ince kalırdı.
 """
 
-from nl2sql import config
-from nl2sql.index.docs import Doc
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import HybridSearch, synonym_query
-from nl2sql.index.text import fold
-from nl2sql.schema_map.rules import load_rules
+from bilgin import config
+from bilgin.index.docs import Doc
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import HybridSearch, synonym_query
+from bilgin.index.text import fold
+from bilgin.schema_map.rules import load_rules
 
 RULES = load_rules()
 CIRO = next(rule for rule in RULES if rule["id"] == "ciro")

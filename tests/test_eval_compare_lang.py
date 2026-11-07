@@ -14,13 +14,13 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.cli import main as cli
-from nl2sql.eval import runner
-from nl2sql.i18n.detect import TURKISH_LETTERS
-from nl2sql.i18n.scan import user_literals
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.cli import main as cli
+from bilgin.eval import runner
+from bilgin.i18n.detect import TURKISH_LETTERS
+from bilgin.i18n.scan import user_literals
+from bilgin.schema_map import build
 
 GOLDEN = runner.load_golden()
 MODES = list(config.MODES)
@@ -105,4 +105,4 @@ def test_eval_retrieval_in_english(tmp_path, capsys):
 
 @pytest.mark.parametrize("module", MODULES)
 def test_module_has_no_turkish_user_literals(module):
-    assert user_literals(f"nl2sql/eval/{module}.py") == []
+    assert user_literals(f"bilgin/eval/{module}.py") == []

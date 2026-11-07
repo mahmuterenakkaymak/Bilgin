@@ -22,15 +22,15 @@ from urllib.parse import unquote
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.schema_map import introspect, template_import
-from nl2sql.schema_map.template import filled_example_workbook
-from nl2sql.web.app import create_app
-from nl2sql.web.authz import NOT_ADMIN
-from nl2sql.web.map_api import DB_NOTE, NO_PREVIEW
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.schema_map import introspect, template_import
+from bilgin.schema_map.template import filled_example_workbook
+from bilgin.web.app import create_app
+from bilgin.web.authz import NOT_ADMIN
+from bilgin.web.map_api import DB_NOTE, NO_PREVIEW
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 PAROLA = "Bilgin2026!erp"
@@ -74,8 +74,8 @@ def project(tmp_path, monkeypatch, capsys):
     (tmp_path / "real_datasets").mkdir()
     shutil.copytree(FIXTURE_ROOT / "mini", tmp_path / "datasets" / "mini")
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path / "datasets"))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(tmp_path / "datasets"))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
     monkeypatch.setattr(config, "MAP_PREVIEWS_DIR", tmp_path / "map_previews")
     monkeypatch.setattr(config, "MAP_CHANGES_LOG", tmp_path / "logs" / "map_changes.jsonl")
     assert cli.build_database(dataset="mini") == 0
@@ -302,20 +302,20 @@ def test_an_apply_never_touches_a_folder_that_already_exists(client):
 
 
 def test_the_button_shows_only_for_a_live_sql_server_connection(client, monkeypatch):
-    monkeypatch.delenv("NL2SQL_MSSQL_CONN", raising=False)
+    monkeypatch.delenv("BILGIN_MSSQL_CONN", raising=False)
 
     assert client.get("/api/schema-map/info").json() == {"db_connection": False}
 
-    monkeypatch.setenv("NL2SQL_BACKEND", "mssql")
+    monkeypatch.setenv("BILGIN_BACKEND", "mssql")
     assert client.get("/api/schema-map/info").json() == {"db_connection": False}
 
-    monkeypatch.setenv("NL2SQL_MSSQL_CONN", "ODBC DRIVER=...")
+    monkeypatch.setenv("BILGIN_MSSQL_CONN", "ODBC DRIVER=...")
     assert client.get("/api/schema-map/info").json() == {"db_connection": True}
 
 
 def test_from_db_fills_the_template_with_the_live_structure(client, project, monkeypatch):
-    monkeypatch.setenv("NL2SQL_BACKEND", "mssql")
-    monkeypatch.setenv("NL2SQL_MSSQL_CONN", "ODBC DRIVER=...")
+    monkeypatch.setenv("BILGIN_BACKEND", "mssql")
+    monkeypatch.setenv("BILGIN_MSSQL_CONN", "ODBC DRIVER=...")
     monkeypatch.setattr(introspect, "mssql_skeleton", lambda: SKELETON)
 
     response = client.get("/api/schema-map/template.xlsx?from_db=1")
@@ -331,8 +331,8 @@ def test_from_db_fills_the_template_with_the_live_structure(client, project, mon
 
 
 def test_a_server_that_cannot_be_read_still_gives_the_blank_template(client, project, monkeypatch):
-    monkeypatch.setenv("NL2SQL_BACKEND", "mssql")
-    monkeypatch.setenv("NL2SQL_MSSQL_CONN", "ODBC DRIVER=...")
+    monkeypatch.setenv("BILGIN_BACKEND", "mssql")
+    monkeypatch.setenv("BILGIN_MSSQL_CONN", "ODBC DRIVER=...")
 
     def broken() -> dict:
         raise introspect.IntrospectError("VIEW DEFINITION yetkisi yok")
@@ -347,8 +347,8 @@ def test_a_server_that_cannot_be_read_still_gives_the_blank_template(client, pro
 
 
 def test_without_a_connection_string_the_server_is_never_asked_again(client, project, monkeypatch):
-    monkeypatch.setenv("NL2SQL_BACKEND", "mssql")
-    monkeypatch.delenv("NL2SQL_MSSQL_CONN", raising=False)
+    monkeypatch.setenv("BILGIN_BACKEND", "mssql")
+    monkeypatch.delenv("BILGIN_MSSQL_CONN", raising=False)
 
     def never() -> dict:
         raise AssertionError("bağlantı yokken yoklama yapılmaz")

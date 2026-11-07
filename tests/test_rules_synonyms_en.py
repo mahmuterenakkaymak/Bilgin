@@ -22,16 +22,16 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.index.docs import build_documents
-from nl2sql.index.search import load_search, synonym_query
-from nl2sql.index.text import fold
-from nl2sql.schema_map.doc import load_schema
-from nl2sql.schema_map.rules import load_rules, rule_text, rules_text
-from nl2sql.schema_map.rules_edit import normalize_rule, validate_rule
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.index.docs import build_documents
+from bilgin.index.search import load_search, synonym_query
+from bilgin.index.text import fold
+from bilgin.schema_map.doc import load_schema
+from bilgin.schema_map.rules import load_rules, rule_text, rules_text
+from bilgin.schema_map.rules_edit import normalize_rule, validate_rule
+from bilgin.web.app import create_app
 
 SCHEMA = load_schema()
 RULES = load_rules()
@@ -113,7 +113,7 @@ def api(tmp_path, monkeypatch, capsys):
     root = tmp_path / "datasets"
     shutil.copytree(FIXTURE_ROOT / "mini", root / "mini")
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(root))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(root))
     cli.build_database(dataset="mini")
     assert cli.build_index("fake", dataset="mini") == 0
     session = open_session(

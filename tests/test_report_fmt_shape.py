@@ -12,10 +12,10 @@ SATIS_MIKTARI sayıdır.
 
 import pytest
 
-from nl2sql import config, datasets
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.report import fmt, shape
-from nl2sql.schema_map import build
+from bilgin import config, datasets
+from bilgin.engine.executor import LocalExecutor
+from bilgin.report import fmt, shape
+from bilgin.schema_map import build
 
 NULL = "–"
 

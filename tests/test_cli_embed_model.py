@@ -3,7 +3,7 @@
 
 """``--embed`` ve ``--embed-model``: ölçümün hangi vektör uzayıyla yapıldığı komutun kendisinde.
 
-Model adı daha önce yalnız ``NL2SQL_EMBED_MODEL`` ile değişebiliyordu; iki modeli karşılaştırmanın
+Model adı daha önce yalnız ``BILGIN_EMBED_MODEL`` ile değişebiliyordu; iki modeli karşılaştırmanın
 yolu ortam değişkenini iki kere düzenlemekti. Artık ``--embed-model bge-m3`` komutta durur,
 ``meta.json`` da hangi uzayla ölçtüğünü yazar. ``--embed``in soneki serbest metin olduğu için
 biçimi bozuk bir değer iz dökümü değil tek cümle olmalı, ölü bir sunucu da hangi adresi denediğimizi
@@ -13,7 +13,7 @@ söyleyip yarım bir indeks bırakmadan çıkmalı.
 import json
 import socket
 
-from nl2sql.cli import main as cli
+from bilgin.cli import main as cli
 
 
 def closed_port() -> int:
@@ -81,14 +81,14 @@ def test_embed_model_composes_the_openai_id(monkeypatch):
 
 def test_dead_server_names_the_url_and_leaves_no_index(tmp_path, monkeypatch, capsys):
     url = f"http://127.0.0.1:{closed_port()}/v1"
-    monkeypatch.setenv("NL2SQL_EMBED_BASE_URL", url)
+    monkeypatch.setenv("BILGIN_EMBED_BASE_URL", url)
     index_dir = tmp_path / "index"
     to_tmp(monkeypatch, "build_index", index_dir=index_dir)
 
     assert cli.main(["build-index", "--embed-model", "bge-m3"]) == 3
     out = capsys.readouterr().out
 
-    assert url in out and "NL2SQL_EMBED_BASE_URL" in out and "Traceback" not in out
+    assert url in out and "BILGIN_EMBED_BASE_URL" in out and "Traceback" not in out
     assert not index_dir.exists(), "vektörsüz bir indeks bırakılmamalı"
 
 

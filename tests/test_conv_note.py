@@ -9,7 +9,7 @@ kullanıcıya teknik kolon adını hiç göstermez - etiket şemadaki açıklama
 değerin bulunduğu satırın diğer metin hücresidir.
 """
 
-from nl2sql.agent.context import evidence_line, validate_note
+from bilgin.agent.context import evidence_line, validate_note
 
 SCHEMA = {
     "tables": [

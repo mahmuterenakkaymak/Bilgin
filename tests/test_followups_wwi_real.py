@@ -12,9 +12,9 @@ geriye dönük işaretleridir. Test sunucuya bağlanmaz.
 
 import pytest
 
-from nl2sql.datasets import load_dataset
-from nl2sql.policy import pii, policy
-from nl2sql.schema_map import doc
+from bilgin.datasets import load_dataset
+from bilgin.policy import pii, policy
+from bilgin.schema_map import doc
 
 DATASET = load_dataset("wwi_real")
 SCHEMA = DATASET.schema()

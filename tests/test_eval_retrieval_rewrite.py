@@ -11,9 +11,9 @@ Stubın kendi varsayılanı bilerek ``False`` değil; çağıranın varsayana d�
 
 from types import SimpleNamespace
 
-from nl2sql import config
-from nl2sql.eval import retrieval
-from nl2sql.index.search import METHODS, Hit
+from bilgin import config
+from bilgin.eval import retrieval
+from bilgin.index.search import METHODS, Hit
 
 GOLDEN = [
     {"id": "Q01", "question": "soru bir", "tags": ["x"], "requires_tables": ["TBLA"]},

@@ -12,7 +12,7 @@ etiket olarak tek tarih kolonunu kullandığı için hem çizgi hem sütun, değ
 
 import pytest
 
-from nl2sql.report import chart
+from bilgin.report import chart
 
 MONTH_COLUMNS = ["AY", "CIRO"]
 MONTH_ROWS = [(f"2026-{month:02d}", 1000.0 + 100.0 * month) for month in range(1, 7)]

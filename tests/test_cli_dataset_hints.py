@@ -16,25 +16,25 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.index.store import FileStore, MissingIndexError, StaleIndexError
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.index.store import FileStore, MissingIndexError, StaleIndexError
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 QUESTION = "Siparişlerin toplamı ne kadar?"
 # Değişiklik öncesi cümleler: küme söylenmeyen koşumda harfi harfine bunlar basılmalı.
-OLD_NO_DB = "Veritabanı yok: {path}\nÖnce `python -m nl2sql build-db` çalıştırın."
-OLD_MISSING = "İndeks bulunamadı: {path}. Önce `python -m nl2sql build-index` çalıştırın."
-OLD_STALE = "İndeks eski: `python -m nl2sql build-index` çalıştırın."
+OLD_NO_DB = "Veritabanı yok: {path}\nÖnce `python -m bilgin build-db` çalıştırın."
+OLD_MISSING = "İndeks bulunamadı: {path}. Önce `python -m bilgin build-index` çalıştırın."
+OLD_STALE = "İndeks eski: `python -m bilgin build-index` çalıştırın."
 
 
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     """Proje kökü geçici: kümenin veritabanı ve indeksi oraya düşer, gerçek repoya tek dosya geçmez."""
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     return tmp_path
 
 

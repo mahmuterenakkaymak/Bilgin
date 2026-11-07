@@ -5,7 +5,7 @@
 
 Test üç şeyi sabitler: İngilizce yardım Türkçe harf taşımaz, Türkçe yardım bugünle aynı metindir
 (yalnız ``--lang`` satırı ve kullanım satırının yeniden sarılması eklenir), her alt komut ``--lang
-en``i kabul eder ve ``NL2SQL_LANG=en`` bayrak olmadan İngilizce yardım verir. Karşılaştırma
+en``i kabul eder ve ``BILGIN_LANG=en`` bayrak olmadan İngilizce yardım verir. Karşılaştırma
 makineden bağımsız olsun diye yardım gövdesinden kullanım bloğu ve ``--lang`` satırları düşürülür,
 boşluklar katlanır ve makineye özel ``models.json`` yolu düzleştirilir.
 """
@@ -17,7 +17,7 @@ import re
 
 import pytest
 
-from nl2sql.cli import main as cli
+from bilgin.cli import main as cli
 
 TURKISH = set("çğıöşüÇĞİÖŞÜ")
 PARSERS = {"top": [], "ask": ["ask"], "eval": ["eval"], "serve": ["serve"], "user_add": ["user", "add"]}
@@ -34,7 +34,7 @@ def _wide_terminal(monkeypatch):
 TODAY_HELP = {
     # Updated automatically: T488 changed this contract (paths, secret-set, service-check and
     # service-xml join the top-level help).
-    "top": r"""usage: python -m nl2sql [-h]
+    "top": r"""usage: python -m bilgin [-h]
                         {build-db,build-index,eval-retrieval,import-map,introspect,diff-map,merge-map,make-login-script,template,ask,serve,user,eval,paths,secret-set,service-check,service-xml}
                         ...
 
@@ -66,7 +66,7 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
 """,
-    "ask": r"""usage: python -m nl2sql ask [-h] [--llm {fake,openai}] [--mode {full,full_rules,rag,auto}]
+    "ask": r"""usage: python -m bilgin ask [-h] [--llm {fake,openai}] [--mode {full,full_rules,rag,auto}]
                             [--json] [--choice SEÇENEK] [--conversation ID | --new]
                             [--model PROFIL] [--models-file DOSYA.json] [--dataset AD]
                             question
@@ -86,10 +86,10 @@ options:
   --model PROFIL        config/models.json profili (varsayılan: http://127.0.0.1:8080/v1)
   --models-file DOSYA.json
                         --model için profil dosyası (varsayılan
-                        C:\Users\PC\Documents\GitHub\nl2sql\config\models.json)
+                        C:\Users\PC\Documents\GitHub\bilgin\config\models.json)
   --dataset AD          veri kümesi adı (varsayılan: synthetic_erp)
 """,
-    "eval": r"""usage: python -m nl2sql eval [-h] [--llm {fake,openai}] [--only Q03 [Q03 ...]]
+    "eval": r"""usage: python -m bilgin eval [-h] [--llm {fake,openai}] [--only Q03 [Q03 ...]]
                              [--tag archive [archive ...]] [--mode {full,full_rules,rag,auto}]
                              [--compare] [--fresh] [--models A,B] [--modes M1,M2] [--repeat N]
                              [--schema DOSYA|full|skeleton] [--ambiguous] [--narrate]
@@ -119,10 +119,10 @@ options:
   --model PROFIL        config/models.json profili (varsayılan: http://127.0.0.1:8080/v1)
   --models-file DOSYA.json
                         --model için profil dosyası (varsayılan
-                        C:\Users\PC\Documents\GitHub\nl2sql\config\models.json)
+                        C:\Users\PC\Documents\GitHub\bilgin\config\models.json)
   --dataset AD          veri kümesi adı (varsayılan: synthetic_erp)
 """,
-    "serve": r"""usage: python -m nl2sql serve [-h] [--host HOST] [--port PORT] [--llm {fake,openai}]
+    "serve": r"""usage: python -m bilgin serve [-h] [--host HOST] [--port PORT] [--llm {fake,openai}]
                               [--model PROFIL] [--models-file DOSYA.json] [--dataset AD]
 
 options:
@@ -133,10 +133,10 @@ options:
   --model PROFIL        config/models.json profili (varsayılan: http://127.0.0.1:8080/v1)
   --models-file DOSYA.json
                         --model için profil dosyası (varsayılan
-                        C:\Users\PC\Documents\GitHub\nl2sql\config\models.json)
+                        C:\Users\PC\Documents\GitHub\bilgin\config\models.json)
   --dataset AD          veri kümesi adı (varsayılan: synthetic_erp)
 """,
-    "user_add": r"""usage: python -m nl2sql user add [-h] [--role {admin,user}]
+    "user_add": r"""usage: python -m bilgin user add [-h] [--role {admin,user}]
                                  [--business-role {satis,satin_alma,muhasebe,yonetim,genel}]
                                  AD
 
@@ -245,13 +245,13 @@ def test_scan_lang_reads_the_flag(argv, expected):
 
 
 def test_scan_lang_falls_back_to_env(monkeypatch):
-    monkeypatch.setenv("NL2SQL_LANG", "en")
+    monkeypatch.setenv("BILGIN_LANG", "en")
     assert cli._scan_lang([]) == "en"
     assert cli._scan_lang(["--lang", "fr"]) == "en"  # tanınmayan değer ortama düşer
 
 
 def test_env_lang_en_without_flag_gives_en_help(monkeypatch):
-    monkeypatch.setenv("NL2SQL_LANG", "en")
+    monkeypatch.setenv("BILGIN_LANG", "en")
     assert not set(_stdout_of(["--help"])) & TURKISH
 
 

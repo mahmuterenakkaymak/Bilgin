@@ -5,7 +5,7 @@
 Turkish column still says the exact sentence every test writes down.
 
 The three questions the catalog has to keep answering: who reads this key; is the English row really
-English; and did a sentence a test froze move. The first is answered from the source of `nl2sql/` -
+English; and did a sentence a test froze move. The first is answered from the source of `bilgin/` -
 a key written as a string constant, or assembled at runtime behind a `DYNAMIC_PREFIXES` prefix, or
 frozen by a test, which no task may un-pin by deleting the key.
 """
@@ -17,8 +17,8 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-from nl2sql.i18n import CATALOG_DIR
-from nl2sql.i18n.detect import TURKISH_LETTERS
+from bilgin.i18n import CATALOG_DIR
+from bilgin.i18n.detect import TURKISH_LETTERS
 
 PACKAGE_DIR = CATALOG_DIR.parent
 TESTS_DIR = CATALOG_DIR.parents[1] / "tests"

@@ -12,14 +12,14 @@ sayılarıdır — kullanıcının soruya kendisinin yazdığı sayı serbest, m
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.agent.llm import ChatResponse
-from nl2sql.app.ask import ask_payload
-from nl2sql.app.conversations import ConversationStore
-from nl2sql.app.session import open_session
-from nl2sql.report import fmt, guard, narrate
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.agent.llm import ChatResponse
+from bilgin.app.ask import ask_payload
+from bilgin.app.conversations import ConversationStore
+from bilgin.app.session import open_session
+from bilgin.report import fmt, guard, narrate
+from bilgin.schema_map import build
 
 TOTAL_SQL = "SELECT SUM(STHAR_GCMIK * STHAR_NF) AS TOPLAM FROM TBLSTHAR WHERE STHAR_GCKOD = 'C'"
 LIST_SQL = "SELECT TOP 5 STOK_KODU, STOK_ADI FROM TBLSTSABIT ORDER BY STOK_KODU"

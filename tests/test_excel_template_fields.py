@@ -12,7 +12,7 @@ from pathlib import Path
 
 import openpyxl
 
-from nl2sql.schema_map.excel import convert, fallback_mapping, read_workbook, sheet_rows
+from bilgin.schema_map.excel import convert, fallback_mapping, read_workbook, sheet_rows
 
 MESSY = str(Path(__file__).parent / "fixtures" / "map_customer_map.xlsx")
 

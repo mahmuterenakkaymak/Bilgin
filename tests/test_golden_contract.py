@@ -13,10 +13,10 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.eval.runner import load_golden
-from nl2sql.policy import policy
-from nl2sql.schema_map import doc
+from bilgin import config
+from bilgin.eval.runner import load_golden
+from bilgin.policy import policy
+from bilgin.schema_map import doc
 
 # ASSUMPTION: needs_values = soru modelin bakması gereken bir kayıtlı değere süzüyor (bir il
 # yazımı, bir grup adı), distractor = gerçek tablonun yanında şaşırtan bir tablo duruyor; R2-15

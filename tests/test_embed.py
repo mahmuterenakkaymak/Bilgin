@@ -17,8 +17,8 @@ import types
 import pytest
 from openai import APIStatusError
 
-from nl2sql import config
-from nl2sql.index.embed import (
+from bilgin import config
+from bilgin.index.embed import (
     Embedder,
     EmbedError,
     FakeEmbedder,
@@ -175,7 +175,7 @@ def test_closed_port_is_an_embed_error_naming_the_url():
         instance.embed(["stok hareketleri"])
     message = str(caught.value)
     assert "127.0.0.1:" in message and "/v1" in message
-    assert "NL2SQL_EMBED_BASE_URL" in message
+    assert "BILGIN_EMBED_BASE_URL" in message
 
 
 def test_http_error_becomes_an_embed_error_with_the_status():

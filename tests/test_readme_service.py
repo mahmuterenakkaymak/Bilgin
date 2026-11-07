@@ -4,7 +4,7 @@
 """Windows servis bölümü (R8-20..R8-23): iki README de aynı kurulum sayfasını taşıyor.
 
 Servis bir kez kurulur ve sonra elle yoklanır; betik adları, `-WhatIf`, `-RemoveData`,
-`NL2SQL_HOME`, `WinSwSha256`, `python -m nl2sql paths` ve yeniden başlatma denetimi bir dilde
+`BILGIN_HOME`, `WinSwSha256`, `python -m bilgin paths` ve yeniden başlatma denetimi bir dilde
 yazılmadıysa o dildeki kurulumcu onların varlığından habersiz kalır. Bölümün başlığı dildedir
 (`## Windows service` / `## Windows servisi`), o yüzden her işaret dosyasında aranıyor; yeniden
 başlatma da her iki dilin kendi sözüyle denetleniyor. Burada hiçbir komut koşulmaz; yalnız metin
@@ -13,7 +13,7 @@ denetlenir.
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 # Dosya başlığı ve yeniden başlatma cümlesinin o dildeki hali.
 FILES = {
@@ -29,9 +29,9 @@ SERVICE_MARKS = (
     "scripts\\uninstall-service.ps1",
     "-WhatIf",
     "-RemoveData",
-    "NL2SQL_HOME",
+    "BILGIN_HOME",
     "C:\\ProgramData\\Bilgin",
-    "python -m nl2sql paths",
+    "python -m bilgin paths",
     "WinSwSha256",
     "http://127.0.0.1:8777",
 )

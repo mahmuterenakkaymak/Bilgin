@@ -14,11 +14,11 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.web.app import create_app
-from nl2sql.web.saved import SavedStore
+from bilgin import config
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.web.app import create_app
+from bilgin.web.saved import SavedStore
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 
@@ -29,7 +29,7 @@ SAVED_KEYS = {"id", "question", "mode", "sql", "dataset", "created_at"}
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     cli.build_database(dataset="mini")
     return tmp_path
 

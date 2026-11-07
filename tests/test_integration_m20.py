@@ -26,21 +26,21 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.schema_map import build
-from nl2sql.schema_map.template import (
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.schema_map import build
+from bilgin.schema_map.template import (
     COLUMN_HEADERS,
     DATASET_HEADERS,
     RULE_HEADERS,
     SHEETS,
     TABLE_HEADERS,
 )
-from nl2sql.web.app import create_app
-from nl2sql.web.authz import NOT_ADMIN
-from nl2sql.web.map_api import NOT_XLSX, STILL_BROKEN
+from bilgin.web.app import create_app
+from bilgin.web.authz import NOT_ADMIN
+from bilgin.web.map_api import NOT_XLSX, STILL_BROKEN
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "datasets" / "mini"
 PAROLA = "Bilgin2026!m20"
@@ -281,10 +281,10 @@ def world(tmp_path_factory) -> World:
 
     mp = MonkeyPatch()
     mp.setattr(config, "ROOT", root)
-    mp.setenv("NL2SQL_DATASETS_DIR", str(datasets_root))
-    mp.setenv("NL2SQL_REAL_DATASETS_DIR", str(real_root))
-    mp.setenv("NL2SQL_APP_DB", str(root / "bilgin.db"))
-    mp.setenv("NL2SQL_BACKEND", "sqlite")
+    mp.setenv("BILGIN_DATASETS_DIR", str(datasets_root))
+    mp.setenv("BILGIN_REAL_DATASETS_DIR", str(real_root))
+    mp.setenv("BILGIN_APP_DB", str(root / "bilgin.db"))
+    mp.setenv("BILGIN_BACKEND", "sqlite")
     mp.setattr(config, "MAP_PREVIEWS_DIR", root / "map_previews")
     mp.setattr(config, "MAP_CHANGES_LOG", root / "logs" / "map_changes.jsonl")
     assert cli.build_database(dataset="mini") == 0

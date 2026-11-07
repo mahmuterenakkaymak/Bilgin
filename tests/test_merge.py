@@ -9,7 +9,7 @@ introspect) meeting here is the M8 integration task.
 
 import copy
 
-from nl2sql.schema_map import merge
+from bilgin.schema_map import merge
 
 
 def _column(name, type_="INT", description="", fk=None, values=None, nullable=True):

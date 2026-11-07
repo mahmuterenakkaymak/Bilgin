@@ -16,10 +16,10 @@ import re
 
 import sqlglot
 
-from nl2sql.cli import main as cli
-from nl2sql.engine import login_script
-from nl2sql.policy import pii
-from nl2sql.schema_map import doc
+from bilgin.cli import main as cli
+from bilgin.engine import login_script
+from bilgin.policy import pii
+from bilgin.schema_map import doc
 
 SCHEMA = doc.load_schema()
 ALLOWED = doc.allowlist(SCHEMA)

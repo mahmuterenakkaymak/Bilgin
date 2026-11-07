@@ -11,7 +11,7 @@ import { makeT } from "../i18n/index.js";
 
 const NAME_PATTERN = /^[a-z0-9_.-]{3,32}$/;
 
-// nl2sql/config.PASSWORD_MIN_LEN: arayüz Python'u okuyamadığı için değeri burada da duruyor.
+// bilgin/config.PASSWORD_MIN_LEN: arayüz Python'u okuyamadığı için değeri burada da duruyor.
 export const PASSWORD_MIN_LEN = 10;
 
 export const ROLES = ["admin", "user"];

@@ -23,11 +23,11 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.engine.result import Budget
-from nl2sql.web.app import BUILD_COMMAND, NO_UI, create_app
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.engine.result import Budget
+from bilgin.web.app import BUILD_COMMAND, NO_UI, create_app
 
 DATASET = "synthetic_erp"
 # Kuralın da aramanın da geçtiği kol: ``serve``in varsayılanı auto, auto da burada rag'a düşer.
@@ -54,13 +54,13 @@ NEW_RULE = {
 def world(tmp_path_factory):
     """tmp'de kurulu sentetik dünya; kümenin iki kopyası var: dünya ve kural turunun kopyası.
 
-    ``config.ROOT`` tmp'ye çevrilir ki db ile indeks de oraya yazılsın; ``NL2SQL_DATASETS_DIR``
+    ``config.ROOT`` tmp'ye çevrilir ki db ile indeks de oraya yazılsın; ``BILGIN_DATASETS_DIR``
     kopyalara bakar, depodaki ``datasets/`` klasörü yalnız okunur.
     """
     folder = tmp_path_factory.mktemp("m17")
     mp = MonkeyPatch()
     mp.setattr(config, "ROOT", folder)
-    mp.setenv("NL2SQL_DATASETS_DIR", str(folder / "datasets"))
+    mp.setenv("BILGIN_DATASETS_DIR", str(folder / "datasets"))
     for name in ("datasets", "rules"):
         shutil.copytree(ROOT / "datasets" / DATASET, folder / name / DATASET)
     ds = datasets.load_dataset(DATASET)
@@ -74,7 +74,7 @@ def world(tmp_path_factory):
 def open_api(folder, name, datasets_dir, **flags):
     """Kümenin verilen kopyası üstünde gerçek oturum ve gerçek kapı; aynı db, aynı indeks."""
     mp = MonkeyPatch()
-    mp.setenv("NL2SQL_DATASETS_DIR", str(datasets_dir))
+    mp.setenv("BILGIN_DATASETS_DIR", str(datasets_dir))
     try:  # küme burada okunur; oturum yolları taşıdığı için env sonra geri alınabilir
         session = open_session(
             dataset=DATASET,

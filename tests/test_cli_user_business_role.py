@@ -3,7 +3,7 @@
 
 """T317: ``user`` komutunda iş rolü (PLAN R7-16).
 
-Dünya ``tests/test_cli_user.py`` ile aynı - kopya, import değil: ``NL2SQL_APP_DB`` testin kendi
+Dünya ``tests/test_cli_user.py`` ile aynı - kopya, import değil: ``BILGIN_APP_DB`` testin kendi
 tmp dosyasına çevrilir ve parola hâlâ ``getpass``ten iki kez sorulur. İş rolü koda yazılır
 (``satis``), ekrana config'in Türkçe adıyla çıkar (``Satış``): komut satırı bir ERP kullanıcısının
 bildiği şeyi gösterir, deposunun anahtarını değil.
@@ -13,9 +13,9 @@ import getpass
 
 import pytest
 
-from nl2sql import config
-from nl2sql.auth.store import NOT_FOUND_MESSAGE, UserStore
-from nl2sql.cli import main as cli
+from bilgin import config
+from bilgin.auth.store import NOT_FOUND_MESSAGE, UserStore
+from bilgin.cli import main as cli
 
 PAROLA = "Parola2026!"
 
@@ -24,7 +24,7 @@ PAROLA = "Parola2026!"
 def db(tmp_path, monkeypatch):
     """Kullanıcı dosyası: komut yolu kendisi çağıran ``config.app_db_path``den okur."""
     path = tmp_path / "app.db"
-    monkeypatch.setenv("NL2SQL_APP_DB", str(path))
+    monkeypatch.setenv("BILGIN_APP_DB", str(path))
     return path
 
 

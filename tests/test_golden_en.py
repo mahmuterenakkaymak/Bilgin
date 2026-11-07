@@ -17,10 +17,10 @@ import json
 
 import pytest
 
-from nl2sql import datasets
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.i18n.detect import detect_lang
+from bilgin import datasets
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.i18n.detect import detect_lang
 
 ALL = {name: load_dataset(name) for name in datasets.list_datasets()}
 ENGLISH = {name: ds for name, ds in ALL.items() if ds.golden_en_path is not None}

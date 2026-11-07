@@ -16,11 +16,11 @@ import re
 
 import pytest
 
-from nl2sql import config
-from nl2sql.app.conversations import ConversationStore
-from nl2sql.cli import main as cli
-from nl2sql.eval import runner
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.app.conversations import ConversationStore
+from bilgin.cli import main as cli
+from bilgin.eval import runner
+from bilgin.schema_map import build
 
 BY_ID = {line["id"]: line for line in runner.load_golden()}
 
@@ -32,7 +32,7 @@ def project(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "INDEX_DIR", tmp_path / "index")
     monkeypatch.setattr(config, "AUDIT_LOG", tmp_path / "audit.jsonl")
     monkeypatch.setattr(config, "ASK_LOG", tmp_path / "asks.jsonl")
-    monkeypatch.setenv("NL2SQL_APP_DB", str(tmp_path / "app.db"))
+    monkeypatch.setenv("BILGIN_APP_DB", str(tmp_path / "app.db"))
     return tmp_path
 
 

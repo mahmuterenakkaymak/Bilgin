@@ -57,9 +57,9 @@ Python reference; read-only; tests never call a real model or a real embedding s
   `distractor` (a near-duplicate table exists), `needs_values` (a filter value the model must look up, e.g. a group
   name or city spelling), `archive` (2025 data). Plus `requires_tables` for the retrieval metric. At least 8 questions
   per tag where it makes sense. Eval questions must never appear in any index (no leakage).
-- **Retrieval index** (`nl2sql/index/`), no new dependencies:
-  - `Embedder` interface: `OpenAIEmbedder` (OpenAI-compatible `/v1/embeddings`; env `NL2SQL_EMBED_BASE_URL` default
-    `http://127.0.0.1:8891/v1`, `NL2SQL_EMBED_MODEL`; batching; clear error when unreachable) and `FakeEmbedder`
+- **Retrieval index** (`bilgin/index/`), no new dependencies:
+  - `Embedder` interface: `OpenAIEmbedder` (OpenAI-compatible `/v1/embeddings`; env `BILGIN_EMBED_BASE_URL` default
+    `http://127.0.0.1:8891/v1`, `BILGIN_EMBED_MODEL`; batching; clear error when unreachable) and `FakeEmbedder`
     (deterministic hashed bag-of-words, for tests).
   - Documents: one per table (name, module, description, columns with descriptions and code values, keywords), one
     per rule. An `examples` collection exists but stays empty in this run (filled from approved history later).
@@ -68,8 +68,8 @@ Python reference; read-only; tests never call a real model or a real embedding s
   - `VectorStore` interface with a file store (`index/` folder: docs JSON + vectors) and a content hash of the schema/
     rules; a stale index is rebuilt or refused with a clear message. (A real vector DB such as LanceDB can be plugged
     in behind the interface later; at this scale it would only add an install dependency.)
-  - `python -m nl2sql build-index [--embed fake|openai]`.
-- **Join graph** (`nl2sql/graph/`, pure Python): edges from schema `fk` (confidence 1.0) plus inferred edges from an
+  - `python -m bilgin build-index [--embed fake|openai]`.
+- **Join graph** (`bilgin/graph/`, pure Python): edges from schema `fk` (confidence 1.0) plus inferred edges from an
   **ERP profile** file (`profiles/netsis.json`: column-name pairs such as CARI_KOD<->CARI_KODU, FISNO<->FATIRS_NO,
   STOK_KODU<->STOK_KODU, with confidence 0.5-0.9) - no ERP-specific rule hard-coded in Python. Shortest path weighted
   by confidence; `find_join_path(tables)` returns the join conditions connecting all requested tables (merge of
@@ -105,9 +105,9 @@ schema.json + rules.json --build-index--> index/ (docs, vectors, BM25 stats, has
 ask/eval --mode rag -> agent loop -> tools: search_schema, search_rules (hybrid search)   join graph
                                           get_table_details, find_join_path, sample_values -> Executor (policy)
 ```
-- New packages: `nl2sql/index`, `nl2sql/graph`; changes in `agent` (mode-aware tools/prompt), `eval` (modes,
+- New packages: `bilgin/index`, `bilgin/graph`; changes in `agent` (mode-aware tools/prompt), `eval` (modes,
   compare, retrieval metric), `cli`.
-- Config at the top of `nl2sql/config.py`: k, RRF constant, tool result cap, embed endpoint/model/batch, index path,
+- Config at the top of `bilgin/config.py`: k, RRF constant, tool result cap, embed endpoint/model/batch, index path,
   profile path, default mode.
 
 ## 4. Stack and environment
@@ -125,10 +125,10 @@ Synthetic, seeded, fictional. Privacy class: public/synthetic.
 
 ## 6. Interfaces
 
-- `python -m nl2sql build-db [--seed 42]` (now ~80 tables), `build-index [--embed fake|openai]`
-- `python -m nl2sql ask "<soru>" [--mode full|full_rules|rag] [--llm ...]`
-- `python -m nl2sql eval [--mode ...] [--tag ...] [--only ...] [--llm ...]`, `eval --compare`, `eval-retrieval`
-- Env (new): `NL2SQL_EMBED_BASE_URL`, `NL2SQL_EMBED_MODEL`.
+- `python -m bilgin build-db [--seed 42]` (now ~80 tables), `build-index [--embed fake|openai]`
+- `python -m bilgin ask "<soru>" [--mode full|full_rules|rag] [--llm ...]`
+- `python -m bilgin eval [--mode ...] [--tag ...] [--only ...] [--llm ...]`, `eval --compare`, `eval-retrieval`
+- Env (new): `BILGIN_EMBED_BASE_URL`, `BILGIN_EMBED_MODEL`.
 
 ## 7. Acceptance tests
 

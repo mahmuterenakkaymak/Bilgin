@@ -19,7 +19,7 @@ import sys
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 CHECKS = (
     "✓ kullanıcının dili en",
@@ -37,7 +37,7 @@ def run(*argv: str) -> subprocess.CompletedProcess:
         cwd=config.ROOT,
         capture_output=True,
         encoding="utf-8",
-        env={**os.environ, "NL2SQL_BACKEND": "sqlite", "PYTHONIOENCODING": "utf-8"},
+        env={**os.environ, "BILGIN_BACKEND": "sqlite", "PYTHONIOENCODING": "utf-8"},
     )
 
 
@@ -52,8 +52,8 @@ def free_port() -> str:
 def smoke():
     """İngilizce altın kümesinin üstünde tek duman koşusu; çıktısını test okur."""
     for argv in (
-        ("-m", "nl2sql", "build-db", "--dataset", "wwi"),
-        ("-m", "nl2sql", "build-index", "--embed", "fake", "--dataset", "wwi"),
+        ("-m", "bilgin", "build-db", "--dataset", "wwi"),
+        ("-m", "bilgin", "build-index", "--embed", "fake", "--dataset", "wwi"),
     ):
         result = run(*argv)
         assert result.returncode == 0, f"{' '.join(argv)}: {result.stdout}{result.stderr}"

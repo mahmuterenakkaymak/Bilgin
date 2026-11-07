@@ -1,5 +1,5 @@
 [project]
-name = "nl2sql"
+name = "bilgin"
 version = "0.1.0"
 description = "NL -> T-SQL Phase 0 proof: synthetic ERP-style DB, safe executor, agent loop, eval"
 requires-python = ">=3.11"
@@ -19,7 +19,7 @@ dependencies = [
 dev = ["pytest==9.1.1", "httpx==0.28.1"]
 
 [tool.setuptools.package-data]
-"nl2sql.i18n" = ["*.json"]
+"bilgin.i18n" = ["*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

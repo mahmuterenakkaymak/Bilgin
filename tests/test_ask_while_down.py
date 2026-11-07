@@ -19,11 +19,11 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from nl2sql import config
-from nl2sql.app.ask import DB_DOWN_MESSAGE
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.app.ask import DB_DOWN_MESSAGE
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.web.app import create_app
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 SORU = "Personel kodları?"
@@ -50,10 +50,10 @@ def world(tmp_path_factory):
     """Bir kez kurulan dünya: mini kümenin veritabanı, sahte modeli sayan oturum, tek kapı."""
     root = tmp_path_factory.mktemp("down")
     mp = MonkeyPatch()
-    mp.delenv("NL2SQL_MSSQL_CONN", raising=False)
-    mp.delenv("NL2SQL_BACKEND", raising=False)
+    mp.delenv("BILGIN_MSSQL_CONN", raising=False)
+    mp.delenv("BILGIN_BACKEND", raising=False)
     mp.setattr(config, "ROOT", root)
-    mp.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    mp.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     cli.build_database(dataset="mini")
     sayan = SayanIstemci()
     oturum = open_session(

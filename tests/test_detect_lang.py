@@ -12,8 +12,8 @@ birinci sınamadır.
 
 import pytest
 
-from nl2sql import datasets
-from nl2sql.i18n.detect import detect_lang
+from bilgin import datasets
+from bilgin.i18n.detect import detect_lang
 
 GOLDEN_DATASETS = ("wwi", "synthetic_erp")
 

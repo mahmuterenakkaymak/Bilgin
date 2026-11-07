@@ -5,7 +5,7 @@
 
 import pytest
 
-from nl2sql.policy import pii
+from bilgin.policy import pii
 
 
 def test_classes_are_the_eight():

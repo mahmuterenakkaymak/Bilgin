@@ -8,7 +8,7 @@ değiştirip değiştirmediğini söyler: istekle dolgu ve önceki tura bağlaya
 yeni bir bilgi kalmamalı ve yeniden koşulacak yanıtlanmış bir tur bulunmalı.
 """
 
-from nl2sql.agent.refine import CHART_WISHES, chart_only, chart_wish
+from bilgin.agent.refine import CHART_WISHES, chart_only, chart_wish
 
 
 def turn(n=1, status="answered", sql="SELECT 1"):

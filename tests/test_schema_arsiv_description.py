@@ -7,7 +7,7 @@ import re
 
 import pytest
 
-from nl2sql.schema_map import doc
+from bilgin.schema_map import doc
 
 ARSIV = "TBLSTHAR_ARSIV"
 

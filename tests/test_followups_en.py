@@ -17,11 +17,11 @@ import json
 import pytest
 from pytest import MonkeyPatch
 
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.i18n.detect import detect_lang
-from nl2sql.policy import pii, policy
-from nl2sql.schema_map import doc
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.i18n.detect import detect_lang
+from bilgin.policy import pii, policy
+from bilgin.schema_map import doc
 
 DATASET = load_dataset("wwi")
 SCHEMA = DATASET.schema()
@@ -63,13 +63,13 @@ def verdict_of(sql: str):
 def world(tmp_path_factory):
     """Modül boyunca tek kurulum: wwi builder'ının dosyası ve audit'i tek tmp klasörde.
 
-    Kabukta ambiyans duran ``NL2SQL_MSSQL_CONN``/``NL2SQL_BACKEND`` silinir: küme SQLite'ı kendi
+    Kabukta ambiyans duran ``BILGIN_MSSQL_CONN``/``BILGIN_BACKEND`` silinir: küme SQLite'ı kendi
     taşır (R7-29), yani ölçümün kapısı hiçbir zaman canlı sunucuya dönmez.
     """
     root = tmp_path_factory.mktemp("followups-en")
     mp = MonkeyPatch()
-    mp.delenv("NL2SQL_MSSQL_CONN", raising=False)
-    mp.delenv("NL2SQL_BACKEND", raising=False)
+    mp.delenv("BILGIN_MSSQL_CONN", raising=False)
+    mp.delenv("BILGIN_BACKEND", raising=False)
     database = root / "wwi.db"
     try:
         DATASET.build_db(db_path=database, sql_path=root / "wwi.sql")

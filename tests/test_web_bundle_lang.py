@@ -16,8 +16,8 @@ import re
 
 import pytest
 
-from nl2sql import config
-from nl2sql.web.app import BUILD_COMMAND
+from bilgin import config
+from bilgin.web.app import BUILD_COMMAND
 
 TURKISH = re.compile(r"[çğıöşüÇĞİÖŞÜ]")
 

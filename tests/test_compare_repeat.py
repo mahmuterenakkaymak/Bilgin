@@ -16,12 +16,12 @@ from datetime import datetime
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.cli import main as cli
-from nl2sql.eval import compare_modes, report, runner
-from nl2sql.eval.runner import QuestionResult
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.cli import main as cli
+from bilgin.eval import compare_modes, report, runner
+from bilgin.eval.runner import QuestionResult
+from bilgin.schema_map import build
 
 MODEL = "strata"
 STAMP = datetime(2026, 10, 24, 12, 0, 0)

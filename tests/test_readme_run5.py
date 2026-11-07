@@ -10,7 +10,7 @@ sayılır, o yüzden her işaret ayrı bir parametrik testte README.md'de aranı
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 # README'de birebir geçmesi gereken işaretler (R5 web yüzeyi, dışa aktarım, netleştirme, eval).
 README_MARKS = (

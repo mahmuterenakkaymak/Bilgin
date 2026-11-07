@@ -20,12 +20,12 @@ from decimal import ROUND_HALF_UP, Decimal
 
 import pytest
 
-from nl2sql import datasets
-from nl2sql.datasets import load_dataset
-from nl2sql.engine import executor as executor_mod
-from nl2sql.eval.runner import COMPARE
-from nl2sql.policy import policy
-from nl2sql.schema_map import doc
+from bilgin import datasets
+from bilgin.datasets import load_dataset
+from bilgin.engine import executor as executor_mod
+from bilgin.eval.runner import COMPARE
+from bilgin.policy import policy
+from bilgin.schema_map import doc
 
 # R2-15 sabit etiketleri; trap:<ad> o kümenin traps.jsonl'ından gelir.
 EXTRA_TAGS = ("needs_rule", "multi_join", "distractor", "needs_values", "archive")

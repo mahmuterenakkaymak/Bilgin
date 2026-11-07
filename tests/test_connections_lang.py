@@ -21,21 +21,21 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.engine import connections, dbstatus, dpapi, guard
-from nl2sql.engine._mssql import CONN_ENV
-from nl2sql.engine.dbstatus import DOWN_MESSAGE, DbStatus
-from nl2sql.engine.guard import POWER_MESSAGE
-from nl2sql.i18n import t
-from nl2sql.i18n.detect import TURKISH_LETTERS
-from nl2sql.i18n.scan import user_literals
-from nl2sql.schema_map import doc
-from nl2sql.web import connections_api
-from nl2sql.web.app import create_app
-from nl2sql.web.connections_api import ENV_SOURCE, GUARD_REFUSED, NOT_MSSQL
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.engine import connections, dbstatus, dpapi, guard
+from bilgin.engine._mssql import CONN_ENV
+from bilgin.engine.dbstatus import DOWN_MESSAGE, DbStatus
+from bilgin.engine.guard import POWER_MESSAGE
+from bilgin.i18n import t
+from bilgin.i18n.detect import TURKISH_LETTERS
+from bilgin.i18n.scan import user_literals
+from bilgin.schema_map import doc
+from bilgin.web import connections_api
+from bilgin.web.app import create_app
+from bilgin.web.connections_api import ENV_SOURCE, GUARD_REFUSED, NOT_MSSQL
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 PAROLA = "Gizli2026!parola"
@@ -135,11 +135,11 @@ def world(tmp_path_factory):
     copy_dataset(root / "datasets" / ERP, display_name="ERP Canlı (Sunucu)", connection="mssql")
     patch = pytest.MonkeyPatch()
     patch.setattr(config, "ROOT", root)
-    patch.setenv("NL2SQL_DATASETS_DIR", str(root / "datasets"))
-    patch.setenv("NL2SQL_REAL_DATASETS_DIR", str(root / "real_datasets"))
-    # Kabuktaki her bağlantı değişkeni silinir: geliştiricide NL2SQL_MSSQL_CONN ambiyans durur (R7-29).
+    patch.setenv("BILGIN_DATASETS_DIR", str(root / "datasets"))
+    patch.setenv("BILGIN_REAL_DATASETS_DIR", str(root / "real_datasets"))
+    # Kabuktaki her bağlantı değişkeni silinir: geliştiricide BILGIN_MSSQL_CONN ambiyans durur (R7-29).
     patch.delenv(CONN_ENV, raising=False)
-    patch.delenv("NL2SQL_BACKEND", raising=False)
+    patch.delenv("BILGIN_BACKEND", raising=False)
     for name in [n for n in os.environ if n.startswith(config.CONN_ENV_PREFIX)]:
         patch.delenv(name, raising=False)
     try:
@@ -154,7 +154,7 @@ def world(tmp_path_factory):
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch):
     """Program dili ve env kaynakları testler arasında taşınmasın: başlıksız istek Türkçe okur."""
-    monkeypatch.delenv("NL2SQL_LANG", raising=False)
+    monkeypatch.delenv("BILGIN_LANG", raising=False)
     for name in [n for n in os.environ if n.startswith(config.CONN_ENV_PREFIX)]:
         monkeypatch.delenv(name, raising=False)
 

@@ -12,12 +12,12 @@ biraz daha kısalıyor. Ölçülen: ikinci çağrının transcript'e hiç dokunm
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import budget, loop, modes
-from nl2sql.agent.fake import FakeLLM
-from nl2sql.agent.llm import ChatResponse, ToolCall
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.schema_map import build, doc
+from bilgin import config
+from bilgin.agent import budget, loop, modes
+from bilgin.agent.fake import FakeLLM
+from bilgin.agent.llm import ChatResponse, ToolCall
+from bilgin.engine.executor import LocalExecutor
+from bilgin.schema_map import build, doc
 
 MARKER = "… (bağlam bütçesi için kısaltıldı: {n} karakter)"
 PREFIX = "… (bağlam bütçesi için kısaltıldı:"

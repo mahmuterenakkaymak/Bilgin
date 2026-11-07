@@ -14,17 +14,17 @@ import re
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.cli import main as cli
-from nl2sql.eval import runner
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.cli import main as cli
+from bilgin.eval import runner
+from bilgin.schema_map import build
 
 GOLDEN = runner.load_golden()
 MODES = list(config.MODES)
 REUSED = "(önceki koşu)"
 SCORE = f"{len(GOLDEN)}/{len(GOLDEN)}"
-BUILD = "Önce `python -m nl2sql build-db` çalıştırın"
+BUILD = "Önce `python -m bilgin build-db` çalıştırın"
 
 
 @pytest.fixture(scope="module")

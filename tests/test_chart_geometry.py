@@ -15,10 +15,10 @@ import ast
 import math
 import re
 
-from nl2sql import config
-from nl2sql.report import chart
+from bilgin import config
+from bilgin.report import chart
 
-CHART_PY = config.ROOT / "nl2sql" / "report" / "chart.py"
+CHART_PY = config.ROOT / "bilgin" / "report" / "chart.py"
 STYLES = config.WEB_DIR / "src" / "styles.css"
 
 MIN_PLOT_PX = 120

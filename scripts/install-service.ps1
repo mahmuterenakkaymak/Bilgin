@@ -53,14 +53,14 @@ $HealthUrl = "http://127.0.0.1:$Port/api/health"
 
 # The service has no environment of its own; the child commands of the install run against the
 # data root the service is about to get, so the app DB and the secrets folder are the right ones.
-# The backend goes the same way: service-xml writes the NL2SQL_BACKEND the service starts with.
-$env:NL2SQL_HOME = $DataHome
-$env:NL2SQL_BACKEND = $Backend
+# The backend goes the same way: service-xml writes the BILGIN_BACKEND the service starts with.
+$env:BILGIN_HOME = $DataHome
+$env:BILGIN_BACKEND = $Backend
 # ASSUMPTION: the profile the service will run is the one the environment names, and 'strata' is
 # the default the program itself falls back to (config.DEFAULT_LLM_MODEL). The service has no
 # shell to read it from, so the same name goes to service-check and into the XML it is installed
 # with: the key [secrets] seals below is that profile's key.
-$profileName = if ($env:NL2SQL_LLM_MODEL) { $env:NL2SQL_LLM_MODEL } else { 'strata' }
+$profileName = if ($env:BILGIN_LLM_MODEL) { $env:BILGIN_LLM_MODEL } else { 'strata' }
 
 function Step([string]$Id, [string]$Text) { Write-Output ('[{0}] {1}' -f $Id, $Text) }
 function StepWhat([string]$Id, [string]$Text) { Write-Output ('[{0}] WHATIF {1}' -f $Id, $Text) }
@@ -86,15 +86,15 @@ else {
 # ------------------------------------------------------------------ [dev-admin-env]
 # R8-23: the development bootstrap password must never reach the service. The install refuses
 # while it exists at machine or process level instead of silently inheriting it.
-$devAdmin = [Environment]::GetEnvironmentVariable('NL2SQL_DEV_ADMIN_PASSWORD', 'Machine')
+$devAdmin = [Environment]::GetEnvironmentVariable('BILGIN_DEV_ADMIN_PASSWORD', 'Machine')
 if (-not $devAdmin) {
-    $devAdmin = [Environment]::GetEnvironmentVariable('NL2SQL_DEV_ADMIN_PASSWORD', 'Process')
+    $devAdmin = [Environment]::GetEnvironmentVariable('BILGIN_DEV_ADMIN_PASSWORD', 'Process')
 }
 if ($devAdmin) {
-    Stop 'dev-admin-env' ('NL2SQL_DEV_ADMIN_PASSWORD is set - unset it (machine and shell) and ' +
+    Stop 'dev-admin-env' ('BILGIN_DEV_ADMIN_PASSWORD is set - unset it (machine and shell) and ' +
         'run the install again; the first administrator is created interactively below')
 }
-Step 'dev-admin-env' 'NL2SQL_DEV_ADMIN_PASSWORD is not set'
+Step 'dev-admin-env' 'BILGIN_DEV_ADMIN_PASSWORD is not set'
 
 # ------------------------------------------------------------------ [shell]
 $major = [int]$PSVersionTable.PSVersion.Major
@@ -134,7 +134,7 @@ else {
 $check = $null
 if (-not $script:WhatIf) {
     try {
-        $check = & $PythonExe -m nl2sql service-check --dataset $Dataset --model $profileName --json 2>$null |
+        $check = & $PythonExe -m bilgin service-check --dataset $Dataset --model $profileName --json 2>$null |
             Out-String | ConvertFrom-Json
     } catch { $check = $null }
 }
@@ -297,7 +297,7 @@ else {
 }
 
 # ------------------------------------------------------------------ [admin-user]
-$adminProbe = "import sys; from nl2sql.auth.store import UserStore; " +
+$adminProbe = "import sys; from bilgin.auth.store import UserStore; " +
     "print(any(u['role'] == 'admin' for u in UserStore(sys.argv[1]).list_users()))"
 if ($script:WhatIf) {
     StepWhat 'admin-user' ('would create the first administrator with: user add --role admin, ' +
@@ -309,7 +309,7 @@ else {
     }
     else {
         $name = Read-Host 'First administrator (username)'
-        & $PythonExe -m nl2sql user add $name --role admin --lang $Lang
+        & $PythonExe -m bilgin user add $name --role admin --lang $Lang
         if ($LASTEXITCODE -ne 0) {
             Stop 'admin-user' 'the administrator could not be created - the service would not start'
         }
@@ -320,10 +320,10 @@ else {
 # ------------------------------------------------------------------ [xml]
 if ($script:WhatIf) {
     StepWhat 'xml' ('would write ' + $ServiceXml + ' with the program itself; it is printed below')
-    Write-Output (& $PythonExe -m nl2sql service-xml --port $Port --dataset $Dataset --home $DataHome --lang $Lang --model $profileName | Out-String)
+    Write-Output (& $PythonExe -m bilgin service-xml --port $Port --dataset $Dataset --home $DataHome --lang $Lang --model $profileName | Out-String)
 }
 else {
-    & $PythonExe -m nl2sql service-xml --port $Port --dataset $Dataset --home $DataHome --lang $Lang --model $profileName --out $ServiceXml |
+    & $PythonExe -m bilgin service-xml --port $Port --dataset $Dataset --home $DataHome --lang $Lang --model $profileName --out $ServiceXml |
         Out-Null
     if ($LASTEXITCODE -ne 0) {
         Stop 'xml' 'the service XML could not be generated'

@@ -19,10 +19,10 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config, datasets
-from nl2sql.schema_map import onboard
-from nl2sql.schema_map.template import filled_example_workbook
-from nl2sql.schema_map.template_import import read_template, validate
+from bilgin import config, datasets
+from bilgin.schema_map import onboard
+from bilgin.schema_map.template import filled_example_workbook
+from bilgin.schema_map.template_import import read_template, validate
 
 REPO = Path(__file__).resolve().parents[1]
 NAME = "deneme_kume"
@@ -53,8 +53,8 @@ def roots(tmp_path, monkeypatch):
     """İki kök, iki günlük ve `outputs`un ROOT'u tmp'de: repo ile `data/` hiç anılmaz."""
     (tmp_path / "datasets").mkdir()
     (tmp_path / "real_datasets").mkdir()
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path / "datasets"))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(tmp_path / "datasets"))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
     monkeypatch.setattr(config, "ROOT", tmp_path)
     monkeypatch.setattr(config, "MAP_PREVIEWS_DIR", tmp_path / "map_previews")
     monkeypatch.setattr(config, "MAP_CHANGES_LOG", tmp_path / "logs" / "map_changes.jsonl")

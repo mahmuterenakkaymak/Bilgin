@@ -1,12 +1,12 @@
 ---
 name: i18n-catalog-reader-gate
-description: A new catalog key must be read by a literal string in nl2sql/ — t(f"prefix.{k}") only passes if its prefix is already in test_i18n_catalog_use's frozen DYNAMIC_PREFIXES
+description: A new catalog key must be read by a literal string in bilgin/ — t(f"prefix.{k}") only passes if its prefix is already in test_i18n_catalog_use's frozen DYNAMIC_PREFIXES
 metadata:
   type: feedback
 ---
 
 `tests/test_i18n_catalog_use.py::test_every_key_is_read_by_the_code_or_frozen_by_a_test` fails a new
-`nl2sql/i18n/*.json` key that no source file mentions as a **string constant**. Building keys at
+`bilgin/i18n/*.json` key that no source file mentions as a **string constant**. Building keys at
 runtime (`t(f"cli.paths.{key}", lang)`) is invisible to its AST scan unless the prefix is listed in
 `DYNAMIC_PREFIXES` — and that tuple lives in an existing test, which hands-off tasks may not edit.
 

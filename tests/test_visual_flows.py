@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 VISUAL_PATH = config.ROOT / ".hybrid" / "visual.json"
 SRC_DIR = config.ROOT / "web" / "src"

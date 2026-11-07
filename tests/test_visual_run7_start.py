@@ -18,8 +18,8 @@ import re
 
 import pytest
 
-from nl2sql import config
-from nl2sql.auth.store import UserStore
+from bilgin import config
+from bilgin.auth.store import UserStore
 from scripts import visual_serve
 
 VISUAL_PATH = config.ROOT / ".hybrid" / "visual.json"

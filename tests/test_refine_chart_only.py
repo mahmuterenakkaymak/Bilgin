@@ -14,12 +14,12 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.app.ask import ask_payload
-from nl2sql.app.conversations import ConversationStore
-from nl2sql.app.session import open_session
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.app.ask import ask_payload
+from bilgin.app.conversations import ConversationStore
+from bilgin.app.session import open_session
+from bilgin.schema_map import build
 
 # Birinci turun biçimi çizgi (tarih + sayı): "çubuk" isteği türü gerçekten değiştiriyor.
 MONTH_SQL = (

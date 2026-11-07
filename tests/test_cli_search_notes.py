@@ -8,7 +8,7 @@ tablo adı gibi görünen bir harf, "Hata: ..." ise bir sözcük üretirdi. Boş
 bilgi olduğu için diğer araçların yaptığı gibi cümlenin kendisi gösterilir.
 """
 
-from nl2sql.cli.main import _search_notes
+from bilgin.cli.main import _search_notes
 
 
 def test_search_schema_bos_hali_kendi_cumlesiyle():

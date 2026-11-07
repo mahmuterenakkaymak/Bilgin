@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (c) 2026 Mahmut Eren Akkaymak
 
-"""T455: M29 entegrasyonu — bir kurulumun yazıları gerçekten ``NL2SQL_HOME``un altında doğuyor (PLAN R8-20, R8-23).
+"""T455: M29 entegrasyonu — bir kurulumun yazıları gerçekten ``BILGIN_HOME``un altında doğuyor (PLAN R8-20, R8-23).
 
-Elde elle kurulmuş tek sahte yok: sunucu ``python -m nl2sql serve --llm fake``ın kendi süreci,
+Elde elle kurulmuş tek sahte yok: sunucu ``python -m bilgin serve --llm fake``ın kendi süreci,
 dünya wwi kümesinin kendi builder'ının kurduğu SQLite, indeks kurulum betiğinin ``index`` adımının
 yaptığı kopyadır (R8-23), giriş kapının kendi bootstrap yöneticisi, soru kümenin kendi altın
 satırlarından biri. İddiaların hepsi diskte okunur: ``/api/health`` 30 sn içinde cevap veriyor,
@@ -33,10 +33,10 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config, datasets
-from nl2sql.auth.bootstrap import DEV_USERNAME
-from nl2sql.cli import main as cli
-from nl2sql.index.store import META_FILE
+from bilgin import config, datasets
+from bilgin.auth.bootstrap import DEV_USERNAME
+from bilgin.cli import main as cli
+from bilgin.index.store import META_FILE
 
 DATASET = "wwi"
 # Sahtenin yedek sorgusu Q01'inki olduğu için soru ondan sonra bir satır olmalı: yalnız
@@ -46,8 +46,8 @@ HEALTH_TIMEOUT_S = 30.0  # R8-23'ün 60 sn'lik sağlık yoklaması değil, testi
 POLL_S = 0.25
 HTTP_TIMEOUT_S = 60.0  # soru ajanı gerçekten koşuyor
 # Taze bir kurulumun ortamı ölçülüyor: depodaki ``.env``in taşıyabileceği yol ve bağlantı
-# değişkenleri çocuğa hiç gitmez, yazıların tek kökü NL2SQL_HOME kalır.
-_INHERIT_SKIP = ("NL2SQL_APP_DB", "NL2SQL_DATASETS_DIR", "NL2SQL_REAL_DATASETS_DIR")
+# değişkenleri çocuğa hiç gitmez, yazıların tek kökü BILGIN_HOME kalır.
+_INHERIT_SKIP = ("BILGIN_APP_DB", "BILGIN_DATASETS_DIR", "BILGIN_REAL_DATASETS_DIR")
 
 
 def _passphrase() -> str:
@@ -73,12 +73,12 @@ def _env(home: Path) -> dict:
     env = {
         key: value
         for key, value in os.environ.items()
-        if key not in _INHERIT_SKIP and not key.startswith("NL2SQL_MSSQL_CONN")
+        if key not in _INHERIT_SKIP and not key.startswith("BILGIN_MSSQL_CONN")
     }
     env.update(
         {
-            "NL2SQL_HOME": str(home),
-            "NL2SQL_BACKEND": "sqlite",
+            "BILGIN_HOME": str(home),
+            "BILGIN_BACKEND": "sqlite",
             "PYTHONIOENCODING": "utf-8",
             config.DEV_ADMIN_ENV: PASSWORD,
         }
@@ -216,7 +216,7 @@ def world(tmp_path_factory):
             [
                 sys.executable,
                 "-m",
-                "nl2sql",
+                "bilgin",
                 "serve",
                 "--llm",
                 "fake",
@@ -261,7 +261,7 @@ def asked(world: World) -> dict:
 def _cli(args: list[str], home: Path) -> str:
     """Aynı ortamla koşan bir CLI alt süreci: çıktısı boş değilse test onu kendi görsün."""
     finished = subprocess.run(
-        [sys.executable, "-m", "nl2sql", *args],
+        [sys.executable, "-m", "bilgin", *args],
         cwd=config.ROOT,
         capture_output=True,
         encoding="utf-8",
@@ -353,8 +353,8 @@ def test_service_xml_names_the_same_python_port_and_home(world: World, tmp_path:
     assert f"--dataset {DATASET}" in arguments
     assert service.findtext("workingdirectory") == str(config.ROOT)
     env = {item.get("key"): item.get("value") for item in service.findall("env")}
-    assert env["NL2SQL_HOME"] == str(world.home)
-    assert env["NL2SQL_BACKEND"] == "sqlite"
+    assert env["BILGIN_HOME"] == str(world.home)
+    assert env["BILGIN_BACKEND"] == "sqlite"
     assert service.findtext("logpath") == str(world.home / "logs")
 
 

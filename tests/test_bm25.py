@@ -13,8 +13,8 @@ import math
 
 import pytest
 
-from nl2sql.index import text
-from nl2sql.index.bm25 import BM25
+from bilgin.index import text
+from bilgin.index.bm25 import BM25
 
 # Elle hesap: 3 doküman, ortalama uzunluk (3+2+1)/3 = 2.
 CORPUS = [

@@ -11,12 +11,12 @@ Burada model yok: FakeLLM boş bir submit, ardından gerçek bir submit oynatıy
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import loop
-from nl2sql.agent.fake import FakeLLM
-from nl2sql.agent.llm import ChatResponse, ToolCall
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.schema_map import build, doc
+from bilgin import config
+from bilgin.agent import loop
+from bilgin.agent.fake import FakeLLM
+from bilgin.agent.llm import ChatResponse, ToolCall
+from bilgin.engine.executor import LocalExecutor
+from bilgin.schema_map import build, doc
 
 SQL = "SELECT CARI_KOD, CARI_ISIM FROM TBLCASABIT WHERE IL = 'ANKARA' ORDER BY CARI_KOD"
 BLANK = "   "

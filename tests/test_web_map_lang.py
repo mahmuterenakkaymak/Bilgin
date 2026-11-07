@@ -20,19 +20,19 @@ from urllib.parse import unquote
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.i18n import t
-from nl2sql.i18n.scan import user_literals
-from nl2sql.schema_map import introspect
-from nl2sql.schema_map import onboard as onboard_module
-from nl2sql.schema_map import rules_edit as rules_edit_module
-from nl2sql.schema_map.template import filled_example_workbook
-from nl2sql.web import datasets_api as datasets_api_module
-from nl2sql.web import map_api as map_api_module
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.i18n import t
+from bilgin.i18n.scan import user_literals
+from bilgin.schema_map import introspect
+from bilgin.schema_map import onboard as onboard_module
+from bilgin.schema_map import rules_edit as rules_edit_module
+from bilgin.schema_map.template import filled_example_workbook
+from bilgin.web import datasets_api as datasets_api_module
+from bilgin.web import map_api as map_api_module
+from bilgin.web.app import create_app
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 PAROLA = "Bilgin2026!erp"
@@ -115,8 +115,8 @@ def project(tmp_path, monkeypatch, capsys):
         json.dumps(DOC, ensure_ascii=False), encoding="utf-8"
     )
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(root))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(real))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(root))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(real))
     monkeypatch.setattr(config, "MAP_PREVIEWS_DIR", tmp_path / "map_previews")
     monkeypatch.setattr(config, "MAP_CHANGES_LOG", tmp_path / "logs" / "map_changes.jsonl")
     assert cli.build_database(dataset="mini") == 0
@@ -244,16 +244,16 @@ def test_the_notice_of_an_sql_server_switch_names_the_next_step(lang, app):
     response = client(app, lang).post("/api/datasets/active", json={"name": MSSQL})
 
     assert response.status_code == 200
-    assert response.json()["notice"]["env"] == "NL2SQL_MSSQL_CONN"
+    assert response.json()["notice"]["env"] == "BILGIN_MSSQL_CONN"
     assert response.json()["notice"]["message"] == expected(
-        "datasets.login_notice", lang, env="NL2SQL_MSSQL_CONN"
+        "datasets.login_notice", lang, env="BILGIN_MSSQL_CONN"
     )
 
 
 @pytest.mark.parametrize("lang", ["tr", "en"])
 def test_the_note_of_a_template_the_server_could_not_fill(lang, app, monkeypatch):
-    monkeypatch.setenv("NL2SQL_BACKEND", "mssql")
-    monkeypatch.setenv("NL2SQL_MSSQL_CONN", "ODBC DRIVER=...")
+    monkeypatch.setenv("BILGIN_BACKEND", "mssql")
+    monkeypatch.setenv("BILGIN_MSSQL_CONN", "ODBC DRIVER=...")
 
     def broken() -> dict:
         raise introspect.IntrospectError("VIEW DEFINITION yetkisi yok")

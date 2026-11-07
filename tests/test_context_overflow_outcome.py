@@ -13,12 +13,12 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent.fake import FakeLLM, golden_replay
-from nl2sql.cli import main as cli
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.eval import report, runner
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent.fake import FakeLLM, golden_replay
+from bilgin.cli import main as cli
+from bilgin.engine.executor import LocalExecutor
+from bilgin.eval import report, runner
+from bilgin.schema_map import build
 
 GOLDEN = [
     {

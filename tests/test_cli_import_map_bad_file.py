@@ -9,7 +9,7 @@ dışında kalırdı. Cümle kullanıcının düzeltebileceği şeyi söylüyor 
 hangi biçimin desteklenmediği — ve bundan fazlası çıkmıyor.
 """
 
-from nl2sql.cli import main as cli
+from bilgin.cli import main as cli
 
 
 def not_a_book(tmp_path, name):

@@ -17,17 +17,17 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.app import asklog
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.i18n import t
-from nl2sql.i18n.scan import user_literals
-from nl2sql.schema_map import build
-from nl2sql.start import cards, ready, seed, suggest
-from nl2sql.web import start_api
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.app import asklog
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.i18n import t
+from bilgin.i18n.scan import user_literals
+from bilgin.schema_map import build
+from bilgin.start import cards, ready, seed, suggest
+from bilgin.web import start_api
+from bilgin.web.app import create_app
 
 DATASET = "synthetic_erp"
 PAROLA = "Bilgin2026!erp"

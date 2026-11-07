@@ -16,10 +16,10 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.web.app import create_app
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.web.app import create_app
 
 ROOT = Path(__file__).resolve().parent.parent
 DATASET = "synthetic_erp"
@@ -41,7 +41,7 @@ def client(tmp_path_factory):
     folder = tmp_path_factory.mktemp("examples")
     mp = MonkeyPatch()
     mp.setattr(config, "ROOT", folder)
-    mp.setenv("NL2SQL_DATASETS_DIR", str(ROOT / "datasets"))
+    mp.setenv("BILGIN_DATASETS_DIR", str(ROOT / "datasets"))
     try:
         ds = datasets.load_dataset(DATASET)
         ds.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -70,7 +70,7 @@ def test_examples_offer_the_first_ambiguous_question_after_the_golden_ones(clien
 
 def test_mini_dataset_without_an_ambiguous_file_stays_all_golden(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     cli.build_database(dataset="mini")
     session = open_session(
         dataset="mini",

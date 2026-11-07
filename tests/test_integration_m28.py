@@ -18,11 +18,11 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.i18n import t
-from nl2sql.web.app import BUILD_COMMAND, create_app
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.i18n import t
+from bilgin.web.app import BUILD_COMMAND, create_app
 
 DATASET = "wwi"
 # Arama istemeyen mod: iddia çeviride ve dilde, indeksin bulup bulmadığında değil.
@@ -43,8 +43,8 @@ def world(tmp_path_factory):
     folder = tmp_path_factory.mktemp("m28")
     mp = MonkeyPatch()
     mp.setattr(config, "ROOT", folder)
-    # Küme SQLite; ortamda duran bir NL2SQL_BACKEND oturumu sunucuya çevirmesin.
-    mp.setenv("NL2SQL_BACKEND", "sqlite")
+    # Küme SQLite; ortamda duran bir BILGIN_BACKEND oturumu sunucuya çevirmesin.
+    mp.setenv("BILGIN_BACKEND", "sqlite")
     app_db = folder / "bilgin.db"
     ds = datasets.load_dataset(DATASET)
     ds.db_path.parent.mkdir(parents=True, exist_ok=True)

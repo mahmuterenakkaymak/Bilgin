@@ -12,17 +12,17 @@ artık ölçüm verisidir, koşu raporuyla birlikte tamamlanır.
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.agent.fake import FAKE_URL, FakeLLM
-from nl2sql.agent.llm import FAILED, UNREACHABLE, LLMError
-from nl2sql.cli import main as cli
-from nl2sql.eval import runner
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.agent.fake import FAKE_URL, FakeLLM
+from bilgin.agent.llm import FAILED, UNREACHABLE, LLMError
+from bilgin.cli import main as cli
+from bilgin.eval import runner
+from bilgin.schema_map import build
 
 GOLDEN = runner.load_golden()
 BY_ID = {line["id"]: line for line in GOLDEN}
-BUILD = "Önce `python -m nl2sql build-db` çalıştırın"
+BUILD = "Önce `python -m bilgin build-db` çalıştırın"
 
 
 @pytest.fixture(scope="module")
@@ -94,7 +94,7 @@ def test_ask_names_the_dead_endpoint(db, tmp_path, capsys):
     out = capsys.readouterr().out
 
     assert code == 3
-    assert FAKE_URL in out and "Strata" in out and "NL2SQL_LLM_BASE_URL" in out
+    assert FAKE_URL in out and "Strata" in out and "BILGIN_LLM_BASE_URL" in out
     assert "Traceback" not in out
     assert "Adımlar:" not in out, "yanıtlanmamış bir tur adım listesi olmaz"
     assert "Cevap gönderilmedi" not in out, "model reddetmedi, konuşamadı"
@@ -111,7 +111,7 @@ def test_eval_stops_when_the_endpoint_answers_nothing(db, tmp_path, capsys):
     out = capsys.readouterr().out
 
     assert code == 3
-    assert FAKE_URL in out and "NL2SQL_LLM_BASE_URL" in out and "Traceback" not in out
+    assert FAKE_URL in out and "BILGIN_LLM_BASE_URL" in out and "Traceback" not in out
     assert "Skor:" not in out and not out_dir.exists()
 
 
@@ -126,7 +126,7 @@ def test_the_hint_is_added_when_the_error_carries_none(db, tmp_path, capsys):
     out = capsys.readouterr().out
 
     assert code == 3
-    assert FAKE_URL in out and "NL2SQL_LLM_BASE_URL" in out and "Traceback" not in out
+    assert FAKE_URL in out and "BILGIN_LLM_BASE_URL" in out and "Traceback" not in out
     assert out.count(FAKE_URL) == 1, "adres iki kere saydırılmamalı"
 
 

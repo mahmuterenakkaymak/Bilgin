@@ -8,7 +8,7 @@ Türkçe büyük I iki yere düşer (I -> ı, İ -> i) ve `str.lower()` bunu bil
 istanbul aynı token olmalı, ILAÇ ılaç olmalı, yoksa indeks ile sorgu hiç karşılaşmaz.
 """
 
-from nl2sql.index import text
+from bilgin.index import text
 
 
 def test_fold_matches_dotted_capital_to_plain_i():

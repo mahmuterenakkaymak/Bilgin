@@ -13,9 +13,9 @@ kullanıcı mesajı bugünkü satırlarıyla kıyaslanır.
 import json
 from pathlib import Path
 
-from nl2sql.agent.llm import ChatResponse
-from nl2sql.i18n import scan, t
-from nl2sql.report import facts, guard, narrate
+from bilgin.agent.llm import ChatResponse
+from bilgin.i18n import scan, t
+from bilgin.report import facts, guard, narrate
 
 COLUMNS = ["STOK_ADI", "NET_TUTAR"]
 ROWS = [("Çay", 1234.56), ("Kahve", 2468.1)]

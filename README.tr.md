@@ -2,7 +2,7 @@ English: [README.md](README.md)
 
 # Bilgin — Run 1
 
-Product name **Bilgin**; the package and the CLI stay `nl2sql`.
+Product, package and CLI all share one name: **Bilgin**.
 
 A measurement tool for one question: **can a local LLM write correct T-SQL over an ERP-like
 schema?** Ten golden Turkish questions run against a synthetic database through a read-only,
@@ -11,7 +11,7 @@ deliverable — this is the Phase 0 kill gate, not the product.
 
 ## Setup
 
-Python 3.11. There is no install step: run everything as `python -m nl2sql` from the repo root.
+Python 3.11. There is no install step: run everything as `python -m bilgin` from the repo root.
 
 ```bash
 uv sync                                # sqlglot, openai, pyodbc (+ pytest)
@@ -21,9 +21,9 @@ uv sync                                # sqlglot, openai, pyodbc (+ pytest)
 ## Three commands
 
 ```bash
-python -m nl2sql build-db [--seed 42]              # data/test.db + db/mssql/build_test_db.sql
-python -m nl2sql ask "Geçen ayın cirosu ne kadar?" [--llm openai|fake]
-python -m nl2sql eval [--llm openai|fake] [--only Q03 Q04]
+python -m bilgin build-db [--seed 42]              # data/test.db + db/mssql/build_test_db.sql
+python -m bilgin ask "Geçen ayın cirosu ne kadar?" [--llm openai|fake]
+python -m bilgin eval [--llm openai|fake] [--only Q03 Q04]
 ```
 
 `build-db` comes first — it writes the SQLite file the other two read. `--llm fake` replays the
@@ -42,19 +42,19 @@ The default endpoint is **Strata** — `http://127.0.0.1:8080/v1`, model id `str
 
 | Env var | Default | Notes |
 | --- | --- | --- |
-| `NL2SQL_LLM_BASE_URL` | `http://127.0.0.1:8080/v1` | OpenAI-compatible base URL, `/v1` included |
-| `NL2SQL_LLM_MODEL` | `strata` | sent as the model id |
-| `NL2SQL_LLM_API_KEY` | `local` | local servers ignore it; never commit a real key |
-| `NL2SQL_BACKEND` | `sqlite` | `mssql` runs the same SQL against SQL Server |
-| `NL2SQL_MSSQL_CONN` | — | ODBC connection string; required for `mssql` |
+| `BILGIN_LLM_BASE_URL` | `http://127.0.0.1:8080/v1` | OpenAI-compatible base URL, `/v1` included |
+| `BILGIN_LLM_MODEL` | `strata` | sent as the model id |
+| `BILGIN_LLM_API_KEY` | `local` | local servers ignore it; never commit a real key |
+| `BILGIN_BACKEND` | `sqlite` | `mssql` runs the same SQL against SQL Server |
+| `BILGIN_MSSQL_CONN` | — | ODBC connection string; required for `mssql` |
 
 They are read at call time, so a one-off override needs no shell state:
 
 ```bash
-NL2SQL_LLM_BASE_URL=http://127.0.0.1:8081/v1 NL2SQL_LLM_MODEL=qwen3.6-27b python -m nl2sql eval
+BILGIN_LLM_BASE_URL=http://127.0.0.1:8081/v1 BILGIN_LLM_MODEL=qwen3.6-27b python -m bilgin eval
 ```
 
-On cmd.exe: `set NL2SQL_LLM_BASE_URL=http://127.0.0.1:8081/v1` before the command.
+On cmd.exe: `set BILGIN_LLM_BASE_URL=http://127.0.0.1:8081/v1` before the command.
 
 ### llama.cpp serving a 27B
 
@@ -69,9 +69,9 @@ then ends `no_submission`. A Q4_K_M 27B is ~17 GB, so a 32 GB card carries it pl
 the schema block is the bulk of the prompt, so dropping the context below 16K starts truncating it.
 
 ```bash
-set NL2SQL_LLM_BASE_URL=http://127.0.0.1:8081/v1
-set NL2SQL_LLM_MODEL=qwen3.6-27b
-python -m nl2sql eval
+set BILGIN_LLM_BASE_URL=http://127.0.0.1:8081/v1
+set BILGIN_LLM_MODEL=qwen3.6-27b
+python -m bilgin eval
 ```
 
 ## Reading the report
@@ -106,11 +106,11 @@ gain → no RAG**, so the deliverable is not the retriever — it is `eval --com
 ## Commands
 
 ```bash
-python -m nl2sql build-db [--seed 42]                       # data/test.db + db/mssql/build_test_db.sql
-python -m nl2sql build-index [--embed openai|fake[:dim]] [--embed-model bge-m3]   # index/ + meta.json
-python -m nl2sql eval-retrieval [--embed openai|fake[:dim]] [--embed-model bge-m3] [--k 5]
-python -m nl2sql ask "..." [--llm openai|fake] [--mode full|full_rules|rag]
-python -m nl2sql eval [--llm openai|fake] [--mode full|full_rules|rag] [--tag archive needs_rule]
+python -m bilgin build-db [--seed 42]                       # data/test.db + db/mssql/build_test_db.sql
+python -m bilgin build-index [--embed openai|fake[:dim]] [--embed-model bge-m3]   # index/ + meta.json
+python -m bilgin eval-retrieval [--embed openai|fake[:dim]] [--embed-model bge-m3] [--k 5]
+python -m bilgin ask "..." [--llm openai|fake] [--mode full|full_rules|rag]
+python -m bilgin eval [--llm openai|fake] [--mode full|full_rules|rag] [--tag archive needs_rule]
                       [--only Q03 Q04] [--compare] [--fresh]
 ```
 
@@ -138,9 +138,9 @@ llama-server -m embeddinggemma-300m-q4_k_m.gguf --host 127.0.0.1 --port 8891 --e
 
 | Env var | Default | Notes |
 | --- | --- | --- |
-| `NL2SQL_EMBED_BASE_URL` | `http://127.0.0.1:8891/v1` | OpenAI-compatible base URL, `/v1` included |
-| `NL2SQL_EMBED_MODEL` | `embeddinggemma` | sent as the model id |
-| `NL2SQL_EMBED_API_KEY` | `local` | local servers ignore it; never commit a real key |
+| `BILGIN_EMBED_BASE_URL` | `http://127.0.0.1:8891/v1` | OpenAI-compatible base URL, `/v1` included |
+| `BILGIN_EMBED_MODEL` | `embeddinggemma` | sent as the model id |
+| `BILGIN_EMBED_API_KEY` | `local` | local servers ignore it; never commit a real key |
 
 `meta.json` records the embedder id (`openai:embeddinggemma`, `fake:256`) and the query side builds
 its embedder from that record, which is why `ask` and `eval` take no `--embed`: an index and a query
@@ -162,13 +162,13 @@ when the whole index is built once:
 
 ```bash
 llama-server -m bge-m3-Q8_0.gguf --host 127.0.0.1 --port 8892 --embedding --cpu
-set NL2SQL_EMBED_BASE_URL=http://127.0.0.1:8892/v1
-python -m nl2sql build-index --embed-model bge-m3
-python -m nl2sql eval-retrieval --embed-model bge-m3
+set BILGIN_EMBED_BASE_URL=http://127.0.0.1:8892/v1
+python -m bilgin build-index --embed-model bge-m3
+python -m bilgin eval-retrieval --embed-model bge-m3
 ```
 
 `--embed-model` is the model id sent to the endpoint, so the two models can be compared without
-touching `NL2SQL_EMBED_MODEL`; `meta.json` records the id it was built with (`openai:bge-m3`), which
+touching `BILGIN_EMBED_MODEL`; `meta.json` records the id it was built with (`openai:bge-m3`), which
 is how `ask`/`eval` know they are not querying a different vector space than they indexed. The
 numbers themselves are read by hand after the run: `eval-retrieval` prints recall@k per golden
 question and the means per method and per tag, and its report lands in `eval_out/retrieval/latest`.
@@ -195,10 +195,10 @@ never mistaken for a full one later.
 ## Running the A/B
 
 ```bash
-python -m nl2sql eval --mode rag
-python -m nl2sql eval --mode full_rules --tag archive needs_rule
-python -m nl2sql eval --compare            # all three modes, one report
-python -m nl2sql eval --compare --fresh    # rerun the modes a reuse would have kept
+python -m bilgin eval --mode rag
+python -m bilgin eval --mode full_rules --tag archive needs_rule
+python -m bilgin eval --compare            # all three modes, one report
+python -m bilgin eval --compare --fresh    # rerun the modes a reuse would have kept
 ```
 
 Each mode writes to its own `eval_out/<mode>/`, so the run-to-run delta only ever compares like with
@@ -250,16 +250,16 @@ executor, before the model, the screen or the eval ever sees a row.
 ## Commands
 
 ```bash
-python -m nl2sql import-map HARITA.xlsx [--llm openai|fake] [--accept] [--mapping m.json]
+python -m bilgin import-map HARITA.xlsx [--llm openai|fake] [--accept] [--mapping m.json]
                       [--out schema/imported.json]
-python -m nl2sql introspect [--out schema/skeleton.json] [--sample]
-python -m nl2sql diff-map --excel schema/imported.json (--db | --db-schema schema/skeleton.json)
-python -m nl2sql merge-map --excel schema/imported.json (--db | --db-schema schema/skeleton.json)
+python -m bilgin introspect [--out schema/skeleton.json] [--sample]
+python -m bilgin diff-map --excel schema/imported.json (--db | --db-schema schema/skeleton.json)
+python -m bilgin merge-map --excel schema/imported.json (--db | --db-schema schema/skeleton.json)
                       [--out schema/merged.json]
-python -m nl2sql make-login-script [--login nl2sql_ro]
-python -m nl2sql eval   [--llm openai|fake] [--schema DOSYA|full|skeleton] [--mode ...]
+python -m bilgin make-login-script [--login nl2sql_ro]
+python -m bilgin eval   [--llm openai|fake] [--schema DOSYA|full|skeleton] [--mode ...]
                       [--compare [--repeat N]]
-python -m nl2sql ask "..." [--mode auto|full|full_rules|rag]      # auto is the default now
+python -m bilgin ask "..." [--mode auto|full|full_rules|rag]      # auto is the default now
 ```
 
 `build-db`, `build-index` and `eval-retrieval` are unchanged from Run 2. The generated files
@@ -354,11 +354,11 @@ fooled, and the parser is what tells the model *why* its query was wrong.
 Against a **copy** of the customer's ERP database. Never the live one, and never with the account you use
 to administer it.
 
-1. Restore the copy, and create the read-only login **first**: `python -m nl2sql make-login-script`,
+1. Restore the copy, and create the read-only login **first**: `python -m bilgin make-login-script`,
    replace `__DEGISTIR__` with a real password, run the script in the copy's database context. Windows auth
    on this machine is sysadmin — it is never used, because a login that can do anything makes every guardrail
    above decorative.
-2. Point the tool at it: `NL2SQL_BACKEND=mssql` and `NL2SQL_MSSQL_CONN` with that login and
+2. Point the tool at it: `BILGIN_BACKEND=mssql` and `BILGIN_MSSQL_CONN` with that login and
    `ApplicationIntent=ReadOnly`.
 3. `introspect --sample` → `schema/skeleton.json`. This is the first step precisely because it needs no
    schema: the skeleton is introspected from tables the hand-written `schema.json` has never heard of.
@@ -405,12 +405,12 @@ private set.
 ## Datasets: `--dataset` on every command
 
 ```bash
-python -m nl2sql build-db          --dataset synthetic_erp|wwi [--seed 42]
-python -m nl2sql build-index       --dataset ... [--embed openai|fake[:dim]]
-python -m nl2sql eval-retrieval    --dataset ... [--embed ...] [--k 5]
-python -m nl2sql ask "..."         --dataset ... [--model PROFILE] [--mode ...]
-python -m nl2sql eval              --dataset ... [--model PROFILE] [--mode ...] [--compare ...]
-python -m nl2sql make-login-script --dataset wwi [--login nl2sql_ro]
+python -m bilgin build-db          --dataset synthetic_erp|wwi [--seed 42]
+python -m bilgin build-index       --dataset ... [--embed openai|fake[:dim]]
+python -m bilgin eval-retrieval    --dataset ... [--embed ...] [--k 5]
+python -m bilgin ask "..."         --dataset ... [--model PROFILE] [--mode ...]
+python -m bilgin eval              --dataset ... [--model PROFILE] [--mode ...] [--compare ...]
+python -m bilgin make-login-script --dataset wwi [--login nl2sql_ro]
 ```
 
 A dataset is a folder `datasets/<name>/` with a `dataset.json` (display name, dialect, connection kind,
@@ -440,11 +440,11 @@ measure against the real database, restore it by hand:
    restore it on the local SQL Server Express. The sample is published under the **MIT** licence — but
    re-check the licence on the release page before publishing anything derived from it.
 2. Create the read-only login **first**, from the WWI schema's allowlist:
-   `python -m nl2sql make-login-script --dataset wwi` → `db/mssql/readonly_login.sql`, with the
+   `python -m bilgin make-login-script --dataset wwi` → `db/mssql/readonly_login.sql`, with the
    `__DEGISTIR__` password placeholder replaced and run in the WWI database context. Windows auth on
    this machine is sysadmin and is **never** used — a login that can do anything makes every guardrail
    decorative.
-3. Point the tool at it: `NL2SQL_BACKEND=mssql` and `NL2SQL_MSSQL_CONN` carrying that login and
+3. Point the tool at it: `BILGIN_BACKEND=mssql` and `BILGIN_MSSQL_CONN` carrying that login and
    `ApplicationIntent=ReadOnly`.
 4. The schema here is written from Microsoft's public documentation, so the real restore may differ.
    `introspect --sample` then `diff-map` against the live database is the check, run by hand; fix the
@@ -480,8 +480,8 @@ which is exactly the thing being measured.
 ## Comparing models: `eval --compare --models`
 
 ```bash
-python -m nl2sql eval --compare --models strata,qwen27b-16k --modes full_rules,rag --dataset wwi --repeat 3
-python -m nl2sql eval --compare --models fakeA,fakeB --modes full_rules,rag --dataset wwi --llm fake
+python -m bilgin eval --compare --models strata,qwen27b-16k --modes full_rules,rag --dataset wwi --repeat 3
+python -m bilgin eval --compare --models fakeA,fakeB --modes full_rules,rag --dataset wwi --llm fake
 ```
 
 Every model × mode (× repeat) combination runs over the same questions and lands in one report —
@@ -517,16 +517,16 @@ gets). Then run the comparisons:
 
 ```bash
 set UNSLOTH_API_KEY=...            # the key config/models.json names for the qwen27b profiles
-python -m nl2sql eval --compare --models qwen27b-16k --modes full_rules,rag --dataset wwi --repeat 3
-python -m nl2sql eval --compare --models qwen27b-16k --modes full_rules,rag --dataset synthetic_erp --repeat 3
+python -m bilgin eval --compare --models qwen27b-16k --modes full_rules,rag --dataset wwi --repeat 3
+python -m bilgin eval --compare --models qwen27b-16k --modes full_rules,rag --dataset synthetic_erp --repeat 3
 ```
 
 **Half 2 — Strata (agent GPU mode).** Switch back to **agent** mode so Strata has the card again, then
 run its block on the same two datasets:
 
 ```bash
-python -m nl2sql eval --compare --models strata --modes full_rules,rag --dataset wwi --repeat 3
-python -m nl2sql eval --compare --models strata --modes full_rules,rag --dataset synthetic_erp --repeat 3
+python -m bilgin eval --compare --models strata --modes full_rules,rag --dataset wwi --repeat 3
+python -m bilgin eval --compare --models strata --modes full_rules,rag --dataset synthetic_erp --repeat 3
 ```
 
 Read the `compare_wwi_*.md` and `compare_synthetic_erp_*.md` reports side by side. A 27B that only
@@ -547,7 +547,7 @@ PII masking); nothing leaves the machine.
 ## `serve` — the UI on your own machine
 
 ```bash
-python -m nl2sql serve [--host 127.0.0.1] [--port 8777] [--llm openai|fake] [--dataset ...] [--model ...]
+python -m bilgin serve [--host 127.0.0.1] [--port 8777] [--llm openai|fake] [--dataset ...] [--model ...]
 ```
 
 `serve` binds **`127.0.0.1` only** — single user, **no auth**. That is deliberate: this is a
@@ -562,16 +562,16 @@ path, so the screen can be opened and clicked through without Strata up.
 
 ## Building the UI
 
-The frontend is React + Vite + ECharts in `web/`, built into `nl2sql/web/static` and served by
+The frontend is React + Vite + ECharts in `web/`, built into `bilgin/web/static` and served by
 FastAPI at `/`. There is no separate web server in production — `serve` serves the built files:
 
 ```bash
 npm --prefix web install
-npm --prefix web run build          # -> nl2sql/web/static, served by `serve`
+npm --prefix web run build          # -> bilgin/web/static, served by `serve`
 npm --prefix web run dev            # dev server with hot reload, talks to a running `serve`
 ```
 
-For the dev loop, run `python -m nl2sql serve --llm fake` and `npm --prefix web run dev` side by side:
+For the dev loop, run `python -m bilgin serve --llm fake` and `npm --prefix web run dev` side by side:
 the Vite dev server proxies `/api` to the API, so you edit components without rebuilding.
 
 ## What an answer shows
@@ -603,7 +603,7 @@ options; the user's choice is sent back as a follow-up with the chosen reading, 
 normally:
 
 ```bash
-python -m nl2sql ask "Geçen ay satış ne kadar?" --choice "İadeler düşülmüş net"
+python -m bilgin ask "Geçen ay satış ne kadar?" --choice "İadeler düşülmüş net"
 ```
 
 The prompt only asks when the readings give **different numbers** — a term a business rule already
@@ -612,7 +612,7 @@ defines is answered, not questioned.
 ## `ask --json`
 
 ```bash
-python -m nl2sql ask "..." --json
+python -m bilgin ask "..." --json
 ```
 
 prints the **same payload as `POST /api/ask`** — status, answer text, chart, columns, rows, SQL,
@@ -649,9 +649,9 @@ API refuses it rather than risk a table the index never had looking like a model
 ## Eval additions
 
 ```bash
-python -m nl2sql eval --ambiguous [--llm fake]     # adds the ambiguous set, prints the metrics block
-python -m nl2sql eval --narrate  [--llm fake]      # narrates each golden answer, counts the sources
-python -m nl2sql eval-retrieval --summaries on|off # recall@k with and without table summaries
+python -m bilgin eval --ambiguous [--llm fake]     # adds the ambiguous set, prints the metrics block
+python -m bilgin eval --narrate  [--llm fake]      # narrates each golden answer, counts the sources
+python -m bilgin eval-retrieval --summaries on|off # recall@k with and without table summaries
 ```
 
 `eval --ambiguous` runs the golden questions plus the dataset's ambiguous set and, besides accuracy,
@@ -686,11 +686,11 @@ Accounts live in the app's own SQLite file, **`data/bilgin.db`** — never in th
 the only way to make one is the CLI, which is also the recovery path when a password is lost:
 
 ```bash
-python -m nl2sql user add eren --role admin    # ilk hesap yönetici olmak zorunda
-python -m nl2sql user list                     # Kullanıcı · Rol · Durum · Son giriş
-python -m nl2sql user passwd eren              # parolayı değiştirir, eski oturumlar düşer
-python -m nl2sql user set analist --role user  # rolü değiştirir
-python -m nl2sql user set analist --deactivate # hesabı kapatır, silmez
+python -m bilgin user add eren --role admin    # ilk hesap yönetici olmak zorunda
+python -m bilgin user list                     # Kullanıcı · Rol · Durum · Son giriş
+python -m bilgin user passwd eren              # parolayı değiştirir, eski oturumlar düşer
+python -m bilgin user set analist --role user  # rolü değiştirir
+python -m bilgin user set analist --deactivate # hesabı kapatır, silmez
 ```
 
 The password is asked with **`getpass`** — twice, never echoed, never passed on a command line, so it
@@ -700,7 +700,7 @@ shorter than 10 characters is refused with the reason. A username is `a-z 0-9 _ 
 whoever holds the keyboard already owns the machine, and the CLI is what you have when the UI is locked.
 
 `serve` refuses to listen while the user table is empty — it prints
-`python -m nl2sql user add <ad> --role admin` and exits before any address is bound, so a box can never
+`python -m bilgin user add <ad> --role admin` and exits before any address is bound, so a box can never
 be served open by accident.
 
 **What each role may do** (enforced on the server, per route — hiding a menu item is not a permission):
@@ -740,7 +740,7 @@ before anything listens. Bilgin is not a hosted service and does not pretend to 
 For a demo or a test run with no user table yet, one environment variable opens the first admin:
 
 ```bash
-NL2SQL_DEV_ADMIN_PASSWORD=<parola> python -m nl2sql serve --llm fake
+BILGIN_DEV_ADMIN_PASSWORD=<parola> python -m bilgin serve --llm fake
 ```
 
 It is read **only when the users table is empty**: it then creates `admin` with that password and prints
@@ -792,8 +792,8 @@ examples, the tables, the rules, the saved list and the history.
 generated script is downloadable per dataset (`GET /api/datasets/<name>/login-script.sql`); it contains
 **`__DEGISTIR__`** where the password goes — the file never carries a password, and the allowlist and the
 denied PII columns are already in it. Run it on the server, then start Bilgin with that connection
-string in **`NL2SQL_MSSQL_CONN`**. Switching to the dataset works without it and says so
-("Bu küme SQL Server'a bağlı: salt okunur girişi kurun ve sunucuyu `NL2SQL_MSSQL_CONN` ile başlatın.")
+string in **`BILGIN_MSSQL_CONN`**. Switching to the dataset works without it and says so
+("Bu küme SQL Server'a bağlı: salt okunur girişi kurun ve sunucuyu `BILGIN_MSSQL_CONN` ile başlatın.")
 rather than failing a question with a connection error.
 
 ## An upload never touches an existing dataset
@@ -863,8 +863,8 @@ is a random uuid hex precisely so that a `#/c/<id>` in a link is not guessable.
 **CLI.**
 
 ```bash
-python -m nl2sql ask "Eylül 2026 fatura sayısı?" --new                   # yeni konuşma açar
-python -m nl2sql ask "Bunlardan kaç müşteri?" --conversation <id>        # devamını sorar
+python -m bilgin ask "Eylül 2026 fatura sayısı?" --new                   # yeni konuşma açar
+python -m bilgin ask "Bunlardan kaç müşteri?" --conversation <id>        # devamını sorar
 ```
 
 Both end with one line, `Konuşma: <id> · tur <n>`, which is what you paste into the next call, and
@@ -893,8 +893,8 @@ and are measured on the real server **by hand** — never as an automated test, 
 check against live on a machine this repo does not own:
 
 ```bash
-NL2SQL_BACKEND=mssql NL2SQL_MSSQL_CONN="<salt okunur giriş>" \
-  python -m nl2sql eval --followups --dataset wwi_real --mode full_rules --model <model>
+BILGIN_BACKEND=mssql BILGIN_MSSQL_CONN="<salt okunur giriş>" \
+  python -m bilgin eval --followups --dataset wwi_real --mode full_rules --model <model>
 ```
 
 What a test *does* guarantee is that every turn's golden SQL passes the policy against that dataset's
@@ -974,8 +974,8 @@ connection. No answer ever carries a password or a connection string — a row s
 as `has_secret` — and a driver's own sentence, which quotes the connection string back, goes through
 `connections.scrub` before anyone reads it.
 
-**Ortam değişkeni kazanır.** `NL2SQL_MSSQL_CONN_<DATASET>` (the dataset name upper-cased) beats the
-stored row, and the generic `NL2SQL_MSSQL_CONN` beats it while it names the database the whole process
+**Ortam değişkeni kazanır.** `BILGIN_MSSQL_CONN_<DATASET>` (the dataset name upper-cased) beats the
+stored row, and the generic `BILGIN_MSSQL_CONN` beats it while it names the database the whole process
 is asking — the active dataset, on the mssql backend. Such a row carries an `Ortam değişkeninden`
 badge and its form opens read-only:
 `Bu bağlantı ortam değişkeninden geliyor; ekrandan değiştirilemez.`
@@ -1015,18 +1015,18 @@ policy'nin de dili yoktur. Burada değişen şu: aynı ölçüm kutusu İngilizc
 
 | Nerede | Sıra |
 | --- | --- |
-| CLI | `--lang` (her komutta; parserı da o dilde kurar) → `NL2SQL_LANG` → `tr` |
-| Web ve API | giriş yapan kullanıcının `lang` tercihi (`PUT /api/auth/me`) → `Accept-Language` → `NL2SQL_LANG` |
+| CLI | `--lang` (her komutta; parserı da o dilde kurar) → `BILGIN_LANG` → `tr` |
+| Web ve API | giriş yapan kullanıcının `lang` tercihi (`PUT /api/auth/me`) → `Accept-Language` → `BILGIN_LANG` |
 | Cevap | sorunun dili: payload'ın `answer_lang` alanı; soru hiçbir dil söylemiyorsa ekran dili |
 
 `config.LANGUAGES` (`tr`, `en`) ile `config.DEFAULT_LANG` (`tr`) tek listedir ve her cümle
-`nl2sql/i18n/tr.json` ile `nl2sql/i18n/en.json` kataloğundadır (`t(key, lang)`); iki dosyanın anahtar
+`bilgin/i18n/tr.json` ile `bilgin/i18n/en.json` kataloğundadır (`t(key, lang)`); iki dosyanın anahtar
 seti aynıdır, yani bir cümlenin İngilizcesi eksirse test söyler. Dil kabuktan da seçilir:
 
 ```bash
-NL2SQL_LANG=en python -m nl2sql eval --dataset wwi --llm fake
-python -m nl2sql --lang en ask "How many invoices were issued in September 2026?" --dataset wwi
-python -m nl2sql eval --help --lang en      # yardım metni de İngilizce
+BILGIN_LANG=en python -m bilgin eval --dataset wwi --llm fake
+python -m bilgin --lang en ask "How many invoices were issued in September 2026?" --dataset wwi
+python -m bilgin eval --help --lang en      # yardım metni de İngilizce
 ```
 
 **Cevabın dili sorunun dilidir**, ekran dilinden ayrıdır: `--lang en` ile sorulan Türkçe bir soru
@@ -1037,7 +1037,7 @@ Türkçe cevaplanır, İngilizce sorulan İngilizce. `--lang` çevreyi söyler (
 
 ## İngilizce şablon
 
-Şablon programın dilidir: `python -m nl2sql template --lang en --out bilgin-database-template.xlsx`
+Şablon programın dilidir: `python -m bilgin template --lang en --out bilgin-database-template.xlsx`
 İngilizce sayfaları (`How to fill in`, `Dataset`, `Tables`, `Columns`, `Business rules`, `Example`),
 İngilizce başlıkları, `Y/N` açılır listelerini ve İngilizce bir örnek satır yazar; `--lang tr`
 bugünkü Türkçe şablondur. Ekrandan indirme de kullanıcının dilini kullanır
@@ -1070,8 +1070,8 @@ Rapor İngilizce yazılır ve `report.json` `lang` alanını taşır. `--llm fak
 ölçülür; Run 7'ın elle adımıyla aynı iki değişken ve aynı salt okunur giriş, yalnız sorular İngilizce:
 
 ```bash
-NL2SQL_BACKEND=mssql NL2SQL_MSSQL_CONN="<salt okunur giriş>" \
-  python -m nl2sql eval --lang en --dataset wwi_real --llm openai --model <model>
+BILGIN_BACKEND=mssql BILGIN_MSSQL_CONN="<salt okunur giriş>" \
+  python -m bilgin eval --lang en --dataset wwi_real --llm openai --model <model>
 ```
 
 Bir testin güvence altına aldığı şey yine aynı: her sorunun altın SQL'i kümenin kendi allowlist'inden
@@ -1089,10 +1089,10 @@ bağımlılık eklenmez.
 - **yükseltilmiş** bir Windows PowerShell 5.1 ya da PowerShell 7; öyle olmayan bir kabuk reddedilir;
 - depodaki `.venv\Scripts\python.exe` (bağımlılıklar `uv sync` ile kurulmuş);
 - `127.0.0.1:8777` boş, değilse başka bir `-Port` verilir;
-- `NL2SQL_DEV_ADMIN_PASSWORD` Machine ve Process düzeyinde kurulu **değil** — geliştirme önyüklemesinin
+- `BILGIN_DEV_ADMIN_PASSWORD` Machine ve Process düzeyinde kurulu **değil** — geliştirme önyüklemesinin
   bir serviste yeri yoktur, o yüzden değişken duruyorsa betik hiçbir şeyi değiştirmeden çıkar;
 - model uç noktası erişilebilir. `model` ve `connection` adımları
-  `python -m nl2sql service-check --dataset NAME --json` çıktısını yazar ve yalnız uyarır: kurulumda
+  `python -m bilgin service-check --dataset NAME --json` çıktısını yazar ve yalnız uyarır: kurulumda
   kapalı olan bir uç nokta soru sorulana kadar açılmış olur.
 
 **Tek elle adım, bir kez.** WinSW v2.12.0'a sabitlenmiştir ve betik doğrulayamadığı hiçbir şeyi
@@ -1119,30 +1119,30 @@ powershell -ExecutionPolicy Bypass -File scripts\update-service.ps1 -Port 8777
 powershell -ExecutionPolicy Bypass -File scripts\uninstall-service.ps1
 ```
 
-`-Home -Port -Dataset -Lang -Backend` yalnız kurulumun değildir: servisin başladığı `NL2SQL_HOME`,
-`NL2SQL_LANG` ve `NL2SQL_BACKEND` olurlar. `-Repo` betiği tutan klasör dışındaki bir checkout'u söyler,
+`-Home -Port -Dataset -Lang -Backend` yalnız kurulumun değildir: servisin başladığı `BILGIN_HOME`,
+`BILGIN_LANG` ve `BILGIN_BACKEND` olurlar. `-Repo` betiği tutan klasör dışındaki bir checkout'u söyler,
 `-CopyAppDb` `HOME`da ikisi de yoksa geliştirme `data\bilgin.db` dosyasını ve kümenin kurulmuş
 indeksini taşır. `-RemoveData` veri kökünü silen tek bayraktır ve önce kumanda bir `y` cevabı ister.
 `update-service.ps1` kod getirmez: yeni sürümü durdurma ile başlatma arasında operatör taşır, betiğin
-tek kurduğu şey arayüzdür ve o da yalnız `web\` altındaki bir dosya `nl2sql\web\static\index.html`
+tek kurduğu şey arayüzdür ve o da yalnız `web\` altındaki bir dosya `bilgin\web\static\index.html`
 dosyasından daha yeniyse yapılır.
 
-**Veri nerede.** Servisin kendi veri kökü vardır — `NL2SQL_HOME`, varsayılan `C:\ProgramData\Bilgin` —
+**Veri nerede.** Servisin kendi veri kökü vardır — `BILGIN_HOME`, varsayılan `C:\ProgramData\Bilgin` —
 ve altında `data\bilgin.db`, `logs\`, `index\`, `eval_out\`, `datasets\` ile `secrets\` durur.
-`python -m nl2sql paths` hepsini çözülmüş haliyle yazdırır (bir betik okuyacaksa `--json`), hiçbir
+`python -m bilgin paths` hepsini çözülmüş haliyle yazdırır (bir betik okuyacaksa `--json`), hiçbir
 ortam değişkeninin değerini ya da bağlantı dizesini yazdırmaz. WinSW'in kendi günlüğü `HOME\logs`
 altında boyuta göre döner.
 
 **Bağlantılar yönetici panelinden girilir.** Bir SQL Server kümesinin bağlantısı uygulama
 veritabanının bir satırıdır; **Veritabanı bağlantıları** ekranından (`#/baglantilar`) girilir ve DPAPI
 blobu olarak saklanır. Bir servisin başka yolu yoktur: kurulumun yazdığı XML tam olarak
-`NL2SQL_HOME`, `NL2SQL_LANG` ve `NL2SQL_BACKEND` anahtarlarını taşır, adında
+`BILGIN_HOME`, `BILGIN_LANG` ve `BILGIN_BACKEND` anahtarlarını taşır, adında
 `PASSWORD|KEY|SECRET|CONN|TOKEN` geçen hiçbir ortam anahtarını kabul etmez — böylece bir bağlantı
 dizesi her yöneticinin okuyabildiği bir servis tanımına düşmez. Bağlantılar bir kez, servisin
 sunduğu tarayıcıda girilir.
 
 **Model anahtarları sır klasörüne** gider, aynı sebeple: `HOME\secrets\<ENV_NAME>.bin`, entropy'si
-değişkenin kendi adı olan makine kapsamı bir DPAPI blobu. `python -m nl2sql secret-set
+değişkenin kendi adı olan makine kapsamı bir DPAPI blobu. `python -m bilgin secret-set
 UNSLOTH_API_KEY` bir tane etkileşimli yazar, kurulum betiği de model profilinin anahtarını kendisi
 mühürlemeyi önerir; klasörün ACL'ı okuma yetkisini yalnız Yöneticiler ve `NT SERVICE\Bilgin`e bırakır.
 Program önce ortam değişkenine, sonra dosyaya baktığı için değişkeni kurulu bir geliştirme

@@ -12,9 +12,9 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.policy import policy
-from nl2sql.schema_map import doc
+from bilgin import config
+from bilgin.policy import policy
+from bilgin.schema_map import doc
 
 ALLOWED = doc.allowlist(doc.load_schema())
 CASES = [

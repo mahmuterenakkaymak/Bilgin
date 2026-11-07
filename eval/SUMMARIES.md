@@ -6,8 +6,8 @@ kümede birden yükseliyor mu — cevap ona göre verildi. Sayılar `FakeEmbedde
 indeks üzerinden, altın soruların `requires_tables` listesi ölçüt alınarak koştu:
 
 ```
-python -m nl2sql eval-retrieval --embed fake --summaries on --dataset synthetic_erp
-python -m nl2sql eval-retrieval --embed fake --summaries on --dataset wwi
+python -m bilgin eval-retrieval --embed fake --summaries on --dataset synthetic_erp
+python -m bilgin eval-retrieval --embed fake --summaries on --dataset wwi
 ```
 
 ## Ölçüm (2026-10-24, k=5, FakeEmbedder)

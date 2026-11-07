@@ -20,17 +20,17 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget, Result
-from nl2sql.eval import compare
-from nl2sql.index.docs import build_documents
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import load_search
-from nl2sql.index.store import ForeignIndexError, FileStore, content_hash
-from nl2sql.schema_map import doc
+from bilgin import config
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Budget, Result
+from bilgin.eval import compare
+from bilgin.index.docs import build_documents
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import load_search
+from bilgin.index.store import ForeignIndexError, FileStore, content_hash
+from bilgin.schema_map import doc
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 DATASETS = (load_dataset("synthetic_erp"), load_dataset("mini", root=FIXTURE_ROOT))
@@ -146,7 +146,7 @@ def test_an_index_is_refused_for_the_other_dataset(indexes, built, wanted):
 
 
 def test_mini_scores_full_marks_in_rag_through_the_real_loop(monkeypatch, tmp_path, capsys):
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     dataset = BY_NAME["mini"]
     database = tmp_path / "mini.db"
     dataset.build_db(db_path=database, sql_path=tmp_path / "mini.sql")
@@ -183,11 +183,11 @@ def test_mini_scores_full_marks_in_rag_through_the_real_loop(monkeypatch, tmp_pa
 
 def test_build_db_from_the_project_root_names_the_dataset_it_built():
     result = subprocess.run(
-        [sys.executable, "-m", "nl2sql", "build-db", "--dataset", "synthetic_erp"],
+        [sys.executable, "-m", "bilgin", "build-db", "--dataset", "synthetic_erp"],
         cwd=config.ROOT,
         capture_output=True,
         encoding="utf-8",
-        env={**os.environ, "NL2SQL_BACKEND": "sqlite", "PYTHONIOENCODING": "utf-8"},
+        env={**os.environ, "BILGIN_BACKEND": "sqlite", "PYTHONIOENCODING": "utf-8"},
     )
     dataset = BY_NAME["synthetic_erp"]
 

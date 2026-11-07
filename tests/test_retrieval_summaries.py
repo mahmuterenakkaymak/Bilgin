@@ -14,14 +14,14 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.graph.graph import build_graph
-from nl2sql.graph.profile import load_profile
-from nl2sql.index.docs import Doc
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import METHODS, HybridSearch, build_search
+from bilgin import config
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.graph.graph import build_graph
+from bilgin.graph.profile import load_profile
+from bilgin.index.docs import Doc
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import METHODS, HybridSearch, build_search
 
 DATASETS = ("synthetic_erp", "wwi")
 QUERIES = (

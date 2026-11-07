@@ -12,7 +12,7 @@ söyler. İddia kaynak CSS'te kurulur - ölçülen yazarın niyeti, küçültüc
 
 import re
 
-from nl2sql import config
+from bilgin import config
 
 STYLES = config.WEB_DIR / "src" / "styles.css"
 

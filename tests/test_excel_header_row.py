@@ -12,7 +12,7 @@ yere çözülmez ve sayfa 0 tabloya düşer.
 import openpyxl
 import pytest
 
-from nl2sql.schema_map.excel import convert, fallback_mapping, read_workbook
+from bilgin.schema_map.excel import convert, fallback_mapping, read_workbook
 
 HEADERS = ["TABLO", "KOLON", "TİP", "AÇIKLAMA", "REFERANS", "DEĞER", "NULL", "MODÜL"]
 

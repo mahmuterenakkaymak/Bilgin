@@ -92,10 +92,10 @@ def fixture_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
     (repo / "web" / "src").mkdir(parents=True)
     (repo / "web" / "node_modules" / "vite" / "bin").mkdir(parents=True)
-    (repo / "nl2sql" / "web" / "static").mkdir(parents=True)
+    (repo / "bilgin" / "web" / "static").mkdir(parents=True)
     (repo / "web" / "src" / "App.jsx").write_text("export function App() {}\n", encoding="utf-8")
     (repo / "web" / "node_modules" / "vite" / "bin" / "vite.js").write_text("//\n", encoding="utf-8")
-    (repo / "nl2sql" / "web" / "static" / "index.html").write_text("<!doctype html>\n", encoding="utf-8")
+    (repo / "bilgin" / "web" / "static" / "index.html").write_text("<!doctype html>\n", encoding="utf-8")
     return repo
 
 
@@ -168,7 +168,7 @@ def test_update_rebuilds_the_ui_only_when_a_web_file_is_newer(tmp_path: Path) ->
     built = time.time()
     app = repo / "web" / "src" / "App.jsx"
     installed = repo / "web" / "node_modules" / "vite" / "bin" / "vite.js"
-    index = repo / "nl2sql" / "web" / "static" / "index.html"
+    index = repo / "bilgin" / "web" / "static" / "index.html"
     touch(index, built)
     touch(app, built - 3600)
     # node_modules her npm kurulumunda yenilenir: saati öne çıksa da kaynak değildir.

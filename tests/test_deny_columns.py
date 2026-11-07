@@ -15,11 +15,11 @@ import re
 import pytest
 import sqlglot
 
-from nl2sql.datasets import load_dataset
-from nl2sql.engine import login_script
-from nl2sql.index.docs import build_documents
-from nl2sql.policy import pii, policy
-from nl2sql.schema_map import doc
+from bilgin.datasets import load_dataset
+from bilgin.engine import login_script
+from bilgin.index.docs import build_documents
+from bilgin.policy import pii, policy
+from bilgin.schema_map import doc
 
 SCHEMA = load_dataset("wwi").schema()
 ALLOWED = doc.allowlist(SCHEMA)

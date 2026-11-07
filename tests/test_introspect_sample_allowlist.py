@@ -14,8 +14,8 @@ import sqlite3
 
 import pytest
 
-from nl2sql.cli import main as cli
-from nl2sql.schema_map import doc, introspect
+from bilgin.cli import main as cli
+from bilgin.schema_map import doc, introspect
 
 TABLE = "TBLMUSTERI"
 COLUMNS = ("MUSTERI_KOD", "ILCE")

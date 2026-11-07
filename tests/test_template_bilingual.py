@@ -20,11 +20,11 @@ import json
 import openpyxl
 import pytest
 
-from nl2sql import config
-from nl2sql.i18n.scan import user_literals
-from nl2sql.schema_map import onboard
-from nl2sql.schema_map.template import LABELS, build_template
-from nl2sql.schema_map.template_import import read_template, validate
+from bilgin import config
+from bilgin.i18n.scan import user_literals
+from bilgin.schema_map import onboard
+from bilgin.schema_map.template import LABELS, build_template
+from bilgin.schema_map.template_import import read_template, validate
 
 TABLE = "Satis.Fatura"
 SHEET_ROLES = ("guide", "dataset", "tables", "columns", "rules", "example")
@@ -73,8 +73,8 @@ def roots(tmp_path, monkeypatch):
     """Küme klasörleri tmp'de: iki uygulama da kendi boş klasörüne doğar, repo anılmaz."""
     (tmp_path / "datasets").mkdir()
     (tmp_path / "real_datasets").mkdir()
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path / "datasets"))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(tmp_path / "datasets"))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
     monkeypatch.setattr(config, "ROOT", tmp_path)
     monkeypatch.setattr(config, "MAP_PREVIEWS_DIR", tmp_path / "map_previews")
     monkeypatch.setattr(config, "MAP_CHANGES_LOG", tmp_path / "logs" / "map_changes.jsonl")
@@ -319,4 +319,4 @@ def test_every_english_schema_header_is_in_the_dictionary():
 
 
 def test_no_turkish_literal_is_left_outside_the_docstrings():
-    assert user_literals("nl2sql/schema_map/template_import.py") == []
+    assert user_literals("bilgin/schema_map/template_import.py") == []

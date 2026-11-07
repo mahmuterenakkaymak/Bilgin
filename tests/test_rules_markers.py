@@ -13,8 +13,8 @@ import re
 
 import pytest
 
-from nl2sql.eval.runner import load_golden
-from nl2sql.schema_map import rules
+from bilgin.eval.runner import load_golden
+from bilgin.schema_map import rules
 
 RULES = rules.load_rules()
 BY_ID = {rule["id"]: rule for rule in RULES}

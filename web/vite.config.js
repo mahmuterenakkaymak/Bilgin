@@ -7,7 +7,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   base: "/",
   build: {
-    outDir: "../nl2sql/web/static",
+    outDir: "../bilgin/web/static",
     emptyOutDir: true,
     assetsDir: "assets",
   },

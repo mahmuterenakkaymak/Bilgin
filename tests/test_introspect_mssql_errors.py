@@ -13,8 +13,8 @@ import types
 
 import pytest
 
-from nl2sql.engine._mssql import CONN_ENV
-from nl2sql.schema_map import introspect
+from bilgin.engine._mssql import CONN_ENV
+from bilgin.schema_map import introspect
 
 DRIVER_TEXT = "[42000] [Microsoft][ODBC Driver 18 for SQL Server]Login timeout expired"
 

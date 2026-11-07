@@ -10,15 +10,15 @@ gerçek - uydurma bir graph üzerinden komşuluk sınanmaz, asıl soru zaten ger
 komşusu olduğu.
 """
 
-from nl2sql import config
-from nl2sql.agent import modes, tools
-from nl2sql.cli.main import _search_notes
-from nl2sql.graph.graph import Edge, JoinGraph, build_graph
-from nl2sql.graph.profile import load_profile
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import build_search, expanded_hits
-from nl2sql.schema_map import doc
-from nl2sql.schema_map.rules import load_rules
+from bilgin import config
+from bilgin.agent import modes, tools
+from bilgin.cli.main import _search_notes
+from bilgin.graph.graph import Edge, JoinGraph, build_graph
+from bilgin.graph.profile import load_profile
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import build_search, expanded_hits
+from bilgin.schema_map import doc
+from bilgin.schema_map.rules import load_rules
 
 SCHEMA = doc.load_schema()
 RULES = load_rules()

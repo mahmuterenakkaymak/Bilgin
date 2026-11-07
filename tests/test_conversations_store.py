@@ -13,10 +13,10 @@ import sqlite3
 
 import pytest
 
-from nl2sql import config
-from nl2sql.app.conversations import ALL, ConversationStore
-from nl2sql.auth.store import UserStore
-from nl2sql.web.saved import SavedStore
+from bilgin import config
+from bilgin.app.conversations import ALL, ConversationStore
+from bilgin.auth.store import UserStore
+from bilgin.web.saved import SavedStore
 
 PAROLA = "Bilgin2026!erp"
 

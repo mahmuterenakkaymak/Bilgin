@@ -14,10 +14,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.web.app import create_app
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 
@@ -42,7 +42,7 @@ def project(tmp_path, monkeypatch, capsys):
     root = tmp_path / "datasets"
     shutil.copytree(FIXTURE_ROOT / "mini", root / "mini")
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(root))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(root))
     cli.build_database(dataset="mini")
     assert cli.build_index("fake", dataset="mini") == 0
     capsys.readouterr()

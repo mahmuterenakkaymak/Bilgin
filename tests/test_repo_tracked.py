@@ -1,20 +1,20 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (c) 2026 Mahmut Eren Akkaymak
 
-"""Depo kaydı: ``nl2sql/index`` izlenir, kökteki çalışma zamanı indeks klasörü izlenmez.
+"""Depo kaydı: ``bilgin/index`` izlenir, kökteki çalışma zamanı indeks klasörü izlenmez.
 
 İndeks paketinin yedi dosyası .gitignore'daki ``index/`` satırına takılıyordu; o satır çalışma
 zamanı indeksinin (depo kökündeki ``index/``) yazdığı dosyalar için yazılmıştı, ama kalıp yolu
-sınırlamadığı için ``nl2sql/index/`` de eleniyordu ve temiz bir kurulum ``ModuleNotFoundError:
-nl2sql.index`` ile düşüyordu. Test iki tarafı birlikte tutuyor: paketin modülleri izlenmeli,
+sınırlamadığı için ``bilgin/index/`` de eleniyordu ve temiz bir kurulum ``ModuleNotFoundError:
+bilgin.index`` ile düşüyordu. Test iki tarafı birlikte tutuyor: paketin modülleri izlenmeli,
 çalışma zamanı klasörü yine izlenmemeli.
 """
 
 import subprocess
 
-from nl2sql import config
+from bilgin import config
 
-INDEX_PACKAGE = "nl2sql/index"
+INDEX_PACKAGE = "bilgin/index"
 RUNTIME_DOC = "index/docs.json"
 PACKAGE_FILES = {"__init__.py", "text.py", "embed.py", "docs.py", "bm25.py", "store.py", "search.py"}
 

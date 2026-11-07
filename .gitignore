@@ -17,7 +17,7 @@ __pycache__/
 /schema/merged.json
 db/mssql/readonly_login.sql
 web/node_modules/
-/nl2sql/web/static/
+/bilgin/web/static/
 
 # document backups and rendered PDFs (2026-10-25)
 docs/*.bak-*

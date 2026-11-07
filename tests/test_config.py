@@ -3,13 +3,13 @@
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 ENV_VARS = [
-    "NL2SQL_LLM_BASE_URL",
-    "NL2SQL_LLM_MODEL",
-    "NL2SQL_LLM_API_KEY",
-    "NL2SQL_BACKEND",
+    "BILGIN_LLM_BASE_URL",
+    "BILGIN_LLM_MODEL",
+    "BILGIN_LLM_API_KEY",
+    "BILGIN_BACKEND",
 ]
 
 
@@ -70,9 +70,9 @@ def test_llm_settings_defaults():
 
 
 def test_llm_settings_env_override(monkeypatch):
-    monkeypatch.setenv("NL2SQL_LLM_BASE_URL", "http://127.0.0.1:8888/v1")
-    monkeypatch.setenv("NL2SQL_LLM_MODEL", "qwen3.8-27b")
-    monkeypatch.setenv("NL2SQL_LLM_API_KEY", "secret-from-env")
+    monkeypatch.setenv("BILGIN_LLM_BASE_URL", "http://127.0.0.1:8888/v1")
+    monkeypatch.setenv("BILGIN_LLM_MODEL", "qwen3.8-27b")
+    monkeypatch.setenv("BILGIN_LLM_API_KEY", "secret-from-env")
     settings = config.llm_settings()
     assert (settings.base_url, settings.model, settings.api_key) == (
         "http://127.0.0.1:8888/v1",
@@ -83,14 +83,14 @@ def test_llm_settings_env_override(monkeypatch):
 
 def test_llm_settings_read_at_call_time(monkeypatch):
     assert config.llm_settings().model == config.DEFAULT_LLM_MODEL
-    monkeypatch.setenv("NL2SQL_LLM_MODEL", "changed")
+    monkeypatch.setenv("BILGIN_LLM_MODEL", "changed")
     assert config.llm_settings().model == "changed"
-    monkeypatch.delenv("NL2SQL_LLM_MODEL")
+    monkeypatch.delenv("BILGIN_LLM_MODEL")
     assert config.llm_settings().model == config.DEFAULT_LLM_MODEL
 
 
 def test_blank_env_falls_back_to_default(monkeypatch):
-    monkeypatch.setenv("NL2SQL_LLM_BASE_URL", "   ")
+    monkeypatch.setenv("BILGIN_LLM_BASE_URL", "   ")
     assert config.llm_settings().base_url == config.DEFAULT_LLM_BASE_URL
 
 
@@ -100,11 +100,11 @@ def test_backend_default():
 
 @pytest.mark.parametrize("value", ["mssql", "MSSQL", " mssql "])
 def test_backend_env_override(monkeypatch, value):
-    monkeypatch.setenv("NL2SQL_BACKEND", value)
+    monkeypatch.setenv("BILGIN_BACKEND", value)
     assert config.backend() == "mssql"
 
 
 def test_backend_unknown_rejected(monkeypatch):
-    monkeypatch.setenv("NL2SQL_BACKEND", "postgres")
-    with pytest.raises(ValueError, match="NL2SQL_BACKEND"):
+    monkeypatch.setenv("BILGIN_BACKEND", "postgres")
+    with pytest.raises(ValueError, match="BILGIN_BACKEND"):
         config.backend()

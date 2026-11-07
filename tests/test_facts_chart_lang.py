@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql.i18n import CATALOG_DIR, scan
-from nl2sql.report import chart, facts, guard
+from bilgin.i18n import CATALOG_DIR, scan
+from bilgin.report import chart, facts, guard
 
 CATEGORY_COLUMNS = ["STOK_ADI", "SATIS_MIKTARI"]
 CATEGORY_ROWS = [("Çay", 1234567.89), ("Kahve", 100000.0), ("Şeker", 50000.0)]

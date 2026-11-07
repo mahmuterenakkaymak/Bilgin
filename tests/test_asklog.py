@@ -11,7 +11,7 @@ geçilir.
 import json
 import re
 
-from nl2sql.app import asklog
+from bilgin.app import asklog
 
 CONTRACT_KEYS = {
     "ts",

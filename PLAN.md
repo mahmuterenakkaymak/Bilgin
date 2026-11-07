@@ -6,26 +6,26 @@ stdlib only.
 ## Architecture
 
 ```
-nl2sql/schema_map/generator.py  generate(seed) -> Dataset (in-memory rows)
+bilgin/schema_map/generator.py  generate(seed) -> Dataset (in-memory rows)
             |                         \
-nl2sql/schema_map/build.py             eval/reference.py  (pure-Python truth, tests only)
+bilgin/schema_map/build.py             eval/reference.py  (pure-Python truth, tests only)
   -> data/test.db (SQLite)
   -> db/mssql/build_test_db.sql (T-SQL)
-schema/schema.json -> nl2sql/schema_map/doc.py (compact text, table detail, allowlist)
+schema/schema.json -> bilgin/schema_map/doc.py (compact text, table detail, allowlist)
 
-nl2sql/cli -> nl2sql/agent/loop.run_agent -> LLMClient (OpenAIClient | FakeLLM)
+bilgin/cli -> bilgin/agent/loop.run_agent -> LLMClient (OpenAIClient | FakeLLM)
                     | tools: get_schema | run_sql | submit_sql
                     v
-             nl2sql/engine/LocalExecutor.execute(sql, budget)
+             bilgin/engine/LocalExecutor.execute(sql, budget)
                  policy.check  ->  transpile (sqlite only)  ->  backend (SQLite ro | MSSQL ro)  ->  audit log
-nl2sql/eval/runner -> agent per golden question -> executor -> compare vs golden result -> report.json/.md
+bilgin/eval/runner -> agent per golden question -> executor -> compare vs golden result -> report.json/.md
 ```
 
 ## File layout
 
 ```
 pyproject.toml                 pinned deps + pytest config (pythonpath = ".")
-nl2sql/
+bilgin/
   __main__.py                  -> cli.main()
   config.py                    all tunables at top; env readers
   schema_map/ generator.py build.py doc.py
@@ -74,7 +74,7 @@ data/ (db, ignored)  db/mssql/  eval_out/ (ignored)  logs/ (ignored)
    `TOP n` injected on the outermost SELECT; a top-level UNION is wrapped as `SELECT TOP n * FROM (...) AS _q`.
 7. **Executor owns the policy.** `LocalExecutor.execute` is the only public entry; backends are private modules
    (`_sqlite`, `_mssql`) with no policy-free public method. SQLite: `file:...?mode=ro` URI, timeout via
-   `set_progress_handler`. MSSQL: pyodbc imported lazily, conn string only from `NL2SQL_MSSQL_CONN`.
+   `set_progress_handler`. MSSQL: pyodbc imported lazily, conn string only from `BILGIN_MSSQL_CONN`.
 8. **Two budgets.** Model sees `Budget(max_rows=50)`; eval comparison uses `Budget(max_rows=100000)` for both golden and
    predicted SQL.
 9. **Paths are parameters.** Every function that touches disk takes the path as an argument defaulting to config, so
@@ -125,8 +125,8 @@ Run 2 shapes and extensions: see "Contracts (Run 2 additions)" at the end of thi
 1. **Turkish number formatting in tables** - `1.234,56`, numeric columns right-aligned (display only; values come
    from SQL untouched).
 2. **Friendly empty/truncated notices** - "Sonuç boş (0 satır)" and "İlk 50 satır gösteriliyor (toplam 312)".
-3. **Helpful startup errors** - missing `data/test.db` says "Önce `python -m nl2sql build-db` çalıştırın"; unreachable
-   endpoint says which URL failed and suggests checking Strata / `NL2SQL_LLM_BASE_URL`; no traceback.
+3. **Helpful startup errors** - missing `data/test.db` says "Önce `python -m bilgin build-db` çalıştırın"; unreachable
+   endpoint says which URL failed and suggests checking Strata / `BILGIN_LLM_BASE_URL`; no traceback.
 4. **Live eval progress** - one line per question as it finishes: `Q03 ✓ pass  4 araç  12.3 sn  8.1K token`.
 5. **Run-to-run delta** - report.md shows score change vs the previous `latest` and which questions flipped
    (`Q04 wrong_result -> pass`).
@@ -148,12 +148,12 @@ output and the markdown reports, planned in R2-14.
 ```
 schema/schema.json (~81 tables) + schema/rules.json --build-index--> index/ docs.json vectors.json meta.json(hash)
         |                                                                   |
-        |              nl2sql/index: text(fold) embed(Fake|OpenAI) docs bm25 store search(hybrid, RRF)
+        |              bilgin/index: text(fold) embed(Fake|OpenAI) docs bm25 store search(hybrid, RRF)
         |                                                                   |
 generator.generate(seed) = Run 1 stream (unchanged) + extra.extend(own stream)          profiles/netsis.json
         -> build_db (every schema table)                                    |                 |
                                                                             v                 v
-ask/eval --mode full|full_rules|rag -> agent/modes.py (ToolContext; tools + prompt per mode) <- nl2sql/graph
+ask/eval --mode full|full_rules|rag -> agent/modes.py (ToolContext; tools + prompt per mode) <- bilgin/graph
         -> loop.run_agent -> tools.dispatch: get_schema | search_schema | get_table_details | find_join_path
                                              | search_rules | sample_values | run_sql | submit_sql
                                   sample_values / run_sql / submit_sql -> LocalExecutor (policy inside)
@@ -168,12 +168,12 @@ python -m eval.review -> eval/REVIEW.md (golden + Python reference rows, for Ere
 schema/schema.json             grows to ~81 tables (10 Run 1 + 6 data + ~65 distractors)
 schema/rules.json              12-15 business rules (Turkish)
 profiles/netsis.json           ERP column-pair profile for inferred join edges
-nl2sql/schema_map/extra.py     extend(dataset, seed): new data tables + distractor rows, own random stream
-nl2sql/schema_map/rules.py     load_rules(), rules_text(), rule_text()
-nl2sql/index/  text.py embed.py docs.py bm25.py store.py search.py
-nl2sql/graph/  profile.py graph.py
-nl2sql/agent/modes.py          Mode, ToolContext, tools/prompt per mode
-nl2sql/eval/   retrieval.py compare_modes.py
+bilgin/schema_map/extra.py     extend(dataset, seed): new data tables + distractor rows, own random stream
+bilgin/schema_map/rules.py     load_rules(), rules_text(), rule_text()
+bilgin/index/  text.py embed.py docs.py bm25.py store.py search.py
+bilgin/graph/  profile.py graph.py
+bilgin/agent/modes.py          Mode, ToolContext, tools/prompt per mode
+bilgin/eval/   retrieval.py compare_modes.py
 eval/reference_run2.py         Q11-Q40 references (merged into eval.reference.REFERENCES)
 eval/review.py                 `python -m eval.review` -> eval/REVIEW.md
 index/ (ignored)   eval_out/<mode>/   eval_out/compare/   eval_out/retrieval/
@@ -232,7 +232,7 @@ R2-8. **Index**: one doc per table (name, module, description, columns with desc
       doc id.
 R2-9. **Index freshness**: `meta.json` stores `content_hash` (sha256 of canonical JSON of schema + rules) and the
       embedder id (`fake:256` / `openai:<model>`). Loading with another hash raises `StaleIndexError`; the CLI says
-      "İndeks eski: `python -m nl2sql build-index` çalıştırın" (exit 2) - refused, never silently rebuilt. The query
+      "İndeks eski: `python -m bilgin build-index` çalıştırın" (exit 2) - refused, never silently rebuilt. The query
       embedder is built from `meta.embedder`, so `ask`/`eval` take no `--embed`. `eval-retrieval --embed` builds its
       index **in memory** (no dependency on the on-disk index; works on a clean checkout).
 R2-10. **Join graph**: edges from schema `fk` (confidence 1.0, source "fk") + profile pairs (every table having the left
@@ -256,7 +256,7 @@ R2-13. **Verdict** (deterministic, in Python): RAG kept iff `rag.passed >= full_
       questions or limits to flip it (brief §9).
 R2-14. **What the user sees (CLI states)**: build-db prints table counts (data/distractor) + the schema token
       estimate; build-index prints doc counts per collection, embedder, dim, hash prefix, seconds; embed server down
-      -> URL + hint `NL2SQL_EMBED_BASE_URL` (exit 3, no traceback). `ask` header `Mod: rag` (+ fallback note when no
+      -> URL + hint `BILGIN_EMBED_BASE_URL` (exit 3, no traceback). `ask` header `Mod: rag` (+ fallback note when no
       fresh index); step notes per tool: search_schema `→ TBLSTHAR, TBLSTSABIT, …`, get_table_details `→ 2 tablo`,
       find_join_path `→ 2 join` (+ `⚠ düşük güven: …` line), search_rules `→ ciro, iade_orani`, sample_values
       `→ 8 değer`. `eval` prints `Mod: <mode>` before the live lines. `eval --compare` prints one summary line per mode
@@ -310,7 +310,7 @@ R2-16. **No leakage**: no index doc contains a golden question or any 6-token sh
 
 # PLAN - NL2SQL Run 3 (schema map import: Excel + live DB, and PII protection)
 
-Source: `PROJECT_BRIEF_RUN3.md`. Product name **Bilgin** (README title; package and CLI stay `nl2sql`). Everything
+Source: `PROJECT_BRIEF_RUN3.md`. Product name **Bilgin** (README title; package and CLI stay `bilgin`). Everything
 above stays valid unless a numbered "Run 3 decision" says it changes. Stack: Run 2 + **openpyxl 3.1.5** (MIT, pure
 Python; installed and pinned in pyproject before the run). No pandas, no other new dependency. Still CLI-only ->
 Decision 14 stands, no `.hybrid/visual.json`; "what users see" is CLI output and markdown reports (R3-13).
@@ -333,11 +333,11 @@ make-login-script --> db/mssql/readonly_login.sql (the primary control; policy i
 
 ```
 profiles/excel_headers.json      header synonyms for the deterministic mapping fallback
-nl2sql/schema_map/excel.py       read (sheets, header detect, preview), propose (LLM+fallback), convert (rows)
-nl2sql/schema_map/introspect.py  sqlite skeleton, MSSQL query texts + rows -> skeleton, --sample hints
-nl2sql/schema_map/merge.py       merge_map(excel, db), diff_map(excel, db) -> DiffReport, render md
-nl2sql/policy/pii.py             classes + mask fns, trace(sql, schema) lineage, filter check for predicates
-nl2sql/engine/login_script.py    readonly_login_sql(schema, login) -> T-SQL text
+bilgin/schema_map/excel.py       read (sheets, header detect, preview), propose (LLM+fallback), convert (rows)
+bilgin/schema_map/introspect.py  sqlite skeleton, MSSQL query texts + rows -> skeleton, --sample hints
+bilgin/schema_map/merge.py       merge_map(excel, db), diff_map(excel, db) -> DiffReport, render md
+bilgin/policy/pii.py             classes + mask fns, trace(sql, schema) lineage, filter check for predicates
+bilgin/engine/login_script.py    readonly_login_sql(schema, login) -> T-SQL text
 tests/fixtures/make_maps.py      generates map_netsis_style.xlsx + map_customer_map.xlsx from schema.json
 tests/fixtures/*.xlsx            the two committed fixtures
 tests/data/pii_bypass.jsonl      >= 20 bypass cases
@@ -367,7 +367,7 @@ R3-3. **Deterministic fallback** (`profiles/excel_headers.json`: canonical field
 R3-4. **Introspection.** SQLite: `sqlite_master` + `PRAGMA table_info` / `foreign_key_list`. SQL Server: query texts
       (`INFORMATION_SCHEMA.TABLES/COLUMNS`, `sys.foreign_keys` joins) live in ONE module constant, are parse-tested
       with sqlglot tsql, and the rows -> skeleton conversion is a pure function unit-tested with hand-built rows;
-      the pyodbc connection (lazy, `NL2SQL_MSSQL_CONN`, ApplicationIntent=ReadOnly) is never exercised by tests.
+      the pyodbc connection (lazy, `BILGIN_MSSQL_CONN`, ApplicationIntent=ReadOnly) is never exercised by tests.
       Skeleton schema: names, types (normalised to the T-SQL type names schema.json uses), nullability, fks;
       descriptions empty; `kind` = "unknown"; join edges stay inferred from the profile (nothing stored).
       `--sample` adds up to 5 distinct values per short text column (declared length <= 100), fetched through
@@ -479,16 +479,16 @@ cleanup) are still `[ ]`; T120's deletion is staged in the working tree. Run 4 t
 
 ```
 datasets/<name>/dataset.json + schema.json rules.json profile.json golden.jsonl [traps.jsonl] [builder.py reference.py]
-        |  nl2sql/datasets.load_dataset(name) -> Dataset (paths, as_of, seed, builder, generator, references)
+        |  bilgin/datasets.load_dataset(name) -> Dataset (paths, as_of, seed, builder, generator, references)
         v
 --dataset X --> build-db | build-index | eval-retrieval | ask | eval | eval --compare | make-login-script
         schema "Sales.Orders" --policy (qualified allowlist, unqualified -> resolved) --> executor
         --sqlite: rewrite Sales.Orders -> "Sales.Orders" (one quoted identifier) | mssql: as written
-config/models.json --nl2sql/agent/llm.load_profiles--> ModelProfile --> client_for(profile), budget
+config/models.json --bilgin/agent/llm.load_profiles--> ModelProfile --> client_for(profile), budget
 loop: before every chat: estimate(messages+tools) > budget? trim old tool answers -> still over? context_overflow
 eval --compare --models a,b --modes m1,m2 --dataset d [--repeat N]
         -> per model: ping endpoint (skip block + message if down) -> per mode x repeat: run_eval(budget)
-        -> nl2sql/eval/compare_models -> eval_out/compare_<dataset>_<ts>.json|md (model x mode table)
+        -> bilgin/eval/compare_models -> eval_out/compare_<dataset>_<ts>.json|md (model x mode table)
 ```
 
 ## Run 4 file layout additions
@@ -498,13 +498,13 @@ datasets/synthetic_erp/        dataset.json + MOVED (paths only, content byte-id
                                schema/schema.json -> schema.json, schema/rules.json -> rules.json,
                                profiles/netsis.json -> profile.json, eval/golden.jsonl -> golden.jsonl,
                                eval/traps.jsonl -> traps.jsonl
-                               (Python stays where it is: nl2sql/schema_map/{generator,extra,build}.py,
+                               (Python stays where it is: bilgin/schema_map/{generator,extra,build}.py,
                                eval/reference.py + eval/reference_run2.py; dataset.json points at them)
 datasets/wwi/                  dataset.json schema.json rules.json profile.json golden.jsonl traps.jsonl
                                builder.py (generate + build_db) reference.py (REFERENCES)
-nl2sql/datasets.py             Dataset, load_dataset(name, root), list_datasets(root), DatasetError
-nl2sql/agent/budget.py         estimate_prompt(messages, tools), trim_tool_answers(messages, limit)
-nl2sql/eval/compare_models.py  build_model_compare(cells, ...), render md, write_model_compare
+bilgin/datasets.py             Dataset, load_dataset(name, root), list_datasets(root), DatasetError
+bilgin/agent/budget.py         estimate_prompt(messages, tools), trim_tool_answers(messages, limit)
+bilgin/eval/compare_models.py  build_model_compare(cells, ...), render md, write_model_compare
 config/models.json             model profiles (no secrets: only the NAME of the key's env variable)
 tests/fixtures/datasets/mini/  3-table qualified-name dataset (Sales/Warehouse), for M11 tests before WWI exists
 tests/data/pii_bypass_wwi.jsonl  >= 20 bypass cases on WWI names
@@ -513,8 +513,8 @@ data/wwi.db  db/mssql/build_wwi.sql  index/wwi/  eval_out/wwi/   (generated, ign
 
 ## Run 4 decisions
 
-R4-1. **Dataset = folder + `dataset.json`** (Contracts). `nl2sql/datasets.load_dataset(name, root=None)`; `root`
-      default = `config.datasets_dir()` (env `NL2SQL_DATASETS_DIR`, read at call time, default `<ROOT>/datasets`) so
+R4-1. **Dataset = folder + `dataset.json`** (Contracts). `bilgin/datasets.load_dataset(name, root=None)`; `root`
+      default = `config.datasets_dir()` (env `BILGIN_DATASETS_DIR`, read at call time, default `<ROOT>/datasets`) so
       tests point at `tests/fixtures/datasets` without monkeypatching globals (Decision 9). Code references in
       dataset.json are `"module.path:attr"` (imported) or `"file.py:attr"` (loaded by path from the dataset folder
       with `importlib.util.spec_from_file_location`, module name `nl2sql_dataset_<name>_<stem>`; the repo-root
@@ -575,10 +575,10 @@ R4-7. **PII on qualified names + denied columns.** `pii.column_map` keys are `(F
       Login script: `OWNER = "dbo"` is replaced by each table's own schema (bracketed), dbo for bare names.
 R4-8. **Index belongs to a dataset.** build-index writes `meta.dataset`; `FileStore.load_checked(expected_hash,
       dataset=None)` raises `ForeignIndexError` (subclass of `StaleIndexError`, so every existing `except` keeps
-      catching it) with "İndeks başka veri kümesine ait: <stored> (istenen <wanted>); `python -m nl2sql build-index
+      catching it) with "İndeks başka veri kümesine ait: <stored> (istenen <wanted>); `python -m bilgin build-index
       --dataset <wanted>` çalıştırın." when they differ; meta without `dataset` counts as "synthetic_erp".
       Search answers, ask's step notes and the eval-retrieval table print qualified names: the CLI regexes
-      `SCHEMA_HIT`/`DETAIL_HEAD` in nl2sql/cli/main.py accept `Schema.Table` (mixed case, one dot).
+      `SCHEMA_HIT`/`DETAIL_HEAD` in bilgin/cli/main.py accept `Schema.Table` (mixed case, one dot).
 R4-9. **WWI dataset (fictional rows, Microsoft's public names).** 20 tables: Application.{Countries,
       StateProvinces, Cities, DeliveryMethods, People}, Sales.{BuyingGroups, Customers, Orders, OrderLines, Invoices,
       InvoiceLines, CustomerTransactions}, Warehouse.{StockGroups, StockItems, StockItemStockGroups,
@@ -657,7 +657,7 @@ R4-15. **Test rule kept** (brief §0, R3-12): tests over golden sets, datasets o
 
 | Shape | Producer -> Consumer | Fields (optional = default) |
 |---|---|---|
-| dataset.json | `datasets/<name>/` -> nl2sql/datasets.py | `{"name", "display_name"=name, "dialect"="tsql", "connection"="sqlite" ("sqlite"\|"mssql"), "default_schema"=null, "as_of", "seed"=42, "files":{"schema"="schema.json","rules"="rules.json","profile"="profile.json","golden"="golden.jsonl","traps"=null}, "builder" ("mod:attr"\|"file.py:attr", `build_db(seed, db_path, sql_path) -> checksum`), "generator" (`generate(seed) -> Dataset rows`), "references" (`REFERENCES` dict), "fake_fallback_sql"=first golden SQL, "outputs":{"db","mssql_script","index_dir","eval_out"} (R4-3 defaults)}` |
+| dataset.json | `datasets/<name>/` -> bilgin/datasets.py | `{"name", "display_name"=name, "dialect"="tsql", "connection"="sqlite" ("sqlite"\|"mssql"), "default_schema"=null, "as_of", "seed"=42, "files":{"schema"="schema.json","rules"="rules.json","profile"="profile.json","golden"="golden.jsonl","traps"=null}, "builder" ("mod:attr"\|"file.py:attr", `build_db(seed, db_path, sql_path) -> checksum`), "generator" (`generate(seed) -> Dataset rows`), "references" (`REFERENCES` dict), "fake_fallback_sql"=first golden SQL, "outputs":{"db","mssql_script","index_dir","eval_out"} (R4-3 defaults)}` |
 | `Dataset` | datasets.load_dataset -> CLI, runner, tests | frozen: `name, display_name, dialect, connection, default_schema, as_of, seed, root: Path, schema_path, rules_path, profile_path, golden_path, traps_path: Path\|None, db_path, mssql_script, index_dir, eval_out, fake_fallback_sql`; methods `build_db(seed=None, db_path=None, sql_path=None)`, `generate(seed=None)`, `references() -> dict`, `schema()`, `rules()`, `golden()` (runner.load_golden defaults) |
 | table name | schema.json -> doc, policy, executor, graph, index, pii, login script | `"Schema.Table"` outside `default_schema`, bare inside; fk `"Schema.Table.Column"` (split with `doc.split_fk`) |
 | column (ext.) | schema.json -> doc, index.docs, policy, login_script | + `deny`=false |
@@ -701,11 +701,11 @@ no CSS framework, no CDN (the built UI loads only its own files - nothing leaves
 ## Run 5 architecture
 
 ```
-Browser (web/ React, built into nl2sql/web/static) --fetch /api/*--> nl2sql/web/app.py (FastAPI, 127.0.0.1 only)
+Browser (web/ React, built into bilgin/web/static) --fetch /api/*--> bilgin/web/app.py (FastAPI, 127.0.0.1 only)
                                                                           |
-CLI `ask --json` -------------------------------------------------------> nl2sql/app/ask.py ask_payload(session, ...)
+CLI `ask --json` -------------------------------------------------------> bilgin/app/ask.py ask_payload(session, ...)
                                                                           |  (ONE code path for CLI and API)
-nl2sql/app/session.py open_session(dataset, model, llm, paths) -> Session |
+bilgin/app/session.py open_session(dataset, model, llm, paths) -> Session |
    reuses cli.main: resolve_auto, _context, make_client, build_index      v
                          agent loop (run_agent, + ask_clarification tool when ctx.clarify)
                            |                                   |
@@ -728,14 +728,14 @@ index: index/summaries.table_summaries -> collection "summaries"; search_tables(
 ## Run 5 file layout additions
 
 ```
-nl2sql/app/      __init__.py session.py (Session, open_session, SessionError) ask.py (ask_payload)
+bilgin/app/      __init__.py session.py (Session, open_session, SessionError) ask.py (ask_payload)
                  asklog.py (new_audit_id, record_ask, history, find_ask)
-nl2sql/web/      __init__.py app.py (create_app, routes) saved.py (SavedStore, SQLite) static/ (built, ignored)
-nl2sql/report/   __init__.py fmt.py shape.py chart.py facts.py guard.py narrate.py export.py
-nl2sql/engine/checks.py          post-execution warnings
-nl2sql/schema_map/rules_edit.py  validate_rule, save_rules
-nl2sql/eval/metrics.py           answered/wrong/clarification metrics
-nl2sql/index/summaries.py        deterministic table summary documents
+bilgin/web/      __init__.py app.py (create_app, routes) saved.py (SavedStore, SQLite) static/ (built, ignored)
+bilgin/report/   __init__.py fmt.py shape.py chart.py facts.py guard.py narrate.py export.py
+bilgin/engine/checks.py          post-execution warnings
+bilgin/schema_map/rules_edit.py  validate_rule, save_rules
+bilgin/eval/metrics.py           answered/wrong/clarification metrics
+bilgin/index/summaries.py        deterministic table summary documents
 datasets/synthetic_erp/ambiguous.jsonl   >= 6 ambiguous questions (dataset.json files.ambiguous)
 scripts/smoke_serve.py           starts `serve --llm fake`, calls the API, stops it (smoke)
 web/  package.json (pinned) vite.config.js index.html src/{main.jsx App.jsx styles.css}
@@ -745,12 +745,12 @@ data/bilgin.db (saved questions, ignored by data/*.db)   logs/asks.jsonl (ignore
 
 ## Run 5 decisions
 
-R5-1. **One code path.** `nl2sql/app/session.py` builds what a run needs once: `open_session(dataset=None, model=None,
+R5-1. **One code path.** `bilgin/app/session.py` builds what a run needs once: `open_session(dataset=None, model=None,
       llm="openai", models_file=None, db_path=None, index_dir=None, audit_path=config.AUDIT_LOG,
       ask_log=config.ASK_LOG)` -> `Session` (dataset, schema, rules, executor with `pii_schema`, profile, budget,
       llm kind, index dir, `agent_llm(mode)`, `narrator()`, `context(mode)`, `reload_rules()`, `ping()`). It reuses
       `cli.main.resolve_auto`, `_context`, `make_client`, `build_index` (no copies). Import rule: `cli/main.py` imports
-      `nl2sql.app` / `nl2sql.web` only inside the functions that need them, so there is no import cycle. Setup
+      `bilgin.app` / `bilgin.web` only inside the functions that need them, so there is no import cycle. Setup
       failures (unknown dataset/profile, missing key, missing DB) raise `SessionError(message, exit_code)` carrying
       the existing CLI sentences (NO_DB with `--dataset`, R4-10/R4-14 texts). `ask_payload(session, question,
       mode=None, choice=None)` is the only function that turns a question into an AskPayload; `ask --json` and
@@ -874,7 +874,7 @@ R5-16. **Saved, export, rules.** Saved questions: SQLite `config.APP_DB_PATH` (`
       (none -> `fake` under `--llm fake`, else `openai`) and reloads the session's search. README: on the demo
       datasets the rules screen edits committed files - restore with git.
 R5-17. **Frontend** (`web/`, plain JS + JSX, React 19, ECharts 6 imported from node_modules; Vite builds to
-      `../nl2sql/web/static` with `emptyOutDir`, dev proxy `/api` -> 127.0.0.1:8777; JSX automatic runtime via
+      `../bilgin/web/static` with `emptyOutDir`, dev proxy `/api` -> 127.0.0.1:8777; JSX automatic runtime via
       Vite's built-in transform). Tests: vitest in node environment - pure modules in `src/lib` and components
       rendered with `react-dom/server` `renderToStaticMarkup`. Hash routes: `#/` (Sor), `#/kurallar` (Kurallar).
       Design, states, ids and the phone fallback: R5-18. `.hybrid/visual.json` flows: R5-19.
@@ -984,14 +984,14 @@ R5-22. **Test rules kept** (R3-12/R4-15): structure over counts, no real model, 
 ## Run 6 architecture
 
 ```
-Browser --cookie bilgin_oturum--> nl2sql/web/app.py create_app(session, saved_path, static_dir, users=None)
+Browser --cookie bilgin_oturum--> bilgin/web/app.py create_app(session, saved_path, static_dir, users=None)
    web/src/main.jsx -> Root.jsx (auth gate: GET /api/auth/me first, LoginScreen or App)
                                    |
-             nl2sql/web/authz.py   current_user(request) -> User|None ; require("public"|"user"|"admin")
+             bilgin/web/authz.py   current_user(request) -> User|None ; require("public"|"user"|"admin")
                                    ROUTE_ROLES {(method, path): level}  (one table, every route)
                                    |
-   nl2sql/auth/  passwords.py (scrypt)  store.py UserStore(app DB: users, sessions, login_failures, settings)
-                 bootstrap.py (NL2SQL_DEV_ADMIN_PASSWORD on an empty users table)
+   bilgin/auth/  passwords.py (scrypt)  store.py UserStore(app DB: users, sessions, login_failures, settings)
+                 bootstrap.py (BILGIN_DEV_ADMIN_PASSWORD on an empty users table)
                                    |
    per-user: ask_payload(..., username) -> ask record.username, audit source <src>:<user>:<id>
              history / replay / export / saved filtered by username (admin: all)
@@ -1009,10 +1009,10 @@ CLI (no login): ask/eval/import-map unchanged; `user add|list|passwd|set` on the
 ## Run 6 file layout additions
 
 ```
-nl2sql/auth/        __init__.py passwords.py store.py bootstrap.py
-nl2sql/web/         authz.py (ROUTE_ROLES, current_user, require) auth_api.py (login/logout/me, users API)
+bilgin/auth/        __init__.py passwords.py store.py bootstrap.py
+bilgin/web/         authz.py (ROUTE_ROLES, current_user, require) auth_api.py (login/logout/me, users API)
                     map_api.py (template, sample, preview, apply, status) datasets_api.py (list, switch, login script)
-nl2sql/schema_map/  template.py (build_template, filled_example_workbook, header constants)
+bilgin/schema_map/  template.py (build_template, filled_example_workbook, header constants)
                     template_import.py (read_template, validate) onboard.py (previews, apply_preview, index job)
 scripts/visual_serve.py   throwaway app DB + users for the visual flows, then `serve --llm fake`
 scripts/smoke_onboard.py  template -> filled -> preview -> apply -> index -> switch -> ask (smoke)
@@ -1025,14 +1025,14 @@ real_datasets/<name>/  dataset.json schema.json rules.json profile.json golden.j
 
 ## Run 6 decisions
 
-R6-1. **Config** (`nl2sql/config.py`, existing names unchanged): `PASSWORD_MIN_LEN=10`, `SCRYPT_N=2**14`,
+R6-1. **Config** (`bilgin/config.py`, existing names unchanged): `PASSWORD_MIN_LEN=10`, `SCRYPT_N=2**14`,
       `SCRYPT_R=8`, `SCRYPT_P=1`, `SESSION_HOURS=12`, `SESSION_COOKIE="bilgin_oturum"`, `LOGIN_MAX_FAILURES=5`,
-      `LOGIN_WINDOW_MIN=15`, `LOCKOUT_MIN=15`, `DEV_ADMIN_ENV="NL2SQL_DEV_ADMIN_PASSWORD"`, `MAP_MAX_BYTES=5*1024*1024`,
+      `LOGIN_WINDOW_MIN=15`, `LOCKOUT_MIN=15`, `DEV_ADMIN_ENV="BILGIN_DEV_ADMIN_PASSWORD"`, `MAP_MAX_BYTES=5*1024*1024`,
       `MAP_PREVIEW_TTL_MIN=30`, `MAP_PREVIEWS_DIR=ROOT/data/map_previews`, `MAP_CHANGES_LOG=ROOT/logs/map_changes.jsonl`,
       `REAL_DATASETS_DIR=ROOT/real_datasets`, `TEMPLATE_FILENAME="bilgin-veritabani-sablonu.xlsx"`,
       `TEMPLATE_VERSION="1"`, `DATASET_NAME_RE=r"^[a-z][a-z0-9_]{2,30}$"`; call-time env readers like
-      `datasets_dir()`: `app_db_path()` (`NL2SQL_APP_DB` else `APP_DB_PATH`) and `real_datasets_dir()`
-      (`NL2SQL_REAL_DATASETS_DIR` else `REAL_DATASETS_DIR`). Every Run 6 caller uses the readers, so tests, the
+      `datasets_dir()`: `app_db_path()` (`BILGIN_APP_DB` else `APP_DB_PATH`) and `real_datasets_dir()`
+      (`BILGIN_REAL_DATASETS_DIR` else `REAL_DATASETS_DIR`). Every Run 6 caller uses the readers, so tests, the
       smoke and the visual server run on throwaway files and never touch `data/bilgin.db` or `real_datasets/`.
 R6-2. **Passwords** (`auth/passwords.py`, stdlib only): `hash_password(pw)` -> `scrypt$n$r$p$salt_b64$hash_b64`
       (16-byte `secrets.token_bytes` salt, dklen 32, maxmem large enough for n=2**14); `verify_password(pw, stored)`
@@ -1070,9 +1070,9 @@ R6-6. **SPA fallback.** Every GET that is not `/api/*` and not `/assets/*` retur
       `Cache-Control: no-cache` (or the Run 5 NO_UI page); unknown `/api/*` stays a JSON 404 and, with a store and no
       session, a 401. The UI decides what to show; the server never 404s a typed deep link.
 R6-7. **serve** always builds `UserStore(config.app_db_path())` and passes it. Empty users table: if
-      `NL2SQL_DEV_ADMIN_PASSWORD` is set (non-blank) `auth/bootstrap.dev_admin(store, environ)` creates `admin`/admin
+      `BILGIN_DEV_ADMIN_PASSWORD` is set (non-blank) `auth/bootstrap.dev_admin(store, environ)` creates `admin`/admin
       with that value (no minimum length for this path only), prints the brief's warning line, and never runs when
-      a user exists; otherwise serve prints "Henüz kullanıcı yok: önce `python -m nl2sql user add <ad> --role admin`
+      a user exists; otherwise serve prints "Henüz kullanıcı yok: önce `python -m bilgin user add <ad> --role admin`
       ile bir yönetici oluşturun." and exits 2 before listening. **Changes R5-15/R5-14:** the served app is no
       longer single-user; the non-loopback sentence becomes "Bilgin yalnız 127.0.0.1 üzerinde çalışır (TLS ve ağ
       erişimi kapsam dışı)." - the two existing serve tests (`tests/test_web_api.py::test_serve_*`,
@@ -1167,7 +1167,7 @@ R6-16. **Preview and apply** (`schema_map/onboard.py`, admin routes in `web/map_
       folder it created.
 R6-17. **Template download.** `GET /api/schema-map/template.xlsx` (admin) -> blank template, `Content-Disposition:
       attachment; filename=bilgin-veritabani-sablonu.xlsx`. `?from_db=1`: only when `config.backend() == "mssql"` and
-      `NL2SQL_MSSQL_CONN` is set (`GET /api/schema-map/info` -> `{"db_connection": bool}` tells the UI whether to show
+      `BILGIN_MSSQL_CONN` is set (`GET /api/schema-map/info` -> `{"db_connection": bool}` tells the UI whether to show
       the button); `introspect.mssql_skeleton()` pre-fills; a metadata/permission failure returns the blank template
       with header `X-Bilgin-Note` (percent-encoded) "Salt okunur giriş tablo bilgisini okuyamadı (VIEW DEFINITION);
       boş şablon verildi." - never another login. `GET /api/schema-map/sample.xlsx` (admin) =
@@ -1176,7 +1176,7 @@ R6-18. **Datasets API** (`web/datasets_api.py`, admin): `GET /api/datasets` -> `
       item + "active": bool, "index": {"exists", "fresh", "reason"}]}`; `POST /api/datasets/active {name}` ->
       `open_session(name, model, llm, models_file)` of the current session (paths from the dataset) -> swap (R6-10),
       store the setting, 200 `{"active", "dataset": {"name","display_name","connection"}, "notice"}` where notice is
-      `{"login_script_url": "/api/datasets/<name>/login-script.sql", "env": "NL2SQL_MSSQL_CONN", "message"}` for an
+      `{"login_script_url": "/api/datasets/<name>/login-script.sql", "env": "BILGIN_MSSQL_CONN", "message"}` for an
       mssql dataset and null otherwise; unknown 404; `SessionError` -> 409 with its sentence (the old session stays).
       `GET /api/datasets/{name}/login-script.sql` -> the folder's `readonly_login.sql`, else generated from its schema.
 R6-19. **What the user sees (web).** Same tokens, dark mode, 8px grid and the one `@media (max-width: 720px)` block
@@ -1212,11 +1212,11 @@ R6-19. **What the user sees (web).** Same tokens, dark mode, 8px grid and the on
         disabled with "Önce hataları düzeltin." while errors exist, `#map-progress` (Yazılıyor → İndeks kuruluyor →
         Hazır, or the failure sentence; polls status every 1 s), `#map-activate` "Bu veri kümesine geç"; card 3
         `#dataset-list` (name, display name, connection, index state, "Etkin" badge, `button[data-dataset-activate]`,
-        disabled without an index) and `#dataset-notice` (mssql: login-script link + "Sunucuyu NL2SQL_MSSQL_CONN
+        disabled without an index) and `#dataset-notice` (mssql: login-script link + "Sunucuyu BILGIN_MSSQL_CONN
         ile başlatın.", shown once per dataset - localStorage key `bilgin-notice-<name>` in try/catch). Phone: stat
         row 3 columns, error rows stack.
-R6-20. **Visual flows.** `scripts/visual_serve.py --port P`: sets `NL2SQL_APP_DB=data/visual/bilgin.db` and
-      `NL2SQL_REAL_DATASETS_DIR=data/visual/real_datasets` (both wiped first; refuses any path outside
+R6-20. **Visual flows.** `scripts/visual_serve.py --port P`: sets `BILGIN_APP_DB=data/visual/bilgin.db` and
+      `BILGIN_REAL_DATASETS_DIR=data/visual/real_datasets` (both wiped first; refuses any path outside
       `data/visual/`), creates `admin` (admin) and `analist` (user) with the fixture password `VISUAL_PASSWORD`
       (a throwaway value valid only in that wiped file - not a dev or production password), builds
       `data/ornek_fatura.db` with the example table (empty), then runs `serve --llm fake --port P`. Every existing
@@ -1226,8 +1226,8 @@ R6-21. New pages: `login-deeplink` (`/#/kurallar` without a session -> login sho
       -> `#/kurallar`), `users-screen` (admin -> users -> add analist2 -> table shot), `admin-map-onboard` (admin ->
       map -> `#map-template`, `#map-try-sample` -> report shot -> `#map-apply` -> progress shot -> `#map-activate`
       -> switched shot -> `#map-try-sample` again -> "name exists" error shot with `#map-apply` disabled).
-R6-22. **Smoke.** `scripts/smoke_serve.py` (existing) runs serve with a tmp `NL2SQL_APP_DB`, a random
-      `NL2SQL_DEV_ADMIN_PASSWORD` generated at run time (`secrets.token_urlsafe`), checks `/api/ask` is 401 without
+R6-22. **Smoke.** `scripts/smoke_serve.py` (existing) runs serve with a tmp `BILGIN_APP_DB`, a random
+      `BILGIN_DEV_ADMIN_PASSWORD` generated at run time (`secrets.token_urlsafe`), checks `/api/ask` is 401 without
       the cookie, logs in, then does its Run 5 steps with the cookie; `--roles` (M19) adds a `user` through
       `/api/users`, logs in as it and checks `POST /api/rules` 403 and another user's export 404.
       `scripts/smoke_onboard.py --port P`: tmp app DB + tmp real datasets dir + dev admin, template download, a
@@ -1283,7 +1283,7 @@ R6-23. **Test rules kept** (R5-22) plus: auth tests use tmp app DBs and an injec
 
 # PLAN - NL2SQL Run 7 (conversations, start screen per business role, database connections in the admin panel)
 
-Brief: `PROJECT_BRIEF_RUN7.md`. Product name Bilgin (package/CLI stay `nl2sql`). No commercial ERP product or company
+Brief: `PROJECT_BRIEF_RUN7.md`. Product name Bilgin (package/CLI stay `bilgin`). No commercial ERP product or company
 name in code, docs, UI text or test data. Milestones M21-M25 as the brief numbers them. No new dependency: DPAPI is
 `ctypes` over `crypt32`, everything else is stdlib + what pyproject already pins.
 
@@ -1319,14 +1319,14 @@ engine/dbstatus.py DbStatus thread: SELECT 1 (3 s) every DB_CHECK_S, kick() afte
 ## Run 7 file layout additions
 
 ```
-nl2sql/app/conversations.py      ConversationStore (conversations, turns) on the app DB
-nl2sql/agent/context.py          turn_summary, followup_hints, context_block, fit_history, validate_note, evidence_line
-nl2sql/agent/refine.py           CHART_WISHES table, chart_wish, chart_only, refine_hint, ambiguous_entity
-nl2sql/eval/followups.py         load_followups, run_followups, followup_metrics
-nl2sql/start/__init__.py ready.py (ReadyStore) cards.py (card_result, StartCache) seed.py suggest.py
-nl2sql/engine/dpapi.py connections.py (ConnectionStore, resolve, build_conn_str, scrub, newest_driver)
-nl2sql/engine/guard.py dbstatus.py
-nl2sql/web/conversations_api.py start_api.py connections_api.py
+bilgin/app/conversations.py      ConversationStore (conversations, turns) on the app DB
+bilgin/agent/context.py          turn_summary, followup_hints, context_block, fit_history, validate_note, evidence_line
+bilgin/agent/refine.py           CHART_WISHES table, chart_wish, chart_only, refine_hint, ambiguous_entity
+bilgin/eval/followups.py         load_followups, run_followups, followup_metrics
+bilgin/start/__init__.py ready.py (ReadyStore) cards.py (card_result, StartCache) seed.py suggest.py
+bilgin/engine/dpapi.py connections.py (ConnectionStore, resolve, build_conn_str, scrub, newest_driver)
+bilgin/engine/guard.py dbstatus.py
+bilgin/web/conversations_api.py start_api.py connections_api.py
 datasets/synthetic_erp/followups.jsonl ready_questions.json          (fixtures for fake serve, smoke, visual)
 real_datasets/wwi_real/followups.jsonl ready_questions.json
 web/src/lib/{thread,startCards,connForm}.js
@@ -1336,12 +1336,12 @@ web/src/components/{Thread,TurnCard,ConversationList,StartScreen,StartCard,Ready
 
 ## Run 7 decisions
 
-R7-1. **Config** (`nl2sql/config.py`, existing names unchanged): `CONV_KEEP_ROWS=5`, `CONV_TURNS=3`,
+R7-1. **Config** (`bilgin/config.py`, existing names unchanged): `CONV_KEEP_ROWS=5`, `CONV_TURNS=3`,
       `CONV_TITLE_CHARS=80`, `FOLLOWUP_MARKERS=("bu","bunlar","bunları","bunların","şu","şunlar","o","onlar","aynı",
       "sadece","yalnız","bunu","peki","ya","bunlardan","onun","bunun")`, `BUSINESS_ROLES` (ordered dict `satis: Satış`,
       `satin_alma: Satın alma`, `muhasebe: Muhasebe`, `yonetim: Yönetim`, `genel: Genel`), `DEFAULT_BUSINESS_ROLE="genel"`,
       `PERSONAL_CARDS=6`, `START_CACHE_S=300`, `CARD_REFRESH_MIN_S=30`, `CARD_TABLE_ROWS=10`, `SUGGEST_PER_ROLE=(2, 4)`,
-      `DB_CHECK_S=60`, `DB_CHECK_TIMEOUT_S=3`, `CONN_ENV_PREFIX="NL2SQL_MSSQL_CONN_"`, `CONN_TABLE_SAMPLE=10`.
+      `DB_CHECK_S=60`, `DB_CHECK_TIMEOUT_S=3`, `CONN_ENV_PREFIX="BILGIN_MSSQL_CONN_"`, `CONN_TABLE_SAMPLE=10`.
 R7-2. **ConversationStore** (`app/conversations.py`, same SQLite file as saved/users = `saved_path` in create_app,
       `config.app_db_path()` on the CLI; short-lived connections like `SavedStore`; injectable clock). Tables exactly as
       the brief; `conversations.id` = `uuid4().hex` (text: a URL `#/c/<id>` must not be guessable), `username` NULL in
@@ -1415,7 +1415,7 @@ R7-13. **Follow-up golden set.** Line = chain `{"id": "F01", "tags": [...], "tur
       wwi_real: 8-12 chains (entity customer/product/supplier/invoice, set "bunlardan", period + filter refinements, one
       chain standing alone in the middle, one chart-only turn whose `sql` equals the previous). Every SQL passes
       `policy.check` against the wwi_real allowlist in a test; the run on the real SQL Server is Eren's manual step
-      (README: `NL2SQL_BACKEND=mssql ... eval --followups --dataset wwi_real --llm fake`), never a task accept.
+      (README: `BILGIN_BACKEND=mssql ... eval --followups --dataset wwi_real --llm fake`), never a task accept.
       synthetic_erp gets 3 chains (deviation from the brief: the fake-served app, smoke and visual flows need chains on
       a dataset that builds locally). `fake.for_golden(..., followups=)` replays chains keyed by (question, previous
       questions read from the `Tur n sorusu:` lines) and submits the golden `uses_turns` as the note;
@@ -1486,7 +1486,7 @@ R7-22. **Connections store** (`engine/connections.py`, app DB): table per the br
       `ApplicationIntent=ReadOnly` still forced by `_mssql._read_only`. `newest_driver(drivers=pyodbc.drivers)`.
       `scrub(text, secret=None)` removes `PWD=...`/`Password=...` values and the literal secret.
 R7-23. **Resolution order** `resolve(dataset, store, active) -> {"source": "env_dataset"|"env"|"stored"|"none",
-      "conn_str"}`: `NL2SQL_MSSQL_CONN_<NAME>` > `NL2SQL_MSSQL_CONN` (only for the active dataset and only when
+      "conn_str"}`: `BILGIN_MSSQL_CONN_<NAME>` > `BILGIN_MSSQL_CONN` (only for the active dataset and only when
       `config.backend() == "mssql"` - that keeps every Run 1-6 test's backend unchanged although the variable is
       ambient in the dev shell) > stored > none. `open_session(..., connections=None)`: with an `env_dataset` or
       `stored` source and `dataset.connection == "mssql"` the executor is `LocalExecutor(backend="mssql",
@@ -1521,7 +1521,7 @@ R7-28. **Visual server** additions: users `analist` business role `satis`, new `
       `yonetim`; synthetic_erp seeds; a probe file (`synthetic_erp: ok`, a second visual dataset `vitrin_kapali`:
       the sample workbook applied + fake index, `down`); the flows that switch dataset switch back at their end.
 R7-29. **Test rules kept** (R5-22, R6-23) plus: conversation/start/connection tests use tmp app DBs; tests touching
-      connection resolution `delenv` `NL2SQL_MSSQL_CONN`, `NL2SQL_MSSQL_CONN_*` and `NL2SQL_BACKEND` first; no test
+      connection resolution `delenv` `BILGIN_MSSQL_CONN`, `BILGIN_MSSQL_CONN_*` and `BILGIN_BACKEND` first; no test
       writes a real password (values from `secrets`); scripted fakes assert agent/narrator call counts.
 
 ## Contracts (Run 7 additions)
@@ -1574,7 +1574,7 @@ R7-29. **Test rules kept** (R5-22, R6-23) plus: conversation/start/connection te
 
 # PLAN - NL2SQL Run 8 (English everywhere, template in the program's language, Windows service)
 
-Brief: `PROJECT_BRIEF_RUN8.md`. Product name Bilgin (package/CLI stay `nl2sql`). No commercial ERP product or company
+Brief: `PROJECT_BRIEF_RUN8.md`. Product name Bilgin (package/CLI stay `bilgin`). No commercial ERP product or company
 name anywhere (already guarded by `tests/test_no_erp_brand.py`, T356). **Milestone renumbering:** the brief numbers
 M24-M26, which Run 7 already used, so Run 8 continues at M26 and splits the brief's M25 in two:
 M26 = brief M24 (language core), M27 = brief M25 server half (API, CLI, template, golden/eval, README),
@@ -1590,11 +1590,11 @@ coverage (T357). **Carry-over:** T376 was ticked but its commit changed nothing 
 ## Run 8 architecture
 
 ```
-lang sources:  web: users.lang -> Accept-Language (UI sets it from its own choice) -> NL2SQL_LANG -> "tr"
-               cli: --lang -> NL2SQL_LANG -> "tr"
-nl2sql/i18n/__init__.py  t(key, lang, **params) over tr.json / en.json ; resolve_lang(...) ; LANGUAGES
-nl2sql/i18n/detect.py    detect_lang(question, fallback) -> "tr"|"en"     (deterministic, no model)
-nl2sql/i18n/scan.py      user_literals(path, allow) -> Turkish string literals that are not docstrings/log/allowed
+lang sources:  web: users.lang -> Accept-Language (UI sets it from its own choice) -> BILGIN_LANG -> "tr"
+               cli: --lang -> BILGIN_LANG -> "tr"
+bilgin/i18n/__init__.py  t(key, lang, **params) over tr.json / en.json ; resolve_lang(...) ; LANGUAGES
+bilgin/i18n/detect.py    detect_lang(question, fallback) -> "tr"|"en"     (deterministic, no model)
+bilgin/i18n/scan.py      user_literals(path, allow) -> Turkish string literals that are not docstrings/log/allowed
 
 POST /api/ask -> web/lang.request_lang(request, user) = ui_lang
    -> ask_payload(..., lang=ui_lang): answer_lang = detect_lang(question, ui_lang)
@@ -1609,18 +1609,18 @@ POST /api/ask -> web/lang.request_lang(request, user) = ui_lang
 GET /api/schema-map/template.xlsx?lang= -> template.build_template(skeleton, lang)   (sheet names, headers, Y/N, _bilgin.lang)
 template_import.read_template: sheet/header aliases of BOTH languages (profiles/excel_headers.json), E/H/Y/N booleans
 
-config: HOME = NL2SQL_HOME or ROOT (import time) -> app DB, logs, map previews, eval_out, index, secrets under HOME
-python -m nl2sql paths | service-xml | service-check | secret-set
-deploy/windows/bilgin.xml (WinSW template) <- nl2sql/service/winsw.render_xml <- scripts/install-service.ps1
-service: C:\ProgramData\Bilgin\service\Bilgin.exe (WinSW) + Bilgin.xml -> .venv python -m nl2sql serve ...
+config: HOME = BILGIN_HOME or ROOT (import time) -> app DB, logs, map previews, eval_out, index, secrets under HOME
+python -m bilgin paths | service-xml | service-check | secret-set
+deploy/windows/bilgin.xml (WinSW template) <- bilgin/service/winsw.render_xml <- scripts/install-service.ps1
+service: C:\ProgramData\Bilgin\service\Bilgin.exe (WinSW) + Bilgin.xml -> .venv python -m bilgin serve ...
 ```
 
 ## Run 8 file layout additions
 
 ```
-nl2sql/i18n/__init__.py tr.json en.json detect.py scan.py
-nl2sql/web/lang.py                       request_lang, PUT /api/auth/me {lang} lives in auth_api.py
-nl2sql/service/__init__.py winsw.py paths.py secrets.py
+bilgin/i18n/__init__.py tr.json en.json detect.py scan.py
+bilgin/web/lang.py                       request_lang, PUT /api/auth/me {lang} lives in auth_api.py
+bilgin/service/__init__.py winsw.py paths.py secrets.py
 deploy/windows/bilgin.xml                WinSW XML template (@TOKENS@), deploy/windows/.gitignore (WinSW-x64.exe)
 scripts/install-service.ps1 uninstall-service.ps1 update-service.ps1
 datasets/wwi/golden_en.jsonl followups_en.jsonl ready_questions.json
@@ -1632,13 +1632,13 @@ tests/readme_text.py                     helper: README.md + README.tr.md text (
 
 ## Run 8 decisions
 
-R8-1. **Config** (names kept): `LANGUAGES = ("tr", "en")`, `DEFAULT_LANG = "tr"`, `lang()` = `NL2SQL_LANG` if in
+R8-1. **Config** (names kept): `LANGUAGES = ("tr", "en")`, `DEFAULT_LANG = "tr"`, `lang()` = `BILGIN_LANG` if in
       LANGUAGES else DEFAULT_LANG (an unknown value -> DEFAULT_LANG, no crash), `TEMPLATE_FILENAMES = {"tr":
       "bilgin-veritabani-sablonu.xlsx", "en": "bilgin-database-template.xlsx"}` (TEMPLATE_FILENAME stays = tr),
       `SERVICE_NAME = "Bilgin"`, `SERVICE_PORT = 8777`, `SERVICE_HOME = r"C:\ProgramData\Bilgin"`,
       `DETECT_EN_WORDS`, `DETECT_TR_WORDS` (~25 stopwords each), `FOLLOWUP_MARKERS_EN = ("this","these","those","it",
       "them","that","same","only","just","their","its")`.
-R8-2. **Catalogs.** `nl2sql/i18n/{tr,en}.json`: flat dotted keys (`api.ask.blank`, `facts.row_count`, `cli.ask.help`,
+R8-2. **Catalogs.** `bilgin/i18n/{tr,en}.json`: flat dotted keys (`api.ask.blank`, `facts.row_count`, `cli.ask.help`,
       ...), values with `{name}` placeholders. `t(key, lang, **params)`: unknown lang -> tr; key missing in that
       catalog -> tr value; missing everywhere -> `KeyError` (tests catch typos). A test asserts identical key sets
       and identical placeholder sets per key. Catalogs are read once (lru_cache). Each migration task adds only its
@@ -1654,12 +1654,12 @@ R8-3. **Which strings move.** User-facing = HTTP `detail`/`errors`/`message`, pa
 R8-4. **Scan.** `i18n/scan.user_literals(path, allow=())` walks the AST: string constants (also inside f-strings)
       containing `[çğıöşüÇĞİÖŞÜ]` that are not a docstring, not an argument of a `logging`/`log.`/`logger.` call, and
       not assigned to a name in `allow`. Each migration task's test asserts `user_literals(<its module>, allow=...)
-      == []` for its own module(s); T425 asserts the whole list. Scanned modules (final list): `nl2sql/web/*.py`,
-      `nl2sql/cli/*.py`, `nl2sql/app/ask.py`, `nl2sql/report/{facts,narrate,chart,export,guard}.py`,
-      `nl2sql/eval/{report,runner,followups,compare,compare_models,compare_modes,retrieval}.py`,
-      `nl2sql/schema_map/{template,template_import,onboard,rules_edit,rules}.py`, `nl2sql/engine/{guard,connections,
-      dbstatus,dpapi}.py`, `nl2sql/auth/store.py`, `nl2sql/start/{ready,cards,suggest,seed}.py`,
-      `nl2sql/agent/{refine,context}.py`. Allow-lists name model-facing constants only (e.g. `narrate.SYSTEM`,
+      == []` for its own module(s); T425 asserts the whole list. Scanned modules (final list): `bilgin/web/*.py`,
+      `bilgin/cli/*.py`, `bilgin/app/ask.py`, `bilgin/report/{facts,narrate,chart,export,guard}.py`,
+      `bilgin/eval/{report,runner,followups,compare,compare_models,compare_modes,retrieval}.py`,
+      `bilgin/schema_map/{template,template_import,onboard,rules_edit,rules}.py`, `bilgin/engine/{guard,connections,
+      dbstatus,dpapi}.py`, `bilgin/auth/store.py`, `bilgin/start/{ready,cards,suggest,seed}.py`,
+      `bilgin/agent/{refine,context}.py`. Allow-lists name model-facing constants only (e.g. `narrate.SYSTEM`,
       `refine.CHART_WISHES`, `config.FOLLOWUP_MARKERS`).
 R8-5. **Language resolution.** Web: `request_lang(request, user)` = `user["lang"]` if set -> first primary subtag of
       `Accept-Language` in LANGUAGES -> `config.lang()`. `users.lang TEXT NULL` added by `ALTER TABLE` when missing
@@ -1667,7 +1667,7 @@ R8-5. **Language resolution.** Web: `request_lang(request, user)` = `user["lang"
       `tests/test_web_users_api.py` FIELDS edited by T403 (named). `PUT /api/auth/me {lang}` (user role; 422 for a
       value outside LANGUAGES) returns the me body; ROUTE_ROLES gets the row in the same task. CLI: a parent parser
       adds `--lang` to the top parser and every subcommand; help language = a pre-scan of argv for `--lang X`, then
-      `NL2SQL_LANG`, then tr; `build_parser(lang)`.
+      `BILGIN_LANG`, then tr; `build_parser(lang)`.
 R8-6. **Question language** `detect_lang(text, fallback)`: score_tr = Turkish-letter count*2 + TR stopword hits,
       score_en = EN stopword hits (words folded, ASCII split); higher wins, tie -> fallback. Payload key
       `answer_lang` always present (ask, replay, card open, chart-only, down_payload = ui lang, clarification).
@@ -1710,12 +1710,12 @@ R8-12. **Template per language** (`schema_map/template.py`): `LABELS = {"tr": {.
       canonical role); `_EH` accepts `e/h/y/n/evet/hayır/yes/no`; issues worded in the request lang
       (`read_template(path, llm=None, lang="tr")`, `validate(..., lang="tr")`). Same content in either template ->
       byte-identical `schema.json` and `rules.json`. API: `?lang=` > request_lang; filename by lang.
-      CLI `python -m nl2sql template --lang tr|en --out FILE [--dataset NAME (skeleton)]`.
+      CLI `python -m bilgin template --lang tr|en --out FILE [--dataset NAME (skeleton)]`.
 R8-13. **synonyms_en.** Optional list on a rule (rules.py validation: list of non-empty strings); rules API/editor
       field `synonyms_en` (`#rule-synonyms-en`); index rule document text includes both lists; BM25 synonym rewrite
       uses both. A rule without it behaves as today.
 R8-14. **README.** `README.md` English, first line links `README.tr.md` ("Türkçe"); `README.tr.md` = today's Turkish
-      README + Run 8 sections; both list the same commands (a test compares the set of `` `python -m nl2sql ...` ``
+      README + Run 8 sections; both list the same commands (a test compares the set of `` `python -m bilgin ...` ``
       commands). README pins in tests read both files through `tests/readme_text.py` (T422 edits only the read line
       of each named test).
 R8-15. **Web i18n.** `web/src/i18n/index.js`: `registerCatalog(lang, obj)`, `loadCatalog(lang)` (dynamic
@@ -1736,22 +1736,22 @@ R8-17. **Screens.** Every visible string, `aria-label`, `title`, `placeholder` o
       tr and en, same ids set, en output has no `[çğıöşüÇĞİÖŞÜ]` outside server-provided fixture data. Phone layout:
       English strings are longer - buttons wrap inside the existing `@media (max-width: 720px)` block, never a
       horizontal scroll (visual pages at 390 check it).
-R8-18. **Bundle scan.** After `vite build`, every `nl2sql/web/static/assets/*.js|*.css` except the tr catalog chunk
+R8-18. **Bundle scan.** After `vite build`, every `bilgin/web/static/assets/*.js|*.css` except the tr catalog chunk
       (`tr-*.js`) contains no `[çğıöşüÇĞİÖŞÜ]`; `index.html` likewise (its `lang` attribute is set at runtime).
 R8-19. **Facts panel** (brief §2, T359 follow-up): Evidence lists, under `#evidence-facts` heading "Diğer olgular" /
       "Other facts", exactly the facts not in the card's chip row (same selection function `chipFacts(facts)` exported
       from AnswerCard's lib, reused by Evidence); none left -> no list. Pins edited by T391 (named):
       `EvidenceRowDump.test.jsx` "no .facts list", `AnswerCard.test.jsx`, `AnswerCardFacts.test.jsx`.
-R8-20. **NL2SQL_HOME.** `config.HOME = Path(NL2SQL_HOME or ROOT)` at import; under it `data/bilgin.db`,
+R8-20. **BILGIN_HOME.** `config.HOME = Path(BILGIN_HOME or ROOT)` at import; under it `data/bilgin.db`,
       `data/map_previews`, `logs/{asks,audit,map_changes}.jsonl`, `eval_out/`, `index/`, `secrets/`. Dataset `outputs.
       index_dir` and `eval_out` resolve against HOME, `db`/`mssql_script` against ROOT (fixtures ship with the code).
-      `NL2SQL_APP_DB`, `NL2SQL_DATASETS_DIR`, `NL2SQL_REAL_DATASETS_DIR` still override. Onboarded datasets: when
-      `NL2SQL_HOME` is set -> `HOME/datasets` (also searched by the loader); unset -> `real_datasets_dir()` as today.
-      Unset HOME = every path identical to Run 7. `python -m nl2sql paths [--json]` prints each name -> path
+      `BILGIN_APP_DB`, `BILGIN_DATASETS_DIR`, `BILGIN_REAL_DATASETS_DIR` still override. Onboarded datasets: when
+      `BILGIN_HOME` is set -> `HOME/datasets` (also searched by the loader); unset -> `real_datasets_dir()` as today.
+      Unset HOME = every path identical to Run 7. `python -m bilgin paths [--json]` prints each name -> path
       (never a secret or connection string).
 R8-21. **Secrets folder.** `service/secrets.py read_secret(env_name, home=None) -> str|None` reads
       `HOME/secrets/<ENV_NAME>.bin` (DPAPI machine scope, entropy UTF-8 `"bilgin-secret:" + ENV_NAME`); llm
-      `_api_key` / `key_missing_reason`: env var first, then the secrets file. `python -m nl2sql secret-set ENV_NAME`
+      `_api_key` / `key_missing_reason`: env var first, then the secrets file. `python -m bilgin secret-set ENV_NAME`
       (getpass, writes the blob; Windows only, exit 2 elsewhere). The install script writes the same blob with
       `[Security.Cryptography.ProtectedData]::Protect(..., 'LocalMachine')` and the same entropy.
 R8-22. **WinSW.** v2.12.0 x64 (MIT), URL `https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe`,
@@ -1763,21 +1763,21 @@ R8-22. **WinSW.** v2.12.0 x64 (MIT), URL `https://github.com/winsw/winsw/release
       <delayedAutoStart>true</delayedAutoStart>`, `<onfailure action="restart" delay="10 sec"/>` 30 / 60,
       `<resetfailure>1 hour</resetfailure>`, `<log mode="roll-by-size"><sizeThreshold>10240</sizeThreshold><keepFiles>
       8</keepFiles></log>`, `<serviceaccount><domain>NT SERVICE</domain><user>Bilgin</user><allowservicelogon>true
-      </allowservicelogon></serviceaccount>`; env keys exactly NL2SQL_HOME, NL2SQL_LANG, NL2SQL_BACKEND,
-      NL2SQL_DATASETS_DIR; refuses any env key matching `PASSWORD|KEY|SECRET|CONN|TOKEN`. `python -m nl2sql
+      </allowservicelogon></serviceaccount>`; env keys exactly BILGIN_HOME, BILGIN_LANG, BILGIN_BACKEND,
+      BILGIN_DATASETS_DIR; refuses any env key matching `PASSWORD|KEY|SECRET|CONN|TOKEN`. `python -m bilgin
       service-xml --port --dataset --home --lang --out` writes it.
-R8-23. **Install script.** Params `-Port 8777 -Dataset <active> -Home C:\ProgramData\Bilgin -Lang <NL2SQL_LANG|tr>
+R8-23. **Install script.** Params `-Port 8777 -Dataset <active> -Home C:\ProgramData\Bilgin -Lang <BILGIN_LANG|tr>
       -WhatIf -CopyAppDb`. Steps print as `[<id>] <text>` with ids in order: `admin, powershell, dev-admin-env, venv,
       port, model, connection, winsw, home, acl, copy-app-db, copy-index, secrets, admin-user, xml, install, start,
-      health`. `dev-admin-env` refuses (exit 1, no change) when `NL2SQL_DEV_ADMIN_PASSWORD` is set at Machine level
+      health`. `dev-admin-env` refuses (exit 1, no change) when `BILGIN_DEV_ADMIN_PASSWORD` is set at Machine level
       or in the process. `-WhatIf`: no change, no download, prints every step with "WHATIF" and the generated XML;
-      the admin check is reported and does not stop a WhatIf. `model` and `connection` use `python -m nl2sql
+      the admin check is reported and does not stop a WhatIf. `model` and `connection` use `python -m bilgin
       service-check --dataset D --json` -> `{"model": {"ok", "message"}, "connection": {"source", "ok", "lines"}}`
-      (warnings only). update: stop -> `vite build` if `web/` is newer than `nl2sql/web/static/index.html` -> start ->
+      (warnings only). update: stop -> `vite build` if `web/` is newer than `bilgin/web/static/index.html` -> start ->
       health. uninstall: stop, uninstall, keep HOME unless `-RemoveData` (+ confirmation). Scripts are ASCII-only
       (Windows PowerShell 5.1 reads UTF-8 without BOM as ANSI).
-R8-24. **Test rules kept** (R5-22, R6-23, R7-29) plus: tests that read `NL2SQL_LANG` or `Accept-Language` set them
-      explicitly (`monkeypatch.delenv("NL2SQL_LANG")` where tr is expected); no test installs a service, downloads
+R8-24. **Test rules kept** (R5-22, R6-23, R7-29) plus: tests that read `BILGIN_LANG` or `Accept-Language` set them
+      explicitly (`monkeypatch.delenv("BILGIN_LANG")` where tr is expected); no test installs a service, downloads
       WinSW, or needs admin; PowerShell tests run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ...
       -WhatIf` and skip off Windows; DPAPI tests skip off Windows.
 R8-25. **Visual pages in English** (`.hybrid/visual.json`, all `"from": "M28"`, both widths; each ends by clicking
@@ -1792,22 +1792,22 @@ R8-25. **Visual pages in English** (`.hybrid/visual.json`, all `"from": "M28"`, 
 
 | Shape | Producer -> Consumer | Fields (optional = default) |
 |---|---|---|
-| catalog | `nl2sql/i18n/*.json`, `web/src/i18n/*.json` -> `t()` | `{"dotted.key": "text with {param}"}`; both langs same keys, same params per key |
+| catalog | `bilgin/i18n/*.json`, `web/src/i18n/*.json` -> `t()` | `{"dotted.key": "text with {param}"}`; both langs same keys, same params per key |
 | AskPayload (ext.) | ask_payload, replay, card open, down_payload -> API, CLI `--json`, UI | + `"answer_lang": "tr"\|"en"` (always) |
 | Fact (ext.) | compute_facts(lang) -> payload, guard, narrator | same keys; `label`, `display` in answer_lang |
 | chart_spec (ext.) | chart_spec(lang) -> payload.chart | titles/`reason` in answer_lang; option numbers raw (UI formats) |
 | GuardResult (ext.) | check_text(text, allowed, lang) -> narrate | same fields; foreign-format tokens appear in `rejected` |
 | User (ext.) | UserStore -> me, login 200, users API | + `"lang": "tr"\|"en"\|null` (null = no preference) |
 | me PUT body | LangToggle -> `PUT /api/auth/me` | `{"lang": "tr"\|"en"}` -> 200 me body; other value 422 |
-| request lang | request_lang -> every route's text | user.lang > Accept-Language primary tag > NL2SQL_LANG > "tr" |
+| request lang | request_lang -> every route's text | user.lang > Accept-Language primary tag > BILGIN_LANG > "tr" |
 | golden_en line | golden_en.jsonl -> eval, fake | Turkish line + `"source_id": "Q.."`, `id` "E..", English `question` |
 | dataset.json (ext.) | dataset -> loader | `files.golden_en`?, `files.followups_en`? (absent = Turkish only) |
 | eval report (ext.) | eval -> report.json, compare report | + `"lang": "tr"\|"en"` |
 | rule (ext.) | rules.json, rules API, template -> index, prompt | + `"synonyms_en": [str]` = [] |
 | template `_bilgin` (ext.) | build_template -> import | rows mark, version, + `lang` |
 | template preview (ext.) | read_template/validate(lang) -> map screen | same shape, `message` texts in request lang |
-| paths | `python -m nl2sql paths --json` -> install script, README | `{"home", "app_db", "logs", "ask_log", "audit_log", "map_changes", "map_previews", "eval_out", "index", "secrets", "datasets": [..], "onboard_dir"}` |
-| service-check | `nl2sql service-check --json` -> install script | `{"model": {"ok": bool, "message": str}, "connection": {"source": str, "ok": bool\|null, "lines": [str]}}` |
+| paths | `python -m bilgin paths --json` -> install script, README | `{"home", "app_db", "logs", "ask_log", "audit_log", "map_changes", "map_previews", "eval_out", "index", "secrets", "datasets": [..], "onboard_dir"}` |
+| service-check | `bilgin service-check --json` -> install script | `{"model": {"ok": bool, "message": str}, "connection": {"source": str, "ok": bool\|null, "lines": [str]}}` |
 | service XML | render_xml -> WinSW | id/name/description/executable/arguments/workingdirectory/logpath/env(4 keys)/serviceaccount/onfailure x3; no secret |
 | secret blob | install script / secret-set -> read_secret | `HOME/secrets/<ENV>.bin`, DPAPI LocalMachine, entropy `bilgin-secret:<ENV>` |
 
@@ -1822,6 +1822,6 @@ R8-25. **Visual pages in English** (`.hybrid/visual.json`, all `"from": "M28"`, 
   README en/tr. Integration: real create_app with an `en` user: ask, template download -> preview -> apply, errors.
 - **M28 - Web UI in English** (T428-T445): i18n core, format, api header, LangToggle, every screen, bundle scan,
   visual pages in English. Integration: built bundle scan + served app returning English for an en user.
-- **M29 - Windows service** (T446-T455): NL2SQL_HOME paths, paths CLI, secrets reader + secret-set, service-check,
+- **M29 - Windows service** (T446-T455): BILGIN_HOME paths, paths CLI, secrets reader + secret-set, service-check,
   WinSW template + render, install/uninstall/update scripts with -WhatIf, README section, full-repo scan.
-  Integration: `NL2SQL_HOME=tmp` serve started for real -> app DB, logs, index under tmp, `/api/health` answers.
+  Integration: `BILGIN_HOME=tmp` serve started for real -> app DB, logs, index under tmp, `/api/health` answers.

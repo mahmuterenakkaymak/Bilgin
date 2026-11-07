@@ -3,7 +3,7 @@
 
 """T463: durum noktası sunucunun BAŞLADIĞI kümeyi değil o anki etkin kümeyi izler (PLAN R7-23, Contracts "health db").
 
-Genel ``NL2SQL_MSSQL_CONN`` yalnız etkin kümenin olduğundan bekçi etkin kümenin adını sunucunun
+Genel ``BILGIN_MSSQL_CONN`` yalnız etkin kümenin olduğundan bekçi etkin kümenin adını sunucunun
 başlangıcından alıyordu: geçişten sonra yeni kümenin noktası hiç yanmıyor ("none"), eski küme
 genel değişkenle yoklanmaya devam ediyordu. Dünya ``tests/test_serve_app_db.py`` ile aynı gerçeklikte
 - tmp'de iki SQL Server kümesi, sahte model, ``run_server`` yerine geçen bir kapı - bir de
@@ -20,11 +20,11 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.engine import dbstatus
-from nl2sql.engine.connections import ConnectionStore
+from bilgin import config
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.engine import dbstatus
+from bilgin.engine.connections import ConnectionStore
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 PAROLA = "Bilgin2026!erp"
@@ -60,12 +60,12 @@ class Ping:
 def baglantilar(monkeypatch):
     """İki SQL Server kümesi, genel ortam değişkeni ve mssql yedeği; kabuktaki her bağlantı silinir."""
     for name in [n for n in os.environ if n.startswith(config.CONN_ENV_PREFIX)] + [
-        "NL2SQL_MSSQL_CONN",
-        "NL2SQL_BACKEND",
+        "BILGIN_MSSQL_CONN",
+        "BILGIN_BACKEND",
     ]:
         monkeypatch.delenv(name, raising=False)
-    monkeypatch.setenv("NL2SQL_BACKEND", "mssql")
-    monkeypatch.setenv("NL2SQL_MSSQL_CONN", GENEL)
+    monkeypatch.setenv("BILGIN_BACKEND", "mssql")
+    monkeypatch.setenv("BILGIN_MSSQL_CONN", GENEL)
     return monkeypatch
 
 
@@ -75,9 +75,9 @@ def world(tmp_path, baglantilar, capsys):
     root = tmp_path / "datasets"
     copy_dataset(root, "alfa")
     copy_dataset(root, "beta")
-    baglantilar.setenv("NL2SQL_DATASETS_DIR", str(root))
+    baglantilar.setenv("BILGIN_DATASETS_DIR", str(root))
     baglantilar.setattr(config, "ROOT", tmp_path)
-    baglantilar.setenv("NL2SQL_APP_DB", str(tmp_path / "app.db"))
+    baglantilar.setenv("BILGIN_APP_DB", str(tmp_path / "app.db"))
     baglantilar.delenv(config.DEV_ADMIN_ENV, raising=False)
     baglantilar.setattr(config, "AUDIT_LOG", tmp_path / "audit.jsonl")
     baglantilar.setattr(config, "ASK_LOG", tmp_path / "asks.jsonl")

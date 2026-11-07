@@ -17,10 +17,10 @@ import json
 import pytest
 from sqlglot import exp, parse_one
 
-from nl2sql.datasets import load_dataset
-from nl2sql.graph.graph import build_graph
-from nl2sql.graph.profile import load_profile
-from nl2sql.index import docs as docs_mod
+from bilgin.datasets import load_dataset
+from bilgin.graph.graph import build_graph
+from bilgin.graph.profile import load_profile
+from bilgin.index import docs as docs_mod
 
 DATASET = load_dataset("wwi")
 SCHEMA = DATASET.schema()

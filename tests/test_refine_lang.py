@@ -9,9 +9,9 @@ sorulur. Şıkkın cümlesi, kanıt satırı ve modelsiz sunumun cümlesi catalo
 Türkçeleri eskisiyle aynıdır. İddialar sözel: veritabanı yok, model yok.
 """
 
-from nl2sql.agent import context, refine
-from nl2sql.agent.context import evidence_line, followup_hints
-from nl2sql.i18n.scan import user_literals
+from bilgin.agent import context, refine
+from bilgin.agent.context import evidence_line, followup_hints
+from bilgin.i18n.scan import user_literals
 
 # Kolon adları ASCII, açıklamaları İngilizce: etiket oradan okunur, teknik ad ekrana çıkmaz.
 SCHEMA = {

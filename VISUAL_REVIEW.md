@@ -1,6 +1,6 @@
 # VISUAL_REVIEW — M28 (web UI in English), 2026-10-28
 
-**Run caveat.** This server and bundle are current (the login refusal comes back as "The username or password is wrong." and `nl2sql/web/static` was built at 03:18, two minutes before the first frame), but the 1366 pass lost its last shots on `saved-and-history-sidebar`, `admin-map-onboard` and `conversation-three-turns` to shared-server state, not to the UI: `#sidebar-toggle` is `display:none` at desktop width, and `#map-apply` was already disabled by the `ornek_fatura` the 390 pass had created. The 401 lines are the boot `/api/auth/me` probe, the 429 the card-refresh throttle, the 409 the duplicate username.
+**Run caveat.** This server and bundle are current (the login refusal comes back as "The username or password is wrong." and `bilgin/web/static` was built at 03:18, two minutes before the first frame), but the 1366 pass lost its last shots on `saved-and-history-sidebar`, `admin-map-onboard` and `conversation-three-turns` to shared-server state, not to the UI: `#sidebar-toggle` is `display:none` at desktop width, and `#map-apply` was already disabled by the `ornek_fatura` the 390 pass had created. The 401 lines are the boot `/api/auth/me` probe, the 429 the card-refresh throttle, the 409 the duplicate username.
 
 ## Real problems
 

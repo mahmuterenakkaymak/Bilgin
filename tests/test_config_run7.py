@@ -9,7 +9,7 @@
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 RUN7_VALUES = {
     "CONV_KEEP_ROWS": 5,
@@ -23,7 +23,7 @@ RUN7_VALUES = {
     "SUGGEST_PER_ROLE": (2, 4),
     "DB_CHECK_S": 60,
     "DB_CHECK_TIMEOUT_S": 3,
-    "CONN_ENV_PREFIX": "NL2SQL_MSSQL_CONN_",
+    "CONN_ENV_PREFIX": "BILGIN_MSSQL_CONN_",
     "CONN_TABLE_SAMPLE": 10,
 }
 

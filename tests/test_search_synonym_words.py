@@ -12,10 +12,10 @@ orada biter), gerçek küme üzerinde ise tek yönlü iddia: hiçbir golden soru
 bir parça yüzünden döviz kuralını yakalamıyor.
 """
 
-from nl2sql.eval.runner import load_golden
-from nl2sql.index.search import synonym_query
-from nl2sql.index.text import fold, tokens
-from nl2sql.schema_map.rules import load_rules
+from bilgin.eval.runner import load_golden
+from bilgin.index.search import synonym_query
+from bilgin.index.text import fold, tokens
+from bilgin.schema_map.rules import load_rules
 
 # Elle kurulu kural: eş anlamlıları kısa, yani kelime testi ancak burada görülür.
 DOVIZ = {"id": "doviz_tl", "term": "döviz kuru", "synonyms": ["kur", "USD"]}

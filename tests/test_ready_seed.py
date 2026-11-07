@@ -17,16 +17,16 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.policy import policy
-from nl2sql.schema_map import build, doc
-from nl2sql.start.cards import card_result
-from nl2sql.start.ready import DISPLAYS, EVERY_ROLE, ReadyStore
-from nl2sql.start.seed import SETTING, ensure_seeded
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.engine.executor import LocalExecutor
+from bilgin.policy import policy
+from bilgin.schema_map import build, doc
+from bilgin.start.cards import card_result
+from bilgin.start.ready import DISPLAYS, EVERY_ROLE, ReadyStore
+from bilgin.start.seed import SETTING, ensure_seeded
 
 SYNTHETIC = "synthetic_erp"
 WWI = "wwi_real"
@@ -206,9 +206,9 @@ def test_the_first_serve_of_a_dataset_writes_its_seeds(tmp_path, monkeypatch, ca
     """Çağrı yeri (R7-19): ``serve`` açılışta tohumu yazar - küme geçişi de aynı kapıdan geçer."""
     _mini(tmp_path, [MINI_OK])
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path / "datasets"))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
-    monkeypatch.setenv("NL2SQL_APP_DB", str(tmp_path / "app.db"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(tmp_path / "datasets"))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
+    monkeypatch.setenv("BILGIN_APP_DB", str(tmp_path / "app.db"))
     assert cli.build_database(dataset="mini") == 0
     users = UserStore(tmp_path / "app.db")
     users.add_user("admin", PAROLA, "admin")

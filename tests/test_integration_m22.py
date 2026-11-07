@@ -13,13 +13,13 @@ satırlarından kurar, seçilen şık o turu tamamlar.
 
 import pytest
 
-from nl2sql import config
-from nl2sql.app.ask import ask_payload
-from nl2sql.app.conversations import ConversationStore
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.app.ask import ask_payload
+from bilgin.app.conversations import ConversationStore
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.schema_map import build
 
 DATASET = load_dataset("synthetic_erp")
 CHAINS = {chain["id"]: chain for chain in DATASET.followups()}

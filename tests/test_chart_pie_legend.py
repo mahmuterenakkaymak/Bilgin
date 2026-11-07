@@ -9,7 +9,7 @@ açıklamada durur — ``legend`` altta (`bottom`) ve uzun kategori listesi kutu
 Sütunda açıklama yoktur: orada adlar zaten eksenin altında tam okunur.
 """
 
-from nl2sql.report import chart
+from bilgin.report import chart
 
 COLUMNS = ["STOK_ADI", "CIRO"]
 ROWS = [

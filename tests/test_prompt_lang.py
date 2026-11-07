@@ -13,13 +13,13 @@ from dataclasses import replace
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import loop, modes, prompt
-from nl2sql.agent.fake import FALLBACK_SQL, FakeLLM
-from nl2sql.agent.llm import ChatResponse, ToolCall
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.schema_map import build, doc
-from nl2sql.schema_map.rules import load_rules
+from bilgin import config
+from bilgin.agent import loop, modes, prompt
+from bilgin.agent.fake import FALLBACK_SQL, FakeLLM
+from bilgin.agent.llm import ChatResponse, ToolCall
+from bilgin.engine.executor import LocalExecutor
+from bilgin.schema_map import build, doc
+from bilgin.schema_map.rules import load_rules
 
 QUESTION = "Ankara'daki alıcı carilerin kodu ve ünvanı nedir?"
 LINE = prompt.ANSWER_LANG_LINE

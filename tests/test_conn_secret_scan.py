@@ -12,7 +12,7 @@ gerçekten dolaştığı her yer taranır: cevap gövdeleri, soru ve denetim gü
 sütunları. Beklenti sıfır vuruş.
 
 Parola kutusu DPAPI istediğinden Windows dışında koşmaz; kabuktaki her bağlantı değişkeni
-silinir, yoksa geliştiricide ambiyans duran ``NL2SQL_MSSQL_CONN`` kümenin yerini alır (R7-29).
+silinir, yoksa geliştiricide ambiyans duran ``BILGIN_MSSQL_CONN`` kümenin yerini alır (R7-29).
 """
 
 from __future__ import annotations
@@ -29,14 +29,14 @@ import pyodbc
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.engine import connections
-from nl2sql.engine.connections import ConnectionStore
-from nl2sql.engine.dbstatus import DOWN_MESSAGE, DbStatus
-from nl2sql.web.app import create_app
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.engine import connections
+from bilgin.engine.connections import ConnectionStore
+from bilgin.engine.dbstatus import DOWN_MESSAGE, DbStatus
+from bilgin.web.app import create_app
 
 pytestmark = pytest.mark.skipif(
     sys.platform != "win32", reason="parola kutusu (DPAPI) yalnız Windows'ta vardır"
@@ -124,10 +124,10 @@ def world(tmp_path_factory):
     copy_dataset(root / "datasets" / ERP, display_name="ERP Canlı (Sunucu)", connection="mssql")
     patch = pytest.MonkeyPatch()
     patch.setattr(config, "ROOT", root)
-    patch.setenv("NL2SQL_DATASETS_DIR", str(root / "datasets"))
-    patch.setenv("NL2SQL_REAL_DATASETS_DIR", str(root / "real_datasets"))
+    patch.setenv("BILGIN_DATASETS_DIR", str(root / "datasets"))
+    patch.setenv("BILGIN_REAL_DATASETS_DIR", str(root / "real_datasets"))
     patch.delenv(connections.CONN_ENV, raising=False)
-    patch.delenv("NL2SQL_BACKEND", raising=False)
+    patch.delenv("BILGIN_BACKEND", raising=False)
     for name in [n for n in os.environ if n.startswith(config.CONN_ENV_PREFIX)]:
         patch.delenv(name, raising=False)
     try:

@@ -13,8 +13,8 @@ import json
 
 import pytest
 
-from nl2sql.index.docs import Doc, build_documents
-from nl2sql.index.store import (
+from bilgin.index.docs import Doc, build_documents
+from bilgin.index.store import (
     DOCS_FILE,
     META_FILE,
     VECTORS_FILE,
@@ -24,8 +24,8 @@ from nl2sql.index.store import (
     VectorStore,
     content_hash,
 )
-from nl2sql.schema_map.doc import load_schema
-from nl2sql.schema_map.rules import load_rules
+from bilgin.schema_map.doc import load_schema
+from bilgin.schema_map.rules import load_rules
 
 SCHEMA = load_schema()
 RULES = load_rules()

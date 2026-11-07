@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from nl2sql.report import fmt, guard
+from bilgin.report import fmt, guard
 
 
 def _allowed(*values: float) -> dict:

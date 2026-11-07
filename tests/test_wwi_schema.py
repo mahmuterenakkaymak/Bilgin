@@ -12,10 +12,10 @@ birebir aynı - sonradan gelecek üreteç altın sorular bunların üstüne kuru
 
 import pytest
 
-from nl2sql import config
-from nl2sql.datasets import load_dataset
-from nl2sql.policy import pii
-from nl2sql.schema_map import build, doc
+from bilgin import config
+from bilgin.datasets import load_dataset
+from bilgin.policy import pii
+from bilgin.schema_map import build, doc
 
 DATASET = load_dataset("wwi")
 SCHEMA = DATASET.schema()

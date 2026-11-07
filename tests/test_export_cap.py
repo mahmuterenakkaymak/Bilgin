@@ -16,12 +16,12 @@ import sqlite3
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.app.session import open_session
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.app.session import open_session
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Budget
+from bilgin.web.app import create_app
 
 BOM = chr(0xFEFF)
 TABLE = "TBLDEPO"  # kümenin izinli listesinde, PII işareti olmayan tek tablo

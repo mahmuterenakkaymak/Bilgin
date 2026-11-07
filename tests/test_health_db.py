@@ -15,16 +15,16 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app.ask import DB_DOWN_MESSAGE
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.engine import connections
-from nl2sql.engine.connections import ConnectionStore
-from nl2sql.engine.dbstatus import DOWN_MESSAGE, DbStatus
-from nl2sql.engine.result import ExecError, Result
-from nl2sql.web.app import CONNECTIONS_URL, create_app
+from bilgin import config
+from bilgin.app.ask import DB_DOWN_MESSAGE
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.engine import connections
+from bilgin.engine.connections import ConnectionStore
+from bilgin.engine.dbstatus import DOWN_MESSAGE, DbStatus
+from bilgin.engine.result import ExecError, Result
+from bilgin.web.app import CONNECTIONS_URL, create_app
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 PAROLA = "Bilgin2026!erp"
@@ -36,11 +36,11 @@ SORGU_HATASI = "Incorrect syntax near 'FROM'."
 
 @pytest.fixture
 def project(tmp_path, monkeypatch):
-    monkeypatch.delenv("NL2SQL_MSSQL_CONN", raising=False)
-    monkeypatch.delenv("NL2SQL_BACKEND", raising=False)
-    monkeypatch.delenv("NL2SQL_MSSQL_CONN_MINI", raising=False)
+    monkeypatch.delenv("BILGIN_MSSQL_CONN", raising=False)
+    monkeypatch.delenv("BILGIN_BACKEND", raising=False)
+    monkeypatch.delenv("BILGIN_MSSQL_CONN_MINI", raising=False)
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     cli.build_database(dataset="mini")
     return tmp_path
 

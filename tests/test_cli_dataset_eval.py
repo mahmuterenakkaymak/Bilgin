@@ -16,10 +16,10 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.schema_map import build
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 # Run 3'ün imzası: ``dataset`` anahtarı yalnız kümenin adı varsayılandan farklıysa yazılır (R4-4).
@@ -39,7 +39,7 @@ RUN3_KEYS = {
 @pytest.fixture
 def world(monkeypatch, tmp_path, capsys):
     """Mini kümesinin tmp dünyası: veritabanı, indeks ve audit repoya yazmaz."""
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     ds = load_dataset("mini", root=FIXTURE_ROOT)
     database = tmp_path / "mini.db"
     assert cli.build_database(db_path=database, sql_path=tmp_path / "mini.sql", dataset="mini") == 0
@@ -201,7 +201,7 @@ def test_a_synthetic_index_is_refused_before_the_first_question(world, tmp_path,
 
 @pytest.mark.parametrize("argv", [["ask", "Soru?"], ["eval"], ["eval", "--compare"]])
 def test_an_unknown_dataset_is_refused_before_anything_runs(monkeypatch, argv, capsys):
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
 
     assert cli.main(argv + ["--llm", "fake", "--dataset", "yok-boyle-bir-kume"]) == 2
     out = capsys.readouterr().out
@@ -211,7 +211,7 @@ def test_an_unknown_dataset_is_refused_before_anything_runs(monkeypatch, argv, c
 
 
 def test_main_leaves_an_unnamed_schema_to_the_dataset(monkeypatch):
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     seen = {}
     monkeypatch.setattr(cli, "evaluate", lambda **kwargs: seen.update(kwargs) or 0)
 

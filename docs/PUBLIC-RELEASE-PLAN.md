@@ -23,7 +23,7 @@ measure Bilgin on it, and produce a clean public tree that contains no ERP name 
   stays the current synthetic set, so all existing tests keep passing unchanged.
 - `--dataset wwi` works end to end on a small seeded SQLite fixture with the WWI table and column names (tests), and
   on a real WWI restore on SQL Server by hand (README steps).
-- `python -m nl2sql make-public --out ../bilgin-public` writes a tree with only the generic code, the WWI dataset and
+- `python -m bilgin make-public --out ../bilgin-public` writes a tree with only the generic code, the WWI dataset and
   public docs; a scan step fails the export if any forbidden term or file is found.
 
 **Core rules (unchanged):** deterministic core, LLM as the language layer; read-only; PII masking in the executor;
@@ -33,7 +33,7 @@ nothing leaves the machine.
 
 **In (Run 5):**
 
-- **Dataset abstraction** (`nl2sql/datasets/`): a dataset = a folder under `datasets/<name>/` with `dataset.json`
+- **Dataset abstraction** (`bilgin/datasets/`): a dataset = a folder under `datasets/<name>/` with `dataset.json`
   (display name, dialect, connection kind, default schema), `schema.json`, `rules.json`, `profile.json` (join hints,
   ERP-specific knowledge), `golden.jsonl`, optional `ambiguous.jsonl`, a builder for the test database, and a
   reference module that computes each golden answer independently in Python. Move the current synthetic set into

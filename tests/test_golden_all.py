@@ -16,12 +16,12 @@ import pytest
 from sqlglot import transpile
 
 from eval import reference
-from nl2sql import config
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
-from nl2sql.eval.runner import load_golden
-from nl2sql.policy import policy
-from nl2sql.schema_map import build, doc, generator
+from bilgin import config
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Budget
+from bilgin.eval.runner import load_golden
+from bilgin.policy import policy
+from bilgin.schema_map import build, doc, generator
 
 GOLDEN = load_golden()
 IDS = [line["id"] for line in GOLDEN]

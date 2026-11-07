@@ -16,13 +16,13 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.datasets import load_dataset
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.eval.runner import COMPARE
-from nl2sql.graph import profile
-from nl2sql.policy import policy
-from nl2sql.schema_map import doc
+from bilgin import config
+from bilgin.datasets import load_dataset
+from bilgin.engine.executor import LocalExecutor
+from bilgin.eval.runner import COMPARE
+from bilgin.graph import profile
+from bilgin.policy import policy
+from bilgin.schema_map import doc
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 DATASET = load_dataset("mini", root=FIXTURE_ROOT)

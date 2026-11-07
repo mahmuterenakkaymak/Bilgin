@@ -17,7 +17,7 @@ import subprocess
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 # Görsel incelemede sayının kutu dışında kaldığı genişlik.
 PHONE_PX = 390

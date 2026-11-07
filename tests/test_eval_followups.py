@@ -13,12 +13,12 @@ import copy
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.app.session import open_session
-from nl2sql.datasets import load_dataset
-from nl2sql.eval import followups
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.app.session import open_session
+from bilgin.datasets import load_dataset
+from bilgin.eval import followups
+from bilgin.schema_map import build
 
 DATASET = load_dataset("synthetic_erp")
 CHAINS = followups.load_followups(DATASET)

@@ -39,7 +39,7 @@ README_MARKS = (
     "chain_accuracy",
     "context_accuracy",
     "Ardışık sorular",
-    "NL2SQL_BACKEND=mssql",
+    "BILGIN_BACKEND=mssql",
     "wwi_real",
     "`CONV_KEEP_ROWS` (5)",
     "data/bilgin.db",
@@ -47,7 +47,7 @@ README_MARKS = (
 
 # Bölümde adı geçmemesi gereken üçüncü taraf ürün/şirket adları: örnek veritabanının satıcısı ve o
 # verinin içinde dolaşan hayali şirketler — bir kanıt satırı örneği en kolay buradan sızıyor.
-# ASSUMPTION: Run 6 testinde yasak ad listesi yok (orada yalnız NL2SQL_DEV_ADMIN_PASSWORD= sonrası
+# ASSUMPTION: Run 6 testinde yasak ad listesi yok (orada yalnız BILGIN_DEV_ADMIN_PASSWORD= sonrası
 # denetleniyor), o yüzden liste burada; Run 7 bölümünün denetimi de kendi dosyasında durur.
 FORBIDDEN_NAMES = ("Microsoft", "WideWorldImporters", "Wide World", "Tailspin", "Wingtip")
 
@@ -151,8 +151,8 @@ CONN_MARKS = (
     "extra entropy",
     "`has_secret`",
     "`connections.scrub`",
-    "`NL2SQL_MSSQL_CONN_<DATASET>`",
-    "`NL2SQL_MSSQL_CONN`",
+    "`BILGIN_MSSQL_CONN_<DATASET>`",
+    "`BILGIN_MSSQL_CONN`",
     "`Ortam değişkeninden`",
     "`Bu bağlantı ortam değişkeninden geliyor; ekrandan değiştirilemez.`",
     "`Bağlantıyı test et`",

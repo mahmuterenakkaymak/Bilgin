@@ -11,8 +11,8 @@ hizalı hücre değerlerini taşıyor, seçim oradan okunuyor. Burada tek tur el
 yok, model yok.
 """
 
-from nl2sql.agent import refine
-from nl2sql.app.ask import _chosen
+from bilgin.agent import refine
+from bilgin.app.ask import _chosen
 
 WWI = ["Tailspin Toys (Peeples Valley, AZ)", "Wingtip Toys (Aleutian, AK)"]
 

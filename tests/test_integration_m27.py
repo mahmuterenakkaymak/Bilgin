@@ -26,15 +26,15 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.i18n import t
-from nl2sql.i18n.detect import TURKISH_LETTERS
-from nl2sql.schema_map import template
-from nl2sql.web.app import create_app
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.i18n import t
+from bilgin.i18n.detect import TURKISH_LETTERS
+from bilgin.schema_map import template
+from bilgin.web.app import create_app
 
 WWI = load_dataset("wwi")
 E01 = next(line for line in WWI.golden("en") if line["id"] == "E01")
@@ -95,13 +95,13 @@ def world(tmp_path_factory):
     (root / "real_datasets").mkdir()
     mp = MonkeyPatch()
     mp.setattr(config, "ROOT", root)
-    mp.delenv("NL2SQL_DATASETS_DIR", raising=False)
-    mp.setenv("NL2SQL_REAL_DATASETS_DIR", str(root / "real_datasets"))
+    mp.delenv("BILGIN_DATASETS_DIR", raising=False)
+    mp.setenv("BILGIN_REAL_DATASETS_DIR", str(root / "real_datasets"))
     mp.setattr(config, "MAP_PREVIEWS_DIR", root / "map_previews")
     mp.setattr(config, "MAP_CHANGES_LOG", root / "logs" / "map_changes.jsonl")
-    mp.delenv("NL2SQL_MSSQL_CONN", raising=False)
-    mp.delenv("NL2SQL_BACKEND", raising=False)
-    mp.delenv("NL2SQL_LANG", raising=False)
+    mp.delenv("BILGIN_MSSQL_CONN", raising=False)
+    mp.delenv("BILGIN_BACKEND", raising=False)
+    mp.delenv("BILGIN_LANG", raising=False)
     assert cli.build_database(dataset="wwi") == 0
 
     users = UserStore(root / "bilgin.db")

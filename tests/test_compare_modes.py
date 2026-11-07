@@ -12,9 +12,9 @@ farklaşan sorularda yazılması, Contracts alanlarının json'da ve md'de eksik
 import json
 from datetime import datetime
 
-from nl2sql import config
-from nl2sql.eval import compare_modes, report
-from nl2sql.eval.runner import QuestionResult
+from bilgin import config
+from bilgin.eval import compare_modes, report
+from bilgin.eval.runner import QuestionResult
 
 MODEL = "strata"
 STAMP = datetime(2026, 10, 23, 12, 0, 0)

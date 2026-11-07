@@ -15,16 +15,16 @@ import re
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.app.ask import ask_payload
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.eval import runner
-from nl2sql.report.chart import validate_option
-from nl2sql.report.guard import allowed_values, check_text
-from nl2sql.schema_map import build
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.app.ask import ask_payload
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.eval import runner
+from bilgin.report.chart import validate_option
+from bilgin.report.guard import allowed_values, check_text
+from bilgin.schema_map import build
+from bilgin.web.app import create_app
 
 GOLDEN = runner.load_golden()
 BY_ID = {line["id"]: line for line in GOLDEN}

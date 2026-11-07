@@ -10,7 +10,7 @@ without a server; the pyodbc path is never exercised (PLAN R3-4).
 import pytest
 import sqlglot
 
-from nl2sql.schema_map import introspect
+from bilgin.schema_map import introspect
 
 TABLE_ROWS = [
     ("dbo", "TBLSTGRUP"),
@@ -118,7 +118,7 @@ def test_tables_and_columns_carry_exactly_the_canonical_fields():
 
 
 def test_missing_connection_names_the_env_var(monkeypatch):
-    monkeypatch.delenv("NL2SQL_MSSQL_CONN", raising=False)
+    monkeypatch.delenv("BILGIN_MSSQL_CONN", raising=False)
     with pytest.raises(introspect.IntrospectError) as excinfo:
         introspect.mssql_skeleton()
-    assert "NL2SQL_MSSQL_CONN" in str(excinfo.value)
+    assert "BILGIN_MSSQL_CONN" in str(excinfo.value)

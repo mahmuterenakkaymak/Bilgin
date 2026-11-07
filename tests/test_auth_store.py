@@ -14,9 +14,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from nl2sql.auth import passwords
-from nl2sql.auth.store import UserError, UserStore
-from nl2sql.web.saved import SavedStore
+from bilgin.auth import passwords
+from bilgin.auth.store import UserError, UserStore
+from bilgin.web.saved import SavedStore
 
 PAROLA = "Bilgin2026!erp"
 YENI_PAROLA = "BaskaParola2026!"

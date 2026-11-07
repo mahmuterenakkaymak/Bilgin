@@ -14,8 +14,8 @@ durmalı, betikte okunabilir yazılmalı.
 import pytest
 from sqlglot import exp, parse
 
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.schema_map import build, doc
+from bilgin.engine.executor import LocalExecutor
+from bilgin.schema_map import build, doc
 
 SCHEMA = {
     "tables": [

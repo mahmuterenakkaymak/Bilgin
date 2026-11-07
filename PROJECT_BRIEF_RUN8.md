@@ -3,7 +3,7 @@
 > Drafted 2026-10-25 from Eren's request: "Tüm programın İngilizce hali. Şablonun İngilizce hali; program dili neyse
 > şablonu ona göre versin. Windows servis olarak kurulum." Runs after Run 6 (users and roles, admin-only rules,
 > onboarding a new database from an Excel template) and Run 7 (conversations: follow-up questions in one session) -
-> every string Run 7 added (conversation screen, follow-up messages) is translated too. Product name **Bilgin** (package and CLI stay `nl2sql`). Never
+> every string Run 7 added (conversation screen, follow-up messages) is translated too. Product name **Bilgin** (package and CLI stay `bilgin`). Never
 > write the names of a specific commercial ERP product or of the owner's company in code, docs, UI text or test data.
 
 ## 0. Input from earlier runs
@@ -14,9 +14,9 @@
   every route, the blank Excel template (`GET /api/schema-map/template.xlsx`, sheets `Nasıl doldurulur`,
   `Veri kümesi`, `Tablolar`, `Kolonlar`, `İş kuralları`, `Örnek`), preview/apply of a filled template into a new
   dataset with an automatic index build, and the active-dataset switch. Build on those interfaces.
-- The written answer (`nl2sql/report/narrate.py`) is checked by the number guard (`nl2sql/report/guard.py`), which
+- The written answer (`bilgin/report/narrate.py`) is checked by the number guard (`bilgin/report/guard.py`), which
   today parses Turkish number formats only (`1.234,56`, `%12,3`), and by the technical-column-name check. Number
-  display is `nl2sql/report/fmt.py` (`tr_number`). Facts (`nl2sql/report/facts.py`) carry Turkish labels.
+  display is `bilgin/report/fmt.py` (`tr_number`). Facts (`bilgin/report/facts.py`) carry Turkish labels.
 - Rules kept: tests over a growing or configurable set assert structure, never a fixed count; tests never call a real
   model or a real SQL Server; every execution goes through the executor; nothing leaves the machine; the LLM never
   owns a number; passwords and connection strings only in environment variables or OS-protected files, never in the
@@ -39,7 +39,7 @@
   with `tr` nothing changes from Run 6.
 - `wwi_real` gets an English golden set (`golden_en.jsonl`: the same 26 questions translated, the same SQL); an eval
   with `--lang en` runs it and its report is in English. English answers pass the number guard with English formats.
-- `python -m nl2sql template --lang en --out bilgin-database-template.xlsx` and the UI download produce the English
+- `python -m bilgin template --lang en --out bilgin-database-template.xlsx` and the UI download produce the English
   template; importing it, and importing the Turkish one, give the same dataset.
 - `scripts\install-service.ps1` (run as administrator) installs service `Bilgin`, it starts at boot, `http://127.0.0.1:8777`
   answers after a reboot, `scripts\uninstall-service.ps1` removes it cleanly.
@@ -48,11 +48,11 @@
 
 **In (Run 8):**
 
-- **Language model of the program** (`nl2sql/i18n/`): supported languages `tr` and `en` (config `LANGUAGES`),
-  server default `NL2SQL_LANG` (default `tr`). Resolution order for a web request: the logged-in user's saved
+- **Language model of the program** (`bilgin/i18n/`): supported languages `tr` and `en` (config `LANGUAGES`),
+  server default `BILGIN_LANG` (default `tr`). Resolution order for a web request: the logged-in user's saved
   preference (new `users.lang` column, Run 6 table) -> the UI's `Accept-Language` -> server default. CLI: `--lang` on
-  every command -> `NL2SQL_LANG` -> `tr`. One function `t(key, lang, **params)` over message catalogs
-  `nl2sql/i18n/tr.json` and `en.json` (flat dotted keys, `{param}` placeholders). Every user-facing string in Python
+  every command -> `BILGIN_LANG` -> `tr`. One function `t(key, lang, **params)` over message catalogs
+  `bilgin/i18n/tr.json` and `en.json` (flat dotted keys, `{param}` placeholders). Every user-facing string in Python
   goes through it: API `detail` messages, warnings, failure messages, clarification texts, facts labels, template
   sentences, export headers, CLI output and argparse help, eval report text. Code comments, docstrings, log field
   names and prompts to the model are not user-facing and stay as they are.
@@ -78,7 +78,7 @@
   English (the example's coded values and descriptions in English too). The hidden `_bilgin` sheet records the
   language. Import accepts **both** templates regardless of the user's language: `profiles/excel_headers.json` gets
   every English header and sheet name, `E/H` and `Y/N` both read as booleans. Preview errors and warnings come back
-  in the user's language. CLI: `python -m nl2sql template --lang tr|en --out FILE`.
+  in the user's language. CLI: `python -m bilgin template --lang tr|en --out FILE`.
 - **English golden set and eval**: `real_datasets/wwi_real/golden_en.jsonl` (ids `E01..`, `source_id` pointing to the
   Turkish question, same `sql`, `requires_tables`, `rules`, tags); `dataset.json` `files.golden_en`. `eval --lang en`
   picks it, prints and writes the report in English, and records `lang` in `report.json` and the compare report.
@@ -86,11 +86,11 @@
   find the same rules; the hybrid search indexes both synonym lists.
 - **README**: `README.md` becomes English with a short "Türkçe" link; the Turkish text moves to `README.tr.md`.
   Both describe the same commands.
-- **Data outside the code folder** (needed for the service): `NL2SQL_HOME` (default: the repo folder, unchanged for
+- **Data outside the code folder** (needed for the service): `BILGIN_HOME` (default: the repo folder, unchanged for
   development; the service sets `C:\ProgramData\Bilgin`). The app DB (users, sessions, saved questions), logs (ask
   log, audit log, map changes, server log), map previews, eval output and indexes live under it; datasets stay in
-  the code folder unless `NL2SQL_DATASETS_DIR` says otherwise, but new datasets created from a template go under
-  `NL2SQL_HOME\datasets`. `python -m nl2sql paths` prints every resolved path.
+  the code folder unless `BILGIN_DATASETS_DIR` says otherwise, but new datasets created from a template go under
+  `BILGIN_HOME\datasets`. `python -m bilgin paths` prints every resolved path.
 - **Windows service** (`deploy/windows/`, `scripts/install-service.ps1`, `uninstall-service.ps1`,
   `update-service.ps1`):
   - Wrapper: **WinSW** (MIT), one pinned release, downloaded by the install script from its official GitHub release
@@ -98,20 +98,20 @@
     Approved by Eren on 2026-10-25 (over pywin32, NSSM and Task Scheduler). If `deploy/windows/WinSW-x64.exe`
     already exists (the operator downloaded it by hand), the script does not download, it only checks the hash.
     The exe is gitignored; tests never download it.
-  - Service `Bilgin`, display name "Bilgin - yerel veri analisti" / "Bilgin - local data analyst" (by `NL2SQL_LANG`),
+  - Service `Bilgin`, display name "Bilgin - yerel veri analisti" / "Bilgin - local data analyst" (by `BILGIN_LANG`),
     start type automatic (delayed), restart on failure (3 tries, 10 s / 30 s / 60 s), runs as the virtual account
-    `NT SERVICE\Bilgin` (no password to store). Executable: the repo's `.venv\Scripts\python.exe -m nl2sql serve
+    `NT SERVICE\Bilgin` (no password to store). Executable: the repo's `.venv\Scripts\python.exe -m bilgin serve
     --host 127.0.0.1 --port <port> --dataset <name>` (parameters of the install script, defaults 8777 and the active
     dataset). Logs rolled by size under `C:\ProgramData\Bilgin\logs`.
-  - Environment of the service: `NL2SQL_HOME`, `NL2SQL_LANG`, `NL2SQL_BACKEND`, `NL2SQL_DATASETS_DIR` in the WinSW XML;
+  - Environment of the service: `BILGIN_HOME`, `BILGIN_LANG`, `BILGIN_BACKEND`, `BILGIN_DATASETS_DIR` in the WinSW XML;
     database connections are **not** asked by the install script and are **not** in the XML: since Run 7 they are
     entered in the admin panel (`Veritabanı bağlantıları`) and stored per dataset, password DPAPI-encrypted at machine
-    scope, in the app DB under `NL2SQL_HOME` - so they keep working when the service (virtual account) reads them.
+    scope, in the app DB under `BILGIN_HOME` - so they keep working when the service (virtual account) reads them.
     Only model keys, if a profile needs one, are asked with `Read-Host -AsSecureString` and stored DPAPI-protected
     (machine scope) in `C:\ProgramData\Bilgin\secrets\`, a folder whose ACL allows only Administrators and
-    `NT SERVICE\Bilgin`; at startup `serve` reads that folder when `NL2SQL_HOME` points at it. The install script
+    `NT SERVICE\Bilgin`; at startup `serve` reads that folder when `BILGIN_HOME` points at it. The install script
     offers to copy the existing app DB (users, connections, ready questions) from the development folder into
-    `NL2SQL_HOME`, so nothing has to be entered twice. `NL2SQL_DEV_ADMIN_PASSWORD` is never passed
+    `BILGIN_HOME`, so nothing has to be entered twice. `BILGIN_DEV_ADMIN_PASSWORD` is never passed
     to the service; the install script refuses to continue while the variable is set at machine level, and creates
     the first admin interactively instead (`user add` with `getpass`).
   - ACLs: `C:\ProgramData\Bilgin` writable by the service account, readable by Administrators; the repo folder
@@ -157,7 +157,7 @@ installer, Linux service.
 
 ## 3. Milestones
 
-- **M24 - Language core:** `nl2sql/i18n` (catalogs, `t()`, resolution order, `--lang`, `NL2SQL_LANG`), question
+- **M24 - Language core:** `bilgin/i18n` (catalogs, `t()`, resolution order, `--lang`, `BILGIN_LANG`), question
   language detection, `users.lang`, per-language number formatting and guard, English narration and clarification
   prompts, facts and template sentence from the catalog. Tests: catalogs have identical key sets and the same
   placeholders per key; a Python AST scan finds no user-facing Turkish literal outside the catalogs in the modules
@@ -170,11 +170,11 @@ installer, Linux service.
   with the same element ids; the English template round-trips like the Turkish one and both give byte-identical
   `schema.json` for the same content; `eval --lang en --llm fake` scores 26/26 on `golden_en`. Visual flows in both
   languages (login, ask with chart, map screen).
-- **M26 - Windows service:** `NL2SQL_HOME` and `paths`, DPAPI secrets folder reader, `deploy/windows/bilgin.xml`
+- **M26 - Windows service:** `BILGIN_HOME` and `paths`, DPAPI secrets folder reader, `deploy/windows/bilgin.xml`
   template, the three scripts with `-WhatIf`, README section "Windows servisi / Windows service". Tests (no real
-  service is installed in tests): path resolution under a fake `NL2SQL_HOME`; the generated XML contains the expected
+  service is installed in tests): path resolution under a fake `BILGIN_HOME`; the generated XML contains the expected
   executable, arguments, environment keys and no secret value; the install script's `-WhatIf` output lists every step
-  and refuses when `NL2SQL_DEV_ADMIN_PASSWORD` is set; the secrets reader reads a DPAPI blob written by the test
+  and refuses when `BILGIN_DEV_ADMIN_PASSWORD` is set; the secrets reader reads a DPAPI blob written by the test
   (Windows only, skipped elsewhere). The real install/reboot check is Eren's manual test, listed in the README.
 
 ## 4. Contracts to keep

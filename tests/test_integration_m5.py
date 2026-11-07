@@ -14,17 +14,17 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.eval.retrieval import run_retrieval
-from nl2sql.eval.runner import load_golden
-from nl2sql.graph.graph import build_graph
-from nl2sql.graph.profile import load_profile
-from nl2sql.index.docs import build_documents, leaks
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import METHODS, load_search
-from nl2sql.index.store import FileStore, StaleIndexError, content_hash
-from nl2sql.schema_map.doc import load_schema
-from nl2sql.schema_map.rules import load_rules
+from bilgin import config
+from bilgin.eval.retrieval import run_retrieval
+from bilgin.eval.runner import load_golden
+from bilgin.graph.graph import build_graph
+from bilgin.graph.profile import load_profile
+from bilgin.index.docs import build_documents, leaks
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import METHODS, load_search
+from bilgin.index.store import FileStore, StaleIndexError, content_hash
+from bilgin.schema_map.doc import load_schema
+from bilgin.schema_map.rules import load_rules
 from test_graph_path import _golden_joins, _sides
 
 IDS = [f"Q{i:02d}" for i in range(1, 41)]

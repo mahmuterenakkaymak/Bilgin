@@ -10,7 +10,7 @@ için ``schema/schema.json`` gibi elle yazılan dosyaların elenmediği aynı ko
 
 import subprocess
 
-from nl2sql import config
+from bilgin import config
 
 
 def check_ignore(path: str) -> int:

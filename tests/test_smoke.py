@@ -3,7 +3,7 @@
 
 """Baştan sona duman testi: üç komut da depo kökünden gerçek bir alt süreç olarak koşar.
 
-Burada hiçbir şey yer değiştirmez: ``python -m nl2sql`` gerçekten çalışır, veritabanı
+Burada hiçbir şey yer değiştirmez: ``python -m bilgin`` gerçekten çalışır, veritabanı
 ``data/test.db``'ye, rapor ``eval_out/``a, audit ``logs/``a yazılır — üçü de .gitignore'da, yani
 test reponun kendi klasörlerini kurar ve temiz bırakır. Model ``--llm fake`` olduğu için ağ istemiyor;
 skor yine de 10/10 olmak zorunda, çünkü altın SQL sahte cevaptan değil gerçek SQLite üzerinde
@@ -17,8 +17,8 @@ import sys
 
 import pytest
 
-from nl2sql import config
-from nl2sql.eval import runner
+from bilgin import config
+from bilgin.eval import runner
 
 GOLDEN = runner.load_golden()
 SUBCOMMANDS = ("build-db", "ask", "eval")
@@ -27,13 +27,13 @@ SCORE = f"## Skor: {len(GOLDEN)}/{len(GOLDEN)}"
 
 def run(*argv: str) -> subprocess.CompletedProcess:
     """Depo kökünde alt süreç. Ortam iki yerde sabitlenir: backend sqlite olsun (başka bir
-    kabuktaki NL2SQL_BACKEND testi MSSQL'e bağlamaya çalışmasın) ve çıktı UTF-8 gelsin."""
+    kabuktaki BILGIN_BACKEND testi MSSQL'e bağlamaya çalışmasın) ve çıktı UTF-8 gelsin."""
     return subprocess.run(
-        [sys.executable, "-m", "nl2sql", *argv],
+        [sys.executable, "-m", "bilgin", *argv],
         cwd=config.ROOT,
         capture_output=True,
         encoding="utf-8",
-        env={**os.environ, "NL2SQL_BACKEND": "sqlite", "PYTHONIOENCODING": "utf-8"},
+        env={**os.environ, "BILGIN_BACKEND": "sqlite", "PYTHONIOENCODING": "utf-8"},
     )
 
 

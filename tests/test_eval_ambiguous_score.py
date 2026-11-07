@@ -15,11 +15,11 @@ import json
 
 import pytest
 
-from nl2sql import config, datasets
-from nl2sql.cli import main as cli
-from nl2sql.eval import report
-from nl2sql.eval.runner import QuestionResult
-from nl2sql.schema_map import build
+from bilgin import config, datasets
+from bilgin.cli import main as cli
+from bilgin.eval import report
+from bilgin.eval.runner import QuestionResult
+from bilgin.schema_map import build
 
 DATASET = "synthetic_erp"
 TOP = report.DECISIONS[0][1]

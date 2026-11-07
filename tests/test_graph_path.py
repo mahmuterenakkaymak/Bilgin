@@ -11,10 +11,10 @@ import pytest
 import sqlglot
 from sqlglot import exp
 
-from nl2sql.eval.runner import load_golden
-from nl2sql.graph.graph import GraphError, build_graph, join_text
-from nl2sql.graph.profile import load_profile
-from nl2sql.schema_map.doc import load_schema
+from bilgin.eval.runner import load_golden
+from bilgin.graph.graph import GraphError, build_graph, join_text
+from bilgin.graph.profile import load_profile
+from bilgin.schema_map.doc import load_schema
 
 GRAPH = build_graph(load_schema(), load_profile())
 MULTI_JOIN = [line for line in load_golden() if "multi_join" in line["tags"]]

@@ -4,15 +4,15 @@
 """``serve`` dumanı: API'yi gerçekten ayağa kaldırır, adımların üstünden HTTP ile geçer.
 
 Komut satırı araçları zaten test ediliyor; burada ölçülen şey sunucunun kendisi — ``python -m
-nl2sql serve`` bir alt süreç olarak açılır, portu dinlemeye başlayana kadar beklenir, sonra
+bilgin serve`` bir alt süreç olarak açılır, portu dinlemeye başlayana kadar beklenir, sonra
 çerezsiz ``POST /api/ask`` (401) → ``POST /api/auth/login`` → ``/api/health`` → ``POST /api/ask``
 → ``GET /api/export/<id>.csv`` sırası koşar. Soru kümenin ilk altın sorusudur: sahte model onu
 birebir bildiği için cevap ``answered`` olmak zorundadır, yani dumanın geçti "bir şey döndü" değil
 "uçtan uca cevap döndü" demektir.
 
 R6-7'den beri ``serve`` oturumsuz hiçbir şey sunmadığı için dumanın da oturum açması gerekir:
-sunucu boş bir uygulama veritabanı üstünde açılır -- geçici bir ``NL2SQL_APP_DB`` ve koşu sırasında
-üretilen ``NL2SQL_DEV_ADMIN_PASSWORD`` --, giriş ondan sonra mümkün olur. Parolanın değeri hiçbir
+sunucu boş bir uygulama veritabanı üstünde açılır -- geçici bir ``BILGIN_APP_DB`` ve koşu sırasında
+üretilen ``BILGIN_DEV_ADMIN_PASSWORD`` --, giriş ondan sonra mümkün olur. Parolanın değeri hiçbir
 satıra düşmez, geçici dosya iş bitince silinir; böylece duman ne gerçek ``data/bilgin.db``ye ne
 gerçek bir kullanıcıya dokunur.
 
@@ -83,14 +83,14 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))  # betik nereden çağrılırsa çağrılsın nl2sql görünsün
+sys.path.insert(0, str(ROOT))  # betik nereden çağrılırsa çağrılsın bilgin görünsün
 
 import openpyxl  # noqa: E402  # şablonun sayfa adları indirilen dosyadan okunur
-from nl2sql import config, datasets  # noqa: E402
-from nl2sql.auth.bootstrap import DEV_USERNAME  # noqa: E402
-from nl2sql.i18n import t  # noqa: E402
-from nl2sql.schema_map import template  # noqa: E402
-from nl2sql.web.app import BUILD_COMMAND, NO_UI  # noqa: E402
+from bilgin import config, datasets  # noqa: E402
+from bilgin.auth.bootstrap import DEV_USERNAME  # noqa: E402
+from bilgin.i18n import t  # noqa: E402
+from bilgin.schema_map import template  # noqa: E402
+from bilgin.web.app import BUILD_COMMAND, NO_UI  # noqa: E402
 
 HOST = "127.0.0.1"
 DEFAULT_PORT = 8778
@@ -742,7 +742,7 @@ def _expect(opener, request, label: str, code: int, body: bool = False):
 def _start_server(
     port: int, dataset: str | None, app_db: str, password: str, probe: str | None = None
 ) -> subprocess.Popen:
-    argv = [sys.executable, "-m", "nl2sql", "serve", "--llm", "fake", "--port", str(port)]
+    argv = [sys.executable, "-m", "bilgin", "serve", "--llm", "fake", "--port", str(port)]
     if dataset:
         argv += ["--dataset", dataset]
     if probe:
@@ -755,9 +755,9 @@ def _start_server(
         encoding="utf-8",
         env={
             **os.environ,
-            "NL2SQL_BACKEND": "sqlite",
+            "BILGIN_BACKEND": "sqlite",
             "PYTHONIOENCODING": "utf-8",
-            "NL2SQL_APP_DB": app_db,  # boş dünya: dumanın kullanıcısı gerçek veriye dokunmaz
+            "BILGIN_APP_DB": app_db,  # boş dünya: dumanın kullanıcısı gerçek veriye dokunmaz
             config.DEV_ADMIN_ENV: password,
         },
     )

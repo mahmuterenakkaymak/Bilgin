@@ -13,7 +13,7 @@ Satır numarası sabitin kendi satırıdır ki geçiş testi "şu satırı katal
 
 from textwrap import dedent
 
-from nl2sql.i18n.scan import user_literals
+from bilgin.i18n.scan import user_literals
 
 
 def scan(tmp_path, source, allow=()):

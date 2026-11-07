@@ -15,15 +15,15 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
-from nl2sql.eval import retrieval, runner
-from nl2sql.graph.graph import Edge, JoinGraph, build_graph
-from nl2sql.graph.profile import load_profile
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import METHODS, build_search
-from nl2sql.schema_map import doc
-from nl2sql.schema_map.rules import load_rules
+from bilgin import config
+from bilgin.cli import main as cli
+from bilgin.eval import retrieval, runner
+from bilgin.graph.graph import Edge, JoinGraph, build_graph
+from bilgin.graph.profile import load_profile
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import METHODS, build_search
+from bilgin.schema_map import doc
+from bilgin.schema_map.rules import load_rules
 
 SCHEMA = doc.load_schema()
 RULES = load_rules()

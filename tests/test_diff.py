@@ -10,8 +10,8 @@
 import copy
 import json
 
-from nl2sql.cli import main as cli
-from nl2sql.schema_map import build, introspect, merge
+from bilgin.cli import main as cli
+from bilgin.schema_map import build, introspect, merge
 
 
 def _column(name, type_="INT", fk=None):

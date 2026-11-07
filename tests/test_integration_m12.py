@@ -16,16 +16,16 @@ import json
 
 import pytest
 
-from nl2sql import datasets
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Result
-from nl2sql.eval import compare
-from nl2sql.eval.runner import COMPARE
-from nl2sql.index.search import load_search
-from nl2sql.index.store import ForeignIndexError
-from nl2sql.schema_map import doc
+from bilgin import datasets
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Result
+from bilgin.eval import compare
+from bilgin.eval.runner import COMPARE
+from bilgin.index.search import load_search
+from bilgin.index.store import ForeignIndexError
+from bilgin.schema_map import doc
 
 WWI = load_dataset("wwi")
 GOLDEN = WWI.golden()

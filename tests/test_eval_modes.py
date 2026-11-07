@@ -13,17 +13,17 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake, modes
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.eval import report, runner
-from nl2sql.eval.runner import QuestionResult
-from nl2sql.graph.graph import build_graph
-from nl2sql.graph.profile import load_profile
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import build_search
-from nl2sql.schema_map import build, doc
-from nl2sql.schema_map.rules import load_rules
+from bilgin import config
+from bilgin.agent import fake, modes
+from bilgin.engine.executor import LocalExecutor
+from bilgin.eval import report, runner
+from bilgin.eval.runner import QuestionResult
+from bilgin.graph.graph import build_graph
+from bilgin.graph.profile import load_profile
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import build_search
+from bilgin.schema_map import build, doc
+from bilgin.schema_map.rules import load_rules
 
 GOLDEN = runner.load_golden()
 BY_ID = {line["id"]: line for line in GOLDEN}

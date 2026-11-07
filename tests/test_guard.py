@@ -11,8 +11,8 @@ Biçim sayı kadar kesindir: İngilizce yazım sayı doğru olsa bile geçmez, h
 sayı değildir.
 """
 
-from nl2sql.policy import pii
-from nl2sql.report import facts, guard
+from bilgin.policy import pii
+from bilgin.report import facts, guard
 
 COLUMNS = ["STOK_ADI", "NET_TUTAR"]
 ROWS = [("Çay", 1234.56), ("Kahve", 12460.0)]

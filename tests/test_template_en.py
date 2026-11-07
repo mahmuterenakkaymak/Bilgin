@@ -14,11 +14,11 @@ import io
 import openpyxl
 from openpyxl.utils import get_column_letter
 
-from nl2sql import config
-from nl2sql.i18n.detect import TURKISH_LETTERS
-from nl2sql.i18n.scan import user_literals
-from nl2sql.policy import pii
-from nl2sql.schema_map.template import LABELS, build_template, filled_example_workbook
+from bilgin import config
+from bilgin.i18n.detect import TURKISH_LETTERS
+from bilgin.i18n.scan import user_literals
+from bilgin.policy import pii
+from bilgin.schema_map.template import LABELS, build_template, filled_example_workbook
 
 EN_SHEETS = ("How to fill in", "Dataset", "Tables", "Columns", "Business rules", "Example")
 EN_DATASET_HEADERS = ("NAME", "DISPLAY NAME", "CONNECTION", "DEFAULT SCHEMA", "DATA DATE")
@@ -281,4 +281,4 @@ def test_the_turkish_rules_sheet_carries_the_new_column_in_the_example_too():
 
 
 def test_no_turkish_literal_is_left_outside_the_labels():
-    assert user_literals("nl2sql/schema_map/template.py", allow=("LABELS",)) == []
+    assert user_literals("bilgin/schema_map/template.py", allow=("LABELS",)) == []

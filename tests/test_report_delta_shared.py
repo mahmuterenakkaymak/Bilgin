@@ -10,8 +10,8 @@ kadardır; report.md de hangi sayının ne üzerinden söylendiğini yazar.
 
 import json
 
-from nl2sql.eval import report
-from nl2sql.eval.runner import QuestionResult
+from bilgin.eval import report
+from bilgin.eval.runner import QuestionResult
 
 ONLY = {"Q03": "pass"}
 FULL = {"Q01": "pass", "Q02": "pass", "Q03": "pass", "Q04": "wrong_result"}

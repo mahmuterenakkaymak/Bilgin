@@ -17,12 +17,12 @@ from pathlib import Path
 import pytest
 
 from eval import reference
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.datasets import DatasetError, list_datasets, load_dataset
-from nl2sql.eval import runner
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.datasets import DatasetError, list_datasets, load_dataset
+from bilgin.eval import runner
 
-ENV_VARS = ["NL2SQL_DATASETS_DIR"]
+ENV_VARS = ["BILGIN_DATASETS_DIR"]
 
 MINI_DOC = {
     "name": "mini",
@@ -232,6 +232,6 @@ def test_missing_key_names_the_key_and_the_file(tmp_path, key):
 def test_datasets_dir_env_is_read_at_call_time(monkeypatch, tmp_path):
     write_mini(tmp_path)
     assert config.DEFAULT_DATASET in list_datasets()
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(tmp_path))
     assert list_datasets() == ["mini"]
     assert load_dataset("mini").root == tmp_path / "mini"

@@ -14,13 +14,13 @@ import copy
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import loop
-from nl2sql.agent.budget import estimate_prompt
-from nl2sql.agent.fake import FakeLLM, golden_replay
-from nl2sql.agent.llm import ChatResponse, ToolCall
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.schema_map import build, doc
+from bilgin import config
+from bilgin.agent import loop
+from bilgin.agent.budget import estimate_prompt
+from bilgin.agent.fake import FakeLLM, golden_replay
+from bilgin.agent.llm import ChatResponse, ToolCall
+from bilgin.engine.executor import LocalExecutor
+from bilgin.schema_map import build, doc
 
 GOLDEN = "SELECT CARI_KOD, CARI_ISIM FROM TBLCASABIT WHERE IL = 'ANKARA' ORDER BY CARI_KOD"
 QUESTION = "Peki bu müşterinin toplamı ne kadar?"

@@ -8,7 +8,7 @@ gerçek ``open_session``: sahte model ``cli.make_client("fake")``ın ``golden_en
 yani ``serve --llm fake``ın kendi istemcisi. Cevap gerçek ``ask_payload`` ve iddia zincirin çıktısı:
 İngilizce sorunun cevabı "en"dir — her olgu adı en.json'dan, her okunuş İngilizce biçimden, cümle
 İngilizce bekçiden geçer; aynı sayılar Türkçe soruda Türkçe okunur. Cevabın dilini soru söyler,
-program değil: ``NL2SQL_LANG="en"`` ile koşan Türkçe sorunun olguları ve cümlesi o değişken yokken
+program değil: ``BILGIN_LANG="en"`` ile koşan Türkçe sorunun olguları ve cümlesi o değişken yokken
 çıkanla birebir aynıdır. Son iddia bekçinin kendi inadı: Türkçe yazılmış bir sayı İngilizce cevapta
 yabancıdır, iki deneme de geçmez ve koddan kurulan İngilizce cümle konuşur.
 """
@@ -20,12 +20,12 @@ import re
 import pytest
 from pytest import MonkeyPatch
 
-from nl2sql.agent import fake
-from nl2sql.app.ask import ask_payload
-from nl2sql.app.session import open_session
-from nl2sql.datasets import load_dataset
-from nl2sql.i18n import t
-from nl2sql.report import guard, narrate
+from bilgin.agent import fake
+from bilgin.app.ask import ask_payload
+from bilgin.app.session import open_session
+from bilgin.datasets import load_dataset
+from bilgin.i18n import t
+from bilgin.report import guard, narrate
 
 WWI = load_dataset("wwi")
 EN_LINE = next(line for line in WWI.golden("en") if line["id"] == "E01")
@@ -41,13 +41,13 @@ def session(tmp_path_factory):
 
     ``client_factory`` verilmezse oturum ``cli.make_client``ı kendi kümesiyle çağırır — sahtenin
     altın kaydı o yüzden ``golden.jsonl`` ile ``golden_en.jsonl``ın birleşimidir. Kabukta ambiyans
-    duran ``NL2SQL_MSSQL_CONN`` ve ``NL2SQL_BACKEND`` silinir: küme SQLite'ı kendi taşır (R7-29).
+    duran ``BILGIN_MSSQL_CONN`` ve ``BILGIN_BACKEND`` silinir: küme SQLite'ı kendi taşır (R7-29).
     """
     root = tmp_path_factory.mktemp("m26")
     mp = MonkeyPatch()
-    mp.delenv("NL2SQL_MSSQL_CONN", raising=False)
-    mp.delenv("NL2SQL_BACKEND", raising=False)
-    mp.delenv("NL2SQL_LANG", raising=False)
+    mp.delenv("BILGIN_MSSQL_CONN", raising=False)
+    mp.delenv("BILGIN_BACKEND", raising=False)
+    mp.delenv("BILGIN_LANG", raising=False)
     try:
         database = root / "wwi.db"
         WWI.build_db(db_path=database, sql_path=root / "wwi.sql")
@@ -127,7 +127,7 @@ def test_the_turkish_twin_shows_the_same_numbers_the_other_way(session, english)
 def test_the_program_language_never_overrides_the_question(session, monkeypatch):
     plain = ask_payload(session, TR_LINE["question"], mode="full")
 
-    monkeypatch.setenv("NL2SQL_LANG", "en")
+    monkeypatch.setenv("BILGIN_LANG", "en")
     english_ui = ask_payload(session, TR_LINE["question"], mode="full")
 
     assert english_ui["answer_lang"] == "tr" == plain["answer_lang"]

@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
+from bilgin import config
+from bilgin.cli import main as cli
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 CLOSED = "http://127.0.0.1:9/v1"  # discard portu: hiçbir zaman yanıt vermez
@@ -48,7 +48,7 @@ def models_file(tmp_path) -> Path:
 def project(tmp_path, monkeypatch, capsys):
     """Proje kökü geçici: kümenin veritabanı, indeksi ve raporu repoya düşmez."""
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     assert cli.build_database(dataset="mini") == 0
     assert cli.build_index("fake", dataset="mini") == 0
     capsys.readouterr()

@@ -19,10 +19,10 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql.datasets import load_dataset
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
-from nl2sql.schema_map import doc
+from bilgin.datasets import load_dataset
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Budget
+from bilgin.schema_map import doc
 
 DATASET = load_dataset("wwi")
 SCHEMA = DATASET.schema()

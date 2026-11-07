@@ -12,7 +12,7 @@ veritabanı yok, model yok, eşik tek başına sınanır.
 
 import pytest
 
-from nl2sql.agent import refine
+from bilgin.agent import refine
 
 
 def answered_turn():

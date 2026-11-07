@@ -12,13 +12,13 @@ tekrar etmez (R2-16 - kaçaklı retrieval'ın skoru yalandır).
 
 import pytest
 
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.graph.graph import build_graph
-from nl2sql.graph.profile import load_profile
-from nl2sql.index.docs import leaks
-from nl2sql.index.store import FileStore
-from nl2sql.index.summaries import table_summaries
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.graph.graph import build_graph
+from bilgin.graph.profile import load_profile
+from bilgin.index.docs import leaks
+from bilgin.index.store import FileStore
+from bilgin.index.summaries import table_summaries
 
 DATASETS = ("synthetic_erp", "wwi")
 

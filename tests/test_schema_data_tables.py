@@ -5,7 +5,7 @@
 
 import pytest
 
-from nl2sql.schema_map import doc
+from bilgin.schema_map import doc
 
 DATA_TABLES = (
     "TBLSTOKFIAT",

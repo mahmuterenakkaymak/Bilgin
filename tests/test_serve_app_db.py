@@ -3,7 +3,7 @@
 
 """T265: ``serve`` kayıtları kullanıcının yaşadığı dosyaya yazar (PLAN R6-1, R6-9).
 
-Kullanıcı deposu ``NL2SQL_APP_DB``den kuruluyor ama ``create_app``e ``saved_path`` verilmiyordu, o
+Kullanıcı deposu ``BILGIN_APP_DB``den kuruluyor ama ``create_app``e ``saved_path`` verilmiyordu, o
 yüzde kapı imzanın bağlandığı ``config.APP_DB_PATH``e düşüp ``data/bilgin.db``yi kendi açıyordu -
 smoke (T232) ve ``scripts/visual_serve.py`` (T235) tam da gerçek dosyaya dokunmamak için o değişkeni
 kuruyorlardı. Burada dünya tmp'de: mini küme, sahte model, ``run_server`` yerine geçen bir kapı.
@@ -18,9 +18,9 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
+from bilgin import config
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 PAROLA = "Bilgin2026!erp"
@@ -39,8 +39,8 @@ def stamp() -> tuple[bool, int]:
 def app_db(tmp_path, monkeypatch):
     """tmp'de kurulu mini dünyanın uygulama veritabanı; yöneticisi olan tek dosya."""
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
-    monkeypatch.setenv("NL2SQL_APP_DB", str(tmp_path / "app.db"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_APP_DB", str(tmp_path / "app.db"))
     monkeypatch.delenv(config.DEV_ADMIN_ENV, raising=False)
     monkeypatch.setattr(config, "AUDIT_LOG", tmp_path / "audit.jsonl")
     monkeypatch.setattr(config, "ASK_LOG", tmp_path / "asks.jsonl")

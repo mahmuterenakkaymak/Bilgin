@@ -10,8 +10,8 @@ skor farkı ve sonucu dönen sorular hem report.json'da (``previous``) hem repor
 
 import json
 
-from nl2sql.eval import report
-from nl2sql.eval.runner import QuestionResult
+from bilgin.eval import report
+from bilgin.eval.runner import QuestionResult
 
 # İlk koşu 2/4; ikincide Q03 geçiyor, Q04 yanlış cevaba düşüyor => 3/4 ve iki dönüş.
 FIRST = {"Q01": "pass", "Q02": "pass", "Q03": "wrong_result", "Q04": "no_submission"}

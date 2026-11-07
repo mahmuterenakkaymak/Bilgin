@@ -23,9 +23,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from nl2sql import config, datasets
-from nl2sql.index.store import META_FILE
-from nl2sql.schema_map import template
+from bilgin import config, datasets
+from bilgin.index.store import META_FILE
+from bilgin.schema_map import template
 from scripts import visual_serve
 
 VISUAL_PATH = config.ROOT / ".hybrid" / "visual.json"
@@ -49,8 +49,8 @@ def sandbox(tmp_path, monkeypatch):
     root = tmp_path / "visual"
     monkeypatch.setattr(visual_serve, "VISUAL_DIR", root)
     monkeypatch.setattr(config, "ROOT", tmp_path)  # küme sözleşmesinin data/ ve index/ yolları
-    monkeypatch.setenv("NL2SQL_APP_DB", str(root / "bilgin.db"))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(root / "real_datasets"))
+    monkeypatch.setenv("BILGIN_APP_DB", str(root / "bilgin.db"))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(root / "real_datasets"))
     return root
 
 
@@ -136,7 +136,7 @@ def test_serve_is_started_with_the_probe_file(sandbox, monkeypatch):
     assert visual_serve.main(["--port", "8777"]) == 0
 
     serve = commands[0]
-    assert serve[:4] == [sys.executable, "-m", "nl2sql", "serve"]
+    assert serve[:4] == [sys.executable, "-m", "bilgin", "serve"]
     assert serve[serve.index("--db-probe-file") + 1] == str(probe)
 
 

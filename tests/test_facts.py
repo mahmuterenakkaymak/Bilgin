@@ -9,8 +9,8 @@ girmez ama satır sayısı satırdır; maskeli kolon hiç olgu vermez. Pay ve y�
 toplamda pay, sıfır önceki dönemde yüzde yoktur. Ekrana çıkan her sayı Türkçe yazılır.
 """
 
-from nl2sql.policy import pii
-from nl2sql.report import facts
+from bilgin.policy import pii
+from bilgin.report import facts
 
 CATEGORY_COLUMNS = ["STOK_ADI", "SATIS_MIKTARI"]
 CATEGORY_ROWS = [("Çay", 120.0), ("Kahve", 80.0), ("Şeker", 50.0)]

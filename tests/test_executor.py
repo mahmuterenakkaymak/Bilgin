@@ -18,10 +18,10 @@ import types
 import pytest
 from sqlglot.errors import SqlglotError
 
-from nl2sql import config
-from nl2sql.engine import executor as executor_module
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
+from bilgin import config
+from bilgin.engine import executor as executor_module
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Budget
 
 ROWS = 5
 ALLOWED = {"TBLSTSABIT"}
@@ -78,10 +78,10 @@ def test_execute_is_the_only_public_method():
 
 
 def test_no_public_engine_module_can_run_sql():
-    import nl2sql.engine
+    import bilgin.engine
 
-    for info in pkgutil.iter_modules(nl2sql.engine.__path__):
-        module = importlib.import_module(f"nl2sql.engine.{info.name}")
+    for info in pkgutil.iter_modules(bilgin.engine.__path__):
+        module = importlib.import_module(f"bilgin.engine.{info.name}")
         if hasattr(module, "run"):
             assert info.name.startswith("_"), f"{info.name} policy'siz çalıştırılabiliyor"
 
@@ -212,7 +212,7 @@ class FakePyodbc(types.ModuleType):
 def install_pyodbc(monkeypatch, fail=None):
     fake = FakePyodbc(fail)
     monkeypatch.setitem(sys.modules, "pyodbc", fake)
-    monkeypatch.setenv("NL2SQL_MSSQL_CONN", "Server=.;Database=ERP;ApplicationIntent=ReadWrite;")
+    monkeypatch.setenv("BILGIN_MSSQL_CONN", "Server=.;Database=ERP;ApplicationIntent=ReadWrite;")
     return fake
 
 
@@ -231,17 +231,17 @@ def test_mssql_session_is_read_only_and_limited(db, audit_path, monkeypatch):
 
 
 def test_mssql_without_a_connection_string_names_the_env_var(db, audit_path, monkeypatch):
-    monkeypatch.delenv("NL2SQL_MSSQL_CONN", raising=False)
+    monkeypatch.delenv("BILGIN_MSSQL_CONN", raising=False)
     result = make(db, audit_path, backend="mssql").execute(SELECT)
     assert result.error.kind == "sql"
-    assert "NL2SQL_MSSQL_CONN" in result.error.message
+    assert "BILGIN_MSSQL_CONN" in result.error.message
 
 
 def test_backend_comes_from_the_environment_by_default(db, audit_path, monkeypatch):
-    monkeypatch.setenv("NL2SQL_BACKEND", "mssql")
-    monkeypatch.delenv("NL2SQL_MSSQL_CONN", raising=False)
+    monkeypatch.setenv("BILGIN_BACKEND", "mssql")
+    monkeypatch.delenv("BILGIN_MSSQL_CONN", raising=False)
     result = LocalExecutor(db_path=db, allowlist=ALLOWED, audit_path=audit_path).execute(SELECT)
-    assert "NL2SQL_MSSQL_CONN" in result.error.message
+    assert "BILGIN_MSSQL_CONN" in result.error.message
 
 
 def test_unknown_backend_is_refused_at_construction(db, audit_path):

@@ -20,15 +20,15 @@ from pathlib import Path
 import pytest
 import sqlglot
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.cli import main as cli
-from nl2sql.engine import login_script
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
-from nl2sql.eval import runner
-from nl2sql.policy import pii
-from nl2sql.schema_map import build, doc
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.cli import main as cli
+from bilgin.engine import login_script
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Budget
+from bilgin.eval import runner
+from bilgin.policy import pii
+from bilgin.schema_map import build, doc
 
 SCHEMA = doc.load_schema()
 MARKS = pii.column_map(SCHEMA)

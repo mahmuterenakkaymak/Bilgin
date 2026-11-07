@@ -8,8 +8,8 @@ from collections import defaultdict
 
 import pytest
 
-from nl2sql import config
-from nl2sql.schema_map import doc, generator
+from bilgin import config
+from bilgin.schema_map import doc, generator
 
 DOC_TABLES = ["TBLFATUIRS", "TBLSTHAR", "TBLCAHAR", "TBLSIPAMAS", "TBLSIPATRA"]
 ALL_TABLES = ["TBLSTGRUP", "TBLSTSABIT", "TBLDEPO", "TBLPLASIYER", "TBLCASABIT"] + DOC_TABLES

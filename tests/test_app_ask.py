@@ -14,13 +14,13 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.app.ask import ask_payload
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.engine.result import Budget
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.app.ask import ask_payload
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.engine.result import Budget
+from bilgin.schema_map import build
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 
@@ -38,7 +38,7 @@ PERSONEL_SQL = "SELECT PERSONEL_KODU, AD_SOYAD FROM TBLPERSONEL ORDER BY PERSONE
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     return tmp_path
 
 

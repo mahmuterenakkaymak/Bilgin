@@ -15,7 +15,7 @@ import re
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 EN_FILE = "README.md"
 TR_FILE = "README.tr.md"
@@ -23,7 +23,7 @@ TR_FILE = "README.tr.md"
 # Run 8'in yüzeyi: dil seçimi, şablon, İngilizce altın küme ve kuralın İngilizce eş anlamlıları.
 README_MARKS = (
     "--lang en",
-    "NL2SQL_LANG",
+    "BILGIN_LANG",
     "template --lang en",
     "eval --lang en",
     "golden_en.jsonl",
@@ -43,13 +43,13 @@ def _readme(name: str) -> str:
 
 
 def _commands(text: str) -> set[str]:
-    """Metinde geçen ``python -m nl2sql <komut>`` çağrılarının komut adları.
+    """Metinde geçen ``python -m bilgin <komut>`` çağrılarının komut adları.
 
     Bayraklar atlanır: ``--lang`` değerini de yuttuğu için ``--lang en ask`` ``ask`` sayılır;
     ``python -m eval.review`` gibi öteki modüller hiç bu kümeye girmez.
     """
     found = set()
-    for match in re.finditer(r"python -m nl2sql([^\n]*)", text):
+    for match in re.finditer(r"python -m bilgin([^\n]*)", text):
         tokens = match.group(1).split()
         index = 0
         while index < len(tokens):

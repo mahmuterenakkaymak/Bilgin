@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (c) 2026 Mahmut Eren Akkaymak
 
-"""``python -m nl2sql paths`` (PLAN R8-20, Contracts ``paths``): her yol adıyla ve çözülmuş haliyle.
+"""``python -m bilgin paths`` (PLAN R8-20, Contracts ``paths``): her yol adıyla ve çözülmuş haliyle.
 
 Üç şey sabitlenir: ``--json``ın anahtarları sözleşmenin satırıdır (kurulum betiği ve README onları
-okur), ``NL2SQL_HOME`` kurulunca yazıların hepsi oraya taşınır, ve ortamda duran sırlar - bağlantı
+okur), ``BILGIN_HOME`` kurulunca yazıların hepsi oraya taşınır, ve ortamda duran sırlar - bağlantı
 dizesi, API anahtarı, geliştirme yöneticisinin parolası - hiçbir çıktıda görünmez. Yollar ``config``
 import edilirken çözüldüğü için testler alt süreç koşar (``test_home_paths``ın yolu): ortam gerçek,
 modül taze.
@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 REPO = Path(config.__file__).resolve().parent.parent
 TURKISH = set("çğıöşüÇĞİÖŞÜ")
@@ -53,15 +53,15 @@ UNDER_HOME = [
     "index",
     "secrets",
 ]
-SECRETS = ("NL2SQL_MSSQL_CONN", "NL2SQL_LLM_API_KEY", "NL2SQL_DEV_ADMIN_PASSWORD")
+SECRETS = ("BILGIN_MSSQL_CONN", "BILGIN_LLM_API_KEY", "BILGIN_DEV_ADMIN_PASSWORD")
 
 
 def run(*args, **env) -> subprocess.CompletedProcess:
-    """``python -m nl2sql paths``ı alt süreçte koşar; ``NL2SQL_*`` ortamı temiz, verilenler kurulu."""
-    child = {k: v for k, v in os.environ.items() if not k.startswith("NL2SQL_")}
+    """``python -m bilgin paths``ı alt süreçte koşar; ``BILGIN_*`` ortamı temiz, verilenler kurulu."""
+    child = {k: v for k, v in os.environ.items() if not k.startswith("BILGIN_")}
     child.update({key: str(value) for key, value in env.items()})
     done = subprocess.run(
-        [sys.executable, "-m", "nl2sql", "paths", *[str(a) for a in args]],
+        [sys.executable, "-m", "bilgin", "paths", *[str(a) for a in args]],
         cwd=str(REPO),
         env=child,
         capture_output=True,
@@ -98,7 +98,7 @@ def test_text_output_prints_one_line_per_path():
 
 
 def test_home_env_moves_every_written_path(tmp_path):
-    data = json.loads(run("--json", NL2SQL_HOME=tmp_path).stdout)
+    data = json.loads(run("--json", BILGIN_HOME=tmp_path).stdout)
 
     assert Path(data["home"]) == tmp_path
     for key in UNDER_HOME:

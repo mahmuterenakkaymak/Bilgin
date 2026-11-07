@@ -11,9 +11,9 @@ import sqlite3
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
-from nl2sql.schema_map import doc, extra, generator
+from bilgin import config
+from bilgin.cli import main as cli
+from bilgin.schema_map import doc, extra, generator
 
 SEED = config.SEED
 

@@ -4,9 +4,9 @@
 """T334: bağlantının nereden geleceği sırası (PLAN R7-23).
 
 Bir veri setinin SQL Server bağlantısı dört yerden biridir: o veri setinin kendi ortam
-değişkeni, genel ``NL2SQL_MSSQL_CONN`` (yalnız etkin veri seti ve yalnız mssql yedeğinde),
+değişkeni, genel ``BILGIN_MSSQL_CONN`` (yalnız etkin veri seti ve yalnız mssql yedeğinde),
 ekrandan saklanan satır, hiçbiri. Sıranın kendisi ölçülebilsin diye kabuktan gelen her bağlantı
-değişkeni testten önce silinir: geliştiricide ``NL2SQL_MSSQL_CONN`` ambiyans durur.
+değişkeni testten önce silinir: geliştiricide ``BILGIN_MSSQL_CONN`` ambiyans durur.
 """
 
 from __future__ import annotations
@@ -16,9 +16,9 @@ import sys
 
 import pytest
 
-from nl2sql import config
-from nl2sql.engine._mssql import CONN_ENV
-from nl2sql.engine.connections import ConnectionStore, resolve
+from bilgin import config
+from bilgin.engine._mssql import CONN_ENV
+from bilgin.engine.connections import ConnectionStore, resolve
 
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="parola kutusu (DPAPI) yalnız Windows'ta vardır")
 
@@ -28,14 +28,14 @@ FIELDS = {"server": "10.0.0.5", "database": "DNAEGITIM", "auth": "sql", "usernam
 # Sözleşme "connection (public)": kaynak adları; conn_str hiçbiri için None'dır.
 GENEL = "DRIVER={ODBC Driver 18 for SQL Server};SERVER=genel;DATABASE=WWI;"
 KENDI = "DRIVER={ODBC Driver 18 for SQL Server};SERVER=kendi;DATABASE=WWI;"
-ENV_ADI = config.CONN_ENV_PREFIX + "WWI_REAL"  # NL2SQL_MSSQL_CONN_<BÜYÜK HARFLERLE AD>
+ENV_ADI = config.CONN_ENV_PREFIX + "WWI_REAL"  # BILGIN_MSSQL_CONN_<BÜYÜK HARFLERLE AD>
 
 
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch):
     """Kabuktaki her bağlantı değişkeni silinir; yedek de silinir ki varsayılan sqlite olsun."""
     monkeypatch.delenv(CONN_ENV, raising=False)
-    monkeypatch.delenv("NL2SQL_BACKEND", raising=False)
+    monkeypatch.delenv("BILGIN_BACKEND", raising=False)
     for name in [n for n in os.environ if n.startswith(config.CONN_ENV_PREFIX)]:
         monkeypatch.delenv(name, raising=False)
 
@@ -61,7 +61,7 @@ def test_a_stored_row_is_the_source_when_the_environment_is_clean(store):
 
 def test_the_datasets_own_variable_wins_over_the_generic_one_and_over_the_row(store, monkeypatch):
     store.save("wwi_real", FIELDS, PAROLA, "eren")
-    monkeypatch.setenv("NL2SQL_BACKEND", "mssql")
+    monkeypatch.setenv("BILGIN_BACKEND", "mssql")
     monkeypatch.setenv(CONN_ENV, GENEL)
     monkeypatch.setenv(ENV_ADI, KENDI)
 
@@ -70,7 +70,7 @@ def test_the_datasets_own_variable_wins_over_the_generic_one_and_over_the_row(st
 
 def test_the_generic_variable_wins_over_the_stored_row_of_the_active_dataset(store, monkeypatch):
     store.save("wwi_real", FIELDS, PAROLA, "eren")
-    monkeypatch.setenv("NL2SQL_BACKEND", "mssql")
+    monkeypatch.setenv("BILGIN_BACKEND", "mssql")
     monkeypatch.setenv(CONN_ENV, GENEL)
 
     assert resolve("wwi_real", store, "wwi_real") == {"source": "env", "conn_str": GENEL}
@@ -89,14 +89,14 @@ def test_nothing_is_resolved_when_there_is_no_store_at_all():
 
 def test_the_generic_variable_is_ignored_while_the_backend_is_sqlite(store, monkeypatch):
     store.save("wwi_real", FIELDS, PAROLA, "eren")
-    monkeypatch.setenv(CONN_ENV, GENEL)  # NL2SQL_BACKEND silindi: yedek sqlite
+    monkeypatch.setenv(CONN_ENV, GENEL)  # BILGIN_BACKEND silindi: yedek sqlite
 
     assert resolve("wwi_real", store, "wwi_real")["source"] == "stored"
 
 
 def test_the_generic_variable_is_ignored_for_a_dataset_that_is_not_active(store, monkeypatch):
     store.save("wwi_real", FIELDS, PAROLA, "eren")
-    monkeypatch.setenv("NL2SQL_BACKEND", "mssql")
+    monkeypatch.setenv("BILGIN_BACKEND", "mssql")
     monkeypatch.setenv(CONN_ENV, GENEL)
 
     assert resolve("wwi_real", store, "synthetic_erp")["source"] == "stored"
@@ -114,7 +114,7 @@ def test_the_variable_name_is_the_upper_cased_dataset_name_whatever_the_backend_
 
 
 def test_another_datasets_variable_is_not_used(store, monkeypatch):
-    monkeypatch.setenv("NL2SQL_BACKEND", "mssql")
+    monkeypatch.setenv("BILGIN_BACKEND", "mssql")
     monkeypatch.setenv(config.CONN_ENV_PREFIX + "SYNTHETIC_ERP", KENDI)
 
     assert resolve("wwi_real", store, "wwi_real")["source"] == "none"

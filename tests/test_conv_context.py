@@ -9,9 +9,9 @@ tur düşer, sonra kalanların satırları eksilir - kullanıcının çıplak so
 çıplak prompt'un bile sığmadığı bütçe.
 """
 
-from nl2sql import config
-from nl2sql.agent.budget import estimate_prompt
-from nl2sql.agent.context import context_block, fit_history
+from bilgin import config
+from bilgin.agent.budget import estimate_prompt
+from bilgin.agent.context import context_block, fit_history
 
 SYSTEM = "Sen ERP şeması üzerinde çalışan bir SQL asistanısın."
 QUESTION = "Peki bu müşterinin toplamı ne kadar?"

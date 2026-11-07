@@ -17,9 +17,9 @@ import sys
 
 import pytest
 
-from nl2sql.auth.store import UserStore
-from nl2sql.engine import connections
-from nl2sql.engine.connections import (
+from bilgin.auth.store import UserStore
+from bilgin.engine import connections
+from bilgin.engine.connections import (
     ConnError,
     ConnectionStore,
     build_conn_str,

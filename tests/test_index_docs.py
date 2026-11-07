@@ -7,11 +7,11 @@ Dokümanın kendisi de iki iddia taşır: şema ve kural dosyalarındaki her şe
 + 15 kural), ve hiçbir doküman hangi tablonun dolgu olduğunu söyleyen `kind` bayrağını sızdırmaz.
 """
 
-from nl2sql.eval.runner import load_golden
-from nl2sql.index import text
-from nl2sql.index.docs import COLLECTIONS, Doc, build_documents, leaks
-from nl2sql.schema_map.doc import load_schema
-from nl2sql.schema_map.rules import load_rules
+from bilgin.eval.runner import load_golden
+from bilgin.index import text
+from bilgin.index.docs import COLLECTIONS, Doc, build_documents, leaks
+from bilgin.schema_map.doc import load_schema
+from bilgin.schema_map.rules import load_rules
 
 SCHEMA = load_schema()
 RULES = load_rules()

@@ -16,16 +16,16 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.app.session import open_session
-from nl2sql.engine import checks
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
-from nl2sql.i18n import t
-from nl2sql.i18n.scan import user_literals
-from nl2sql.schema_map import build, doc
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.app.session import open_session
+from bilgin.engine import checks
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Budget
+from bilgin.i18n import t
+from bilgin.i18n.scan import user_literals
+from bilgin.schema_map import build, doc
+from bilgin.web.app import create_app
 
 SCHEMA = doc.load_schema()
 FULL = Budget(max_rows=100000)

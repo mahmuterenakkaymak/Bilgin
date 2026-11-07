@@ -3,7 +3,7 @@
 
 """Run 4 config: dataset/model ayarları, dataset klasörü okuyucusu ve .gitignore kalıbı.
 
-``datasets_dir()`` ``llm_settings`` gibi davranır: ``NL2SQL_DATASETS_DIR`` çağrı anında
+``datasets_dir()`` ``llm_settings`` gibi davranır: ``BILGIN_DATASETS_DIR`` çağrı anında
 okunur, yoksa sabit ``DATASETS_DIR`` döner. ``db/mssql/build_*.sql`` üretilen betikleri
 eler; ``build_test_db.sql`` satırı durduğu için o da elenmeye devam eder, ``.gitkeep`` elemez.
 """
@@ -12,9 +12,9 @@ import subprocess
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
-ENV_VARS = ["NL2SQL_DATASETS_DIR"]
+ENV_VARS = ["BILGIN_DATASETS_DIR"]
 
 
 @pytest.fixture(autouse=True)
@@ -87,20 +87,20 @@ def test_datasets_dir_default():
 
 
 def test_datasets_dir_env_override(monkeypatch, tmp_path):
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(tmp_path))
     assert config.datasets_dir() == tmp_path
 
 
 def test_datasets_dir_read_at_call_time(monkeypatch, tmp_path):
     assert config.datasets_dir() == config.DATASETS_DIR
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(tmp_path))
     assert config.datasets_dir() == tmp_path
-    monkeypatch.delenv("NL2SQL_DATASETS_DIR")
+    monkeypatch.delenv("BILGIN_DATASETS_DIR")
     assert config.datasets_dir() == config.DATASETS_DIR
 
 
 def test_blank_datasets_dir_env_falls_back(monkeypatch):
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", "   ")
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", "   ")
     assert config.datasets_dir() == config.DATASETS_DIR
 
 

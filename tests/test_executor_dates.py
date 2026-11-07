@@ -17,11 +17,11 @@ import datetime as dt
 
 import pytest
 
-from nl2sql import config
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
-from nl2sql.policy import policy
-from nl2sql.schema_map import build, doc, generator
+from bilgin import config
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Budget
+from bilgin.policy import policy
+from bilgin.schema_map import build, doc, generator
 
 # Karsilastirma butcesi: burada satir kesmek yok, her faturanin tarihi gorunmeli.
 COMPARE = Budget(max_rows=config.COMPARE_MAX_ROWS)

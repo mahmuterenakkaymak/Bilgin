@@ -14,12 +14,12 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app import asklog
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.web.app import NO_ASK, NO_SAVED, create_app
+from bilgin import config
+from bilgin.app import asklog
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.web.app import NO_ASK, NO_SAVED, create_app
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 PAROLA = "Bilgin2026!erp"
@@ -29,7 +29,7 @@ ADMIN, ALI, VELI = "yonetici", "ali", "veli"
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     cli.build_database(dataset="mini")
     return tmp_path
 

@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
+from bilgin import config
+from bilgin.cli import main as cli
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 QUESTION = "Cari kartlarında kaç kayıt var?"
@@ -34,7 +34,7 @@ RUN3_KEYS = {
     "max_tool_calls",
     "dataset",
 }
-KEY_ENV = "NL2SQL_TEST_EKSIK_ANAHTAR"
+KEY_ENV = "BILGIN_TEST_EKSIK_ANAHTAR"
 
 
 def models_file(tmp_path) -> Path:
@@ -76,7 +76,7 @@ def models_file(tmp_path) -> Path:
 def project(tmp_path, monkeypatch, capsys):
     """Proje kökü geçici: kümenin veritabanı, indeksi ve raporu repoya düşmez."""
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     assert cli.build_database(dataset="mini") == 0
     assert cli.build_index("fake", dataset="mini") == 0
     capsys.readouterr()

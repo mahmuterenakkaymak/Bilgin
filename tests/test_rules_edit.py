@@ -13,11 +13,11 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.index.store import content_hash
-from nl2sql.schema_map import doc
-from nl2sql.schema_map.rules import load_rules
-from nl2sql.schema_map.rules_edit import normalize_rule, save_rules, validate_rule
+from bilgin import config
+from bilgin.index.store import content_hash
+from bilgin.schema_map import doc
+from bilgin.schema_map.rules import load_rules
+from bilgin.schema_map.rules_edit import normalize_rule, save_rules, validate_rule
 
 SRC = config.RULES_PATH
 SCHEMA = doc.load_schema()

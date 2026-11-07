@@ -14,11 +14,11 @@ from collections import Counter, defaultdict
 import pytest
 
 from eval import reference
-from nl2sql import config
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
-from nl2sql.eval.runner import load_golden
-from nl2sql.schema_map import build, generator
+from bilgin import config
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Budget
+from bilgin.eval.runner import load_golden
+from bilgin.schema_map import build, generator
 
 # 3, 10, 12 çakışma üreten tohumlar; 42 Run 1 pin dünyası (çakışma yok, satırları değişmemeli).
 SEEDS = [3, 10, 12, 42]

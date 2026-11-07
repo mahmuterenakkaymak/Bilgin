@@ -13,7 +13,7 @@ kareleri İngilizce çekilir.
 import json
 import re
 
-from nl2sql import config
+from bilgin import config
 
 VISUAL_PATH = config.ROOT / ".hybrid" / "visual.json"
 GOLDEN_EN_PATH = config.ROOT / "datasets" / "wwi" / "golden_en.jsonl"

@@ -13,9 +13,9 @@ import io
 import openpyxl
 import pytest
 
-from nl2sql import config
-from nl2sql.schema_map.template import SHEETS, build_template, filled_example_workbook
-from nl2sql.schema_map.template_import import (
+from bilgin import config
+from bilgin.schema_map.template import SHEETS, build_template, filled_example_workbook
+from bilgin.schema_map.template_import import (
     TemplateError,
     is_bilgin_template,
     read_template,

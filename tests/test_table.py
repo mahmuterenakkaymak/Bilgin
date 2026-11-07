@@ -11,8 +11,8 @@ bile olduğu gibi kalır.
 
 from decimal import Decimal
 
-from nl2sql.cli.table import format_table
-from nl2sql.engine.result import Result
+from bilgin.cli.table import format_table
+from bilgin.engine.result import Result
 
 
 def make(columns, rows, row_count=None, truncated=False):

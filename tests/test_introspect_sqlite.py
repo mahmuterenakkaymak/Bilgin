@@ -7,7 +7,7 @@ import sqlite3
 
 import pytest
 
-from nl2sql.schema_map import build, doc, introspect
+from bilgin.schema_map import build, doc, introspect
 
 
 @pytest.fixture(scope="module")

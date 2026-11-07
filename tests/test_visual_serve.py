@@ -6,7 +6,7 @@
 ``scripts/visual_serve.py`` tarayıcı akışının ``serve``ı: kullanıcıları kendisi açar, veriyi
 ``data/visual/`` altında tutar. İzolasyonun kendisi yol denetimi olduğu için iki şey ölçülür: kum
 havuzunda ne kurulur, dışarıda ne reddedilir. Son iki test parolanın sınırını söyler —
-``VISUAL_PASSWORD`` bir kum havuzu sabitidir, ürün kodunun (``nl2sql/``) hiçbir dosyasına giremez
+``VISUAL_PASSWORD`` bir kum havuzu sabitidir, ürün kodunun (``bilgin/``) hiçbir dosyasına giremez
 ama akışın her sayfası da onu yazmak zorundadır, yoksa inceleme giriş kartında kalır.
 """
 
@@ -16,9 +16,9 @@ import sqlite3
 
 import pytest
 
-from nl2sql import config
-from nl2sql.auth.store import UserStore
-from nl2sql.schema_map import template
+from bilgin import config
+from bilgin.auth.store import UserStore
+from bilgin.schema_map import template
 from scripts import visual_serve
 
 # visual.json'ın yanlış parola denemesi; doğrusu modül sabitinden okunur, kopyalanmaz.
@@ -117,7 +117,7 @@ def test_seeding_refuses_any_path_outside_the_visual_root(sandbox):
 def test_the_fixture_password_never_enters_the_product_code():
     """Kum havuzu parolası yalnız betikte ve akışta durur; ürün kodu onu tanımaz."""
     needle = visual_serve.VISUAL_PASSWORD.encode("utf-8")
-    root = config.ROOT / "nl2sql"
+    root = config.ROOT / "bilgin"
     hits = [
         str(path.relative_to(root))
         for path in sorted(root.rglob("*"))

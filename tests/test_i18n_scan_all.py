@@ -15,42 +15,42 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql.i18n.scan import user_literals
+from bilgin.i18n.scan import user_literals
 
 ROOT = Path(__file__).resolve().parents[1]
 
 # PLAN R8-4 "Scanned modules (final list)" - kalıplar olduğu gibi oradan alındı.
 PATTERNS = (
-    "nl2sql/web/*.py",
-    "nl2sql/cli/*.py",
-    "nl2sql/app/ask.py",
-    "nl2sql/report/{facts,narrate,chart,export,guard}.py",
-    "nl2sql/eval/{report,runner,followups,compare,compare_models,compare_modes,retrieval}.py",
-    "nl2sql/schema_map/{template,template_import,onboard,rules_edit,rules}.py",
-    "nl2sql/engine/{guard,connections,dbstatus,dpapi}.py",
-    "nl2sql/auth/store.py",
-    "nl2sql/start/{ready,cards,suggest,seed}.py",
-    "nl2sql/agent/{refine,context}.py",
+    "bilgin/web/*.py",
+    "bilgin/cli/*.py",
+    "bilgin/app/ask.py",
+    "bilgin/report/{facts,narrate,chart,export,guard}.py",
+    "bilgin/eval/{report,runner,followups,compare,compare_models,compare_modes,retrieval}.py",
+    "bilgin/schema_map/{template,template_import,onboard,rules_edit,rules}.py",
+    "bilgin/engine/{guard,connections,dbstatus,dpapi}.py",
+    "bilgin/auth/store.py",
+    "bilgin/start/{ready,cards,suggest,seed}.py",
+    "bilgin/agent/{refine,context}.py",
 )
 
 # Muafiyet yalnız model-facing sabitler ve eşleştirme tabloları içindir; gerekçesiz ad giremez.
 ALLOW = {
     # `sample_values` çıktısındaki "Değerler (N)" satırını eşleştiren regex - ekran satırı değil.
-    "nl2sql/cli/main.py": ("VALUE_COUNT",),
+    "bilgin/cli/main.py": ("VALUE_COUNT",),
     # Türkçe anlatıcının system promptu; İngilizce kopyası SYSTEM_EN'de, ikisi de modele gider.
-    "nl2sql/report/narrate.py": ("SYSTEM",),
+    "bilgin/report/narrate.py": ("SYSTEM",),
     # Grafik sözcüklerini katlayan Türkçe harf tablosu - `fold` okur, kullanıcı görmez.
-    "nl2sql/report/chart.py": ("_FOLD",),
+    "bilgin/report/chart.py": ("_FOLD",),
     # Şablonun iki dilin etiket tablosu: xlsx hücreleridir, İngilizcesi LABELS["en"]de.
-    "nl2sql/schema_map/template.py": ("LABELS",),
+    "bilgin/schema_map/template.py": ("LABELS",),
     # Kural bloğunun bölük etiketleri: prompt bölümü ve indeks belgesi, ekran değil.
-    "nl2sql/schema_map/rules.py": ("RULE_LABELS",),
+    "bilgin/schema_map/rules.py": ("RULE_LABELS",),
     # Öneriyi yazan modele giden system prompt ve bölük başlıkları.
-    "nl2sql/start/suggest.py": ("SYSTEM", "SECTIONS"),
+    "bilgin/start/suggest.py": ("SYSTEM", "SECTIONS"),
     # Tohum satırı politika süzgecinden düşerse günlük satırına yazılan teknik not.
-    "nl2sql/start/seed.py": ("SKIPPED",),
+    "bilgin/start/seed.py": ("SKIPPED",),
     # Eşleştirme tabloları: grafik isteği, doldurma sözcükleri, dönüm ipuçları, harf katlaması.
-    "nl2sql/agent/refine.py": (
+    "bilgin/agent/refine.py": (
         "CHART_WISHES",
         "CHART_FILLERS",
         "REFINE_HINTS",
@@ -63,7 +63,7 @@ ALLOW = {
         "_TURKISH_TO_ASCII",
     ),
     # Modelin okuduğu bağlam bloğu: başlık, kurallar, tur satırları, ipuçları, not düşme gerekçeleri.
-    "nl2sql/agent/context.py": (
+    "bilgin/agent/context.py": (
         "HISTORY_HEADER",
         "FOLLOWUP_RULES",
         "TURN_LINES",

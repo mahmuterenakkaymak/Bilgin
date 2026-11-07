@@ -14,16 +14,16 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.cli import main as cli
-from nl2sql.eval import runner
-from nl2sql.index.docs import build_documents
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import load_search
-from nl2sql.index.store import FileStore, content_hash
-from nl2sql.schema_map import build, doc
-from nl2sql.schema_map.rules import load_rules
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.cli import main as cli
+from bilgin.eval import runner
+from bilgin.index.docs import build_documents
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import load_search
+from bilgin.index.store import FileStore, content_hash
+from bilgin.schema_map import build, doc
+from bilgin.schema_map.rules import load_rules
 
 MODES = list(config.MODES)
 SCHEMA = doc.load_schema()

@@ -17,7 +17,7 @@ kırmızı nokta ile guard'ın "yazabiliyor" cevabı o dosyanın sözüdür, SQL
 
 ``VISUAL_PASSWORD`` bilinçli olarak depoda durur: tek kullanımlık bir kum havuzu parolasıdır, üç
 incelemeci hesabından başka bir şey korumaz ve ``.hybrid/visual.json`` da aynı değeri yazar. Ürünün
-kodu onu tanımaz; ``nl2sql/`` altında arandığında boş dönmesinin sebebi bu. Sunucu ``serve``ı alt
+kodu onu tanımaz; ``bilgin/`` altında arandığında boş dönmesinin sebebi bu. Sunucu ``serve``ı alt
 süreç olarak açar, böylece inceleme de aynı komut satırı kapısından geçer.
 """
 
@@ -34,12 +34,12 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))  # betik nereden çağrılırsa çağrılsın nl2sql görünsün
+sys.path.insert(0, str(ROOT))  # betik nereden çağrılırsa çağrılsın bilgin görünsün
 
-from nl2sql import config  # noqa: E402
-from nl2sql.auth.store import UserStore  # noqa: E402
-from nl2sql.schema_map import build, onboard, template, template_import  # noqa: E402
-from nl2sql.web.map_api import SAMPLE_DATASET  # noqa: E402  # örnek kümenin adı arayüzle aynı kalsın
+from bilgin import config  # noqa: E402
+from bilgin.auth.store import UserStore  # noqa: E402
+from bilgin.schema_map import build, onboard, template, template_import  # noqa: E402
+from bilgin.web.map_api import SAMPLE_DATASET  # noqa: E402  # örnek kümenin adı arayüzle aynı kalsın
 
 VISUAL_DIR = ROOT / "data" / "visual"
 VISUAL_PASSWORD = "Gorsel-Dunya-2026"
@@ -66,12 +66,12 @@ class VisualError(Exception):
 
 
 def app_db() -> Path:
-    """İncelemenin uygulama veritabanı; ``NL2SQL_APP_DB`` olarak çocuğa verilir."""
+    """İncelemenin uygulama veritabanı; ``BILGIN_APP_DB`` olarak çocuğa verilir."""
     return VISUAL_DIR / "bilgin.db"
 
 
 def real_datasets_dir() -> Path:
-    """Ekrandan yüklenen gerçek kümelerin indiği klasör; ``NL2SQL_REAL_DATASETS_DIR``."""
+    """Ekrandan yüklenen gerçek kümelerin indiği klasör; ``BILGIN_REAL_DATASETS_DIR``."""
     return VISUAL_DIR / "real_datasets"
 
 
@@ -121,7 +121,7 @@ def build_vitrin_dataset() -> Path:
     kurduğu şeyin aynısıdır; veritabanı ile indeks de geçişi mümkün kılacak kadardır — "Bu kümeye
     geç" düğmesi indeksi olana açıktır. Düşük olan şey sunucudur, yani durumu yoklama dosyası söyler.
     """
-    from nl2sql.cli import main as cli  # indeks işi CLI'ın kendi kapısından geçer
+    from bilgin.cli import main as cli  # indeks işi CLI'ın kendi kapısından geçer
 
     root = config.real_datasets_dir()
     if root != real_datasets_dir():
@@ -224,12 +224,12 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     # Hazırlığın kendi süreci de kum havuzunu görmeli: ``apply_preview`` ve ``build_index`` yolu
     # configden okur. Alt süreç aynı ortamı taşır, yani iki dünya bir daha ayrılmaz.
-    os.environ["NL2SQL_APP_DB"] = str(app_db())
-    os.environ["NL2SQL_REAL_DATASETS_DIR"] = str(real_datasets_dir())
+    os.environ["BILGIN_APP_DB"] = str(app_db())
+    os.environ["BILGIN_REAL_DATASETS_DIR"] = str(real_datasets_dir())
     probe = prepare()
     return subprocess.call(
         [
-            sys.executable, "-m", "nl2sql", "serve",
+            sys.executable, "-m", "bilgin", "serve",
             "--llm", "fake",
             "--port", str(args.port),
             "--db-probe-file", str(probe),

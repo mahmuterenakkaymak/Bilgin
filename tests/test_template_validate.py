@@ -15,9 +15,9 @@ import io
 import openpyxl
 import pytest
 
-from nl2sql import datasets
-from nl2sql.schema_map.template import SHEETS, filled_example_workbook
-from nl2sql.schema_map.template_import import read_template, validate
+from bilgin import datasets
+from bilgin.schema_map.template import SHEETS, filled_example_workbook
+from bilgin.schema_map.template_import import read_template, validate
 
 DATASET_SHEET, TABLE_SHEET, COLUMN_SHEET, RULE_SHEET = SHEETS[1], SHEETS[2], SHEETS[3], SHEETS[4]
 TABLE = "SATIS.FATURA"

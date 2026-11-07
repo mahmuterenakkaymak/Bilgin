@@ -5,16 +5,16 @@
 > edilecek. Bunu da admin kullanıcı yapabilecek." Clarified: "Eski şemayı düzeltmek için değil. Başka db kullanmak
 > istediğimde Bilgin'e uygun formatta Excel şablonu versin, nasıl dolduracağımı göstermek için 1 tabloluk örnek versin
 > başka sheet'te. Bu şablonu yükleyince kendisi RAG'i vesaire oluşturacak." Builds on Run 1-5. Product name **Bilgin** (package and CLI stay
-> `nl2sql`). Never write the names of a specific commercial ERP product or of the owner's company in code, docs, UI
+> `bilgin`). Never write the names of a specific commercial ERP product or of the owner's company in code, docs, UI
 > text or test data.
 
 ## 0. Input from earlier runs
 
 - Read `.hybrid/report.json`, `REVIEW.md`, `README.md` (Run 3-5 sections) and `docs/BILGIN-TEKNIK-DOKUMAN.md` first.
-  Run 5 delivered the web UI (`nl2sql/web/app.py` FastAPI, `web/` React + ECharts built into `nl2sql/web/static`),
-  saved questions in a local SQLite file (`config.APP_DB_PATH`, `nl2sql/web/saved.py`), the ask log
-  (`nl2sql/app/asklog.py`), the rules API (`/api/rules`, `nl2sql/schema_map/rules_edit.py`) and history replay
-  (`POST /api/replay/{audit_id}`). Run 3 delivered Excel schema import on the CLI (`nl2sql/schema_map/excel.py`:
+  Run 5 delivered the web UI (`bilgin/web/app.py` FastAPI, `web/` React + ECharts built into `bilgin/web/static`),
+  saved questions in a local SQLite file (`config.APP_DB_PATH`, `bilgin/web/saved.py`), the ask log
+  (`bilgin/app/asklog.py`), the rules API (`/api/rules`, `bilgin/schema_map/rules_edit.py`) and history replay
+  (`POST /api/replay/{audit_id}`). Run 3 delivered Excel schema import on the CLI (`bilgin/schema_map/excel.py`:
   `read_workbook`, `fallback_mapping`, `propose`, `convert`; header dictionary `profiles/excel_headers.json`), live
   schema introspection (`introspect.py`) and diff/merge (`merge.py`). Build on these interfaces; do not write a second
   Excel reader or a second rules writer.
@@ -36,12 +36,12 @@ reviews the check report, and applies it. Bilgin then creates a new dataset, bui
 rule and summary embeddings) and its read-only login script by itself, and the admin switches the active dataset to it.
 
 "Done" =
-- `python -m nl2sql user add NAME --role admin` creates the first admin (password typed twice through `getpass`,
+- `python -m bilgin user add NAME --role admin` creates the first admin (password typed twice through `getpass`,
   never an argument, never a default password). Without at least one user, `serve` refuses to start and says how to
   create one (one Turkish sentence, exit 2) - unless the development bootstrap below applies.
-- **Development bootstrap (Eren, for testing):** when the environment variable `NL2SQL_DEV_ADMIN_PASSWORD` is set
+- **Development bootstrap (Eren, for testing):** when the environment variable `BILGIN_DEV_ADMIN_PASSWORD` is set
   and the users table is empty, `serve` creates user `admin` with role `admin` and that password at startup, and
-  prints one warning line ("Geliştirme yöneticisi oluşturuldu: admin - NL2SQL_DEV_ADMIN_PASSWORD ortam
+  prints one warning line ("Geliştirme yöneticisi oluşturuldu: admin - BILGIN_DEV_ADMIN_PASSWORD ortam
   değişkeninden; canlı kurulumda bu değişkeni tanımlamayın."). The minimum password length does not apply to this
   bootstrap only. No password value appears anywhere in code, config, tests, docs or the repo; tests set the variable
   with `monkeypatch`. It never runs when at least one user exists, so it cannot reset a real admin.
@@ -76,7 +76,7 @@ rule and summary embeddings) and its read-only login script by itself, and the a
 
 **In (Run 6):**
 
-- **Users and passwords** (`nl2sql/auth/`): users live in the same local app SQLite file as saved questions
+- **Users and passwords** (`bilgin/auth/`): users live in the same local app SQLite file as saved questions
   (`config.APP_DB_PATH`), table `users(id, username UNIQUE, password_hash, role CHECK(role IN ('admin','user')),
   active, created_at, last_login_at)`. Passwords are hashed with the standard library only: `hashlib.scrypt`
   (n=2**14, r=8, p=1, 16-byte random salt, stored as `scrypt$n$r$p$salt_b64$hash_b64`), compared with
@@ -114,7 +114,7 @@ rule and summary embeddings) and its read-only login script by itself, and the a
     `VARSAYILAN ŞEMA`, `VERİ TARİHİ` (the date "bu yıl / geçen ay" is relative to, ISO), one row.
   - Sheet `Tablolar`: `TABLO | MODÜL | AÇIKLAMA | ANAHTAR KELİMELER`, empty rows with header styling.
   - Sheet `Kolonlar`: `TABLO | KOLON | TİP | AÇIKLAMA | DEĞERLER | KİŞİSEL VERİ | KAPALI | REFERANS | NULL`, empty.
-    `KİŞİSEL VERİ` has a data-validation list of the PII classes (`nl2sql/policy/pii.py` CLASSES) plus empty;
+    `KİŞİSEL VERİ` has a data-validation list of the PII classes (`bilgin/policy/pii.py` CLASSES) plus empty;
     `KAPALI` and `NULL` have `E/H` lists; `TABLO` has a list fed from the Tablolar sheet.
   - Sheet `İş kuralları` (optional): `KİMLİK | TERİM | EŞ ANLAMLILAR | TANIM | SQL İPUCU | TABLOLAR`, empty.
   - Sheet `Örnek`: the same three blocks filled for **one** generic example table (an invoice header table, e.g.
@@ -155,7 +155,7 @@ rule and summary embeddings) and its read-only login script by itself, and the a
   (database-backed ones); both are listed.
   After switching to a database-backed dataset the UI shows, once, what the database administrator must do: run the
   generated login script (download link `GET /api/datasets/{name}/login-script.sql`, admin) and set
-  `NL2SQL_MSSQL_CONN` for the server.
+  `BILGIN_MSSQL_CONN` for the server.
 - **UI** (`web/`): login screen (`#login-form`, `#login-username`, `#login-password`, `#login-submit`, error line);
   header user chip and `#logout`; a `user` sees the rules screen with forms disabled and a one-line note
   ("İş kurallarını yalnız yönetici değiştirebilir."); admin-only nav items `Veritabanı haritası` (`#nav-map`) and
@@ -184,7 +184,7 @@ session. New auth and role tests build the app with a store. This keeps the exis
 
 - **M18 - Auth core:** users/sessions tables and migration of the existing app DB (saved questions keep working; old
   rows get `username = NULL` and are visible to admins only), scrypt hashing, login/logout/me, lockout, `require`
-  dependency, CLI `user ...`, `serve` refuses without users, the `NL2SQL_DEV_ADMIN_PASSWORD` bootstrap (creates
+  dependency, CLI `user ...`, `serve` refuses without users, the `BILGIN_DEV_ADMIN_PASSWORD` bootstrap (creates
   only on an empty table, warns, never overwrites). Tests: hashing round trip and format, wrong password and
   unknown user give the same message, lockout and expiry with an injected clock, cookie flags, last-admin guard.
 - **M19 - Roles everywhere:** apply the matrix to every route (one table-driven test that walks every registered
@@ -209,6 +209,6 @@ session. New auth and role tests build the app with a store. This keeps the exis
 - Every `/api/*` response for a forbidden or missing session is JSON `{"detail": "<Türkçe cümle>"}` with 401/403/404;
   the UI shows the sentence. The 422 rules body stays `{"errors": [...]}`.
 - An upload only ever creates a new dataset folder; it never writes into an existing one.
-- The template carries no connection string; the server's connection stays in `NL2SQL_MSSQL_CONN`.
+- The template carries no connection string; the server's connection stays in `BILGIN_MSSQL_CONN`.
 - Passwords, password hashes and session tokens never appear in logs, the ask log, the audit log, API responses
   (except the cookie itself) or test snapshots.

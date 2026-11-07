@@ -12,8 +12,8 @@ gibi davranır, kim olduğunu sızdırmaz). Red cümleleri yazıyla burada durur
 
 import pytest
 
-from nl2sql import config
-from nl2sql.start.ready import ReadyError, ReadyStore
+from bilgin import config
+from bilgin.start.ready import ReadyError, ReadyStore
 
 CAP_REFUSED = "En fazla 6 kişisel kart ekleyebilirsiniz."
 ROLE_REFUSED = "Geçersiz iş rolü."
@@ -303,7 +303,7 @@ def test_an_update_of_an_unknown_row_is_404(store):
 
 
 def test_the_store_shares_the_app_file_with_the_other_stores(tmp_path):
-    from nl2sql.auth.store import UserStore
+    from bilgin.auth.store import UserStore
 
     path = tmp_path / "app.db"
     card = ReadyStore(path).add("erp", "*", "Ciro", "Ciro kaç?", "SELECT 1", "number")

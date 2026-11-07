@@ -3,7 +3,7 @@
 
 """T202: derlenmiş arayüzün sunulması (PLAN R5-15).
 
-Ekran ``npm --prefix web run build`` ile ``nl2sql/web/static``e yazılıyor; API onu olduğu gibi
+Ekran ``npm --prefix web run build`` ile ``bilgin/web/static``e yazılıyor; API onu olduğu gibi
 sunuyor. Testler derlenmiş çıktıyı okur: hangi hashli dosyaların üretildiği burada yazılı
 değil, ``index.html``den okunur, yani derleme adı değişirse test de kendini toplar. Yerel
 öncelik de burada denetlenir - sayfada dışarı giden tek bir adres yoktur, Bilgin açılmak için
@@ -18,10 +18,10 @@ from urllib.parse import urlparse
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.web.app import BUILD_COMMAND, create_app
+from bilgin import config
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.web.app import BUILD_COMMAND, create_app
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 
@@ -53,7 +53,7 @@ def references(page: str) -> list[str]:
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     cli.build_database(dataset="mini")
     return tmp_path
 

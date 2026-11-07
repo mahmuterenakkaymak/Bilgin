@@ -15,12 +15,12 @@ import copy
 
 import pytest
 
-from nl2sql import config
-from nl2sql.app import asklog
-from nl2sql.app.session import open_session
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.schema_map import build, doc
-from nl2sql.start.ready import ReadyError, ReadyStore, approve_from_audit, personal_from_audit
+from bilgin import config
+from bilgin.app import asklog
+from bilgin.app.session import open_session
+from bilgin.engine.executor import LocalExecutor
+from bilgin.schema_map import build, doc
+from bilgin.start.ready import ReadyError, ReadyStore, approve_from_audit, personal_from_audit
 
 NOT_FOUND = "Bu soru geçmişte bulunamadı."
 DATASET = "synthetic_erp"

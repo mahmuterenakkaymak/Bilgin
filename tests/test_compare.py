@@ -11,8 +11,8 @@ cezalandırılmayıp listelenir.
 
 from decimal import Decimal
 
-from nl2sql.engine.result import Result
-from nl2sql.eval.compare import compare
+from bilgin.engine.result import Result
+from bilgin.eval.compare import compare
 
 
 def make(columns, rows):

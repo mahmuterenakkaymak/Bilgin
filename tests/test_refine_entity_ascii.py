@@ -9,7 +9,7 @@ indirmedikçe "müşteri" ile "MUSTERI_ADI" aynı alfabede buluşmuyor, şık ya
 adlarla çalışıyordu. Burada tek tur elle kurulur: veritabanı yok, model yok.
 """
 
-from nl2sql.agent import refine
+from bilgin.agent import refine
 
 
 def answered_turn(columns, rows):

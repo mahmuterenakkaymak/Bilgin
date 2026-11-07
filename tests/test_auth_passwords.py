@@ -10,8 +10,8 @@ Doğrulama saklanan n/r/p ile yeniden hesaplar, bozuk/foreign değer asla istisn
 import base64
 import hashlib
 
-from nl2sql import config
-from nl2sql.auth import passwords
+from bilgin import config
+from bilgin.auth import passwords
 
 PAROLA = "Bilgin2026!erp"
 

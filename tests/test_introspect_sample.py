@@ -13,10 +13,10 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.schema_map import build, introspect
+from bilgin import config
+from bilgin.cli import main as cli
+from bilgin.engine.executor import LocalExecutor
+from bilgin.schema_map import build, introspect
 
 PII_CLASS = "address"
 

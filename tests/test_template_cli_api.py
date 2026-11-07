@@ -19,14 +19,14 @@ import openpyxl
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.i18n import t
-from nl2sql.schema_map import introspect, template, template_import
-from nl2sql.schema_map.template import INFO_SHEET
-from nl2sql.web.app import create_app
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.i18n import t
+from bilgin.schema_map import introspect, template, template_import
+from bilgin.schema_map.template import INFO_SHEET
+from bilgin.web.app import create_app
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 PAROLA = "Bilgin2026!erp"
@@ -53,8 +53,8 @@ def project(tmp_path, monkeypatch, capsys):
     (tmp_path / "real_datasets").mkdir()
     shutil.copytree(FIXTURE_ROOT / "mini", tmp_path / "datasets" / "mini")
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path / "datasets"))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(tmp_path / "datasets"))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
     monkeypatch.setattr(config, "MAP_PREVIEWS_DIR", tmp_path / "map_previews")
     monkeypatch.setattr(config, "MAP_CHANGES_LOG", tmp_path / "logs" / "map_changes.jsonl")
     assert cli.build_database(dataset="mini") == 0
@@ -169,8 +169,8 @@ def test_a_lang_the_program_does_not_speak_is_refused(client_en):
 
 
 def test_the_query_lang_reaches_the_live_skeleton_too(client_en, project, monkeypatch):
-    monkeypatch.setenv("NL2SQL_BACKEND", "mssql")
-    monkeypatch.setenv("NL2SQL_MSSQL_CONN", "ODBC DRIVER=...")
+    monkeypatch.setenv("BILGIN_BACKEND", "mssql")
+    monkeypatch.setenv("BILGIN_MSSQL_CONN", "ODBC DRIVER=...")
     monkeypatch.setattr(introspect, "mssql_skeleton", lambda: SKELETON)
 
     response = client_en.get(f"{TEMPLATE_URL}?from_db=1&lang=en")

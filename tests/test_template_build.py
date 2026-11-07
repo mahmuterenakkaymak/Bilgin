@@ -14,9 +14,9 @@ import io
 import openpyxl
 from openpyxl.utils import get_column_letter
 
-from nl2sql import config
-from nl2sql.policy import pii
-from nl2sql.schema_map.template import (
+from bilgin import config
+from bilgin.policy import pii
+from bilgin.schema_map.template import (
     COLUMN_HEADERS,
     DATASET_HEADERS,
     RULE_HEADERS,

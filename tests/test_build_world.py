@@ -11,9 +11,9 @@ import sqlite3
 import pytest
 from sqlglot import parse
 
-from nl2sql import config
-from nl2sql.cli import main as cli
-from nl2sql.schema_map import build, doc, extra, generator
+from bilgin import config
+from bilgin.cli import main as cli
+from bilgin.schema_map import build, doc, extra, generator
 
 EYLUL = ("2026-09-01", "2026-09-30")
 SEEDS = (1, 7, 42, 2026)

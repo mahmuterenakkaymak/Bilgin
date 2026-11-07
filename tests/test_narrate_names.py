@@ -9,8 +9,8 @@ are not technical and stay allowed.
 
 from types import SimpleNamespace
 
-from nl2sql.report import narrate
-from nl2sql.report.facts import compute_facts
+from bilgin.report import narrate
+from bilgin.report.facts import compute_facts
 
 COLUMNS = ["StateProvinceName", "ToplamCiro"]
 ROWS = [("Texas", 11957764.15), ("Colorado", 5544840.13)]

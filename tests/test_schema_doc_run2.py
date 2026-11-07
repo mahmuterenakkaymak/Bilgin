@@ -7,8 +7,8 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.schema_map import doc
+from bilgin import config
+from bilgin.schema_map import doc
 
 
 @pytest.fixture(scope="module")

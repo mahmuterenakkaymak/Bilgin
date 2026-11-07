@@ -15,13 +15,13 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.index.docs import build_documents
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import load_search
-from nl2sql.index.store import (
+from bilgin import config
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.index.docs import build_documents
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import load_search
+from bilgin.index.store import (
     META_FILE,
     FileStore,
     ForeignIndexError,

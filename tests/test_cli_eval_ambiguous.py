@@ -16,9 +16,9 @@ import json
 import pytest
 from pathlib import Path
 
-from nl2sql import config, datasets
-from nl2sql.cli import main as cli
-from nl2sql.schema_map import build
+from bilgin import config, datasets
+from bilgin.cli import main as cli
+from bilgin.schema_map import build
 
 DATASET = "synthetic_erp"
 NO_AMBIGUOUS = "Bu veri kümesinin belirsiz soru seti yok."
@@ -89,7 +89,7 @@ def test_the_ambiguous_set_is_measured_everywhere_it_shows_up(world, tmp_path, c
 
 def test_a_dataset_without_the_set_names_the_missing_one(world, tmp_path, capsys, monkeypatch):
     # Updated 2026-10-26 (Eren: "otomatik olsun"): wwi gained this set for the visual flows (Run 8 brief); the mini fixture has none.
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(Path(__file__).parent / "fixtures" / "datasets"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(Path(__file__).parent / "fixtures" / "datasets"))
     out_dir = tmp_path / "eval_out"
     code = cli.evaluate(
         cli.make_client("fake"), out_dir=out_dir, dataset="mini", ambiguous=True

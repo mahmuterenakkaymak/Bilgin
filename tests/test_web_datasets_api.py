@@ -17,12 +17,12 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.web.app import create_app
-from nl2sql.web.datasets_api import ACTIVE_SETTING
+from bilgin import config
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.web.app import create_app
+from bilgin.web.datasets_api import ACTIVE_SETTING
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 PAROLA = "Bilgin2026!erp"
@@ -91,8 +91,8 @@ def project(tmp_path, monkeypatch, capsys):
     (mini2 / "golden.jsonl").write_text(golden[0] + "\n", encoding="utf-8")
 
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(root))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(root))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
     for name in ("mini", "mini2"):
         assert cli.build_database(dataset=name) == 0
         assert cli.build_index("fake", dataset=name) == 0
@@ -221,8 +221,8 @@ def test_only_an_mssql_switch_carries_a_notice(client):
         "name": "mini2", "display_name": "Mini 2 (Sunucu)", "connection": "mssql",
     }
     assert mssql["notice"]["login_script_url"] == "/api/datasets/mini2/login-script.sql"
-    assert mssql["notice"]["env"] == "NL2SQL_MSSQL_CONN"
-    assert "NL2SQL_MSSQL_CONN" in mssql["notice"]["message"]
+    assert mssql["notice"]["env"] == "BILGIN_MSSQL_CONN"
+    assert "BILGIN_MSSQL_CONN" in mssql["notice"]["message"]
     assert client.post("/api/datasets/active", json={"name": "mini"}).json()["notice"] is None
 
 
@@ -268,7 +268,7 @@ def test_a_script_the_folder_already_carries_is_served_as_is(client, project):
 def test_serve_picks_the_stored_dataset_and_an_explicit_one_wins(project, capsys, monkeypatch):
     seen = {}
     capsys.readouterr()
-    monkeypatch.setenv("NL2SQL_APP_DB", str(project / "app.db"))
+    monkeypatch.setenv("BILGIN_APP_DB", str(project / "app.db"))
     users = UserStore(project / "app.db")
     users.add_user("admin", PAROLA, "admin")
     users.set_setting(ACTIVE_SETTING, "mini2")
@@ -284,7 +284,7 @@ def test_serve_picks_the_stored_dataset_and_an_explicit_one_wins(project, capsys
 
 def test_a_stored_dataset_that_no_longer_loads_falls_back_with_a_note(project, capsys, monkeypatch):
     capsys.readouterr()
-    monkeypatch.setenv("NL2SQL_APP_DB", str(project / "app.db"))
+    monkeypatch.setenv("BILGIN_APP_DB", str(project / "app.db"))
     users = UserStore(project / "app.db")
     users.add_user("admin", PAROLA, "admin")
     users.set_setting(ACTIVE_SETTING, "kaybolmus")

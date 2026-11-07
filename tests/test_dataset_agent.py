@@ -14,17 +14,17 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import modes, prompt
-from nl2sql.agent.loop import run_agent
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.graph.graph import build_graph
-from nl2sql.graph.profile import load_profile
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import build_search
-from nl2sql.schema_map import doc
+from bilgin import config
+from bilgin.agent import modes, prompt
+from bilgin.agent.loop import run_agent
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.engine.executor import LocalExecutor
+from bilgin.graph.graph import build_graph
+from bilgin.graph.profile import load_profile
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import build_search
+from bilgin.schema_map import doc
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 DATASET = load_dataset("mini", root=FIXTURE_ROOT)

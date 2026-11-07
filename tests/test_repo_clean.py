@@ -10,7 +10,7 @@ sürüklenmemesi için durum test altında: ne git indeksinde ne çalışma ağa
 
 import subprocess
 
-from nl2sql import config
+from bilgin import config
 
 SCRATCH = "_t101check"
 

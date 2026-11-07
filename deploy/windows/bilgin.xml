@@ -1,6 +1,6 @@
-<!-- WinSW template of the Bilgin service (PLAN R8-22). `python -m nl2sql service-xml` fills the
+<!-- WinSW template of the Bilgin service (PLAN R8-22). `python -m bilgin service-xml` fills the
      placeholders and writes the result next to WinSW-x64.exe. No secret belongs in this file:
-     model keys live DPAPI-encrypted under NL2SQL_HOME\secrets, database connections in the app
+     model keys live DPAPI-encrypted under BILGIN_HOME\secrets, database connections in the app
      database (R8-23), so the service reads them from its own data root at startup. -->
 <service>
   <id>Bilgin</id>
@@ -9,9 +9,9 @@
   <executable>@PYTHON_EXE@</executable>
   <arguments>@ARGUMENTS@</arguments>
   <workingdirectory>@REPO@</workingdirectory>
-  <env key="NL2SQL_HOME" value="@HOME@" />
-  <env key="NL2SQL_LANG" value="@LANG@" />
-  <env key="NL2SQL_BACKEND" value="@BACKEND@" />
+  <env key="BILGIN_HOME" value="@HOME@" />
+  <env key="BILGIN_LANG" value="@LANG@" />
+  <env key="BILGIN_BACKEND" value="@BACKEND@" />
   @MODEL_ENV@
   @DATASETS_ENV@
   <startmode>Automatic</startmode>

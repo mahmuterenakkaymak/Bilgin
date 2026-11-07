@@ -11,7 +11,7 @@ import subprocess
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 
 def check_ignore(path: str) -> int:
@@ -103,7 +103,7 @@ def test_run5_paths_absolute_and_named():
     expected = {
         "APP_DB_PATH": "data/bilgin.db",
         "ASK_LOG": "logs/asks.jsonl",
-        "STATIC_DIR": "nl2sql/web/static",
+        "STATIC_DIR": "bilgin/web/static",
         "WEB_DIR": "web",
     }
     for name, relative in expected.items():
@@ -145,9 +145,9 @@ def test_ask_log_lives_under_logs_and_is_ignored():
 
 
 def test_static_dir_is_the_build_output_and_ignored():
-    assert config.STATIC_DIR == config.ROOT / "nl2sql" / "web" / "static"
+    assert config.STATIC_DIR == config.ROOT / "bilgin" / "web" / "static"
     assert config.STATIC_DIR != config.WEB_DIR
-    assert check_ignore("nl2sql/web/static/index.html") == 0
+    assert check_ignore("bilgin/web/static/index.html") == 0
 
 
 def test_web_dir_is_the_frontend_source():

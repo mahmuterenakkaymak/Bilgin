@@ -12,13 +12,13 @@ listesi, ne sistem istemi, ne de dispatch'in kabul ettiği adlar.
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import loop, modes, prompt, tools
-from nl2sql.agent.fake import FakeLLM, golden_replay
-from nl2sql.agent.llm import ChatResponse, ToolCall
-from nl2sql.agent.tools import ASK_CLARIFICATION, ERROR_PREFIX, UNKNOWN_TOOL_PREFIX
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.schema_map import build, doc
+from bilgin import config
+from bilgin.agent import loop, modes, prompt, tools
+from bilgin.agent.fake import FakeLLM, golden_replay
+from bilgin.agent.llm import ChatResponse, ToolCall
+from bilgin.agent.tools import ASK_CLARIFICATION, ERROR_PREFIX, UNKNOWN_TOOL_PREFIX
+from bilgin.engine.executor import LocalExecutor
+from bilgin.schema_map import build, doc
 
 GOLDEN = "SELECT CARI_KOD, CARI_ISIM FROM TBLCASABIT WHERE IL = 'ANKARA' ORDER BY CARI_KOD"
 QUESTION = "Satış derken brüt mü net mi kastediliyor?"

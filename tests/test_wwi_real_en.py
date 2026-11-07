@@ -16,11 +16,11 @@ elle adımıdır.
 
 import pytest
 
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.i18n.detect import detect_lang
-from nl2sql.policy import pii, policy
-from nl2sql.schema_map import doc
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.i18n.detect import detect_lang
+from bilgin.policy import pii, policy
+from bilgin.schema_map import doc
 
 DATASET = load_dataset("wwi_real")
 SCHEMA = DATASET.schema()

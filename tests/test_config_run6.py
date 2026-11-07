@@ -13,7 +13,7 @@ import subprocess
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 
 def check_ignore(path: str) -> int:
@@ -36,7 +36,7 @@ def test_run6_tunables_match_plan():
     assert config.LOGIN_MAX_FAILURES == 5
     assert config.LOGIN_WINDOW_MIN == 15
     assert config.LOCKOUT_MIN == 15
-    assert config.DEV_ADMIN_ENV == "NL2SQL_DEV_ADMIN_PASSWORD"
+    assert config.DEV_ADMIN_ENV == "BILGIN_DEV_ADMIN_PASSWORD"
     assert config.MAP_MAX_BYTES == 5 * 1024 * 1024
     assert config.MAP_PREVIEW_TTL_MIN == 30
     assert config.TEMPLATE_FILENAME == "bilgin-veritabani-sablonu.xlsx"
@@ -121,16 +121,16 @@ def test_customer_maps_are_ignored_but_the_wwi_example_is_not():
 
 
 def test_app_db_path_reader_reads_the_env_at_call_time(monkeypatch, tmp_path):
-    monkeypatch.delenv("NL2SQL_APP_DB", raising=False)
+    monkeypatch.delenv("BILGIN_APP_DB", raising=False)
     assert config.app_db_path() == config.APP_DB_PATH
     target = tmp_path / "test.db"
-    monkeypatch.setenv("NL2SQL_APP_DB", str(target))
+    monkeypatch.setenv("BILGIN_APP_DB", str(target))
     assert config.app_db_path() == target
 
 
 def test_real_datasets_dir_reader_reads_the_env_at_call_time(monkeypatch, tmp_path):
-    monkeypatch.delenv("NL2SQL_REAL_DATASETS_DIR", raising=False)
+    monkeypatch.delenv("BILGIN_REAL_DATASETS_DIR", raising=False)
     assert config.real_datasets_dir() == config.REAL_DATASETS_DIR
     target = tmp_path / "gercek"
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(target))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(target))
     assert config.real_datasets_dir() == target

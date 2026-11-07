@@ -18,9 +18,9 @@ from pathlib import Path
 import pytest
 import sqlglot
 
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.engine import login_script
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.engine import login_script
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 
@@ -28,7 +28,7 @@ FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 @pytest.fixture
 def mini(monkeypatch):
     """Mini kümesi tek bilinen klasör: komutlar onu ortam değişkeni üzerinden bulur."""
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     return load_dataset("mini", root=FIXTURE_ROOT)
 
 

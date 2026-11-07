@@ -14,10 +14,10 @@ import re
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import modes, prompt
-from nl2sql.schema_map import doc
-from nl2sql.schema_map.rules import load_rules
+from bilgin import config
+from bilgin.agent import modes, prompt
+from bilgin.schema_map import doc
+from bilgin.schema_map.rules import load_rules
 
 RAG_TOOLS = ["search_schema", "get_table_details", "find_join_path", "search_rules", "sample_values"]
 SQL_TOOLS = ["run_sql", "submit_sql"]

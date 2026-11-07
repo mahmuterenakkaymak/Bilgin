@@ -15,16 +15,16 @@ import shutil
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.cli import main as cli
-from nl2sql.eval import runner
-from nl2sql.index.store import META_FILE
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.cli import main as cli
+from bilgin.eval import runner
+from bilgin.index.store import META_FILE
+from bilgin.schema_map import build
 
 GOLDEN = runner.load_golden()
 ARCHIVE = [line["id"] for line in GOLDEN if "archive" in line["tags"]]
-BUILD = "`python -m nl2sql build-index` çalıştırın"
+BUILD = "`python -m bilgin build-index` çalıştırın"
 
 
 @pytest.fixture(scope="module")

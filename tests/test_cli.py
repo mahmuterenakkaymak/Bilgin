@@ -14,13 +14,13 @@ import re
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.agent.fake import FakeLLM
-from nl2sql.agent.llm import OpenAIClient
-from nl2sql.cli import main as cli
-from nl2sql.eval import runner
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.agent.fake import FakeLLM
+from bilgin.agent.llm import OpenAIClient
+from bilgin.cli import main as cli
+from bilgin.eval import runner
+from bilgin.schema_map import build
 
 GOLDEN = runner.load_golden()
 BY_ID = {line["id"]: line for line in GOLDEN}

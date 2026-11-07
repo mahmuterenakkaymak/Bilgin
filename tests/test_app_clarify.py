@@ -14,14 +14,14 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.engine.result import Budget
-from nl2sql.eval import runner
-from nl2sql.schema_map import build
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.engine.result import Budget
+from bilgin.eval import runner
+from bilgin.schema_map import build
+from bilgin.web.app import create_app
 
 GOLDEN = runner.load_golden()
 BY_ID = {line["id"]: line for line in GOLDEN}

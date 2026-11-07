@@ -7,9 +7,9 @@ import sqlite3
 import pytest
 from sqlglot import exp, parse, transpile
 
-from nl2sql import config
-from nl2sql.policy import policy
-from nl2sql.schema_map import build, doc
+from bilgin import config
+from bilgin.policy import policy
+from bilgin.schema_map import build, doc
 
 ALLOWED = doc.allowlist(doc.load_schema())
 GOLDEN = [json.loads(line) for line in config.GOLDEN_PATH.read_text(encoding="utf-8").splitlines() if line.strip()]

@@ -8,8 +8,8 @@ import sqlite3
 import pytest
 from sqlglot import exp, parse
 
-from nl2sql import config
-from nl2sql.schema_map import build, doc, generator
+from bilgin import config
+from bilgin.schema_map import build, doc, generator
 
 
 @pytest.fixture(scope="module")

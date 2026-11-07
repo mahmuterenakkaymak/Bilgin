@@ -19,11 +19,11 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.engine.result import Budget
-from nl2sql.web.app import create_app
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.engine.result import Budget
+from bilgin.web.app import create_app
 
 DATASET = "synthetic_erp"
 DATASETS = ("synthetic_erp", "wwi")

@@ -9,12 +9,12 @@ nokta gerçek ``DbStatus``. Dışarıdan gelen yalnız iki yer var: guard'ın ba
 yerine salt okunur bir girişi yanıtlar) ve bekçinin ``SELECT 1``i. Zincir sırasıyla ölçülür:
 yönetici tmp SQL Server kümesine salt okunur bir bağlantı kaydeder ve geçişte yürütücü o dizeyi
 taşır; bekçi ok → down → ok derken ``/api/health`` kullanıcı için genel cümleyle birlikte uyar;
-veritabanı düşmüşken soru sunucuya hiç gitmez; ``NL2SQL_MSSQL_CONN_<NAME>`` kayıtlı satırın üstüne
+veritabanı düşmüşken soru sunucuya hiç gitmez; ``BILGIN_MSSQL_CONN_<NAME>`` kayıtlı satırın üstüne
 geçer ve form okunur olur; parola hiçbir cevabın içinde görünmez.
 
 Nokta bekçinin kendi yoklamasıyla (``check_now``) yürür: iş parçacığının zamanı testin koşulu değil.
 Parola kutusu DPAPI istediğinden Windows dışında koşmaz; kabuktaki her bağlantı değişkeni silinir,
-yoksa geliştiricide ambiyans duran ``NL2SQL_MSSQL_CONN`` kümenin yerini alır (R7-29).
+yoksa geliştiricide ambiyans duran ``BILGIN_MSSQL_CONN`` kümenin yerini alır (R7-29).
 """
 
 from __future__ import annotations
@@ -30,18 +30,18 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from nl2sql import config, datasets
-from nl2sql.app.ask import DB_DOWN_MESSAGE
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.engine import _mssql, connections
-from nl2sql.engine._mssql import CONN_ENV
-from nl2sql.engine.connections import ConnectionStore
-from nl2sql.engine.dbstatus import DOWN_MESSAGE, DbStatus
-from nl2sql.engine.result import Result
-from nl2sql.web.app import CONNECTIONS_URL, create_app
-from nl2sql.web.connections_api import ENV_SOURCE
+from bilgin import config, datasets
+from bilgin.app.ask import DB_DOWN_MESSAGE
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.engine import _mssql, connections
+from bilgin.engine._mssql import CONN_ENV
+from bilgin.engine.connections import ConnectionStore
+from bilgin.engine.dbstatus import DOWN_MESSAGE, DbStatus
+from bilgin.engine.result import Result
+from bilgin.web.app import CONNECTIONS_URL, create_app
+from bilgin.web.connections_api import ENV_SOURCE
 
 pytestmark = pytest.mark.skipif(
     sys.platform != "win32", reason="parola kutusu (DPAPI) yalnız Windows'ta vardır"
@@ -142,10 +142,10 @@ def world(tmp_path_factory):
     copy_dataset(root / "datasets" / ERP, display_name="ERP Canlı (Sunucu)", connection="mssql")
     mp = MonkeyPatch()
     mp.setattr(config, "ROOT", root)
-    mp.setenv("NL2SQL_DATASETS_DIR", str(root / "datasets"))
-    mp.setenv("NL2SQL_REAL_DATASETS_DIR", str(root / "real_datasets"))
+    mp.setenv("BILGIN_DATASETS_DIR", str(root / "datasets"))
+    mp.setenv("BILGIN_REAL_DATASETS_DIR", str(root / "real_datasets"))
     mp.delenv(CONN_ENV, raising=False)
-    mp.delenv("NL2SQL_BACKEND", raising=False)
+    mp.delenv("BILGIN_BACKEND", raising=False)
     for name in [n for n in os.environ if n.startswith(config.CONN_ENV_PREFIX)]:
         mp.delenv(name, raising=False)
 

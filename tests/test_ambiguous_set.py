@@ -14,16 +14,16 @@ import itertools
 import pytest
 from pathlib import Path
 
-from nl2sql import config
-from nl2sql.datasets import load_dataset
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
-from nl2sql.eval import compare
-from nl2sql.eval.runner import load_golden
-from nl2sql.index.docs import build_documents, leaks
-from nl2sql.policy import policy
-from nl2sql.schema_map import build, doc
-from nl2sql.schema_map.rules import load_rules
+from bilgin import config
+from bilgin.datasets import load_dataset
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Budget
+from bilgin.eval import compare
+from bilgin.eval.runner import load_golden
+from bilgin.index.docs import build_documents, leaks
+from bilgin.policy import policy
+from bilgin.schema_map import build, doc
+from bilgin.schema_map.rules import load_rules
 
 DATASET = load_dataset("synthetic_erp")
 LINES = DATASET.ambiguous()

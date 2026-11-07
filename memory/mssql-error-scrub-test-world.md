@@ -1,6 +1,6 @@
 ---
 name: mssql-error-scrub-test-world
-description: nl2sql — how to make a driver error reach the stored answer in a test (3 pyodbc connects per ask), and that _mssql.run is the scrub point for PWD=
+description: bilgin — how to make a driver error reach the stored answer in a test (3 pyodbc connects per ask), and that _mssql.run is the scrub point for PWD=
 metadata:
   type: project
 ---
@@ -13,7 +13,7 @@ of one `POST /api/ask`: 1 = the agent's `run_sql` tool, 2 = the loop's own valid
 the message). `dbstatus.ping` and the guard's `app.state.conn_connect` are separate seams, so they
 do not consume those connects.
 
-`nl2sql/engine/_mssql.run` is where the driver text is born and where it is scrubbed
+`bilgin/engine/_mssql.run` is where the driver text is born and where it is scrubbed
 (`connections.scrub`); the ask log stores only the error *kind* and the audit log only
 `error.kind`, so a leak there is impossible by construction — the leak sites are the payload
 (`error.message`, `answer_text`, `steps[].summary`) and the stored turn.
@@ -22,4 +22,4 @@ do not consume those connects.
 module-level import is circular.
 **How to apply:** when a task touches connection error text or the ask path, reuse this
 three-connect shape instead of monkeypatching `executor.execute` (that bypasses `_mssql.run` and
-hides a real leak). See [[nl2sql-hybrid-workflow]], [[hybrid-test-guard]].
+hides a real leak). See [[bilgin-hybrid-workflow]], [[hybrid-test-guard]].

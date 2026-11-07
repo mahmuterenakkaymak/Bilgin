@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql.agent.context import followup_hints
+from bilgin.agent.context import followup_hints
 
 REPO = Path(__file__).resolve().parents[1]
 WWI = REPO / "real_datasets" / "wwi_real"

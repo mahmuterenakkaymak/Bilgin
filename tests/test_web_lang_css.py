@@ -14,7 +14,7 @@ yerde satır küçülme hakkını üstlenmeli.
 
 import re
 
-from nl2sql import config
+from bilgin import config
 
 STYLES = config.WEB_DIR / "src" / "styles.css"
 PHONE_PX = 720

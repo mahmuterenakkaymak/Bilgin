@@ -6,8 +6,8 @@ import random
 
 import pytest
 
-from nl2sql import config
-from nl2sql.schema_map import doc, generator
+from bilgin import config
+from bilgin.schema_map import doc, generator
 
 MASTER_TABLES = ["TBLSTGRUP", "TBLSTSABIT", "TBLDEPO", "TBLPLASIYER", "TBLCASABIT"]
 PRIMARY_KEYS = {

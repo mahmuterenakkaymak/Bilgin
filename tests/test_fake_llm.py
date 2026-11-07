@@ -15,8 +15,8 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent.fake import (
+from bilgin import config
+from bilgin.agent.fake import (
     BROKEN_SQL,
     FALLBACK_SQL,
     FORBIDDEN_SQL,
@@ -30,9 +30,9 @@ from nl2sql.agent.fake import (
     unreachable,
     wrong_sql,
 )
-from nl2sql.agent.llm import ChatResponse, LLMError
-from nl2sql.policy import policy
-from nl2sql.schema_map import doc
+from bilgin.agent.llm import ChatResponse, LLMError
+from bilgin.policy import policy
+from bilgin.schema_map import doc
 
 GOLDEN = "SELECT CARI_KOD FROM TBLCASABIT"
 WRONG = "SELECT CARI_KOD FROM TBLCASABIT WHERE IL = 'ANKARA'"
@@ -162,7 +162,7 @@ def test_unreachable_raises_the_error_the_real_endpoint_would():
     with pytest.raises(LLMError) as caught:
         FakeLLM(unreachable()).chat(messages_for(0))
     message = str(caught.value)
-    assert "127.0.0.1:" in message and "NL2SQL_LLM_BASE_URL" in message
+    assert "127.0.0.1:" in message and "BILGIN_LLM_BASE_URL" in message
 
 
 # ------------------------------------------------------- the scripts against the guardrail

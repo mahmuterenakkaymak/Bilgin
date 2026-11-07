@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import Evidence from "./Evidence.jsx";
 
-// Red satırı nl2sql/agent/tools.py `_unknown`'ın döndürdüğü metindir: araç listesi modelin bir
+// Red satırı bilgin/agent/tools.py `_unknown`'ın döndürdüğü metindir: araç listesi modelin bir
 // sonraki turuna yazılmıştır, kanıt panelini okuyan iş kullanıcıya değil.
 const UNKNOWN_TOOL =
   "Bilinmeyen araç: get_schema. Kullanabileceklerin: search_schema, get_table_details, find_join_path, " +

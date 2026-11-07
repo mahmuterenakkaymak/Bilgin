@@ -14,10 +14,10 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent.clarify import follow_up_text, split_follow_up
-from nl2sql.agent.fake import FALLBACK_SQL, FakeLLM, for_golden, over_clarify
-from nl2sql.agent.tools import clarify_request
+from bilgin import config
+from bilgin.agent.clarify import follow_up_text, split_follow_up
+from bilgin.agent.fake import FALLBACK_SQL, FakeLLM, for_golden, over_clarify
+from bilgin.agent.tools import clarify_request
 
 
 def golden_lines(path=config.GOLDEN_PATH):

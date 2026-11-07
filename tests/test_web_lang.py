@@ -15,12 +15,12 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.requests import Request
 
-from nl2sql import config
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.web.app import create_app
-from nl2sql.web.lang import request_lang
+from bilgin import config
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.web.app import create_app
+from bilgin.web.lang import request_lang
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 
@@ -35,8 +35,8 @@ ENGLISH = "Total sales by city"
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
-    monkeypatch.delenv("NL2SQL_LANG", raising=False)
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.delenv("BILGIN_LANG", raising=False)
     cli.build_database(dataset="mini")
     return tmp_path
 
@@ -97,11 +97,11 @@ def golden_question(session) -> str:
 
 
 def test_without_a_preference_or_a_header_the_program_language_wins(monkeypatch):
-    monkeypatch.setenv("NL2SQL_LANG", "en")
+    monkeypatch.setenv("BILGIN_LANG", "en")
 
     assert request_lang(http_request(), None) == "en"
     assert request_lang(http_request("de"), {"lang": None}) == "en"  # tanıdık başlık yok
-    monkeypatch.delenv("NL2SQL_LANG", raising=False)
+    monkeypatch.delenv("BILGIN_LANG", raising=False)
     assert request_lang(http_request(), None) == config.DEFAULT_LANG
 
 

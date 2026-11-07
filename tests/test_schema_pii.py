@@ -12,8 +12,8 @@ import copy
 
 import pytest
 
-from nl2sql.policy import pii
-from nl2sql.schema_map import doc
+from bilgin.policy import pii
+from bilgin.schema_map import doc
 
 # PLAN R3-7: PII işaretini taşıyan sütunların tam listesi; listelenmeyen hiçbir sütun işaretli değildir.
 ANNOTATED = {

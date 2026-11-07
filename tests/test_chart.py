@@ -15,10 +15,10 @@ import math
 
 import pytest
 
-from nl2sql import config, datasets
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.report import chart
-from nl2sql.schema_map import build
+from bilgin import config, datasets
+from bilgin.engine.executor import LocalExecutor
+from bilgin.report import chart
+from bilgin.schema_map import build
 
 DATE_COLUMNS = ["TARIH", "CIRO", "MIKTAR"]
 DATE_ROWS = [

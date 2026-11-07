@@ -1,0 +1,309 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
+"""Sohbette model koşmadan çözülen istekler (PLAN R7-10).
+
+Kullanıcı bazen yeni bir cevap istemez, gördüğü cevabın sunumunu değiştirir: "Grafiği çubuk yap".
+Böyle bir soru agent'a giderse aynı sorgu baştan kurulur ve uydurma sayı riski yeniden doğar; oysa
+tek gereken önceki turun SQL'ini olduğu gibi yeniden koşup grafiğin türünü değiştirmektir.
+``chart_only`` bu eşiği deterministik olarak ayırt eder: soru yalnızca bir grafik isteğinden ibaretse
+istenen türü döner, içinde yeni bir bilgi barındırıyorsa None.
+
+Modeli koşurmamanın ikinci yolu şık sormaktır (PLAN R7-12): "Bu müşteriye başka ne sattık?" tek
+başına çözülmez, cevabı da modelden değil kullanıcıdan gelir. ``ambiguous_entity`` bunu da
+deterministik olarak ayırt eder ve şıklarını kendisi kurar.
+
+Modelin koştuğu üçüncü yol ise yön göstermektir (PLAN R7-11): "Sadece Texas" yeni bir veri ister,
+ama işin yarı yolda başladığını söyleyecek olan anahtar kelime yine deterministiktir -
+``refine_hint`` tek satırı ondan kurar.
+"""
+
+from __future__ import annotations
+
+from bilgin import config
+from bilgin.i18n import t
+from bilgin.index.text import fold, tokens
+
+# R7-10: soruda geçerse anlaşılan grafik türü. Sözlük sırası, iki istek birden geçerse hangisinin
+# kazanacağını da söyler.
+CHART_WISHES = {
+    "line": ("çizgi", "line", "trend"),
+    "bar": ("çubuk", "sütun", "bar"),
+    "pie": ("pasta", "dilim", "pie"),
+    "table": ("tablo", "tablo olarak"),
+}
+
+# İngilizce istekler CHART_WISHESin üstüne okunur: sözlüğün kendisi bir testle sabitlenmiştir ve
+# İngilizce karşılığı yalnız "table" için gerekir - "line", "bar", "pie" zaten İngilizce sözcükler.
+CHART_WISHES_EN = {"table": ("table", "as a table")}
+
+# İsteğin etrafındaki dolgu: "grafiği ... yap/göster/çevir", "olarak", "olsun", "lütfen" ve
+# İngilizce karşılıkları - "show it as a bar chart" istekle dolgu düşünce bir şey bırakmasın.
+CHART_FILLERS = (
+    "grafik",
+    "grafiği",
+    "göster",
+    "yap",
+    "çevir",
+    "olarak",
+    "olsun",
+    "lütfen",
+    "show",
+    "as",
+    "chart",
+    "make",
+    "please",
+    "it",
+)
+
+# İstek, dolgu ve önceki tura bağlayan işaretler düşünce geriye bir şey kalmıyorsa soru yeni bir
+# şey sormuyordur - sunum dışında.
+_NOTHING_LEFT = (
+    {word for wishes in CHART_WISHES.values() for wish in wishes for word in wish.split()}
+    | {word for wishes in CHART_WISHES_EN.values() for wish in wishes for word in wish.split()}
+    | set(CHART_FILLERS)
+    | set(config.FOLLOWUP_MARKERS)
+)
+
+# R7-11: takibat soruları agent'a kalır - ortada yeni bir veri isteği vardır - ama modelin önüne
+# tek satırlık bir yön düşer: cevap baştan kurulmaz, son turun SQL'i değiştirilir. Sıra, iki
+# kategori birden tutarsa hangisinin kazanacağını da söyler.
+REFINE_HINTS = (
+    (
+        ("sadece", "yalnız"),
+        "İpucu: bu soru önceki cevabı daraltıyor; son turun SQL'ini başlangıç al, filtreyi ekle, sıfırdan yazma.",
+    ),
+    (
+        ("karşılaştır", "geçen yıl", "önceki"),
+        "İpucu: bu soru önceki cevabı başka bir dönemle karşılaştırıyor; son turun SQL'ini başlangıç al, dönemi değiştir, sıfırdan yazma.",
+    ),
+    (
+        ("aylık", "çeyreklik", "haftalık", "yıllık"),
+        "İpucu: bu soru aynı cevabı daha farklı bir dönemsellikte istiyor; son turun SQL'ini başlangıç al, gruplamayı o döneme çevir, sıfırdan yazma.",
+    ),
+)
+
+# "ilk N|en çok N": sayı gelmeyen sıralama sözü listeyi değil dönemi söyleyebilir - "ilk üç ay".
+TOP_WORDS = ("ilk", "en çok", "en fazla")
+TOP_HINT = "İpucu: bu soru listenin başını istiyor; son turun SQL'ini başlangıç al, sıralamayı ve sınırı ekle, sıfırdan yazma."
+
+# R7-12: ardışık sorunun işaret edebildiği varlıklar. Anahtar Türkçe sözcük - soruda ve şıkkın
+# cümlesinde o geçer; değerler son turun kolon adlarında ve şemadaki açıklamalarında aranır.
+ENTITY_NOUNS = {
+    "müşteri": ("customer", "müşteri", "cari"),
+    "ürün": ("stockitem", "product", "ürün", "stok"),
+    "tedarikçi": ("supplier", "tedarikçi"),
+    "fatura": ("invoice", "fatura"),
+}
+
+# Tekil işaret zamirleri: "bunlar / onlar" birden çok varlığa işaret eder, o yüzden tek bir varlık
+# sorulamaz - çoğulları FOLLOWUP_MARKERSda kalır, burada yalnız tekilleri sayılır.
+ENTITY_MARKERS = ("bu", "şu", "o", "this", "that")
+
+# Hal eki kökü bırakır ("müşteriye", "ürünün"), çoğul ek soruyu tek bir varlıktan çıkarır
+# ("müşterilerin", "carilerin") - neyle devam ettiği fark etmez, çoğul bir varlık sorulmaz.
+ENTITY_PLURAL = ("ler", "lar")
+
+# "cari yıl / dönem / ay" dönemi söyler, cari kaydını değil: ardındaki sözcük bunlardan biri ise
+# orada varlık değil takvim geçiyor. Katlanmış halleri - sorunun kelimeleri de katlanmış gelir.
+ENTITY_PERIOD_WORDS = ("yil", "donem", "ay")
+
+
+def chart_wish(question: str) -> str | None:
+    """Soruda geçen grafik türü isteği: "line"|"bar"|"pie"|"table", hiç yoksa None."""
+    words = tokens(question or "")
+    for kind, wishes in CHART_WISHES.items():
+        if any(_mentions(words, tokens(wish)) for wish in wishes + CHART_WISHES_EN.get(kind, ())):
+            return kind
+    return None
+
+
+def chart_only(question: str, turns: list[dict] | None) -> str | None:
+    """Soru yalnızca son cevabın sunumunu mu değiştiriyor: istenen tür, yoksa None (PLAN R7-10).
+
+    Eşik üç koşulun kesişimi: soruda bir istek var, yeniden koşulacak SQL'i bırakmış yanıtlanmış
+    bir tur var, ve istekle dolgu ve işaretler düşünce soruda yeni bir bilgi kalmıyor. Kalan tek bir
+    kelime bile ("Sadece Texas, çubuk grafik"taki "Texas") sorunun agent'a dönmesini söyler - orada
+    sunum değil veri değişiyordur.
+    """
+    kind = chart_wish(question)
+    if kind is None or _last_answered(turns) is None:
+        return None
+    return kind if all(word in _NOTHING_LEFT for word in tokens(question)) else None
+
+
+def refine_hint(question: str) -> str | None:
+    """Takibat sorusunun modelin önüne düşecek tek satırı (PLAN R7-11), hiçbiri değilse None.
+
+    "Sadece Texas" model koşmayı hak eder - istenen yeni bir veri - ama model hangi yoldan
+    koşacağını bilmez: anahtar kelime, cevabı baştan kurmak yerine son turun SQL'inin değiştirilmesi
+    gerektiğini söyler. Satır bloğun içine düştüğü için "son turun" hangi tur olduğunu da görür;
+    bloğun son ``Tur n SQL`` satırı o turdur.
+    """
+    words = tokens(question or "")
+    for keywords, hint in REFINE_HINTS:
+        if any(_says(words, phrase) for phrase in keywords):
+            return hint
+    return TOP_HINT if _top_wanted(words) else None
+
+
+def ambiguous_entity(
+    question: str, turns: list[dict] | None, schema: dict | None, lang: str = "tr"
+) -> dict | None:
+    """Soru tekil bir işaretyle son cevabın çok değerli bir kolonuna mı bakıyor (PLAN R7-12).
+
+    Şıkkın cümlesi ``refine.which.<varlık>`` anahtarının ``lang``deki metnidir; zamir ve varlık
+    sözcükleri iki dilde de aynı sözlüklerden okunur.
+
+    "Bu müşteriye başka ne sattık?" tek başına çözülmez: son turun satırlarında beş farklı cari
+    kodu varsa hangisinin kastedildiğini yalnız kullanıcı bilir, model tahmin ederse uydurur - o
+    yüzden soru modelden önce burada sorulur. Eşik üç koşulun kesişimi: soruda tekil zamir bir varlık
+    sözcüğünün hemen önünde duruyor ve o sözcük çoğul değil, son yanıtlanmış turun kolonlarından biri
+    o varlığın sözlüğüyle eşleşiyor, o kolonun gösterilen satırlarda en az iki farklı değeri var. Tek
+    değer bellidir; çoğul zamir ("bunlar") ve çoğul varlık ("bu carilerin") tek bir varlığı sormayı
+    gerektirmez - üçünde de None.
+
+    Dönüş ``needs_clarification``ın kendisidir: ``{"question", "options", "values", "column"}``.
+    ``column`` şıkkın hangi kolonun değeri olduğunu söyler ve turda dolaşır, böylece seçim bağlam
+    notunun varlığı olur - değeri kod yazar, model değil. ``values`` şıkların sırasıyla hizalı
+    hücre değerleridir: bir kaydın adı da " (" taşıyabildiği için ("Tailspin Toys (Peeples Valley,
+    AZ)") değer şıkkın içinden geri okunmaz, şıkkın numarası buradan okunur.
+    """
+    turn = _last_answered(turns)
+    if turn is None:
+        return None
+    noun = _entity_noun(tokens(question or ""))
+    if noun is None:
+        return None
+    column = _entity_column(turn, noun, schema)
+    if column is None:
+        return None
+    rows = _entity_rows(turn, column)
+    if len(rows) < 2:
+        return None
+    return {
+        "question": t(f"refine.which.{noun}", lang),
+        "options": [f"{value} ({name})" if name else value for value, name in rows],
+        "values": [value for value, _ in rows],
+        "column": column,
+    }
+
+
+def _entity_noun(words: list[str]) -> str | None:
+    """Varlığın adı: hemen önünde tekil zamir duran varlık sözcüğü; hal eki almış hali de aynı sözcük.
+
+    Zamirin arada sıfat bırakmadan bitişiği işareti şart: "Bu ay hangi ürün en çok satıldı?"ndaki
+    "bu" döneme, "Bu yıl müşteri sayısı?"ndaki de yıla bakar - ikisi de tek bir varlık sormaz.
+    """
+    words = [_loose(word) for word in words]
+    for n, word in enumerate(words):
+        if not n or words[n - 1] not in ENTITY_MARKERS:
+            continue
+        noun = _entity_word(word, words[n + 1] if n + 1 < len(words) else "")
+        if noun is not None:
+            return noun
+    return None
+
+
+def _entity_word(word: str, following: str) -> str | None:
+    """Kelime bir varlığın adı mı: kök + hal eki olur, çoğul ek olmaz; "cari yılı" dönemi söyler."""
+    for noun, aliases in ENTITY_NOUNS.items():
+        for alias in aliases:
+            stem = _loose(alias)
+            if not word.startswith(stem):
+                continue
+            suffix = word[len(stem):]
+            if any(mark in suffix for mark in ENTITY_PLURAL):
+                continue
+            if stem == "cari" and following.startswith(ENTITY_PERIOD_WORDS):
+                continue
+            return noun
+    return None
+
+
+def _entity_column(turn: dict, noun: str, schema: dict | None) -> str | None:
+    """Varlığın kolonu: turun kolon adlarından ya da şemadaki açıklamasından eşanlamlıyı taşıyan ilki."""
+    aliases = [_loose(alias) for alias in ENTITY_NOUNS[noun]]
+    descriptions = _descriptions(schema)
+    for column in (turn.get("summary") or {}).get("columns") or []:
+        name = _loose(column)
+        if any(alias in f"{name} {descriptions.get(name, '')}" for alias in aliases):
+            return str(column)
+    return None
+
+
+def _descriptions(schema: dict | None) -> dict[str, str]:
+    """Kolon adının şemadaki açıklaması: ad ASCII kısaltmayla duruyorsa varlık sözcüğü burada geçer."""
+    found: dict[str, str] = {}
+    for table in (schema or {}).get("tables", []):
+        for column in table.get("columns", []):
+            name = _loose(column.get("name"))
+            if name:
+                found.setdefault(name, _loose(column.get("description")))
+    return found
+
+
+def _entity_rows(turn: dict, column: str) -> list[tuple[str, str]]:
+    """Kolonun gösterilen satırlardaki farklı değerleri ve yanlarındaki ad: (değer, ad) sırasıyla."""
+    summary = turn.get("summary") or {}
+    columns = summary.get("columns") or []
+    if column not in columns:
+        return []
+    index = columns.index(column)
+    rows: list[tuple[str, str]] = []
+    for row in (summary.get("rows") or [])[: config.CONV_KEEP_ROWS]:
+        if index >= len(row) or row[index] is None or not str(row[index]).strip():
+            continue
+        value = str(row[index])
+        if not any(value == seen for seen, _ in rows):
+            rows.append((value, _row_name(row, index)))
+    return rows
+
+
+def _row_name(row: list, index: int) -> str:
+    """Satırın değer dışındaki ilk dolu metin hücresi: şıkkın parantezindeki kayıt adı."""
+    for n, cell in enumerate(row):
+        if n != index and isinstance(cell, str) and cell.strip():
+            return cell.strip()
+    return ""
+
+
+# ``fold`` Türkçe harfleri yerinde bırakır, oysa gerçek şemaların kolon adları ASCII'dir:
+# MUSTERI_ADI ile "müşteri" ancak aynı alfabeye inince buluşur.
+_TURKISH_TO_ASCII = str.maketrans("çğıöşü", "cgiosu")
+
+
+def _loose(value) -> str:
+    """Yumuşak katlama: Türkçe harfler ASCII'ye iner - BÜYÜK HARFLİ kolon adlarında "I" zaten "ı"ya düşer."""
+    return fold(str(value or "")).translate(_TURKISH_TO_ASCII)
+
+
+def _last_answered(turns: list[dict] | None) -> dict | None:
+    """Son yanıtlanmış tur: yeni sorgu kurulmayacaksa takılacak tek yer orası.
+
+    ``last_turns``tan gelen turlar yalnız yanıtlıları taşır, o yüzden ``status`` alanları yoktur;
+    konuşma deposundan olduğu gibi okunan turlarda "answered" olanı sayılır.
+    """
+    for turn in reversed(list(turns or [])):
+        if turn.get("status", "answered") == "answered" and turn.get("sql"):
+            return turn
+    return None
+
+
+def _mentions(words: list[str], phrase: list[str]) -> bool:
+    """İfadeli isteğin ("tablo olarak") bitişik geçtiği bir yer var mı."""
+    return any(words[i : i + len(phrase)] == phrase for i in range(len(words) - len(phrase) + 1))
+
+
+def _says(words: list[str], phrase: str) -> bool:
+    """Kelime soruda mı: tek kelime kökle aranır - "karşılaştırma" da "karşılaştır"dır - çok kelimeli
+    ifade ise bitişik geçmelidir, yoksa "geçen" ile "yıl" ayrı cümlelerde buluşurdu."""
+    parts = tokens(phrase)
+    if len(parts) == 1:
+        return any(word.startswith(parts[0]) for word in words)
+    return _mentions(words, parts)
+
+
+def _top_wanted(words: list[str]) -> bool:
+    """Sayıyla gelen sıralama isteği: "ilk 10", "en çok 5 ürün"."""
+    return any(word.isdigit() for word in words) and any(_says(words, phrase) for phrase in TOP_WORDS)

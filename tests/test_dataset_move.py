@@ -6,15 +6,15 @@
 Beş veri dosyası ``datasets/synthetic_erp/`` altına geçti. sha256 değerleri taşımadan önce
 ``git show HEAD:<eski yol>`` çıktısından hesaplanıp burada sabitlendi: taşımaların commit'iyle
 birlikte HEAD o yolları taşımıyor, dolayısıyla test eski hâli git'ten soramaz. Python yerinde
-kaldı (``eval/reference*.py``, ``nl2sql/schema_map/*``); dataset.json onları ``modül:attr`` ile gösterir.
+kaldı (``eval/reference*.py``, ``bilgin/schema_map/*``); dataset.json onları ``modül:attr`` ile gösterir.
 """
 
 import hashlib
 import importlib
 import json
 
-from nl2sql import config
-from nl2sql.agent import fake
+from bilgin import config
+from bilgin.agent import fake
 
 DATASET = "synthetic_erp"
 DATASET_DIR = f"datasets/{DATASET}"
@@ -89,8 +89,8 @@ def test_python_modules_stayed_where_they_were():
     for path in (
         "eval/reference.py",
         "eval/reference_run2.py",
-        "nl2sql/schema_map/generator.py",
-        "nl2sql/schema_map/build.py",
+        "bilgin/schema_map/generator.py",
+        "bilgin/schema_map/build.py",
     ):
         assert (config.ROOT / path).is_file(), path
 

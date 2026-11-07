@@ -12,16 +12,16 @@ CLI'ın adım notu regexi `Sales.Orders` satırını okur. Mini kümesi seçildi
 
 from pathlib import Path
 
-from nl2sql.agent import modes, tools
-from nl2sql.cli.main import _search_notes
-from nl2sql.datasets import load_dataset
-from nl2sql.graph.graph import build_graph, join_text
-from nl2sql.graph.profile import load_profile
-from nl2sql.index.docs import build_documents
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import build_search
-from nl2sql.index.text import fold, tokens
-from nl2sql.schema_map import doc
+from bilgin.agent import modes, tools
+from bilgin.cli.main import _search_notes
+from bilgin.datasets import load_dataset
+from bilgin.graph.graph import build_graph, join_text
+from bilgin.graph.profile import load_profile
+from bilgin.index.docs import build_documents
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import build_search
+from bilgin.index.text import fold, tokens
+from bilgin.schema_map import doc
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 DATASET = load_dataset("mini", root=FIXTURE_ROOT)

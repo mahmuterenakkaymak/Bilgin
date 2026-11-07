@@ -13,8 +13,8 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent.fake import (
+from bilgin import config
+from bilgin.agent.fake import (
     BROKEN_SQL,
     FORBIDDEN_SQL,
     FakeLLM,
@@ -25,10 +25,10 @@ from nl2sql.agent.fake import (
     unreachable,
     wrong_sql,
 )
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.eval import report, runner
-from nl2sql.eval.runner import QuestionResult
-from nl2sql.schema_map import build
+from bilgin.engine.executor import LocalExecutor
+from bilgin.eval import report, runner
+from bilgin.eval.runner import QuestionResult
+from bilgin.schema_map import build
 
 GOLDEN = runner.load_golden()
 IDS = [line["id"] for line in GOLDEN]

@@ -16,8 +16,8 @@ import pytest
 from sqlglot import exp, parse, transpile
 
 from eval import reference
-from nl2sql import config
-from nl2sql.schema_map import build, generator
+from bilgin import config
+from bilgin.schema_map import build, generator
 
 FIELDS = {"trap", "qid", "naive_sql"}
 

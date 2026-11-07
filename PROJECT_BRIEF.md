@@ -12,7 +12,7 @@ how many of 10 golden Turkish questions does the local LLM answer correctly (exe
 calls, how many tokens of context and how much time? A second command asks one free question in the terminal and
 prints the steps, the generated SQL and the result table.
 
-"Done" = `python -m nl2sql eval --llm fake` is green in CI-style tests, and `python -m nl2sql eval` against the local
+"Done" = `python -m bilgin eval --llm fake` is green in CI-style tests, and `python -m bilgin eval` against the local
 OpenAI-compatible endpoint produces `eval_out/report.md` with a score like `7/10` and per-question details.
 
 **Core rules (non-negotiable):**
@@ -25,7 +25,7 @@ OpenAI-compatible endpoint produces `eval_out/report.md` with a score like `7/10
 ## 2. Users and use cases
 
 - **Eren (developer):** runs the eval after changing prompt, model or tools and compares numbers between runs.
-- **Demo viewer (Eren's colleague/manager):** watches `python -m nl2sql ask "Eylül ayında en çok satan 5 ürün"`
+- **Demo viewer (Eren's colleague/manager):** watches `python -m bilgin ask "Eylül ayında en çok satan 5 ürün"`
   print the agent steps, the SQL, and a table - all on synthetic data, no company data.
 
 ## 3. Scope
@@ -64,7 +64,7 @@ OpenAI-compatible endpoint produces `eval_out/report.md` with a score like `7/10
   For each question an **independent Python reference** (`eval/reference.py`) computes the expected rows straight
   from the generator's in-memory data (no SQL). A test asserts golden SQL result == Python reference for all 10.
   Questions are marked `review: pending` - Eren reviews the wording and intent after the run.
-- **Policy** (`nl2sql/policy/`, sqlglot, dialect tsql): exactly one statement; only SELECT (CTEs and UNION of SELECTs
+- **Policy** (`bilgin/policy/`, sqlglot, dialect tsql): exactly one statement; only SELECT (CTEs and UNION of SELECTs
   allowed); **default-deny table allowlist checked on the parse tree** (real table references only; CTE names and
   aliases are not tables, a CTE named like a forbidden table must not hide it); no cross-database or server names
   (`OtherDB.dbo.X`), no `sys.*` / `INFORMATION_SCHEMA` / `xp_` / `sp_` / `OPENROWSET` / `OPENQUERY` /
@@ -72,17 +72,17 @@ OpenAI-compatible endpoint produces `eval_out/report.md` with a score like `7/10
   is none; reject with a clear, model-readable reason. A malicious-SQL test set of at least 20 cases (multi-statement,
   comment injection, UPDATE in a CTE, sys access through UNION, CTE shadowing, bracket/quoted names, case tricks,
   SELECT INTO, EXEC) - all must be rejected; all 10 golden SQLs must pass.
-- **Executor interface** (`nl2sql/engine/`): `Executor.execute(sql, budget) -> Result{columns, rows, row_count,
+- **Executor interface** (`bilgin/engine/`): `Executor.execute(sql, budget) -> Result{columns, rows, row_count,
   truncated, elapsed_ms, error}`. Policy is called **inside** the executor. `LocalExecutor` with two backends:
   - SQLite (used by all tests and the default run): the T-SQL is transpiled with sqlglot (`read="tsql",
     write="sqlite"`) after the policy check; a transpile failure is reported as its own error kind, not as a model
     error. The SQLite connection is opened read-only (`mode=ro` URI).
-  - SQL Server via pyodbc (optional, not exercised by tests): connection string only from env `NL2SQL_MSSQL_CONN`,
+  - SQL Server via pyodbc (optional, not exercised by tests): connection string only from env `BILGIN_MSSQL_CONN`,
     `ApplicationIntent=ReadOnly`, query timeout from config, `SET LOCK_TIMEOUT`. Never a hard-coded connection string.
   Query budget: max rows returned to the model (default 50, rest truncated with a note), timeout.
-- **Agent loop** (`nl2sql/agent/`): OpenAI-compatible chat completions with tool calling (`openai` SDK; base URL and
-  model from env `NL2SQL_LLM_BASE_URL` default `http://127.0.0.1:8080/v1`, `NL2SQL_LLM_MODEL`, optional
-  `NL2SQL_LLM_API_KEY` default `local`). Tools: `get_schema(tables?: list)` (no arg = compact list of all tables with
+- **Agent loop** (`bilgin/agent/`): OpenAI-compatible chat completions with tool calling (`openai` SDK; base URL and
+  model from env `BILGIN_LLM_BASE_URL` default `http://127.0.0.1:8080/v1`, `BILGIN_LLM_MODEL`, optional
+  `BILGIN_LLM_API_KEY` default `local`). Tools: `get_schema(tables?: list)` (no arg = compact list of all tables with
   one-line descriptions; with tables = full columns and code values), `run_sql(sql)` (through the executor; returns
   columns, first rows, row count or the error/policy reason), `submit_sql(sql)` (final answer). System prompt states
   the dialect (T-SQL), AS_OF, and the rules. Limits: max 8 tool calls, max 3 failed `run_sql` calls, total timeout.
@@ -91,7 +91,7 @@ OpenAI-compatible endpoint produces `eval_out/report.md` with a score like `7/10
   `usage`, latency) for the CLI and the eval report.
 - **Context budget measurement:** for each question record the largest `prompt_tokens` of any call and the total;
   the report shows max/median, so the hardware tier decision (16/24/32 GB) has data.
-- **Eval runner** (`nl2sql/eval/`): runs each golden question through the agent, executes the submitted SQL through
+- **Eval runner** (`bilgin/eval/`): runs each golden question through the agent, executes the submitted SQL through
   the same executor, compares with the golden result. Comparison: rows as a multiset (order ignored unless the
   question's ordering flag is set), numbers rounded to 2 decimals, strings trimmed; each golden column must match a
   distinct predicted column by values (column names and order ignored); extra predicted columns allowed but listed.
@@ -102,7 +102,7 @@ OpenAI-compatible endpoint produces `eval_out/report.md` with a score like `7/10
   reconsider.
 - **Fake LLM** for tests and smoke: a scripted client that replays tool calls (e.g. submits the golden SQL, submits a
   wrong SQL, calls a forbidden table, never submits) so every outcome kind is tested without a model.
-- **CLI** (`python -m nl2sql`): `build-db [--seed n]`, `ask "<question>"` (prints numbered steps, final SQL, result as
+- **CLI** (`python -m bilgin`): `build-db [--seed n]`, `ask "<question>"` (prints numbered steps, final SQL, result as
   an aligned text table, tokens and seconds; Turkish labels), `eval [--llm fake|openai] [--only Q03]`.
 - **Audit log** (`logs/audit.jsonl`): time, question id or "ask", SQL, elapsed, row count, outcome. **Result rows are
   never written to the log.**
@@ -121,9 +121,9 @@ CLI ask/eval -> agent loop -> LLM (OpenAI-compatible)          tools: get_schema
                      |                                                          |
                  schema doc                       Executor (policy inside) -> SQLite (ro) / SQL Server (ro)
 ```
-- Package layout leaves room for the plan: `nl2sql/{schema_map,policy,engine,agent,eval,cli}` (+ later `index`,
+- Package layout leaves room for the plan: `bilgin/{schema_map,policy,engine,agent,eval,cli}` (+ later `index`,
   `graph`, `api`, `runner`).
-- Config at the top of `nl2sql/config.py` (AS_OF, seed, TOP n, row budget, timeouts, tool limits, thinking on/off,
+- Config at the top of `bilgin/config.py` (AS_OF, seed, TOP n, row budget, timeouts, tool limits, thinking on/off,
   endpoint defaults); env vars override endpoint/model/connection.
 - Deterministic everything: same seed -> identical database (checksum test).
 
@@ -132,7 +132,7 @@ CLI ask/eval -> agent loop -> LLM (OpenAI-compatible)          tools: get_schema
 - Python 3.11, `uv`, `.venv` already created in the repo with **sqlglot 30.24.0, openai 3.37.0, pytest 9.1.1,
   pyodbc 5.3.0** installed. Use only these plus the standard library (sqlite3, json, statistics, argparse). Pin them
   in `pyproject.toml`; do not add other dependencies.
-- Windows 11; tests: `.venv/Scripts/python -m pytest -q`; run: `.venv/Scripts/python -m nl2sql ...`.
+- Windows 11; tests: `.venv/Scripts/python -m pytest -q`; run: `.venv/Scripts/python -m bilgin ...`.
 - LLM: local OpenAI-compatible endpoint only (Strata on `127.0.0.1:8080` during development, later llama.cpp with a
   27B model). No cloud LLM, no API keys in code. Tests never call a real model.
 
@@ -143,15 +143,15 @@ Privacy class: public/synthetic.
 
 ## 7. Interfaces
 
-- `python -m nl2sql build-db [--seed 42]` -> `data/test.db`, `db/mssql/build_test_db.sql`
-- `python -m nl2sql ask "<soru>"`
-- `python -m nl2sql eval [--llm fake|openai] [--only Q03]` -> `eval_out/latest/report.md`
-- Env: `NL2SQL_LLM_BASE_URL`, `NL2SQL_LLM_MODEL`, `NL2SQL_LLM_API_KEY`, `NL2SQL_MSSQL_CONN`, `NL2SQL_BACKEND`
+- `python -m bilgin build-db [--seed 42]` -> `data/test.db`, `db/mssql/build_test_db.sql`
+- `python -m bilgin ask "<soru>"`
+- `python -m bilgin eval [--llm fake|openai] [--only Q03]` -> `eval_out/latest/report.md`
+- Env: `BILGIN_LLM_BASE_URL`, `BILGIN_LLM_MODEL`, `BILGIN_LLM_API_KEY`, `BILGIN_MSSQL_CONN`, `BILGIN_BACKEND`
   (`sqlite` default | `mssql`).
 
 ## 8. Constraints
 
-- Read-only connections; nothing in `nl2sql/` writes to the queried database (only `build-db` creates the SQLite file).
+- Read-only connections; nothing in `bilgin/` writes to the queried database (only `build-db` creates the SQLite file).
 - No secrets in the repo; `.gitignore`: `.venv/`, `data/*.db`, `eval_out/`, `logs/`, `.env`.
 - Error messages to the model are short and actionable (they are part of the prompt budget).
 - Turkish user-facing CLI text; English code, comments, docs.

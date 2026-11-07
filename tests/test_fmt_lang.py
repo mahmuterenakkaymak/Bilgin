@@ -10,7 +10,7 @@ virgül, ondalık nokta, yüzde sonda, ölçek K/M/B'dir; Türkçe tarafı bugü
 
 import pytest
 
-from nl2sql.report import fmt
+from bilgin.report import fmt
 
 NULL = "–"
 

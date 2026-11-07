@@ -8,7 +8,7 @@ birleşir. Olmayan dosya metne girmez, yani README.tr.md henüz yokken bugünkü
 Yol ``config.ROOT``'tan çağrı anında okunur; kökü tmp'ye taşıyan testler aynı davranır.
 """
 
-from nl2sql import config
+from bilgin import config
 
 
 def readme_text() -> str:

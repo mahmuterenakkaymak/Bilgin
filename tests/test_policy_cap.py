@@ -8,8 +8,8 @@ import sqlite3
 import pytest
 from sqlglot import parse, transpile
 
-from nl2sql import config
-from nl2sql.policy import policy
+from bilgin import config
+from bilgin.policy import policy
 
 
 def check(sql, top_n=config.TOP_N):

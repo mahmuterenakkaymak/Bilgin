@@ -3,12 +3,12 @@
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 ENV_VARS = [
-    "NL2SQL_EMBED_BASE_URL",
-    "NL2SQL_EMBED_MODEL",
-    "NL2SQL_EMBED_API_KEY",
+    "BILGIN_EMBED_BASE_URL",
+    "BILGIN_EMBED_MODEL",
+    "BILGIN_EMBED_API_KEY",
 ]
 
 
@@ -101,9 +101,9 @@ def test_embed_settings_defaults():
 
 
 def test_embed_settings_env_override(monkeypatch):
-    monkeypatch.setenv("NL2SQL_EMBED_BASE_URL", "http://127.0.0.1:8888/v1")
-    monkeypatch.setenv("NL2SQL_EMBED_MODEL", "qwen3-embedding-4b")
-    monkeypatch.setenv("NL2SQL_EMBED_API_KEY", "secret-from-env")
+    monkeypatch.setenv("BILGIN_EMBED_BASE_URL", "http://127.0.0.1:8888/v1")
+    monkeypatch.setenv("BILGIN_EMBED_MODEL", "qwen3-embedding-4b")
+    monkeypatch.setenv("BILGIN_EMBED_API_KEY", "secret-from-env")
     settings = config.embed_settings()
     assert (settings.base_url, settings.model, settings.api_key) == (
         "http://127.0.0.1:8888/v1",
@@ -114,18 +114,18 @@ def test_embed_settings_env_override(monkeypatch):
 
 def test_embed_settings_read_at_call_time(monkeypatch):
     assert config.embed_settings().model == config.DEFAULT_EMBED_MODEL
-    monkeypatch.setenv("NL2SQL_EMBED_MODEL", "changed")
+    monkeypatch.setenv("BILGIN_EMBED_MODEL", "changed")
     assert config.embed_settings().model == "changed"
-    monkeypatch.delenv("NL2SQL_EMBED_MODEL")
+    monkeypatch.delenv("BILGIN_EMBED_MODEL")
     assert config.embed_settings().model == config.DEFAULT_EMBED_MODEL
 
 
 @pytest.mark.parametrize(
     "name,field,default",
     [
-        ("NL2SQL_EMBED_BASE_URL", "base_url", config.DEFAULT_EMBED_BASE_URL),
-        ("NL2SQL_EMBED_MODEL", "model", config.DEFAULT_EMBED_MODEL),
-        ("NL2SQL_EMBED_API_KEY", "api_key", config.DEFAULT_EMBED_API_KEY),
+        ("BILGIN_EMBED_BASE_URL", "base_url", config.DEFAULT_EMBED_BASE_URL),
+        ("BILGIN_EMBED_MODEL", "model", config.DEFAULT_EMBED_MODEL),
+        ("BILGIN_EMBED_API_KEY", "api_key", config.DEFAULT_EMBED_API_KEY),
     ],
 )
 def test_blank_embed_env_falls_back_to_default(monkeypatch, name, field, default):
@@ -134,9 +134,9 @@ def test_blank_embed_env_falls_back_to_default(monkeypatch, name, field, default
 
 
 def test_embed_settings_independent_of_llm_settings(monkeypatch):
-    monkeypatch.setenv("NL2SQL_LLM_BASE_URL", "http://127.0.0.1:8080/v1")
-    monkeypatch.setenv("NL2SQL_LLM_MODEL", "strata")
-    monkeypatch.setenv("NL2SQL_LLM_API_KEY", "llm-key")
+    monkeypatch.setenv("BILGIN_LLM_BASE_URL", "http://127.0.0.1:8080/v1")
+    monkeypatch.setenv("BILGIN_LLM_MODEL", "strata")
+    monkeypatch.setenv("BILGIN_LLM_API_KEY", "llm-key")
     embed = config.embed_settings()
     llm = config.llm_settings()
     assert embed.base_url == config.DEFAULT_EMBED_BASE_URL

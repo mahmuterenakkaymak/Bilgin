@@ -10,7 +10,7 @@ import sys
 
 import pytest
 
-from nl2sql.engine import dpapi
+from bilgin.engine import dpapi
 
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="DPAPI yalnız Windows'ta vardır")
 

@@ -14,10 +14,10 @@ import socket
 from datetime import datetime
 from types import SimpleNamespace
 
-from nl2sql import config
-from nl2sql.cli import main as cli
-from nl2sql.eval import retrieval, runner
-from nl2sql.index.search import METHODS, Hit
+from bilgin import config
+from bilgin.cli import main as cli
+from bilgin.eval import retrieval, runner
+from bilgin.index.search import METHODS, Hit
 
 GOLDEN = [
     {"id": "Q01", "question": "soru bir", "tags": ["x"], "requires_tables": ["TBLA", "TBLB"]},
@@ -159,14 +159,14 @@ def test_cli_eval_retrieval_prints_every_golden_question(tmp_path, capsys):
 
 def test_cli_eval_retrieval_dead_embedding_server(tmp_path, monkeypatch, capsys):
     url = f"http://127.0.0.1:{closed_port()}/v1"
-    monkeypatch.setenv("NL2SQL_EMBED_BASE_URL", url)
+    monkeypatch.setenv("BILGIN_EMBED_BASE_URL", url)
     out_dir = tmp_path / "retrieval"
 
     code = cli.eval_retrieval("openai", out_dir=out_dir)
     out = capsys.readouterr().out
 
     assert code == 3
-    assert url in out and "NL2SQL_EMBED_BASE_URL" in out and "Traceback" not in out
+    assert url in out and "BILGIN_EMBED_BASE_URL" in out and "Traceback" not in out
     assert "Ortalama:" not in out
     assert not out_dir.exists(), "ölçüm tamamlanmadan rapor yazılmamalı"
 

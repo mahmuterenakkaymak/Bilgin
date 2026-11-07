@@ -12,9 +12,9 @@ import sqlite3
 
 import pytest
 
-from nl2sql import config
-from nl2sql.auth.passwords import hash_password
-from nl2sql.auth.store import UserError, UserStore
+from bilgin import config
+from bilgin.auth.passwords import hash_password
+from bilgin.auth.store import UserError, UserStore
 
 PAROLA = "Bilgin2026!erp"
 REFUSED = "Geçersiz iş rolü."

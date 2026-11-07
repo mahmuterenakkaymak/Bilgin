@@ -18,7 +18,7 @@ import subprocess
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 # Görsel incelemede İşlem sütununun kaybolduğu genişlik.
 PHONE_PX = 390

@@ -8,7 +8,7 @@ import string
 
 import pytest
 
-from nl2sql import config, i18n
+from bilgin import config, i18n
 
 CATALOG_LANGS = ("tr", "en")
 
@@ -71,7 +71,7 @@ def test_key_missing_in_language_uses_turkish(catalogs):
 
 
 def test_key_missing_in_turkish_raises(catalogs, monkeypatch):
-    monkeypatch.delenv("NL2SQL_LANG", raising=False)
+    monkeypatch.delenv("BILGIN_LANG", raising=False)
     catalogs(tr={}, en={"other.key": "hello"})
     with pytest.raises(KeyError, match="ask.hi"):
         i18n.t("ask.hi", "en")
@@ -95,7 +95,7 @@ def test_text_without_params_is_returned_as_is(catalogs):
 
 def test_lang_none_follows_nl2sql_lang(catalogs, monkeypatch):
     catalogs(tr={"ask.hi": "merhaba"}, en={"ask.hi": "hello"})
-    monkeypatch.setenv("NL2SQL_LANG", "en")
+    monkeypatch.setenv("BILGIN_LANG", "en")
     assert i18n.t("ask.hi") == "hello"
 
 
@@ -142,16 +142,16 @@ def test_run8_config_names():
 
 
 def test_lang_default_without_env(monkeypatch):
-    monkeypatch.delenv("NL2SQL_LANG", raising=False)
+    monkeypatch.delenv("BILGIN_LANG", raising=False)
     assert config.lang() == config.DEFAULT_LANG == "tr"
 
 
 def test_lang_reads_env(monkeypatch):
-    monkeypatch.setenv("NL2SQL_LANG", "en")
+    monkeypatch.setenv("BILGIN_LANG", "en")
     assert config.lang() == "en"
 
 
 @pytest.mark.parametrize("value", ["xx", "fr", "TR"])
 def test_lang_unknown_value_falls_back_without_crashing(monkeypatch, value):
-    monkeypatch.setenv("NL2SQL_LANG", value)
+    monkeypatch.setenv("BILGIN_LANG", value)
     assert config.lang() == "tr"

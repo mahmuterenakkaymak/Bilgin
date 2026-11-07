@@ -13,14 +13,14 @@ SQL Server'da koştuğu için onun testi yalnız kendi allowlist'ına bakıyor
 
 import pytest
 
-from nl2sql import config, datasets
-from nl2sql.auth.store import UserStore
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
-from nl2sql.policy import policy
-from nl2sql.schema_map import doc
-from nl2sql.start.ready import DISPLAYS, EVERY_ROLE, ReadyStore
-from nl2sql.start.seed import SETTING, ensure_seeded
+from bilgin import config, datasets
+from bilgin.auth.store import UserStore
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Budget
+from bilgin.policy import policy
+from bilgin.schema_map import doc
+from bilgin.start.ready import DISPLAYS, EVERY_ROLE, ReadyStore
+from bilgin.start.seed import SETTING, ensure_seeded
 
 WWI = "wwi"
 # Tohumun taşıdığı roller: ``genel``in yerini ``*`` tutuyor, o yüzden dört rolün ikişer kartı var.

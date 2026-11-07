@@ -19,16 +19,16 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config, datasets
-from nl2sql.agent.llm import ChatResponse
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.schema_map import build, onboard
-from nl2sql.schema_map.template import filled_example_workbook
-from nl2sql.schema_map.template_import import read_template, validate
-from nl2sql.start import suggest
-from nl2sql.start.suggest import SuggestError, SuggestJobs
-from nl2sql.web.app import create_app
+from bilgin import config, datasets
+from bilgin.agent.llm import ChatResponse
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.schema_map import build, onboard
+from bilgin.schema_map.template import filled_example_workbook
+from bilgin.schema_map.template_import import read_template, validate
+from bilgin.start import suggest
+from bilgin.start.suggest import SuggestError, SuggestJobs
+from bilgin.web.app import create_app
 
 DATASET = "synthetic_erp"
 PAROLA = "Bilgin2026!erp"
@@ -244,8 +244,8 @@ def roots(tmp_path, monkeypatch):
     """Küme klasörleri ve ``outputs``un ROOT'u tmp'de: repo ile ``data/`` hiç anılmaz."""
     (tmp_path / "datasets").mkdir()
     (tmp_path / "real_datasets").mkdir()
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path / "datasets"))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(tmp_path / "datasets"))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
     monkeypatch.setattr(config, "ROOT", tmp_path)
     monkeypatch.setattr(config, "MAP_PREVIEWS_DIR", tmp_path / "map_previews")
     monkeypatch.setattr(config, "MAP_CHANGES_LOG", tmp_path / "logs" / "map_changes.jsonl")

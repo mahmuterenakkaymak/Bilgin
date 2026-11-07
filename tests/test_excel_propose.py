@@ -9,9 +9,9 @@ Model burada FakeLLM: öneri hazır bir JSON, ulaşılmayan endpoint de bir scri
 
 import json
 
-from nl2sql.agent.fake import FakeLLM, unreachable
-from nl2sql.agent.llm import ChatResponse
-from nl2sql.schema_map.excel import fallback_mapping, propose
+from bilgin.agent.fake import FakeLLM, unreachable
+from bilgin.agent.llm import ChatResponse
+from bilgin.schema_map.excel import fallback_mapping, propose
 
 HEADERS = ["TABLO", "KOLON", "TİP", "AÇIKLAMA"]
 ROWS = [["TBLSTHAR", "STHAR_GCKOD", "VARCHAR", "Giriş/çıkış kodu"]]

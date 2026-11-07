@@ -3,7 +3,7 @@
 > Approved by Eren 2026-10-23. Builds on Run 1 (Phase 0) and Run 2 (Phase 2 retrieval + A/B eval). This run = the
 > rest of Phase 1 (getting a customer's schema in without hand-writing `schema.json`), the rest of Phase 4 (PII
 > masking, DB-level read-only script), retrieval improvements measured by the A/B eval, and a test clean-up. Web UI,
-> charts and written reports are Run 4. Product name: **Bilgin** (package and CLI stay `nl2sql`).
+> charts and written reports are Run 4. Product name: **Bilgin** (package and CLI stay `bilgin`).
 
 ## 0. Input from earlier runs
 
@@ -29,9 +29,9 @@ From an Excel schema map (two very different layouts) and/or a database connecti
 with the same agent - with personal data masked before any row reaches the model or the screen.
 
 "Done" =
-- `python -m nl2sql import-map tests/fixtures/map_netsis_style.xlsx` proposes a column mapping, `--accept` writes a
+- `python -m bilgin import-map tests/fixtures/map_netsis_style.xlsx` proposes a column mapping, `--accept` writes a
   canonical schema, and for the generated fixture that schema equals `schema/schema.json` (round trip).
-- `python -m nl2sql introspect` builds a skeleton schema from the live DB (SQLite in tests, SQL Server by hand) and
+- `python -m bilgin introspect` builds a skeleton schema from the live DB (SQLite in tests, SQL Server by hand) and
   `diff-map` lists Excel-only / DB-only tables and columns and type mismatches.
 - `eval --mode rag --schema skeleton` vs `--schema full` measures how much the descriptions are worth (this is the
   data behind the plan's "Excel opsiyonel" decision).
@@ -51,7 +51,7 @@ SQL Server.
   lines with the same per-question checks (policy pass, transpile, run, equals reference, >=1 row, ordering), keep every
   distinct assertion, delete the duplicates. The task names every file it edits or deletes. Report the test count
   before/after; coverage of behaviours must not shrink.
-- **Excel import** (`nl2sql/schema_map/excel.py`), `openpyxl` only (no pandas):
+- **Excel import** (`bilgin/schema_map/excel.py`), `openpyxl` only (no pandas):
   - Read sheets, header row detection (first row with >= 3 text cells), first 20 rows preview.
   - **Mapping proposal**: the LLM gets only sheet names, headers and 20 sample rows and returns JSON
     `{sheet, header_row, table_name, column_name, data_type, description, fk_target, values, nullable, module}`
@@ -67,14 +67,14 @@ SQL Server.
     Turkish headers in a different order, a title row and an empty row above the header, merged-looking blank cells
     repeating the table name, mixed-case type names, a few rows with missing descriptions). Both round-trip to the same
     tables/columns; (a) round-trips exactly.
-- **Live schema introspection** (`nl2sql/schema_map/introspect.py`):
+- **Live schema introspection** (`bilgin/schema_map/introspect.py`):
   - SQLite: `sqlite_master` + `PRAGMA table_info` / `foreign_key_list`.
   - SQL Server (written, not exercised by tests): `INFORMATION_SCHEMA.TABLES/COLUMNS` + `sys.foreign_keys`, through a
-    read-only connection from `NL2SQL_MSSQL_CONN`; query text kept in one place and unit-tested by parsing with sqlglot.
+    read-only connection from `BILGIN_MSSQL_CONN`; query text kept in one place and unit-tested by parsing with sqlglot.
   - Skeleton schema: names, types, nullability, fks; descriptions empty; inferred join edges from the ERP profile;
     `kind` = "unknown". Optional `--sample` adds up to 5 distinct values per short text column (through the executor
     and policy, PII columns excluded) as hints.
-- **Merge + diff** (`nl2sql/schema_map/merge.py`): live DB is the truth for existence and types, Excel for meaning
+- **Merge + diff** (`bilgin/schema_map/merge.py`): live DB is the truth for existence and types, Excel for meaning
   (description, values, module, keywords). `diff-map --excel schema/imported.json --db` writes
   `schema/diff.md|json`: tables/columns only in Excel, only in DB, type mismatches, fks in Excel missing in DB.
   `merge-map` writes the merged canonical schema. A schema version (content hash) is stored in the index meta; the
@@ -82,7 +82,7 @@ SQL Server.
 - **Eval on imported/skeleton schemas:** `eval --schema <path|full|skeleton>` (default the current `schema/schema.json`)
   so the same 40 questions measure: hand schema vs imported-from-messy-Excel vs skeleton. Report shows which schema
   (path + hash) was used.
-- **PII protection** (`nl2sql/policy/pii.py`):
+- **PII protection** (`bilgin/policy/pii.py`):
   - Schema columns get an optional `pii` class: `tckn`, `vkn`, `iban`, `phone`, `email`, `address`, `salary`,
     `person_name`. The synthetic world gets real PII-shaped (fake, checksum-valid where a checksum exists) data in the
     personnel tables (`TBLPERSONEL`, `TBLMAAS`, `TBLMAASDETAY` get rows) and address/phone/email in `TBLCARISUBE`
@@ -100,7 +100,7 @@ SQL Server.
     channels. Each case: expected `masked` (with which output columns) or `rejected`.
   - The audit log records which columns were masked (names only).
 - **DB-level protection script** (the primary control, the sqlglot policy is the second layer):
-  `python -m nl2sql make-login-script [--login nl2sql_ro]` writes `db/mssql/readonly_login.sql`: CREATE LOGIN with a
+  `python -m bilgin make-login-script [--login nl2sql_ro]` writes `db/mssql/readonly_login.sql`: CREATE LOGIN with a
   password **placeholder** (never a real one), CREATE USER, `db_datareader`, `DENY SELECT` on every table not in the
   allowlist and on PII columns (column-level DENY), `DENY VIEW DEFINITION`, `DENY EXECUTE`; header comments explain
   that views/synonyms/TVFs can bypass a parser allowlist, so this script is what really limits access. Tests parse the

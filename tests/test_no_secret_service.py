@@ -4,14 +4,14 @@
 """Brief §4: hiçbir sır yerinden oynamaz - beş ortam sırrının değeri hiçbir çıktıda geçmez.
 
 R8-21 ile R8-23'ün ortak sözü tek cümledir: bağlantı dizesi uygulama veritabanında, model anahtarı
-``NL2SQL_HOME``ın sır klasöründe durur; servisin XML'i, ``paths``, ``service-check`` ve kurulum
+``BILGIN_HOME``ın sır klasöründe durur; servisin XML'i, ``paths``, ``service-check`` ve kurulum
 betiğinin satırları o değerlerin yalnız *adını* taşır. Test beş değişkene koşu başına rastgele
 değerler koyar - sabit bir örnek bir sızıntıyı ancak değeri tanıyarak gösterir - ve o değerleri
 çıktıların kendisinde arar: ``render_xml``, ``paths`` (metin ve ``--json``), ``service-check --json``,
-kümesine özel ``NL2SQL_MSSQL_CONN_WWI``den de genel ``NL2SQL_MSSQL_CONN``den de gelen bağlantı
+kümesine özel ``BILGIN_MSSQL_CONN_WWI``den de genel ``BILGIN_MSSQL_CONN``den de gelen bağlantı
 dizesini sürücünün geri söylediği yol dahil, ve kurulum betiğinin ``-WhatIf`` koşusu.
 
-Betiğin iki koşusu vardır: ``NL2SQL_DEV_ADMIN_PASSWORD`` dururken ``dev-admin-env`` adımında durmalı
+Betiğin iki koşusu vardır: ``BILGIN_DEV_ADMIN_PASSWORD`` dururken ``dev-admin-env`` adımında durmalı
 ve sırrın değerini söylememeli; o değişken yokken bütün adımlar geçmeli, tmp klasörüyle
 ``deploy/windows`` olduğu gibi kalmalı. Son satır R8-23'ün bir diğer sözü: WinSW exe'si depoya girmez.
 """
@@ -30,21 +30,21 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
-from nl2sql.service import winsw
+from bilgin import config
+from bilgin.cli import main as cli
+from bilgin.service import winsw
 
 REPO = Path(config.__file__).resolve().parent.parent
 MINI = REPO / "tests" / "fixtures" / "datasets" / "mini"
 SCRIPT = REPO / "scripts" / "install-service.ps1"
 DEPLOY = REPO / "deploy"
-DEV_ADMIN = "NL2SQL_DEV_ADMIN_PASSWORD"
+DEV_ADMIN = "BILGIN_DEV_ADMIN_PASSWORD"
 
 # Brief §4'ün beş sırrı: değerleri ne XML'e ne bir terminal satırına düşebilir.
 SECRET_NAMES = (
-    "NL2SQL_MSSQL_CONN",
-    "NL2SQL_MSSQL_CONN_WWI",
-    "NL2SQL_LLM_API_KEY",
+    "BILGIN_MSSQL_CONN",
+    "BILGIN_MSSQL_CONN_WWI",
+    "BILGIN_LLM_API_KEY",
     "UNSLOTH_API_KEY",
     DEV_ADMIN,
 )
@@ -86,9 +86,9 @@ def assert_clean(text: str, values: dict[str, str]) -> None:
 def secrets_env(monkeypatch) -> dict[str, str]:
     """Beş sır değişkeni koşu başına rastgele değerleriyle kurulur; sözlük arama listesidir."""
     values = {
-        "NL2SQL_MSSQL_CONN": conn_string(secrets.token_hex(8)),
-        "NL2SQL_MSSQL_CONN_WWI": conn_string(secrets.token_hex(8)),
-        "NL2SQL_LLM_API_KEY": secrets.token_hex(8),
+        "BILGIN_MSSQL_CONN": conn_string(secrets.token_hex(8)),
+        "BILGIN_MSSQL_CONN_WWI": conn_string(secrets.token_hex(8)),
+        "BILGIN_LLM_API_KEY": secrets.token_hex(8),
         "UNSLOTH_API_KEY": secrets.token_hex(8),
         DEV_ADMIN: secrets.token_hex(8),
     }
@@ -113,11 +113,11 @@ def test_render_xml_carries_no_secret(secrets_env):
 
 
 def run_paths(*args, **env) -> str:
-    """``python -m nl2sql paths`` taze bir alt süreçte: config yolları import anında çözülür."""
-    child = {key: value for key, value in os.environ.items() if not key.startswith("NL2SQL_")}
+    """``python -m bilgin paths`` taze bir alt süreçte: config yolları import anında çözülür."""
+    child = {key: value for key, value in os.environ.items() if not key.startswith("BILGIN_")}
     child.update({key: str(value) for key, value in env.items()})
     done = subprocess.run(
-        [sys.executable, "-m", "nl2sql", "paths", *[str(a) for a in args]],
+        [sys.executable, "-m", "bilgin", "paths", *[str(a) for a in args]],
         cwd=str(REPO),
         env=child,
         capture_output=True,
@@ -149,15 +149,15 @@ def _rewrite(path: Path, name: str) -> None:
 
 @pytest.fixture
 def world(tmp_path, monkeypatch, secrets_env):
-    """İki mssql kümesi: ``wwi`` kendi değişkenini okur, ``erp`` genel ``NL2SQL_MSSQL_CONN``i."""
+    """İki mssql kümesi: ``wwi`` kendi değişkenini okur, ``erp`` genel ``BILGIN_MSSQL_CONN``i."""
     for name in ("wwi", "erp"):
         shutil.copytree(MINI, tmp_path / "datasets" / name)
         _rewrite(tmp_path / "datasets" / name / "dataset.json", name)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path / "datasets"))
-    monkeypatch.setenv("NL2SQL_APP_DB", str(tmp_path / "app.db"))
-    monkeypatch.setenv("NL2SQL_BACKEND", "mssql")
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(tmp_path / "datasets"))
+    monkeypatch.setenv("BILGIN_APP_DB", str(tmp_path / "app.db"))
+    monkeypatch.setenv("BILGIN_BACKEND", "mssql")
     # Modelin ucu kapalı: yoklamanın cümlesi gerçekten üretilsin, ama sır oraya da sıçramasın.
-    monkeypatch.setenv("NL2SQL_LLM_BASE_URL", f"http://127.0.0.1:{closed_port()}/v1")
+    monkeypatch.setenv("BILGIN_LLM_BASE_URL", f"http://127.0.0.1:{closed_port()}/v1")
     return tmp_path
 
 

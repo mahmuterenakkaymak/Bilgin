@@ -11,13 +11,13 @@ soran over_clarify ise golden'ları cevaplanmamış saydırıp precision'ı kır
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent.fake import FakeLLM, for_golden, over_clarify
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.eval import runner
-from nl2sql.eval.metrics import compute_metrics
-from nl2sql.eval.runner import QuestionResult
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent.fake import FakeLLM, for_golden, over_clarify
+from bilgin.engine.executor import LocalExecutor
+from bilgin.eval import runner
+from bilgin.eval.metrics import compute_metrics
+from bilgin.eval.runner import QuestionResult
+from bilgin.schema_map import build
 
 GOLDEN = runner.load_golden()
 THREE = ["Q01", "Q02", "Q03"]

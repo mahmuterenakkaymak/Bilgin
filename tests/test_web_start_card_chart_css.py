@@ -12,7 +12,7 @@ düşürmez (390px'de de okunmuyordu, yani istisna telefonda değil).
 
 import re
 
-from nl2sql import config
+from bilgin import config
 
 STYLES = config.WEB_DIR / "src" / "styles.css"
 FLOOR_PX = 200.0

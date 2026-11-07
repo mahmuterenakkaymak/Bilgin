@@ -8,7 +8,7 @@ eksiksiz durur, README.tr.md bir satır boşluksuz altına gelir, tr dosyası yo
 Kök ``config.ROOT`` çağrı anında okunduğu için dünya tmp'de kurulur; depodaki README'lere dokunulmaz.
 """
 
-from nl2sql import config
+from bilgin import config
 from readme_text import readme_text
 
 TR = "Satır sayısı beş."

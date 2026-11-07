@@ -18,9 +18,9 @@ import time
 
 import pytest
 
-from nl2sql import config
-from nl2sql.engine import dbstatus
-from nl2sql.engine.dbstatus import DOWN_MESSAGE, DbStatus, looks_like_connection_error
+from bilgin import config
+from bilgin.engine import dbstatus
+from bilgin.engine.dbstatus import DOWN_MESSAGE, DbStatus, looks_like_connection_error
 
 PAROLA = "Gizli2026!parola"
 BAGLANTI = (

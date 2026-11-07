@@ -13,10 +13,10 @@ bir tablo ise tüm kolonlarını listelemeye devam ediyor.
 
 import pytest
 
-from nl2sql.agent import modes, tools
-from nl2sql.datasets import load_dataset
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.schema_map import doc
+from bilgin.agent import modes, tools
+from bilgin.datasets import load_dataset
+from bilgin.engine.executor import LocalExecutor
+from bilgin.schema_map import doc
 
 DATASET = load_dataset("wwi")
 SCHEMA = DATASET.schema()

@@ -17,7 +17,7 @@ import random
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from nl2sql.schema_map import build, doc
+from bilgin.schema_map import build, doc
 
 SCHEMA_PATH = Path(__file__).parent / "schema.json"
 

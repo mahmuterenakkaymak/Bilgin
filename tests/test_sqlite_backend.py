@@ -5,9 +5,9 @@ import sqlite3
 
 import pytest
 
-from nl2sql import config
-from nl2sql.engine import _sqlite
-from nl2sql.engine.result import Budget, Result
+from bilgin import config
+from bilgin.engine import _sqlite
+from bilgin.engine.result import Budget, Result
 
 ROWS = 5
 SLOW_SQL = (

@@ -14,11 +14,11 @@ import json
 import pytest
 from pathlib import Path
 
-from nl2sql import config
-from nl2sql.datasets import load_dataset
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.datasets import load_dataset
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Budget
+from bilgin.schema_map import build
 
 DATASET = load_dataset("synthetic_erp")
 CHAINS = DATASET.followups()

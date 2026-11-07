@@ -11,7 +11,7 @@
 
     The code itself is not touched: the operator brings the new version over between the stop and
     the start, this script never fetches anything. The only build it runs is the UI, and only when
-    a file under web\ is newer than the built nl2sql\web\static\index.html - a Python-only update
+    a file under web\ is newer than the built bilgin\web\static\index.html - a Python-only update
     costs no build.
 
     The file is ASCII only: Windows PowerShell 5.1 reads a script without a byte-order mark in
@@ -36,7 +36,7 @@ if (-not $Repo) { $Repo = Split-Path -Parent $PSScriptRoot }
 $ServiceName = 'Bilgin'
 $ServiceExe = Join-Path $Repo "deploy\windows\$ServiceName.exe"
 $WebDir = Join-Path $Repo 'web'
-$IndexHtml = Join-Path $Repo 'nl2sql\web\static\index.html'
+$IndexHtml = Join-Path $Repo 'bilgin\web\static\index.html'
 $ViteJs = Join-Path $Repo 'web\node_modules\vite\bin\vite.js'
 $HealthUrl = "http://127.0.0.1:$Port/api/health"
 

@@ -346,13 +346,13 @@ describe("MapScreen — veri kümeleri", () => {
   it("SQL Server kümesine geçişin duyurusu bağlantısıyla birlikte durur", () => {
     const notice = {
       name: "wwi_real",
-      message: "Bu küme SQL Server'a bağlı: salt okunur girişi kurun ve sunucuyu NL2SQL_MSSQL_CONN ile başlatın.",
+      message: "Bu küme SQL Server'a bağlı: salt okunur girişi kurun ve sunucuyu BILGIN_MSSQL_CONN ile başlatın.",
       login_script_url: "/api/datasets/wwi_real/login-script.sql",
-      env: "NL2SQL_MSSQL_CONN",
+      env: "BILGIN_MSSQL_CONN",
     };
     const html = screen({ datasets: DATASETS, active: "wwi_real", notice });
     expect(html).toContain('id="dataset-notice"');
-    expect(html).toContain("NL2SQL_MSSQL_CONN ile başlatın.");
+    expect(html).toContain("BILGIN_MSSQL_CONN ile başlatın.");
     expect(html).toContain('href="/api/datasets/wwi_real/login-script.sql"');
     expect(screen({ datasets: DATASETS })).not.toContain('id="dataset-notice"');
   });

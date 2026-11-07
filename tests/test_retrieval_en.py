@@ -18,10 +18,10 @@ eklenen kuralın genişletmesi ancak kendi tablosunu yukarı taşıyabilir. Dene
 BM25'te kısalıyor, yani İngilizce kelime kazanırken Türkçe kelime kaybediyor.
 """
 
-from nl2sql.datasets import load_dataset
-from nl2sql.eval import retrieval
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import build_search
+from bilgin.datasets import load_dataset
+from bilgin.eval import retrieval
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import build_search
 
 # ASSUMPTION: eş anlamlı listesi `datasets/wwi/profile.json`da değil `rules.json`da (`synonyms_en`)
 # - profile yalnız join çifti taşır; oraya synonym okumak kod değişikliği ister, ölçüm istemedi.

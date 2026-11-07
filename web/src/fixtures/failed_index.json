@@ -3,7 +3,7 @@
   "question": "En çok satan beş ürün hangisi?",
   "choice": null,
   "answer_lang": "tr",
-  "answer_text": "İndeks eski: `python -m nl2sql build-index` çalıştırın.",
+  "answer_text": "İndeks eski: `python -m bilgin build-index` çalıştırın.",
   "narration_source": null,
   "chart": null,
   "facts": [],
@@ -30,13 +30,13 @@
   "clarification": null,
   "error": {
     "kind": "index",
-    "message": "İndeks eski: `python -m nl2sql build-index` çalıştırın."
+    "message": "İndeks eski: `python -m bilgin build-index` çalıştırın."
   },
   "steps": [
     {
       "tool": "search_schema",
       "ok": false,
-      "summary": "İndeks eski: `python -m nl2sql build-index` çalıştırın."
+      "summary": "İndeks eski: `python -m bilgin build-index` çalıştırın."
     }
   ],
   "conversation_id": "3f2a9c0d1e4b4a7f8c6d5e2b1a0f9e8d",

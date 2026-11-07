@@ -19,9 +19,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from nl2sql.cli import main as cli
-from nl2sql.engine.connections import ConnectionStore
-from nl2sql.engine.dbstatus import DbStatus
+from bilgin.cli import main as cli
+from bilgin.engine.connections import ConnectionStore
+from bilgin.engine.dbstatus import DbStatus
 
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="DPAPI yalnız Windows'ta vardır")
 

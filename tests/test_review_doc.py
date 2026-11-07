@@ -8,9 +8,9 @@ from collections import Counter
 import pytest
 
 from eval import reference, review
-from nl2sql import config
-from nl2sql.eval.runner import load_golden
-from nl2sql.schema_map import generator
+from bilgin import config
+from bilgin.eval.runner import load_golden
+from bilgin.schema_map import generator
 
 GOLDEN = load_golden()
 IDS = [line["id"] for line in GOLDEN]

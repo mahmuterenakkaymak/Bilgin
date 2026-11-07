@@ -10,13 +10,13 @@ iddia ise ölçüm değil bulunabilirlik: altın sorunun dili ilgili tabloyu ilk
 
 import pytest
 
-from nl2sql import config
-from nl2sql.index.docs import build_documents
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import Hit, build_search, load_search, rrf
-from nl2sql.index.store import FileStore, content_hash
-from nl2sql.schema_map.doc import load_schema
-from nl2sql.schema_map.rules import load_rules
+from bilgin import config
+from bilgin.index.docs import build_documents
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import Hit, build_search, load_search, rrf
+from bilgin.index.store import FileStore, content_hash
+from bilgin.schema_map.doc import load_schema
+from bilgin.schema_map.rules import load_rules
 
 SCHEMA = load_schema()
 RULES = load_rules()

@@ -19,8 +19,8 @@ import sys
 
 import pytest
 
-from nl2sql import config
-from nl2sql.eval import runner
+from bilgin import config
+from bilgin.eval import runner
 
 GOLDEN = runner.load_golden()
 QUESTION = GOLDEN[0]["question"]
@@ -58,11 +58,11 @@ FLAGS = (
 def run(*argv: str) -> subprocess.CompletedProcess:
     """Depo kökünde alt süreç; backend sqlite ve çıktı UTF-8 (test_smoke ile aynı iki sabitleme)."""
     return subprocess.run(
-        [sys.executable, "-m", "nl2sql", *argv],
+        [sys.executable, "-m", "bilgin", *argv],
         cwd=config.ROOT,
         capture_output=True,
         encoding="utf-8",
-        env={**os.environ, "NL2SQL_BACKEND": "sqlite", "PYTHONIOENCODING": "utf-8"},
+        env={**os.environ, "BILGIN_BACKEND": "sqlite", "PYTHONIOENCODING": "utf-8"},
     )
 
 

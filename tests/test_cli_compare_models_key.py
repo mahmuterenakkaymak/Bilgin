@@ -16,12 +16,12 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
+from bilgin import config
+from bilgin.cli import main as cli
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 CLOSED = "http://127.0.0.1:9/v1"  # discard portu: hiçbir zaman yanıt vermez
-KEY_ENV = "NL2SQL_TEST_ANAHTAR_YOK"
+KEY_ENV = "BILGIN_TEST_ANAHTAR_YOK"
 KEY_SENTENCE = f"API anahtarı yok: {KEY_ENV} ortam değişkenini tanımlayın."
 DOWN_REASON = f"uç nokta yanıt vermiyor ({CLOSED})"  # stub'un döndüğü gerçek yoklama sebebi
 
@@ -55,7 +55,7 @@ def models_file(tmp_path) -> Path:
 def project(tmp_path, monkeypatch, capsys):
     """Proje kökü geçici, anahtar değişkeni yok: tıpkı UNSLOTH_API_KEY tanımlı değilken."""
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     monkeypatch.delenv(KEY_ENV, raising=False)
     assert cli.build_database(dataset="mini") == 0
     assert cli.build_index("fake", dataset="mini") == 0

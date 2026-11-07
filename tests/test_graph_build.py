@@ -12,10 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql.graph import graph as graph_module
-from nl2sql.graph.graph import build_graph
-from nl2sql.graph.profile import load_profile
-from nl2sql.schema_map.doc import load_schema
+from bilgin.graph import graph as graph_module
+from bilgin.graph.graph import build_graph
+from bilgin.graph.profile import load_profile
+from bilgin.schema_map.doc import load_schema
 
 SCHEMA = load_schema()
 PROFILE = load_profile()

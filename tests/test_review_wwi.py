@@ -8,7 +8,7 @@ from __future__ import annotations
 import pytest
 
 from eval import review
-from nl2sql.datasets import load_dataset
+from bilgin.datasets import load_dataset
 
 DATASET = load_dataset("wwi")
 GOLDEN = DATASET.golden()

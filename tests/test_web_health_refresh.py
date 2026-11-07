@@ -13,7 +13,7 @@ denetler — isteğin adı konmuş bir işlev olması, hem açılış effect'ind
 
 import re
 
-from nl2sql import config
+from bilgin import config
 
 APP = config.ROOT / "web" / "src" / "App.jsx"
 SOURCE = APP.read_text(encoding="utf-8")

@@ -16,8 +16,8 @@ import types
 import pytest
 from openai import APIStatusError
 
-from nl2sql import config
-from nl2sql.agent.llm import LLMError, OpenAIClient, strip_think
+from bilgin import config
+from bilgin.agent.llm import LLMError, OpenAIClient, strip_think
 
 BASE_URL = "http://127.0.0.1:9/v1"
 MESSAGES = [{"role": "user", "content": "Ankara carileri"}]
@@ -153,9 +153,9 @@ def test_request_carries_the_model_tools_and_thinking_flag():
 
 
 def test_endpoint_settings_come_from_the_environment(monkeypatch):
-    monkeypatch.setenv("NL2SQL_LLM_BASE_URL", "http://127.0.0.1:8888/v1")
-    monkeypatch.setenv("NL2SQL_LLM_MODEL", "qwen3.8-27b")
-    monkeypatch.setenv("NL2SQL_LLM_API_KEY", "token-1")
+    monkeypatch.setenv("BILGIN_LLM_BASE_URL", "http://127.0.0.1:8888/v1")
+    monkeypatch.setenv("BILGIN_LLM_MODEL", "qwen3.8-27b")
+    monkeypatch.setenv("BILGIN_LLM_API_KEY", "token-1")
     instance = OpenAIClient()
     assert (instance.base_url, instance.model) == ("http://127.0.0.1:8888/v1", "qwen3.8-27b")
 
@@ -168,7 +168,7 @@ def test_unreachable_endpoint_is_an_llm_error_naming_the_url():
         instance.chat(MESSAGES)
     message = str(caught.value)
     assert "127.0.0.1:" in message and "/v1" in message
-    assert "NL2SQL_LLM_BASE_URL" in message
+    assert "BILGIN_LLM_BASE_URL" in message
 
 
 def test_http_error_becomes_an_llm_error_with_the_status():

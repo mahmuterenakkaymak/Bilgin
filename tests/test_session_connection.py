@@ -20,14 +20,14 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.engine import _mssql
-from nl2sql.engine._mssql import CONN_ENV
-from nl2sql.engine.connections import ConnectionStore
-from nl2sql.engine.result import Result
-from nl2sql.web.app import create_app
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.engine import _mssql
+from bilgin.engine._mssql import CONN_ENV
+from bilgin.engine.connections import ConnectionStore
+from bilgin.engine.result import Result
+from bilgin.web.app import create_app
 
 pytestmark = pytest.mark.skipif(
     sys.platform != "win32", reason="parola kutusu (DPAPI) yalnız Windows'ta vardır"
@@ -54,9 +54,9 @@ def copy_dataset(root: Path, name: str, **over) -> Path:
 
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch):
-    """Kabuktaki her bağlantı değişkeni silinir: geliştiricide ``NL2SQL_MSSQL_CONN`` ambiyans durur."""
+    """Kabuktaki her bağlantı değişkeni silinir: geliştiricide ``BILGIN_MSSQL_CONN`` ambiyans durur."""
     monkeypatch.delenv(CONN_ENV, raising=False)
-    monkeypatch.delenv("NL2SQL_BACKEND", raising=False)
+    monkeypatch.delenv("BILGIN_BACKEND", raising=False)
     for name in [n for n in os.environ if n.startswith(config.CONN_ENV_PREFIX)]:
         monkeypatch.delenv(name, raising=False)
 
@@ -68,8 +68,8 @@ def world(tmp_path, monkeypatch, capsys):
     copy_dataset(root, "synthetic_erp")
     copy_dataset(root, "erp_live", display_name="ERP Canlı (Sunucu)", connection="mssql")
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(root))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(root))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(tmp_path / "real_datasets"))
     for name in ("synthetic_erp", "erp_live"):
         assert cli.build_database(dataset=name) == 0
     capsys.readouterr()

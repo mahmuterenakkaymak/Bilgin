@@ -21,10 +21,10 @@ from urllib.parse import urlparse
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app.session import open_session
-from nl2sql.cli import main as cli
-from nl2sql.web.app import BUILD_COMMAND, create_app
+from bilgin import config
+from bilgin.app.session import open_session
+from bilgin.cli import main as cli
+from bilgin.web.app import BUILD_COMMAND, create_app
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 
@@ -69,7 +69,7 @@ def built_css(build) -> str:
 def client(build, tmp_path, monkeypatch, capsys) -> TestClient:
     """Gerçek oturumun üstünde gerçek uygulama: ``/`` ve ``/assets`` oradan geliyor."""
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     cli.build_database(dataset="mini")
     capsys.readouterr()
     session = open_session(

@@ -14,10 +14,10 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.datasets import DatasetError, all_datasets, list_datasets, load_dataset, name_taken
+from bilgin import config
+from bilgin.datasets import DatasetError, all_datasets, list_datasets, load_dataset, name_taken
 
-ENV_VARS = ["NL2SQL_DATASETS_DIR", "NL2SQL_REAL_DATASETS_DIR"]
+ENV_VARS = ["BILGIN_DATASETS_DIR", "BILGIN_REAL_DATASETS_DIR"]
 
 MINI_DOC = {
     "name": "mini",
@@ -49,8 +49,8 @@ def roots(tmp_path, monkeypatch):
     synthetic, real = tmp_path / "datasets", tmp_path / "real"
     synthetic.mkdir()
     real.mkdir()
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(synthetic))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(real))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(synthetic))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(real))
     return synthetic, real
 
 

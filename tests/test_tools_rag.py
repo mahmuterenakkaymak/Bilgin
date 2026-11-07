@@ -10,14 +10,14 @@ eşitlikleri ve güveni söyler, uzun bir cevap ise modele girmeden kırpılır.
 biçim sınanmaz.
 """
 
-from nl2sql import config
-from nl2sql.agent import modes, tools
-from nl2sql.graph.graph import build_graph, join_text
-from nl2sql.graph.profile import load_profile
-from nl2sql.index.embed import FakeEmbedder
-from nl2sql.index.search import build_search
-from nl2sql.schema_map import doc
-from nl2sql.schema_map.rules import load_rules, rule_text
+from bilgin import config
+from bilgin.agent import modes, tools
+from bilgin.graph.graph import build_graph, join_text
+from bilgin.graph.profile import load_profile
+from bilgin.index.embed import FakeEmbedder
+from bilgin.index.search import build_search
+from bilgin.schema_map import doc
+from bilgin.schema_map.rules import load_rules, rule_text
 
 SCHEMA = doc.load_schema()
 RULES = load_rules()

@@ -20,7 +20,7 @@ import sys
 
 import pytest
 
-from nl2sql import config
+from bilgin import config
 
 PORT = "8780"
 CHECKS = (
@@ -42,7 +42,7 @@ def run(*argv: str) -> subprocess.CompletedProcess:
         cwd=config.ROOT,
         capture_output=True,
         encoding="utf-8",
-        env={**os.environ, "NL2SQL_BACKEND": "sqlite", "PYTHONIOENCODING": "utf-8"},
+        env={**os.environ, "BILGIN_BACKEND": "sqlite", "PYTHONIOENCODING": "utf-8"},
     )
 
 
@@ -63,8 +63,8 @@ def smoke():
     """Kurulu dünyanın üstünde tek duman koşusu; öncesi/sonrası imzayı da taşıyan üçlü."""
     before = real_datasets_tree()
     for argv in (
-        ("-m", "nl2sql", "build-db"),
-        ("-m", "nl2sql", "build-index", "--embed", "fake"),
+        ("-m", "bilgin", "build-db"),
+        ("-m", "bilgin", "build-index", "--embed", "fake"),
     ):
         result = run(*argv)
         assert result.returncode == 0, f"{' '.join(argv)}: {result.stdout}{result.stderr}"

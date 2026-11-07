@@ -11,7 +11,7 @@ with a RIGHT/FULL join are left alone. The rewritten SQL must still count the sa
 
 import sqlite3
 
-from nl2sql.policy import pii, policy
+from bilgin.policy import pii, policy
 
 SCHEMA = {
     "tables": [

@@ -128,7 +128,7 @@ describe("ErrorCard", () => {
     expect(html).toContain("İndeks eski");
     expect(html).toContain('id="error-rebuild"');
     expect(html).toContain("İndeksi yeniden kur");
-    expect(html).toContain("İndeks eski: `python -m nl2sql build-index` çalıştırın.");
+    expect(html).toContain("İndeks eski: `python -m bilgin build-index` çalıştırın.");
   });
 
   it("cevap üretilemedi: neden cümlesi okunur", () => {
@@ -143,7 +143,7 @@ describe("ErrorCard", () => {
     const html = render(<ErrorCard kind="network" message="Sunucuya ulaşılamadı" onRebuild={noop} />);
     expect(html).toContain("Sunucuya ulaşılamadı");
     expect(html.match(/Sunucuya ulaşılamadı/g)).toHaveLength(1);
-    expect(html).toContain("python -m nl2sql serve");
+    expect(html).toContain("python -m bilgin serve");
   });
 
   it("bilinmeyen tür genel başlığa iner", () => {

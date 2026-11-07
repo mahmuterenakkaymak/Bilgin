@@ -3,8 +3,8 @@
 
 """trace() her çıktı kolonunu gerçek kaynak kolonlarına kadar izler; izlenemeyen None döner (R3-6)."""
 
-from nl2sql.policy import pii
-from nl2sql.schema_map import doc
+from bilgin.policy import pii
+from bilgin.schema_map import doc
 
 SCHEMA = doc.load_schema()
 

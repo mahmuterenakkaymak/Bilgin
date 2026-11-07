@@ -13,11 +13,11 @@ yarım bir indeks de bırakmamalı.
 import json
 import socket
 
-from nl2sql import config
-from nl2sql.cli import main as cli
-from nl2sql.index import store
-from nl2sql.schema_map import doc
-from nl2sql.schema_map.rules import load_rules
+from bilgin import config
+from bilgin.cli import main as cli
+from bilgin.index import store
+from bilgin.schema_map import doc
+from bilgin.schema_map.rules import load_rules
 
 
 def closed_port() -> int:
@@ -62,14 +62,14 @@ def test_fake_embedder_builds_the_index(tmp_path, capsys):
 
 def test_dead_embedding_server_names_the_url(tmp_path, monkeypatch, capsys):
     url = f"http://127.0.0.1:{closed_port()}/v1"
-    monkeypatch.setenv("NL2SQL_EMBED_BASE_URL", url)
+    monkeypatch.setenv("BILGIN_EMBED_BASE_URL", url)
     index_dir = tmp_path / "index"
 
     code = cli.build_index("openai", index_dir=index_dir)
     out = capsys.readouterr().out
 
     assert code == 3
-    assert url in out and "NL2SQL_EMBED_BASE_URL" in out and "Traceback" not in out
+    assert url in out and "BILGIN_EMBED_BASE_URL" in out and "Traceback" not in out
     assert out.count(url) == 1, "adres iki kere saydırılmamalı"
     assert "Dokümanlar:" not in out
     assert not index_dir.exists(), "vektörsüz bir indeks bırakılmamalı"

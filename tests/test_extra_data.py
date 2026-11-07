@@ -8,7 +8,7 @@ from collections import defaultdict
 
 import pytest
 
-from nl2sql.schema_map import doc, extra, generator
+from bilgin.schema_map import doc, extra, generator
 
 EXTRA_TABLES = ("TBLSTOKFIAT", "TBLDOVKUR", "TBLCARISUBE", "TBLKAMPANYA")
 RUN1_TABLES = (

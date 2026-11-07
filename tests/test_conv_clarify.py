@@ -15,14 +15,14 @@ import sqlite3
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.agent.clarify import CHOICE_MARKER
-from nl2sql.agent.llm import ChatResponse, ToolCall
-from nl2sql.app.ask import ask_payload
-from nl2sql.app.conversations import ConversationStore
-from nl2sql.app.session import open_session
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.agent.clarify import CHOICE_MARKER
+from bilgin.agent.llm import ChatResponse, ToolCall
+from bilgin.app.ask import ask_payload
+from bilgin.app.conversations import ConversationStore
+from bilgin.app.session import open_session
+from bilgin.schema_map import build
 
 CUSTOMERS_SQL = "SELECT TOP 5 CARI_KOD, CARI_ISIM FROM TBLCASABIT ORDER BY CARI_KOD"
 ONE_CUSTOMER_SQL = "SELECT TOP 1 CARI_KOD, CARI_ISIM FROM TBLCASABIT ORDER BY CARI_KOD"

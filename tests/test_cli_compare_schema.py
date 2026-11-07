@@ -15,11 +15,11 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.cli import main as cli
-from nl2sql.eval import report, runner
-from nl2sql.schema_map import build, doc
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.cli import main as cli
+from bilgin.eval import report, runner
+from bilgin.schema_map import build, doc
 
 GOLDEN = runner.load_golden()
 MODES = list(config.MODES)

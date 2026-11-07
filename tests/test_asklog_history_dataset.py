@@ -5,7 +5,7 @@
 sends it to the wrong database. `dataset=None` is the default dataset, whose records carry no name; leaving the
 argument out keeps the old behaviour (every record)."""
 
-from nl2sql.app import asklog
+from bilgin.app import asklog
 
 
 def write(path, *datasets):

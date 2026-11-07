@@ -12,7 +12,7 @@ import sqlite3
 
 import pytest
 
-from nl2sql.web.saved import ALL, SavedStore
+from bilgin.web.saved import ALL, SavedStore
 
 # Run 5'in sözleşmesi değişmez.
 SAVED_KEYS = {"id", "question", "mode", "sql", "dataset", "created_at"}

@@ -15,10 +15,10 @@ import re
 import pytest
 import sqlglot
 
-from nl2sql.engine import login_script
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.policy import pii
-from nl2sql.schema_map import build, doc
+from bilgin.engine import login_script
+from bilgin.engine.executor import LocalExecutor
+from bilgin.policy import pii
+from bilgin.schema_map import build, doc
 
 SCHEMA = {
     "tables": [

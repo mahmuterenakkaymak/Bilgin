@@ -11,7 +11,7 @@ blokta birden çok ``th`` kuralı olabilir, önemli olan telefon genişliğinde 
 
 import re
 
-from nl2sql import config
+from bilgin import config
 
 STYLES = config.WEB_DIR / "src" / "styles.css"
 

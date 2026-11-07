@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (c) 2026 Mahmut Eren Akkaymak
 
-"""``python -m nl2sql service-check`` (PLAN R8-23, Contracts ``service-check``).
+"""``python -m bilgin service-check`` (PLAN R8-23, Contracts ``service-check``).
 
 Kurulum betiği bu yoklamayı *uyarı* olarak okur, o yüzden üç şey sabitlenir: kapalı bir uç nokta ya
 da yazabilen bir giriş çıkış koduna hiç geçmez, ``--json``ın anahtarları sözleşmenin satırıdır
@@ -17,9 +17,9 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
-from nl2sql.i18n import t
+from bilgin import config
+from bilgin.cli import main as cli
+from bilgin.i18n import t
 
 REPO = Path(config.__file__).resolve().parent.parent
 MINI = REPO / "tests" / "fixtures" / "datasets" / "mini"
@@ -80,15 +80,15 @@ def world(tmp_path, monkeypatch):
     shutil.copytree(MINI, tmp_path / "datasets" / "mini")
     shutil.copytree(MINI, tmp_path / "datasets" / "erp")
     _rewrite(tmp_path / "datasets" / "erp" / "dataset.json", "erp")
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path / "datasets"))
-    monkeypatch.setenv("NL2SQL_APP_DB", str(tmp_path / "app.db"))
-    monkeypatch.setenv("NL2SQL_LLM_BASE_URL", URL)
-    monkeypatch.setenv("NL2SQL_LLM_MODEL", MODEL)
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(tmp_path / "datasets"))
+    monkeypatch.setenv("BILGIN_APP_DB", str(tmp_path / "app.db"))
+    monkeypatch.setenv("BILGIN_LLM_BASE_URL", URL)
+    monkeypatch.setenv("BILGIN_LLM_MODEL", MODEL)
     for name in (
-        "NL2SQL_MSSQL_CONN",
-        "NL2SQL_BACKEND",
-        "NL2SQL_MSSQL_CONN_MINI",
-        "NL2SQL_MSSQL_CONN_ERP",
+        "BILGIN_MSSQL_CONN",
+        "BILGIN_BACKEND",
+        "BILGIN_MSSQL_CONN_MINI",
+        "BILGIN_MSSQL_CONN_ERP",
     ):
         monkeypatch.delenv(name, raising=False)
     return tmp_path
@@ -172,7 +172,7 @@ def test_an_mssql_dataset_without_a_connection_points_at_the_admin_panel(world, 
 
 
 def test_a_sysadmin_login_is_refused_by_the_guard(world, capsys, monkeypatch):
-    monkeypatch.setenv("NL2SQL_MSSQL_CONN_ERP", CONN_STR)
+    monkeypatch.setenv("BILGIN_MSSQL_CONN_ERP", CONN_STR)
     code, data = check(capsys, "erp", ping=up, connect=connector("sysadmin"))
 
     assert code == 0
@@ -182,7 +182,7 @@ def test_a_sysadmin_login_is_refused_by_the_guard(world, capsys, monkeypatch):
 
 
 def test_a_readonly_login_passes_the_guard(world, capsys, monkeypatch):
-    monkeypatch.setenv("NL2SQL_MSSQL_CONN_ERP", CONN_STR)
+    monkeypatch.setenv("BILGIN_MSSQL_CONN_ERP", CONN_STR)
     code, data = check(capsys, "erp", ping=up, connect=connector())
 
     assert code == 0
@@ -192,7 +192,7 @@ def test_a_readonly_login_passes_the_guard(world, capsys, monkeypatch):
 
 
 def test_json_keys_are_exactly_the_contract(world, capsys, monkeypatch):
-    monkeypatch.setenv("NL2SQL_MSSQL_CONN_ERP", CONN_STR)
+    monkeypatch.setenv("BILGIN_MSSQL_CONN_ERP", CONN_STR)
     _, data = check(capsys, "erp", ping=up, connect=connector())
 
     assert list(data) == list(CONTRACT)
@@ -206,7 +206,7 @@ def test_json_keys_are_exactly_the_contract(world, capsys, monkeypatch):
 
 @pytest.mark.parametrize("json_out", [True, False])
 def test_the_connection_string_never_appears_in_either_output(world, capsys, monkeypatch, json_out):
-    monkeypatch.setenv("NL2SQL_MSSQL_CONN_ERP", CONN_STR)
+    monkeypatch.setenv("BILGIN_MSSQL_CONN_ERP", CONN_STR)
 
     code = cli.service_check("erp", json_out=json_out, ping=up, connect=failing_connect)
     printed = capsys.readouterr().out

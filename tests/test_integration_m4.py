@@ -15,9 +15,9 @@ import sqlite3
 import pytest
 
 from eval import reference
-from nl2sql import config
-from nl2sql.eval.runner import load_golden
-from nl2sql.schema_map import build, doc, generator, rules
+from bilgin import config
+from bilgin.eval.runner import load_golden
+from bilgin.schema_map import build, doc, generator, rules
 from test_run1_world import RUN1_FINGERPRINT, fingerprint
 
 IDS = [f"Q{i:02d}" for i in range(1, 41)]

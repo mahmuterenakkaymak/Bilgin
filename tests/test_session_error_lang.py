@@ -13,13 +13,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app.session import NO_DB, SessionError, open_session
-from nl2sql.cli import main as cli
-from nl2sql.i18n import t
-from nl2sql.i18n.detect import TURKISH_LETTERS
-from nl2sql.index.store import dataset_arg
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.app.session import NO_DB, SessionError, open_session
+from bilgin.cli import main as cli
+from bilgin.i18n import t
+from bilgin.i18n.detect import TURKISH_LETTERS
+from bilgin.index.store import dataset_arg
+from bilgin.web.app import create_app
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 EN = {"Accept-Language": "en"}
@@ -29,7 +29,7 @@ KEY_ENV = "UNSLOTH_API_KEY"
 @pytest.fixture
 def project(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     cli.build_database(dataset="mini")
     capsys.readouterr()
     return tmp_path

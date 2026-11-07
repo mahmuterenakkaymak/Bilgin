@@ -20,17 +20,17 @@ from types import SimpleNamespace
 import openpyxl
 import pytest
 
-from nl2sql import config
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.cli.table import format_table
-from nl2sql.engine.login_script import DEFAULT_LOGIN
-from nl2sql.engine.result import Result
-from nl2sql.i18n.detect import TURKISH_LETTERS
-from nl2sql.i18n.scan import user_literals
-from nl2sql.schema_map import build
-from nl2sql.web import app as web_app
-from nl2sql.web.datasets_api import ACTIVE_SETTING
+from bilgin import config
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.cli.table import format_table
+from bilgin.engine.login_script import DEFAULT_LOGIN
+from bilgin.engine.result import Result
+from bilgin.i18n.detect import TURKISH_LETTERS
+from bilgin.i18n.scan import user_literals
+from bilgin.schema_map import build
+from bilgin.web import app as web_app
+from bilgin.web.datasets_api import ACTIVE_SETTING
 
 PAROLA = "Bilgin2026!erp"
 # import-map'ın ASCII haritası: başlıklar sözlükte de İngilizce, yani eşleme kuruluyor ama hiçbir
@@ -53,7 +53,7 @@ def project(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "MSSQL_SCRIPT", tmp_path / "test.sql")
     monkeypatch.setattr(config, "INDEX_DIR", tmp_path / "index")
     monkeypatch.setattr(config, "AUDIT_LOG", tmp_path / "audit.jsonl")
-    monkeypatch.setenv("NL2SQL_APP_DB", str(tmp_path / "app.db"))
+    monkeypatch.setenv("BILGIN_APP_DB", str(tmp_path / "app.db"))
     return tmp_path
 
 
@@ -72,7 +72,7 @@ def workbook(tmp_path) -> Path:
 def stub_session(monkeypatch) -> None:
     """``serve``ın açılış satırı ölçülür, sunucu ayağa kalkmaz: oturum, kapı ve bekçi hazır."""
     session = SimpleNamespace(dataset=None, profile=None, llm_kind="fake", executor=None)
-    monkeypatch.setattr("nl2sql.app.session.open_session", lambda **kwargs: session)
+    monkeypatch.setattr("bilgin.app.session.open_session", lambda **kwargs: session)
     monkeypatch.setattr(
         web_app,
         "create_app",
@@ -275,7 +275,7 @@ def test_the_serve_refusals_in_english(project, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "Bilgin runs on 127.0.0.1 only" in out and turkish(out) == []
 
-    monkeypatch.setenv("NL2SQL_APP_DB", str(project / "bos.db"))
+    monkeypatch.setenv("BILGIN_APP_DB", str(project / "bos.db"))
     monkeypatch.delenv(config.DEV_ADMIN_ENV, raising=False)
     assert cli.serve(llm_kind="fake", dataset="mini", lang="en") == 2
     out = capsys.readouterr().out
@@ -283,8 +283,8 @@ def test_the_serve_refusals_in_english(project, monkeypatch, capsys):
 
 
 def test_the_stored_dataset_note_in_english(project, monkeypatch, capsys):
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(project / "datasets"))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(project / "real"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(project / "datasets"))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(project / "real"))
     write_datasets(project, cli.DEMO_DATASET, indexed=[cli.DEMO_DATASET])
     UserStore(project / "app.db").set_setting(ACTIVE_SETTING, "kaybolmus")
 
@@ -296,8 +296,8 @@ def test_the_stored_dataset_note_in_english(project, monkeypatch, capsys):
 
 
 def test_the_stored_dataset_note_stays_turkish_by_default(project, monkeypatch, capsys):
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(project / "datasets"))
-    monkeypatch.setenv("NL2SQL_REAL_DATASETS_DIR", str(project / "real"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(project / "datasets"))
+    monkeypatch.setenv("BILGIN_REAL_DATASETS_DIR", str(project / "real"))
     write_datasets(project, cli.DEMO_DATASET, indexed=[cli.DEMO_DATASET])
     UserStore(project / "app.db").set_setting(ACTIVE_SETTING, "kaybolmus")
 
@@ -321,4 +321,4 @@ def test_the_table_notices_follow_the_lang():
 
 
 def test_table_has_no_turkish_literal_left():
-    assert user_literals("nl2sql/cli/table.py") == []
+    assert user_literals("bilgin/cli/table.py") == []

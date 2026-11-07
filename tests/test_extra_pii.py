@@ -13,7 +13,7 @@ from collections import defaultdict
 
 import pytest
 
-from nl2sql.schema_map import doc, extra, generator
+from bilgin.schema_map import doc, extra, generator
 
 SUBE, PERSONEL, MAAS, MAASDETAY = "TBLCARISUBE", "TBLPERSONEL", "TBLMAAS", "TBLMAASDETAY"
 PII_TABLES = (SUBE, PERSONEL, MAAS, MAASDETAY)

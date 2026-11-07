@@ -21,17 +21,17 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from nl2sql import config, datasets
-from nl2sql.agent import fake
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Budget
-from nl2sql.index.store import META_FILE
-from nl2sql.policy import policy
-from nl2sql.schema_map import doc
-from nl2sql.web import app as web_app
-from nl2sql.web.datasets_api import ACTIVE_SETTING
+from bilgin import config, datasets
+from bilgin.agent import fake
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Budget
+from bilgin.index.store import META_FILE
+from bilgin.policy import policy
+from bilgin.schema_map import doc
+from bilgin.web import app as web_app
+from bilgin.web.datasets_api import ACTIVE_SETTING
 
 DATASET = "synthetic_erp"
 ROOT = Path(__file__).resolve().parent.parent
@@ -44,7 +44,7 @@ def world(tmp_path_factory):
     folder = tmp_path_factory.mktemp("serve-default")
     mp = MonkeyPatch()
     mp.setattr(config, "ROOT", folder)
-    mp.setenv("NL2SQL_DATASETS_DIR", str(folder / "datasets"))
+    mp.setenv("BILGIN_DATASETS_DIR", str(folder / "datasets"))
     shutil.copytree(ROOT / "datasets" / DATASET, folder / "datasets" / DATASET)
     ds = datasets.load_dataset(DATASET)
     ds.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -57,8 +57,8 @@ def world(tmp_path_factory):
 def serve_app(folder, dataset):
     """Gerçek ``serve``ın kurduğu oturum ve kapı; günlükler ve kayıtlar tmp'de, sunucu kapalı."""
     mp = MonkeyPatch()
-    mp.setenv("NL2SQL_DATASETS_DIR", str(folder / "datasets"))
-    mp.setenv("NL2SQL_APP_DB", str(folder / "bilgin.db"))
+    mp.setenv("BILGIN_DATASETS_DIR", str(folder / "datasets"))
+    mp.setenv("BILGIN_APP_DB", str(folder / "bilgin.db"))
     mp.setattr(config, "AUDIT_LOG", folder / "audit.jsonl")
     mp.setattr(config, "ASK_LOG", folder / "asks.jsonl")
     # R6-7: serve kullanıcı deposu olmadan dinlemeye başlamaz; dünyanın bir yöneticisi var.
@@ -182,8 +182,8 @@ def asked(client, question: str, earlier=(), turns: int = 3):
 def served(tmp_path, monkeypatch):
     """Sunucunun küme sırasının baktığı dünya: tmp kök, tmp ayar dosyası, sunucu hiç yok."""
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(tmp_path / "datasets"))
-    monkeypatch.setenv("NL2SQL_APP_DB", str(tmp_path / "bilgin.db"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(tmp_path / "datasets"))
+    monkeypatch.setenv("BILGIN_APP_DB", str(tmp_path / "bilgin.db"))
     return tmp_path
 
 
@@ -191,7 +191,7 @@ def served(tmp_path, monkeypatch):
 def demo_world(tmp_path_factory):
     """Vitrin kümesi depodaki klasörüyle: kurulu db'si, kendi şeması, kendi okuma dosyaları."""
     mp = MonkeyPatch()
-    mp.delenv("NL2SQL_DATASETS_DIR", raising=False)  # yukarıdaki ``world`` tmp kökünü işaret edebilir
+    mp.delenv("BILGIN_DATASETS_DIR", raising=False)  # yukarıdaki ``world`` tmp kökünü işaret edebilir
     folder = tmp_path_factory.mktemp("demo-visual")
     ds = datasets.load_dataset(cli.DEMO_DATASET)
     ds.build_db(db_path=folder / "wwi.db", sql_path=folder / "wwi.sql")

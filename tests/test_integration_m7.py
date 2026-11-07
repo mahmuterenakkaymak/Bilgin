@@ -16,8 +16,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from nl2sql import config
-from nl2sql.schema_map.excel import convert, fallback_mapping, read_workbook
+from bilgin import config
+from bilgin.schema_map.excel import convert, fallback_mapping, read_workbook
 
 FIXTURES = Path(__file__).parent / "fixtures"
 TIDY = str(FIXTURES / "map_erp_style.xlsx")
@@ -61,7 +61,7 @@ def test_cli_import_map_accept_writes_the_schema_to_out(tmp_path):
         [
             sys.executable,
             "-m",
-            "nl2sql",
+            "bilgin",
             "import-map",
             MESSY_REL,
             "--accept",

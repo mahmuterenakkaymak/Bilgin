@@ -17,12 +17,12 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.web.app import create_app
-from nl2sql.web.authz import NOT_ADMIN, NO_SESSION, ROUTE_ROLES
+from bilgin import config
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.web.app import create_app
+from bilgin.web.authz import NOT_ADMIN, NO_SESSION, ROUTE_ROLES
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 PAROLA = "Bilgin2026!erp"
@@ -86,7 +86,7 @@ def world(tmp_path_factory):
     shutil.copytree(FIXTURE_ROOT / "mini", root / "datasets" / "mini")
     patch = pytest.MonkeyPatch()
     patch.setattr(config, "ROOT", root)
-    patch.setenv("NL2SQL_DATASETS_DIR", str(root / "datasets"))
+    patch.setenv("BILGIN_DATASETS_DIR", str(root / "datasets"))
     try:
         cli.build_database(dataset="mini")
         session = open_session(

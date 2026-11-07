@@ -10,10 +10,10 @@ join graphı üç taşıyıcı bağlantıyı kurar. Python'da ERP kuralı yok - 
 
 import re
 
-from nl2sql.datasets import load_dataset
-from nl2sql.graph.graph import build_graph
-from nl2sql.graph.profile import load_profile
-from nl2sql.schema_map import rules
+from bilgin.datasets import load_dataset
+from bilgin.graph.graph import build_graph
+from bilgin.graph.profile import load_profile
+from bilgin.schema_map import rules
 
 DATASET = load_dataset("wwi")
 SCHEMA = DATASET.schema()

@@ -18,17 +18,17 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.web import app as web_app
-from nl2sql.web.app import create_app
-from nl2sql.web.authz import NO_SESSION, ROUTE_ROLES
+from bilgin import config
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.web import app as web_app
+from bilgin.web.app import create_app
+from bilgin.web.authz import NO_SESSION, ROUTE_ROLES
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 PAROLA = "Bilgin2026!erp"
 DEV_WARNING = (
-    "Geliştirme yöneticisi oluşturuldu: admin - NL2SQL_DEV_ADMIN_PASSWORD ortam değişkeninden; "
+    "Geliştirme yöneticisi oluşturuldu: admin - BILGIN_DEV_ADMIN_PASSWORD ortam değişkeninden; "
     "canlı kurulumda bu değişkeni tanımlamayın."
 )
 # Matrisin public olmayan satırları: oturumsuz hepsi 401 demek zorunda.
@@ -38,8 +38,8 @@ NON_PUBLIC = [(method, path) for (method, path), level in ROUTE_ROLES.items() if
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
-    monkeypatch.setenv("NL2SQL_APP_DB", str(tmp_path / "app.db"))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_APP_DB", str(tmp_path / "app.db"))
     monkeypatch.delenv(config.DEV_ADMIN_ENV, raising=False)
     monkeypatch.setattr(config, "AUDIT_LOG", tmp_path / "audit.jsonl")
     monkeypatch.setattr(config, "ASK_LOG", tmp_path / "asks.jsonl")

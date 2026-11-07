@@ -8,7 +8,7 @@ from collections import defaultdict
 
 import pytest
 
-from nl2sql.schema_map import doc, generator
+from bilgin.schema_map import doc, generator
 
 ARSIV = "TBLSTHAR_ARSIV"
 MUHFIS = "TBLMUHFIS"

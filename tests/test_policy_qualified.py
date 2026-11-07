@@ -12,8 +12,8 @@ kastedildiğini görüp SQL'i tek adımda düzeltebilsin.
 
 import pytest
 
-from nl2sql import config
-from nl2sql.policy import policy
+from bilgin import config
+from bilgin.policy import policy
 
 ALLOWED = {"SALES.ORDERS", "SALES.CUSTOMERS", "PURCHASING.PURCHASEORDERS", "WAREHOUSE.STOCKITEMS"}
 PII = {("SALES.ORDERS", "TCKN"): "tckn"}

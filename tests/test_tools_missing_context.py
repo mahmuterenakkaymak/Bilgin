@@ -12,13 +12,13 @@ kendisini bozar, yani bağlamın yokluğu burada bir hatadır.
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake, loop, modes
-from nl2sql.agent.fake import FakeLLM
-from nl2sql.agent.llm import ChatResponse, ToolCall
-from nl2sql.agent.tools import ERROR_PREFIX, answer_is_ok, dispatch
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.schema_map import build, doc
+from bilgin import config
+from bilgin.agent import fake, loop, modes
+from bilgin.agent.fake import FakeLLM
+from bilgin.agent.llm import ChatResponse, ToolCall
+from bilgin.agent.tools import ERROR_PREFIX, answer_is_ok, dispatch
+from bilgin.engine.executor import LocalExecutor
+from bilgin.schema_map import build, doc
 
 SCHEMA = doc.load_schema()
 QUESTION = "Geçen ayın net cirosu ne kadar?"

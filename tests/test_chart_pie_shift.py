@@ -10,7 +10,7 @@ okunmuyor. İddia: seri çakışanı düşeyde kaydıran bir ``labelLayout`` ta�
 kategorinin sütun grafiğinde aldığı alt boşluk kadar yer.
 """
 
-from nl2sql.report import chart
+from bilgin.report import chart
 
 COLUMNS = ["STOK_ADI", "CIRO"]
 ROWS = [

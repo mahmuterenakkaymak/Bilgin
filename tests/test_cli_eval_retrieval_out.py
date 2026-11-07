@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.cli import main as cli
+from bilgin import config
+from bilgin.cli import main as cli
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 
@@ -25,7 +25,7 @@ FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 def project(tmp_path, monkeypatch):
     """Proje kökü geçici: kümenin ``eval_out``u oraya düşer, ``config``in sabiti gerçek repoda kalır."""
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     return tmp_path
 
 
@@ -77,7 +77,7 @@ def test_two_datasets_keep_two_reports(tmp_path, monkeypatch, capsys):
     for name in ("mini", "mini2"):
         copy_dataset(datasets, name)
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(datasets))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(datasets))
 
     for name in ("mini", "mini2"):
         assert cli.eval_retrieval("fake", dataset=name) == 0

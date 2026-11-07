@@ -24,10 +24,10 @@ import sqlglot
 from sqlglot import errors
 
 from eval import reference
-from nl2sql import config, datasets
-from nl2sql.cli.main import EXIT_BAD_INPUT
-from nl2sql.cli.table import format_table
-from nl2sql.engine.result import Result
+from bilgin import config, datasets
+from bilgin.cli.main import EXIT_BAD_INPUT
+from bilgin.cli.table import format_table
+from bilgin.engine.result import Result
 
 Dataset = dict[str, list[dict]]
 

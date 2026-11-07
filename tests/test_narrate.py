@@ -13,8 +13,8 @@ göstermek için burada.
 
 import json
 
-from nl2sql.agent import fake
-from nl2sql.report import facts, guard, narrate
+from bilgin.agent import fake
+from bilgin.report import facts, guard, narrate
 
 COLUMNS = ["STOK_ADI", "NET_TUTAR"]
 ROWS = [("Çay", 1234.56), ("Kahve", 2468.1)]

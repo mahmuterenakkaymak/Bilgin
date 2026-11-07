@@ -18,9 +18,9 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config, datasets
-from nl2sql.agent import llm
-from nl2sql.cli import main as cli
+from bilgin import config, datasets
+from bilgin.agent import llm
+from bilgin.cli import main as cli
 
 DATASETS = ("wwi", "synthetic_erp")
 WIDE = "strata"

@@ -16,10 +16,10 @@ import re
 import socket
 import types
 
-from nl2sql.agent import llm
-from nl2sql.agent.llm import ModelProfile
-from nl2sql.eval import compare_models
-from nl2sql.eval.runner import QuestionResult
+from bilgin.agent import llm
+from bilgin.agent.llm import ModelProfile
+from bilgin.eval import compare_models
+from bilgin.eval.runner import QuestionResult
 
 STRATA = ModelProfile(
     name="strata",

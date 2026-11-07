@@ -18,14 +18,14 @@ import openpyxl
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.app import asklog
-from nl2sql.app.session import open_session
-from nl2sql.engine.result import Budget
-from nl2sql.report.export import to_csv_bytes, to_xlsx_bytes
-from nl2sql.schema_map import build
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.app import asklog
+from bilgin.app.session import open_session
+from bilgin.engine.result import Budget
+from bilgin.report.export import to_csv_bytes, to_xlsx_bytes
+from bilgin.schema_map import build
+from bilgin.web.app import create_app
 
 BOM = chr(0xFEFF)
 NL = "\n"

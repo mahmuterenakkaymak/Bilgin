@@ -8,7 +8,7 @@ gerçeğidir: ``-WhatIf`` ile çağrılır, hiçbir şeyin değişmediği yerind
 sabitler. Birincisi sıralama - R8-23'ün adımları çıktıda aynı sırada geçmeli, yoksa operatör
 hangi yoklamanın neyin önünde koştuğunu bilemez. İkincisi ``-WhatIf``in sözü: tmp klasörü boş
 kalmalı, hiçbir WinSW exe'si belirmemeli, ama XML yine de basılmalı ve kurulacak servisi
-anlatmalı. Üçüncüsü reddin sınırı - ``NL2SQL_DEV_ADMIN_PASSWORD`` makine ya da kabuk düzeyinde
+anlatmalı. Üçüncüsü reddin sınırı - ``BILGIN_DEV_ADMIN_PASSWORD`` makine ya da kabuk düzeyinde
 dururken beti ``dev-admin-env`` adımında durmalı, ardından tek bir adım daha gelmemeli.
 
 Betik ASCII olmak zorundadır (Windows PowerShell 5.1 işaretsiz dosyayı konsolun kod sayfasında
@@ -32,7 +32,7 @@ REPO = Path(__file__).resolve().parent.parent
 SCRIPT = REPO / "scripts" / "install-service.ps1"
 WINSW_VERSION = "2.12.0"
 WINSW_URL = f"https://github.com/winsw/winsw/releases/download/v{WINSW_VERSION}/WinSW-x64.exe"
-DEV_ADMIN = "NL2SQL_DEV_ADMIN_PASSWORD"
+DEV_ADMIN = "BILGIN_DEV_ADMIN_PASSWORD"
 
 # R8-23'in adım sırası: yoklamalar kuruluma, kurulum sağlık yoklamasına önkoşuldur.
 STEPS = [
@@ -114,7 +114,7 @@ def test_whatif_prints_the_xml_the_service_will_run(tmp_path: Path) -> None:
     assert root.findtext("id") == "Bilgin"
     assert (
         root.findtext("arguments")
-        == f"-m nl2sql serve --host 127.0.0.1 --port {port} --dataset synthetic_erp"
+        == f"-m bilgin serve --host 127.0.0.1 --port {port} --dataset synthetic_erp"
     )
     assert root.findtext("workingdirectory").replace("/", "\\") == str(REPO)
 

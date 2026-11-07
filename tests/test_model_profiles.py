@@ -16,8 +16,8 @@ import types
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent.llm import (
+from bilgin import config
+from bilgin.agent.llm import (
     LLMError,
     ModelProfile,
     OpenAIClient,
@@ -206,13 +206,13 @@ def test_a_missing_or_broken_file_is_a_profile_error(tmp_path):
 
 
 def test_key_is_read_from_the_named_variable_at_call_time(tmp_path, monkeypatch):
-    profile = get_profile("q", models_file(tmp_path, {"q": entry(api_key_env="NL2SQL_TEST_KEY")}))
-    monkeypatch.setenv("NL2SQL_TEST_KEY", "token-9")
+    profile = get_profile("q", models_file(tmp_path, {"q": entry(api_key_env="BILGIN_TEST_KEY")}))
+    monkeypatch.setenv("BILGIN_TEST_KEY", "token-9")
     assert client_for(profile)._sdk.api_key == "token-9"
 
 
 def test_profile_without_a_variable_is_a_local_endpoint(tmp_path, monkeypatch):
-    monkeypatch.delenv("NL2SQL_TEST_KEY", raising=False)
+    monkeypatch.delenv("BILGIN_TEST_KEY", raising=False)
     client = client_for(get_profile("q", models_file(tmp_path, {"q": entry()})))
     assert client._sdk.api_key == "local"
     assert (client.base_url, client.model) == ("http://127.0.0.1:9/v1", "denek")
@@ -220,13 +220,13 @@ def test_profile_without_a_variable_is_a_local_endpoint(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize("value", [None, "", "   "])
 def test_missing_variable_names_the_variable_to_define(tmp_path, monkeypatch, value):
-    monkeypatch.delenv("NL2SQL_TEST_KEY", raising=False)
+    monkeypatch.delenv("BILGIN_TEST_KEY", raising=False)
     if value is not None:
-        monkeypatch.setenv("NL2SQL_TEST_KEY", value)
-    profile = get_profile("q", models_file(tmp_path, {"q": entry(api_key_env="NL2SQL_TEST_KEY")}))
+        monkeypatch.setenv("BILGIN_TEST_KEY", value)
+    profile = get_profile("q", models_file(tmp_path, {"q": entry(api_key_env="BILGIN_TEST_KEY")}))
     with pytest.raises(LLMError) as caught:
         client_for(profile)
-    assert str(caught.value) == "API anahtarı yok: NL2SQL_TEST_KEY ortam değişkenini tanımlayın."
+    assert str(caught.value) == "API anahtarı yok: BILGIN_TEST_KEY ortam değişkenini tanımlayın."
 
 
 # ------------------------------------------------------------------ istek

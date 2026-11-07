@@ -14,13 +14,13 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake, prompt
-from nl2sql.agent.loop import AgentRun
-from nl2sql.cli import main as cli
-from nl2sql.eval import runner
-from nl2sql.schema_map import build, doc
-from nl2sql.schema_map.rules import load_rules
+from bilgin import config
+from bilgin.agent import fake, prompt
+from bilgin.agent.loop import AgentRun
+from bilgin.cli import main as cli
+from bilgin.eval import runner
+from bilgin.schema_map import build, doc
+from bilgin.schema_map.rules import load_rules
 
 GOLDEN = runner.load_golden()
 BY_ID = {line["id"]: line for line in GOLDEN}

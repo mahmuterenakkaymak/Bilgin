@@ -83,7 +83,7 @@ header'da veritabanı durumu göstergesi, telefon düzeni ve karanlık mod.
 
 | Katman | Teknoloji | Sürüm | Not |
 |---|---|---|---|
-| Arka uç dili | Python | 3.11.9 (`requires-python >= 3.11`) | Paket adı `nl2sql`, komut satırı `python -m nl2sql` |
+| Arka uç dili | Python | 3.11.9 (`requires-python >= 3.11`) | Paket adı `bilgin`, komut satırı `python -m bilgin` |
 | Ön uç dili | JavaScript (JSX) | Node.js 24.21 ile derlenir | Çalışma anında Node gerekmez; derlenmiş dosyalar Python sunucusundan servis edilir |
 | İşletim sistemi | Windows 11 (geliştirme ve servis), WSL2 Ubuntu 24.04 (model sunumunun bir kısmı) | | Windows servisi: WinSW |
 
@@ -101,7 +101,7 @@ header'da veritabanı durumu göstergesi, telefon düzeni ve karanlık mod.
 | pytest / httpx | 9.1.1 / 0.28.1 | Testler ve API testleri (FastAPI TestClient) |
 
 Bilinçli olarak **eklenmeyenler**: ORM, vektör veritabanı, LangChain türü çerçeveler, `python-multipart`, i18n
-kütüphanesi (dil kataloğu iki JSON dosyası: `nl2sql/i18n/tr.json`, `en.json`; anahtar setlerinin eşitliğini test
+kütüphanesi (dil kataloğu iki JSON dosyası: `bilgin/i18n/tr.json`, `en.json`; anahtar setlerinin eşitliğini test
 kontrol eder).
 
 **Ön uç kütüphaneleri** (`web/package.json`)
@@ -110,7 +110,7 @@ kontrol eder).
 |---|---|---|
 | React / React DOM | 19.3.1 | Arayüz bileşenleri |
 | ECharts | 6.1.0 | Grafikler (grafik türünü ve verisini Python tarafı seçer, ECharts yalnız çizer) |
-| Vite | 8.3.5 | Derleme; çıktı `nl2sql/web/static` |
+| Vite | 8.3.5 | Derleme; çıktı `bilgin/web/static` |
 | Vitest | 5.0.5 | Ön uç birim testleri |
 
 Arayüz dış URL kullanmaz (yazı tipi, CDN, analitik yok); bir test bunu derlenmiş dosyada kontrol eder.
@@ -320,13 +320,13 @@ testini geçti. Ayrıntılı sayılar ve "aynı işi bulut model yapsaydı" mali
 
 - **Programın İngilizcesi:** arayüz, API mesajları, cevap cümlesi, netleştirme, uyarılar, grafik etiketleri, komut
   satırı ve README (`README.md` İngilizce, `README.tr.md` Türkçe). Dil sırası: kullanıcının tercihi →
-  `Accept-Language` → `NL2SQL_LANG`. **Cevabın dili sorunun dilidir**, ekran dilinden ayrıdır. Veri çevrilmez.
+  `Accept-Language` → `BILGIN_LANG`. **Cevabın dili sorunun dilidir**, ekran dilinden ayrıdır. Veri çevrilmez.
 - **Şablon programın dilinde:** İngilizce kullanıcıya İngilizce şablon; iki şablon da hangi dilde olursa olsun okunur
   ve aynı şemayı üretir.
 - **Windows servisi:** yükseltilmiş bir kabuktan tek betikle kurulum (`scripts\install-service.ps1`), Windows'la
   birlikte açılır, çökerse yeniden başlar, sanal hesapla (`NT SERVICE\Bilgin`) çalışır, verisi
   `C:\ProgramData\Bilgin` altında, logları boyuta göre döner, yalnız `127.0.0.1:8777`'den erişilir. Güncelleme ve
-  kaldırma betikleri; her adımı değiştirmeden gösteren `-WhatIf`. `python -m nl2sql paths` veri yerlerini sırları
+  kaldırma betikleri; her adımı değiştirmeden gösteren `-WhatIf`. `python -m bilgin paths` veri yerlerini sırları
   göstermeden yazar.
 
 ## 11. Açık işler

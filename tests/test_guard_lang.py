@@ -10,7 +10,7 @@ Tolerans değişmez — gösterilen son basamağın yarısı, İngilizcede de b�
 test_guard.py'deki hâliyle durur.
 """
 
-from nl2sql.report import facts, guard
+from bilgin.report import facts, guard
 
 COLUMNS = ["STOK_ADI", "NET_TUTAR"]
 ROWS = [("Çay", 1234.56), ("Kahve", 12460.0)]

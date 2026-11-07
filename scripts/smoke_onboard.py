@@ -9,8 +9,8 @@ uygulanıp indeksi kuruluyor, yeni kümenin SQLite dosyası şemasından doğuyo
 değiştiriliyor ve sahte model ondan bir soruyu cevaplıyor. Yani "harita çalışıyor"un anlamı
 şablonun inmesi değil, uçta gerçek bir cevabın dönmesidir.
 
-Duman gerçek hiçbir veriye dokunmaz: boş bir uygulama veritabanı (``NL2SQL_APP_DB``) ve geçici bir
-gerçek-kümeler kökü (``NL2SQL_REAL_DATASETS_DIR``) üstünde koşar, yöneticinin parolası bir kez
+Duman gerçek hiçbir veriye dokunmaz: boş bir uygulama veritabanı (``BILGIN_APP_DB``) ve geçici bir
+gerçek-kümeler kökü (``BILGIN_REAL_DATASETS_DIR``) üstünde koşar, yöneticinin parolası bir kez
 üretilir ve hiçbir satıra düşmez. Kurulan kümenin adı sabittir (``smoke_fatura``), böylece işi
 biten duman kendi ürettiği ``data/smoke_fatura.db``yi ve ``index/smoke_fatura``yı siler; depo
 kökündeki ``real_datasets/`` hiç açılmaz. Sunucu her durumda kapatılır; biriktirdiği çıktı yalnız
@@ -35,11 +35,11 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))  # betik nereden çağrılırsa çağrılsın nl2sql görünsün
+sys.path.insert(0, str(ROOT))  # betik nereden çağrılırsa çağrılsın bilgin görünsün
 
-from nl2sql import config, datasets  # noqa: E402
-from nl2sql.auth.bootstrap import DEV_USERNAME  # noqa: E402
-from nl2sql.schema_map import build, template  # noqa: E402
+from bilgin import config, datasets  # noqa: E402
+from bilgin.auth.bootstrap import DEV_USERNAME  # noqa: E402
+from bilgin.schema_map import build, template  # noqa: E402
 
 HOST = "127.0.0.1"
 DEFAULT_PORT = 8782
@@ -62,8 +62,8 @@ def main(argv: list[str] | None = None) -> int:
     password = secrets.token_urlsafe(16)  # bir kez üretilir; hiçbir satıra, günlüğe, hataya düşmez
     # Ortamı hem bu süreç hem alt süreç görmeli: şemayı okuyup db'yi kurmak bu süreçte olur,
     # sunucu ise aynı geçici kökü alt süreçte okur -- depo kökündeki real_datasets/ açılmaz.
-    os.environ["NL2SQL_APP_DB"] = app_db
-    os.environ["NL2SQL_REAL_DATASETS_DIR"] = str(real_dir)
+    os.environ["BILGIN_APP_DB"] = app_db
+    os.environ["BILGIN_REAL_DATASETS_DIR"] = str(real_dir)
     os.environ[config.DEV_ADMIN_ENV] = password
     state: dict = {}
     server = _start_server(args.port)
@@ -240,16 +240,16 @@ def _send(opener, request, label: str, raw: bool = False):
 
 def _start_server(port: int) -> subprocess.Popen:
     return subprocess.Popen(
-        [sys.executable, "-m", "nl2sql", "serve", "--llm", "fake", "--port", str(port)],
+        [sys.executable, "-m", "bilgin", "serve", "--llm", "fake", "--port", str(port)],
         cwd=ROOT,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         encoding="utf-8",
         env={
             **os.environ,
-            "NL2SQL_BACKEND": "sqlite",
+            "BILGIN_BACKEND": "sqlite",
             "PYTHONIOENCODING": "utf-8",
-            # NL2SQL_APP_DB / NL2SQL_REAL_DATASETS_DIR / NL2SQL_DEV_ADMIN_PASSWORD os.environ'da:
+            # BILGIN_APP_DB / BILGIN_REAL_DATASETS_DIR / BILGIN_DEV_ADMIN_PASSWORD os.environ'da:
             # boş dünya -- dumanın kurduğu küme gerçek veriye dokunmaz.
         },
     )

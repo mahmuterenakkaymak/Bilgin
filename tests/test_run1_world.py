@@ -6,7 +6,7 @@
 import hashlib
 import json
 
-from nl2sql.schema_map import doc, generator
+from bilgin.schema_map import doc, generator
 
 RUN1_TABLES = (
     "TBLSTGRUP",

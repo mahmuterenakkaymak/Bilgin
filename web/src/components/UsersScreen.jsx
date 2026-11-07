@@ -10,7 +10,7 @@ import { MESSAGE_KEYS, PASSWORD_MIN_LEN, ROLES, clientErrors, toPayload } from "
 // Kullanıcı ekranı (R6-19): yöneticinin defteri. Liste üstten okunur; her ekme ve güncelleme
 // sonrası aynı istek yinelenir ki tablo sunucudaki halini göstersin. Reddin cümlesi değiştirilmeden
 // #users-error'a düşer — son etkin yöneticiyi koruyan 409'un sözü de sunucunundur.
-// nl2sql/config.DEFAULT_BUSINESS_ROLE: arayüz Python'u okuyamadığı için varsayılan burada da duruyor.
+// bilgin/config.DEFAULT_BUSINESS_ROLE: arayüz Python'u okuyamadığı için varsayılan burada da duruyor.
 const DEFAULT_BUSINESS_ROLE = "genel";
 
 const EMPTY_FORM = { username: "", password: "", password2: "", role: "user", businessRole: DEFAULT_BUSINESS_ROLE };

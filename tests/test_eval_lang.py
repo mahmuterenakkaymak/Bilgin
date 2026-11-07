@@ -19,11 +19,11 @@ import json
 import pytest
 from pytest import MonkeyPatch
 
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.eval import report, runner
-from nl2sql.i18n.detect import TURKISH_LETTERS
-from nl2sql.i18n.scan import user_literals
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.eval import report, runner
+from bilgin.i18n.detect import TURKISH_LETTERS
+from bilgin.i18n.scan import user_literals
 
 WWI = load_dataset("wwi")
 ENGLISH = WWI.golden("en")
@@ -34,13 +34,13 @@ TOTAL = len(ENGLISH)
 def world(tmp_path_factory):
     """Modül boyunca tek kurulum: wwi builder'ının dosyası ve audit'i tek tmp klasörde.
 
-    Kabukta ambiyans duran ``NL2SQL_MSSQL_CONN``/``NL2SQL_BACKEND`` silinir: küme SQLite'ı kendi
+    Kabukta ambiyans duran ``BILGIN_MSSQL_CONN``/``BILGIN_BACKEND`` silinir: küme SQLite'ı kendi
     taşır (R7-29), yani ölçümün kapısı hiçbir zaman canlı sunucuya dönmez.
     """
     root = tmp_path_factory.mktemp("eval-lang")
     mp = MonkeyPatch()
-    mp.delenv("NL2SQL_MSSQL_CONN", raising=False)
-    mp.delenv("NL2SQL_BACKEND", raising=False)
+    mp.delenv("BILGIN_MSSQL_CONN", raising=False)
+    mp.delenv("BILGIN_BACKEND", raising=False)
     database = root / "wwi.db"
     WWI.build_db(db_path=database, sql_path=root / "wwi.sql")
     try:
@@ -187,7 +187,7 @@ def test_the_decision_and_the_metric_labels_are_translated(tmp_path):
 
 
 def test_main_resolves_the_lang_for_the_eval_run(monkeypatch):
-    monkeypatch.delenv("NL2SQL_LANG", raising=False)
+    monkeypatch.delenv("BILGIN_LANG", raising=False)
     monkeypatch.setattr(cli, "evaluate", lambda **kwargs: cli._LANG)
 
     assert cli.main(["eval", "--llm", "fake", "--dataset", "wwi", "--lang", "en"]) == "en"
@@ -195,5 +195,5 @@ def test_main_resolves_the_lang_for_the_eval_run(monkeypatch):
 
 
 def test_the_eval_modules_have_no_turkish_literal_left():
-    assert user_literals("nl2sql/eval/runner.py") == []
-    assert user_literals("nl2sql/eval/report.py") == []
+    assert user_literals("bilgin/eval/runner.py") == []
+    assert user_literals("bilgin/eval/report.py") == []

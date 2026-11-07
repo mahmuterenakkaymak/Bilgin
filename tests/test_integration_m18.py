@@ -4,7 +4,7 @@
 """T236: M18 entegrasyonu — kapının arkasında elle kurulmuş tek sahte yok.
 
 Kullanıcı CLI'nin kendi ``user add``i (parolayı ``getpass``ten iki kez sorar), dosya tmp'deki
-``NL2SQL_APP_DB``, kapı gerçek ``open_session``ın üstündeki gerçek ``create_app``, dünya mini
+``BILGIN_APP_DB``, kapı gerçek ``open_session``ın üstündeki gerçek ``create_app``, dünya mini
 kümesinin kendi builder'ının kurduğu SQLite ve ``cli.build_index``in kurduğu sahte indeks. Uçtan
 uca tek akış: giriş → kimim → cevaplı soru → kayıtlar → çıkış → kapının tekrar kapanması → beş
 hatalı denemenin kilidi → dosyanın hâli. Son iki iddia Run 6'nın kendi sözleşmesi: ne soru
@@ -24,12 +24,12 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from nl2sql import config, datasets
-from nl2sql.app import asklog
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.web.app import create_app
+from bilgin import config, datasets
+from bilgin.app import asklog
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.web.app import create_app
 
 DATASET = "mini"
 # İndeksin gerçekten kullanıldığı mod: sahte indeks olmadan rag bir koşum değil, hatadır.
@@ -79,14 +79,14 @@ def world(tmp_path_factory):
     """tmp'de kurulu mini dünyası: db kümenin kendi builder'ından, indeks gerçek ``build_index``ten.
 
     ``config.ROOT`` tmp'ye çevrilir ki kümenin db ve indeks çıktıları da oraya yazılsın;
-    ``NL2SQL_APP_DB`` uygulamanın kendi dosyasını, ``NL2SQL_DATASETS_DIR`` fixture'ın kümesini
+    ``BILGIN_APP_DB`` uygulamanın kendi dosyasını, ``BILGIN_DATASETS_DIR`` fixture'ın kümesini
     gösterir — depodaki ``data/`` ve ``index/`` klasörlerine tek bayt yazılmaz.
     """
     folder = tmp_path_factory.mktemp("m18")
     mp = MonkeyPatch()
     mp.setattr(config, "ROOT", folder)
-    mp.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
-    mp.setenv("NL2SQL_APP_DB", str(folder / "bilgin.db"))
+    mp.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
+    mp.setenv("BILGIN_APP_DB", str(folder / "bilgin.db"))
     ds = datasets.load_dataset(DATASET)
     ds.db_path.parent.mkdir(parents=True, exist_ok=True)
     ds.build_db(db_path=ds.db_path, sql_path=folder / "mini.sql")

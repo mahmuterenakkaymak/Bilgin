@@ -14,7 +14,7 @@ import sqlite3
 
 import pytest
 
-from nl2sql.schema_map import build, introspect
+from bilgin.schema_map import build, introspect
 
 SCHEMA = {
     "tables": [

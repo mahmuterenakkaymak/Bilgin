@@ -12,9 +12,9 @@ Adımların token/gecikme taşıması da raporun boş kalmaması için burada do
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import loop
-from nl2sql.agent.fake import (
+from bilgin import config
+from bilgin.agent import loop
+from bilgin.agent.fake import (
     BROKEN_SQL,
     FORBIDDEN_SQL,
     FakeLLM,
@@ -26,9 +26,9 @@ from nl2sql.agent.fake import (
     unreachable,
     wrong_sql,
 )
-from nl2sql.agent.tools import ERROR_PREFIX
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.schema_map import build, doc
+from bilgin.agent.tools import ERROR_PREFIX
+from bilgin.engine.executor import LocalExecutor
+from bilgin.schema_map import build, doc
 
 GOLDEN = "SELECT CARI_KOD, CARI_ISIM FROM TBLCASABIT WHERE IL = 'ANKARA' ORDER BY CARI_KOD"
 WRONG = "SELECT CARI_KOD FROM TBLCASABIT"

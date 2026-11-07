@@ -15,11 +15,11 @@ from pathlib import Path
 import pytest
 from sqlglot import exp, parse
 
-from nl2sql.agent import modes, tools
-from nl2sql.datasets import load_dataset
-from nl2sql.engine.executor import LocalExecutor
-from nl2sql.engine.result import Result
-from nl2sql.schema_map import doc
+from bilgin.agent import modes, tools
+from bilgin.datasets import load_dataset
+from bilgin.engine.executor import LocalExecutor
+from bilgin.engine.result import Result
+from bilgin.schema_map import doc
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 DATASET = load_dataset("mini", root=FIXTURE_ROOT)

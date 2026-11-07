@@ -14,11 +14,11 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from nl2sql import config
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.web.app import create_app
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 
@@ -31,7 +31,7 @@ HEALTH_KEYS = {
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     cli.build_database(dataset="mini")
     return tmp_path
 
@@ -175,7 +175,7 @@ def test_serve_binds_loopback_and_names_what_it_serves(project, capsys, monkeypa
     seen = {}
     capsys.readouterr()
     # R6-7: sunulan uygulama oturum ister, yani koşum ancak bir yönetici varsa dinlemeye başlar.
-    monkeypatch.setenv("NL2SQL_APP_DB", str(project / "app.db"))
+    monkeypatch.setenv("BILGIN_APP_DB", str(project / "app.db"))
     UserStore(project / "app.db").add_user("admin", "Bilgin2026!erp", "admin")
     monkeypatch.setattr(cli, "run_server", lambda app, host, port: seen.update(host=host, port=port))
 

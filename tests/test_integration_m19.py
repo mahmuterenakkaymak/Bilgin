@@ -19,11 +19,11 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from nl2sql import config, datasets
-from nl2sql.app.session import open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.web.app import NO_ASK, create_app
-from nl2sql.web.authz import NOT_ADMIN, NO_SESSION
+from bilgin import config, datasets
+from bilgin.app.session import open_session
+from bilgin.auth.store import UserStore
+from bilgin.web.app import NO_ASK, create_app
+from bilgin.web.authz import NOT_ADMIN, NO_SESSION
 
 DATASET = "mini"
 # İndeks istemeyen mod: burada ölçülen rol kapılarıdır, vektörler değil.
@@ -81,8 +81,8 @@ def world(tmp_path_factory) -> World:
     shutil.copytree(FIXTURE, datasets_dir / DATASET)
     mp = MonkeyPatch()
     mp.setattr(config, "ROOT", folder)
-    mp.setenv("NL2SQL_DATASETS_DIR", str(datasets_dir))
-    mp.setenv("NL2SQL_APP_DB", str(folder / "bilgin.db"))
+    mp.setenv("BILGIN_DATASETS_DIR", str(datasets_dir))
+    mp.setenv("BILGIN_APP_DB", str(folder / "bilgin.db"))
     ds = datasets.load_dataset(DATASET)
     ds.db_path.parent.mkdir(parents=True, exist_ok=True)
     ds.build_db(db_path=ds.db_path, sql_path=folder / "mini.sql")

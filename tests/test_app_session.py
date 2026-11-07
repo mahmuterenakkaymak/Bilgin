@@ -12,10 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.app.session import SessionError, open_session
-from nl2sql.cli import main as cli
-from nl2sql.index.store import MissingIndexError
+from bilgin import config
+from bilgin.app.session import SessionError, open_session
+from bilgin.cli import main as cli
+from bilgin.index.store import MissingIndexError
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 
@@ -23,7 +23,7 @@ FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "datasets"
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "ROOT", tmp_path)
-    monkeypatch.setenv("NL2SQL_DATASETS_DIR", str(FIXTURE_ROOT))
+    monkeypatch.setenv("BILGIN_DATASETS_DIR", str(FIXTURE_ROOT))
     return tmp_path
 
 

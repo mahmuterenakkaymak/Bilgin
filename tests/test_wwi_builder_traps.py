@@ -18,8 +18,8 @@ from collections import defaultdict
 import pytest
 from sqlglot import parse
 
-from nl2sql.datasets import load_dataset
-from nl2sql.schema_map import doc
+from bilgin.datasets import load_dataset
+from bilgin.schema_map import doc
 
 DATASET = load_dataset("wwi")
 SCHEMA = DATASET.schema()

@@ -12,9 +12,9 @@ import json
 import openpyxl
 import pytest
 
-from nl2sql import config
-from nl2sql.index.text import fold
-from nl2sql.schema_map.excel import fallback_mapping, read_workbook
+from bilgin import config
+from bilgin.index.text import fold
+from bilgin.schema_map.excel import fallback_mapping, read_workbook
 
 FIELDS = (
     "table_name",

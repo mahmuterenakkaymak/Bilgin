@@ -12,7 +12,7 @@ ince çizginin altında ikincil metne iner.
 
 import re
 
-from nl2sql import config
+from bilgin import config
 
 STYLES = config.WEB_DIR / "src" / "styles.css"
 CARD = config.WEB_DIR / "src" / "components" / "AnswerCard.jsx"

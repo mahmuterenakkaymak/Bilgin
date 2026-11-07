@@ -12,7 +12,7 @@ import re
 
 import pytest
 
-from nl2sql.schema_map import doc
+from bilgin.schema_map import doc
 
 MODULES = {"Muhasebe", "Banka", "Çek/Senet"}
 MIN_DISTRACTORS = 22

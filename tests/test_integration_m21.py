@@ -22,13 +22,13 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from nl2sql import config
-from nl2sql.app.conversations import ConversationStore
-from nl2sql.app.session import Session, open_session
-from nl2sql.auth.store import UserStore
-from nl2sql.cli import main as cli
-from nl2sql.datasets import load_dataset
-from nl2sql.web.app import create_app
+from bilgin import config
+from bilgin.app.conversations import ConversationStore
+from bilgin.app.session import Session, open_session
+from bilgin.auth.store import UserStore
+from bilgin.cli import main as cli
+from bilgin.datasets import load_dataset
+from bilgin.web.app import create_app
 
 REPO = Path(__file__).resolve().parents[1]
 DATASET = "synthetic_erp"
@@ -74,10 +74,10 @@ def world(tmp_path_factory):
     root = tmp_path_factory.mktemp("m21")
     mp = MonkeyPatch()
     mp.setattr(config, "ROOT", root)
-    mp.setenv("NL2SQL_DATASETS_DIR", str(REPO / "datasets"))
-    mp.setenv("NL2SQL_REAL_DATASETS_DIR", str(root / "real_datasets"))
-    mp.setenv("NL2SQL_APP_DB", str(root / "bilgin.db"))
-    mp.setenv("NL2SQL_BACKEND", "sqlite")
+    mp.setenv("BILGIN_DATASETS_DIR", str(REPO / "datasets"))
+    mp.setenv("BILGIN_REAL_DATASETS_DIR", str(root / "real_datasets"))
+    mp.setenv("BILGIN_APP_DB", str(root / "bilgin.db"))
+    mp.setenv("BILGIN_BACKEND", "sqlite")
     mp.setattr(getpass, "getpass", lambda prompt="": PAROLA)
 
     # Hesaplar komutun kendisinden: parolayı sorar, karmayı gerçek UserStore'a yazar (R6-8).

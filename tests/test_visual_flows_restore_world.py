@@ -16,7 +16,7 @@ koşunun açtığı dünyaya dönmeli.
 import json
 import re
 
-from nl2sql import config
+from bilgin import config
 
 VISUAL_PATH = config.ROOT / ".hybrid" / "visual.json"
 

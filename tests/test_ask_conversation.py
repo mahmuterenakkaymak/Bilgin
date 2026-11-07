@@ -14,13 +14,13 @@ import sqlite3
 
 import pytest
 
-from nl2sql import config
-from nl2sql.agent import fake
-from nl2sql.agent.llm import ChatResponse, ToolCall
-from nl2sql.app.ask import ask_payload
-from nl2sql.app.conversations import ConversationNotFound, ConversationStore
-from nl2sql.app.session import open_session
-from nl2sql.schema_map import build
+from bilgin import config
+from bilgin.agent import fake
+from bilgin.agent.llm import ChatResponse, ToolCall
+from bilgin.app.ask import ask_payload
+from bilgin.app.conversations import ConversationNotFound, ConversationStore
+from bilgin.app.session import open_session
+from bilgin.schema_map import build
 
 STOCK_SQL = "SELECT TOP 5 STOK_KODU, STOK_ADI FROM TBLSTSABIT ORDER BY STOK_KODU"
 REVERSED_SQL = "SELECT TOP 5 STOK_KODU, STOK_ADI FROM TBLSTSABIT ORDER BY STOK_KODU DESC"

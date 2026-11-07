@@ -19,8 +19,8 @@ from pathlib import Path
 
 import pytest
 
-from nl2sql import config
-from nl2sql.schema_map import build, doc, excel, introspect, merge
+from bilgin import config
+from bilgin.schema_map import build, doc, excel, introspect, merge
 
 FIXTURES = Path(__file__).parent / "fixtures"
 MESSY = str(FIXTURES / "map_customer_map.xlsx")
@@ -145,7 +145,7 @@ def test_cli_introspect_then_eval_scores_the_skeleton(built_database, tmp_path):
     env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
     introspect_run = subprocess.run(
-        [sys.executable, "-m", "nl2sql", "introspect", "--out", str(skeleton_path)],
+        [sys.executable, "-m", "bilgin", "introspect", "--out", str(skeleton_path)],
         cwd=config.ROOT,
         capture_output=True,
         encoding="utf-8",
@@ -155,7 +155,7 @@ def test_cli_introspect_then_eval_scores_the_skeleton(built_database, tmp_path):
     assert skeleton_path.is_file()
 
     eval_run = subprocess.run(
-        [sys.executable, "-m", "nl2sql", "eval", "--schema", str(skeleton_path), "--llm", "fake"],
+        [sys.executable, "-m", "bilgin", "eval", "--schema", str(skeleton_path), "--llm", "fake"],
         cwd=config.ROOT,
         capture_output=True,
         encoding="utf-8",

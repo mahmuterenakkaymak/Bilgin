@@ -304,4 +304,4 @@ ayrıntı `docs/GERCEK-WWI-TEST.md`. Sırada:
 - **Public yayın zamanı:** iş sözleşmesi (rekabet/IP) kontrolü bitmeden yok (bkz. bölüm 8).
 - **Odoo'nun sırası:** geri planda bekliyor; PostgreSQL desteği işi ne zaman alınacak?
 - Embedding: EmbeddingGemma (geliştirme) yerine bge-m3 (MIT, ürün hedefi). Retrieval ölçümüyle karar verilecek.
-- Python paket adı `nl2sql` mı kalacak, `bilgin` mi olacak.
+- Python paket adı `bilgin` mı kalacak, `bilgin` mi olacak.

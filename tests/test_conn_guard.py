@@ -15,9 +15,9 @@ import json
 
 import pytest
 
-from nl2sql import config
-from nl2sql.engine import guard
-from nl2sql.engine.guard import POWER_MESSAGE, readonly_guard
+from bilgin import config
+from bilgin.engine import guard
+from bilgin.engine.guard import POWER_MESSAGE, readonly_guard
 
 PAROLA = "Gizli2026!parola"
 BAGLANTI = (

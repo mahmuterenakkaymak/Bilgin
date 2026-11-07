@@ -4,7 +4,7 @@
 """``user``: kullanıcı hesapları komut satırından (R6-8).
 
 Parola hiçbir komutun argümanı değildir: iki kez ``getpass``den geçer ve uyuşmazsa hiçbir satır
-yazılmaz. Komut login istemez — kendi makinesinin dosyasını kendi yönetir. ``NL2SQL_APP_DB`` testin
+yazılmaz. Komut login istemez — kendi makinesinin dosyasını kendi yönetir. ``BILGIN_APP_DB`` testin
 kendi tmp dosyasına çevrilir, yani ``data/bilgin.db``ye dokunulmaz.
 """
 
@@ -13,9 +13,9 @@ import sqlite3
 
 import pytest
 
-from nl2sql.auth.passwords import verify_password
-from nl2sql.auth.store import DUPLICATE_MESSAGE, LAST_ADMIN_MESSAGE, NOT_FOUND_MESSAGE, UserStore
-from nl2sql.cli import main as cli
+from bilgin.auth.passwords import verify_password
+from bilgin.auth.store import DUPLICATE_MESSAGE, LAST_ADMIN_MESSAGE, NOT_FOUND_MESSAGE, UserStore
+from bilgin.cli import main as cli
 
 PAROLA = "Parola2026!"
 YENI = "YeniParola2026!"
@@ -26,7 +26,7 @@ KISA = "Kisa1!"
 def db(tmp_path, monkeypatch):
     """Kullanıcı dosyası: komut yolu kendisi çağıran ``config.app_db_path``den okur."""
     path = tmp_path / "app.db"
-    monkeypatch.setenv("NL2SQL_APP_DB", str(path))
+    monkeypatch.setenv("BILGIN_APP_DB", str(path))
     return path
 
 

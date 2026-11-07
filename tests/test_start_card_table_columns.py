@@ -9,9 +9,9 @@ kayboluyor. Yükte düzeltilir: tablo kartı her sayısal kolonu ve en dar tek m
 tam tablo kart açılınca zaten görünüyor. ``CARD_TABLE_ROWS`` satır sınırı değişmez.
 """
 
-from nl2sql import config
-from nl2sql.engine.result import Result
-from nl2sql.start.cards import card_result
+from bilgin import config
+from bilgin.engine.result import Result
+from bilgin.start.cards import card_result
 
 SQL = "SELECT CARI_KOD, CARI_ISIM, BELIRSIZ_SATIR FROM V_SIPARIS_SATIR"
 
