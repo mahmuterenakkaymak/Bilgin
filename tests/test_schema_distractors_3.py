@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-4 part 3: the last three modules and the near-duplicates that shadow the real tables.
 
 The near-duplicate is the sharp end of R2-4: it carries the real table's columns, so a model

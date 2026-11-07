@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Model x mod hücreleri yan yana: hangi pencere hangi moda sığıyor (PLAN R4-13).
 
 Karşılaştırma kendi başına hiçbir şey ölçmez; her hücre ``run_eval``in bıraktığı

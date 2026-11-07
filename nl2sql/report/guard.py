@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Sayı bekçisi: anlatının sayıları sonuçta yoksa cümle geçmez (PLAN R5-8, Contracts GuardResult).
 
 Bekçi sayı uydurmaz, karşılaştırır: anlatıda geçen her sayının sonucun hücrelerinde, olgularında

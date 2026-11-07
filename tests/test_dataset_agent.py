@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T132: agent tarafı ölçtüğü veri kümesine göre konuşur (PLAN R4-4).
 
 Referans tarih, sahte istemcinin kaydı ve eşleşmeyen bir sorunun cevabı kümenin kendisine aittir;

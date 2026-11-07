@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import pytest
 
 from nl2sql import config

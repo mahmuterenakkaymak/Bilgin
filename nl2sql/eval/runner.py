@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """One golden question, end to end: the agent runs, the answer is executed, the outcome is decided.
 
 The runner is where a run becomes a number. It re-decides nothing about what the model meant: the

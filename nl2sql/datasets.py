@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Veri kümeleri: bir klasör + ``dataset.json`` -> yollar, tohum, builder, generator, referans.
 
 Bir veri kümesi şemasını, kurallarını, profilini, golden sorularını, test veritabanını kuran

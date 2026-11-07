@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Ekrana çıkan her sayının tek kaynağı: Python tarafındaki report/fmt.py ile aynı okunuş.
 // Binlik ayıracı nokta, ondalık virgül, yüzde işareti sayının önünde; boş hücre "0" değil "–".
 const NULL_TEXT = "–";

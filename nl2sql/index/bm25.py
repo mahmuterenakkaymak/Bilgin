@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Okapi BM25: bir kelimenin dokümanda kaç kez geçtiği değil, korpus içinde ne kadar nadir olduğu.
 
 Sözcük arama tarafının tek işi bu. idf'nin klasik Robertson sürümü yerine daima pozitif olan

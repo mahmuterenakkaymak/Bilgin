@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T82: satırların koddan şemaya dönüşümü (PLAN R3-2) - tüm satırlar, LLM satırları hiç görmez.
 
 Eşleme elle kurulmaz: gerçek okuyucu (T79) + gerçek sözlük eşlemesi (T80) convert'e verilir,

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Adım notları: arama aracının boş ve hatalı cevabı kendi cümlesiyle çıkar (R2-14).
 
 Adlar yalnız gerçek sonuç satırlarından toplanır; "Eşleşen tablo yok." cümlesinin ilk sözcüğü

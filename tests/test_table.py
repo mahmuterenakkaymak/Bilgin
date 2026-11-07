@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Tablonun ekranda duruşu: hizalı kolonlar, Türkçe sayılar, dostane uyarılar.
 
 Sınanan şey verinin kendisi değil nasıl göründüğü: sayılar 1.234,56 gibi yazılır ve sağa

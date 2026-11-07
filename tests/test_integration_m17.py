@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T204: M17 entegrasyonu — derlenmiş ekranın arkasında gerçek dünya, elle kurulmuş tek sahte yok.
 
 Veritabanı kümenin kendi builder'ı, indeks gerçek ``cli.build_index``i (sahte embedder), kapı

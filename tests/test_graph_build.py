@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-10: graph yalnızca fk ve profilden kurulur - Python'da ERP kuralı yok.
 
 İki iddia var: şemadaki her fk bir kenardır ve hiçbir profil kenarı onu geçersiz kılamaz; profil

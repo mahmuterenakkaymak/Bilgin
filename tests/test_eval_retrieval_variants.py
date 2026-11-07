@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T104: R3-9 varyantları — +komşu ve +eşanlam tabanın altına düşmemeli.
 
 Ölçümün kendisi gerçek: gerçek şema + gerçek kurallar + FakeEmbedder bellekte, 40 altın soru,

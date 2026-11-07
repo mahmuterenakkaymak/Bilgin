@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Metni arama için normalize etme: Türkçe katlama, kelime parçaları, shingle'lar.
 
 İndeksin hem doküman tarafı hem sorgu tarafı aynı katlamadan geçmek zorunda; aksi halde

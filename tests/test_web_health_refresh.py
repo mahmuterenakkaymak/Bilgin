@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T218: başlıktaki sağlık noktası kendini tazelemeli (PLAN R5-18 header).
 
 Nokta ``/api/health`` çıktısını, kural ekranındaki ``#index-stale`` bandı ise aynı ``index.fresh``

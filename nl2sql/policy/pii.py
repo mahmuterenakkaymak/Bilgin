@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Masked display values for PII columns (PLAN R3-6).
 
 The executor masks every value that traces back to a column carrying `pii`, so the model,

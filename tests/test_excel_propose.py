@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T81: modelden başlık eşleme önerisi - doğrulama, sözlükle birleşme, uyuşmazlıklar.
 
 Model burada FakeLLM: öneri hazır bir JSON, ulaşılmayan endpoint de bir script. Böylece

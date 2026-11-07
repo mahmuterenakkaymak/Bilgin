@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T170: web API'si (PLAN R5-15).
 
 Dünya gerçek, model ``--llm fake``, yollar tmp: ``TestClient`` kurulmuş bir oturumun üstünde koşar,

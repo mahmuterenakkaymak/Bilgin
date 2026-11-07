@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-16: indeks dokümanı altın soruyu tekrar edemez - kaçaklı bir retrieval'ın skoru yalandır.
 
 Dokümanın kendisi de iki iddia taşır: şema ve kural dosyalarındaki her şey bir dokümandır (83 tablo

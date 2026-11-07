@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Kayıtlı sorular: uygulamanın kendi SQLite dosyasında tek tablo (PLAN R5-16).
 
 Kenar çubuğunun yükü bu kadar: sorunun metni ve SQL'i. ``data/bilgin.db`` analiz edilen

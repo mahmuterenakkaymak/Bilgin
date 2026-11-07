@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Soru akışının durumu: her alan bir AskPayload alanıdır, burada zaman/sayaç/tip yok; böylece
 // indirgeyici ekrandan bağımsız test edilebilir. Durum adları payload'ınkinden türetilir (R5-2).
 export const initialState = {

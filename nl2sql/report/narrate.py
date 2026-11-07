@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Anlatı: cümleyi LLM kurar, sayıları bekçi onaylar (PLAN R5-9, Contracts Narration).
 
 LLM dil katmanıdır, hesap makinesi değil: satırların ve olguların sayılarını olduğu gibi kullanır,

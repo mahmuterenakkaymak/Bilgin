@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """The same questions run in two modes, lined up: the verdict PLAN R2-13 asks for and what it rests on.
 
 A comparison re-measures nothing. It takes the report each mode already committed and reads the two

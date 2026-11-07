@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R5-20: tablo özeti aramaya katılınca liste hâlâ tablo listesi olmalı.
 
 Özetler tablo dokümanlarının yanına yazılan ikinci bir ses; kaynaşım o sesi tablonun kendi

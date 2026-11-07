@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-8: kaynaşımın aritmetiği ve gerçek şema üzerinde üç yöntemin davranışı.
 
 RRF elle hesaplanabilmeli: kaynaşımın sıralamayı neden böyle kurduğu testte görünmezse, bir

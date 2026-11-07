@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // ECharts seçeneği JSON olarak geldiği için Türkçe sayı biçimi burada işlevle buluşur (PLAN R5-6):
 // yalnız biçimleyici eklenir, verinin ve seri tipinin kendisine dokunulmaz.
 import { formatNumber, formatPercent } from "./format.js";

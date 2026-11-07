@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``serve`` dumanı: API'yi gerçekten ayağa kaldırır, adımların üstünden HTTP ile geçer.
 
 Komut satırı araçları zaten test ediliyor; burada ölçülen şey sunucunun kendisi — ``python -m

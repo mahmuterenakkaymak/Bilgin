@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Embedder sözleşmesi: deterministik sahte vektörler, toplara bölünen sıralı istekler, erişilemeyen endpoint.
 
 Ölçümün kendisi tekrarlanabilir olmalı: sahte embedder aynı metne her çalıştırmada aynı vektörü

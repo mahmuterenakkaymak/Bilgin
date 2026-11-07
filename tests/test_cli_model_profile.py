@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``--model`` ve ``--models-file`` (T150, PLAN R4-10/R4-12/R4-14): koşum bir profili olsun.
 
 Bir profil uç noktayı, model adını, anahtarın hangi ortam değişkeninde durduğunu ve kaç tokenlık

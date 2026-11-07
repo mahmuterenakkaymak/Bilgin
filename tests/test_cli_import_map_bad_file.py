@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T110: import-map çöp bir dosyayla karşılaşınca iz dökmez (Delight 3, T84'ün sözü).
 
 openpyxl yalnızca desteklediği uzantıdaki kitabı açar: düz metin ya da eski .xls arşive

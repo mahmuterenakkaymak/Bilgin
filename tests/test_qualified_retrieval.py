@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R4-8: retrieval, graph, araçlar ve CLI tam adlarla konuşur - mini kümesi üzerinde.
 
 Çıplak ad modelin ezberinde olan şey, tam ad şemanın söylediği şey. İddia dört yerde aynı: indeks

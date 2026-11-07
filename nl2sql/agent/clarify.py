@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """The follow-up a clarification turns into, and how to split it back apart.
 
 A clarification stops the run (PLAN R5-10), so the user's choice comes back as a *new* question:

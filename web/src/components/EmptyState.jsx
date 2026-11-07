@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Hiç soru sorulmamış ekranın açılışı: iki cümle ve örnek çipler (R5-18).
 // ASSUMPTION: boş durumdayken çipler burada, soru sorulduktan sonra AskBox'ın altında durur;
 // aynı çip iki kez görünmesin diye kutu boş durumdayken kendi çip sırasını vermez.

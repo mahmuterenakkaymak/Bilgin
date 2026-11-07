@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Join graphı: şemadaki fk'lar ile profil çiftlerinin birleşimi (PLAN R2-10).
 
 Kenar yönsüzdür - bir soru hangi tablodan yürümeye başlarsa köprüyü o taraftan kullanır. Bir fk

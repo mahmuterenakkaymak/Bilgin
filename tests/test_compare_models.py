@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Model x mod hücreleri, elle kurulmuş tekrarlarla: sayılar nereden geldiği bilinen sayılar (T151, R4-13).
 
 Model de veritabanı da yok; her hücre ``QuestionResult`` listeleridir ve beklenen her sayı o

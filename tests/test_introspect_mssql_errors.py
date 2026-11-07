@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T114: a SQL Server that cannot be introspected fails with a one-line IntrospectError, not a traceback.
 
 The two failures a real user hits first - pyodbc not installed, server or DSN refusing the

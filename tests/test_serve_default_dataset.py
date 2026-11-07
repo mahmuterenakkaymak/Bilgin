@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T211: ``serve`` kümesi söylenmemiş dünyayı da sunar (R5-11, R5-15).
 
 ``--dataset`` yazılmadığında başlığın çipi ``wwi`` diyordu ama oturum kümesiz kuruluyordu:

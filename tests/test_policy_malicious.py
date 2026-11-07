@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Saldırı kümesi: tests/data/malicious.jsonl satırlarının hiçbiri policy'den geçmemeli.
 
 Reddin bir nedeni olmalı (model o nedeni görüp SQL'i düzeltebilir), ama neden asla

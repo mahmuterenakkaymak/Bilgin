@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``eval --compare --models`` ``llm.ping``in sebebini ezmez (T162, PLAN R4-10; T151'in kapısı).
 
 ``UNSLOTH_API_KEY`` tanımlı değilken blok "GPU'da bu modeli açıp yeniden koşun" tavsiyesiyle

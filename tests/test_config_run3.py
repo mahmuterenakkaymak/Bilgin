@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 3 config: yeni ayarlar, şema üretim yolları ve .gitignore kuralları.
 
 ``schema/`` altındaki import çıktıları (imported/skeleton/diff/mapping) makine üretimi-

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import { formatCell, formatNumber, isNumericColumn } from "../lib/format.js";
 
 // Sonuç tablosu: başlık yapışkan, sayı sütunları sağda ve Türkçe, boş hücre "–". Alt yazı yalnız

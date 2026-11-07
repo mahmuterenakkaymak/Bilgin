@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T155: M13 entegrasyonu — gerçek profil dosyası, gerçek pencere, gerçek ölçüm.
 
 Elle kurulmuş ``QuestionResult`` yok: profiller gerçek ``config/models.json``dan okunur (tek ekleme

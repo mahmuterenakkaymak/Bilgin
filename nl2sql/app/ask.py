@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Bir sorunun cevabı: ``ask_payload`` tek kapı (PLAN R5-1, R5-2, Contracts AskPayload).
 
 ``ask --json`` da ``POST /api/ask`` da bunu çağırır; ekranın gördüğü anahtarların tamamı burada

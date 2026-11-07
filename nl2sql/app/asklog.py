@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Soru günlüğü: her ``ask_payload`` çağrısı ``logs/asks.jsonl`` dosyasına tek satır bırakır.
 
 Satır hiçbir zaman veri taşımaz: alanlar tek tek, sözleşme sırasıyla yazılır, ``rows`` ve

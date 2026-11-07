@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R4-5: qualified-name helpers — split, resolve and `table_detail` by bare or qualified name."""
 
 import json

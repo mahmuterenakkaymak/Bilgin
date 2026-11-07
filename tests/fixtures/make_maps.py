@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T83: iki Excel fixture'ını config.SCHEMA_PATH'ten üretir (PLAN R3-2).
 
 Çalıştırma: .venv/Scripts/python tests/fixtures/make_maps.py

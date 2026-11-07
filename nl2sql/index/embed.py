@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Metni vektöre çeviren iki kurulum: deterministik sahte embedder ve OpenAI uyumlu endpoint.
 
 Aramanın işe yarayıp yaramadığı ölçülecekse aynı kod hem ağa hiç dokunmadan hem de gerçek bir

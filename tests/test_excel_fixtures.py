@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T83: iki Excel fixture'ı (PLAN R3-2).
 
 map_tidy.xlsx düzgün tek sayfalık harita; fallback_mapping + convert tam tur atıp

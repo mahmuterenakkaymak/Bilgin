@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T202: derlenmiş arayüzün sunulması (PLAN R5-15).
 
 Ekran ``npm --prefix web run build`` ile ``nl2sql/web/static``e yazılıyor; API onu olduğu gibi

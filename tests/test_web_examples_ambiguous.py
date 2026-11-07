@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T217: ``GET /api/examples`` belirsiz soruyu da önerir (PLAN R5-15).
 
 Dünya gerçek: kümenin kendi builder'ı tmp'de db kurar, oturum gerçek ``open_session``, kapı gerçek

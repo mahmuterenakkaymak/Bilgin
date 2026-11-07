@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T117: taban varyantı eş anlamlı genişletmesini aramaya da söylemeli.
 
 R3-9'un hükmü "hiçbir varyant recall@5'i düşürmez" tabanla +eşanlamı karşılaştırır; ikisi de

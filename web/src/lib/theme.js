@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Tema üç durumludur (T222): "system" tarayıcının/sistemin tercihine bırakır ve kök niteliği
 // kaldırılır; "dark" ve "light" hangi token kümesinin geçerli olduğunu `html[data-theme]` ile
 // sabitler. Değer tek bir anahtarda durur, arayüzün geri kalanı onu okumaz.

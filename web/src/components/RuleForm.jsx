@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import { useState } from "react";
 import * as api from "../lib/api.js";
 import { clientErrors, fromForm, mergeErrors, toForm } from "../lib/rulesForm.js";

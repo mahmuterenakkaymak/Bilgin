@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Araç listesi ve sistem istemi, mod başına (PLAN R2-5, R2-6).
 
 Üç mod aynı soruyu aynı kurallarla çözer; farkı bağlam ve araçtır. `full` bütün şema detayını

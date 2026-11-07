@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Nitelikli adlar iki fiziksel hedefte de kurulabilir olmalı (PLAN R4-6).
 
 SQLite'ta nokta şema ayracıdır: `"Sales"."Orders"` iki parçalı bir ad sayılır, oysa dosyada

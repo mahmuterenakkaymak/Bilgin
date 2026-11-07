@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-4 part 2: the Personel/Üretim/Servis/İthalat tables that exist only to be walked past.
 
 Same rule as part 1: a distractor is only worth its tokens if it reads like the real thing -

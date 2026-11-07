@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-11: bir kural ile onu iddia eden golden SQL aynı şeyi söylemek zorunda.
 
 Kuralın işaretçileri (markers), o kuralı `rules` alanına yazan her golden SQL'de geçmeli. Böylece

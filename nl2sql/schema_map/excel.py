@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Excel şema haritasını okuma: sayfalar, başlık satırı ve önizleme satırları (PLAN R3-2).
 
 Başlık satırı, dolu metin hücresi sayısı eşiği geçen ilk satırdır; üstünde kalan satırlar (dosya

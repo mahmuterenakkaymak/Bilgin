@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 import { useState } from "react";
 
 // Hata kartının türleri (R5-18): payload'ın hatası hangi adla gelirse gelsin ekranda dört başlıktan

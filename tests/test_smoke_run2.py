@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 2'nin duman testi: beş komut da depo kökünden gerçek bir alt süreç olarak koşar.
 
 ``test_smoke.py``nin Run 2 karşılığı; burada da hiçbir şey yer değiştirmez: veritabanı

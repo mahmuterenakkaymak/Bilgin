@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T141: her veri kümesinin golden kümesi kendi sözleşmesine göre ölçülür.
 
 ``datasets.list_datasets()`` içindeki her küme ve o kümenin her golden satırı tek tek sınanır:

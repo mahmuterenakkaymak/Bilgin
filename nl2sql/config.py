@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """All tunables in one place. Env vars are read at call time, never at import."""
 
 from __future__ import annotations

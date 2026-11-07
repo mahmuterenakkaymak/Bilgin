@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-11 işaretçiler boşluğa karşı: işaretcisiz kural hiçbir şeyi sınamaz.
 
 `markers: []` olan bir kural için "her işaretçi kuralı iddia eden SQL'de geçmeli" testi boş döngüde

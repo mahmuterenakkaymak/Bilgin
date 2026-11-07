@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``build-index``: aramanın girdisinin kurulumu ve ölü embedding sunucusu.
 
 İndeks iki şeyin toplamı: doküman metni ve onun vektörü. Ekran bu yüzden kaç doküman yazıldığını

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Schema document: loader, policy allowlist and the text forms the model sees."""
 
 from __future__ import annotations

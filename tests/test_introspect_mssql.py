@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T87: the MSSQL query texts are valid T-SQL and rows_to_skeleton turns rows into a canonical skeleton.
 
 The rows here are hand-built in the column order MSSQL_QUERIES selects, so the conversion is tested

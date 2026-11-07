@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """The conversation: ask the model, run what it asks for, hand the answer back, until it submits.
 
 The loop is the only part that owns a run's shape. It keeps the transcript in the OpenAI form the

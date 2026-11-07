@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """What an eval run leaves on disk: report.json for the next run, report.md for the reader.
 
 The markdown is the artifact a person actually reads, so it opens with the score and the decision

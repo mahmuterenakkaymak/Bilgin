@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Depo kökü: ``index/`` kalıbı yalnızca kökteki çalışma zamanı indeksini eler.
 
 ``index/`` satırı yolu sınırlamadığı için ``nl2sql/index/`` paketini de eliyordu; yedi dosya

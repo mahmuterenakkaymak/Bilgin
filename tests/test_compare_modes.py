@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Aynı soruların modlar arasındaki yan yana okunuşu: karar, dönenler ve rapor (T64).
 
 Model yine yok; raporlar ``report._report`` ile kurulan sahte koşuların çıktısı. Dört şey görülüyor:

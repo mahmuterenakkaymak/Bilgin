@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """PII ve salt okunur giriş betiği şemalı tablo adlarında da çalışır (PLAN R4-7).
 
 Eski şemada her tablo dbo'da durduğu için maske yolu şema adını hiç bilmiyordu; R4-5 tablo adını

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T111: eşlemedeki header_row dönüşüme uygulanır (PLAN R3-2).
 
 Öneri adımının yazdığı 1-tabanlı başlık satırı kullanıcıya "eşlemeyi elle düzeltmek isterseniz

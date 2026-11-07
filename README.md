@@ -6,7 +6,7 @@
 
 *Bilgin means "learned, wise" in Turkish - and also "your knowledge". Your data stays yours.*
 
-![License: all rights reserved](https://img.shields.io/badge/license-all%20rights%20reserved-lightgrey)
+![License: AGPL-3.0 or commercial](https://img.shields.io/badge/license-AGPL--3.0%20%7C%20commercial-blue)
 ![Platform: Windows 11](https://img.shields.io/badge/platform-Windows%2011-0078D6)
 ![Tested on: RTX 5090 32 GB](https://img.shields.io/badge/tested%20on-RTX%205090%2032%20GB-76B900)
 ![Model: Qwen3.8-27B · Flash-Next](https://img.shields.io/badge/model-Qwen3.8--27B%20%C2%B7%20Flash--Next-7B61FF)
@@ -315,4 +315,14 @@ redistributed here; check each model's license before a commercial deployment.
 
 ## License
 
-All rights reserved © 2026 Mahmut Eren Akkaymak. A license has not been chosen yet.
+Copyright © 2026 Mahmut Eren Akkaymak. Bilgin is **dual-licensed**:
+
+- **[GNU AGPL-3.0](LICENSE)** — free to use, change and share; if you run a modified version for users over a
+  network, you must publish its source under the same license.
+- **Commercial license** — for closed-source products, hosted services that keep their changes private, or
+  companies whose policy rules out AGPL. See [LICENSING.md](LICENSING.md) for how to ask.
+
+## Contributing
+
+Issues and pull requests are welcome. Contributions are accepted under a short Contributor License Agreement
+that keeps the dual licensing possible; see [CONTRIBUTING.md](CONTRIBUTING.md).

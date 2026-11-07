@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R4-7: `deny` kolonlar modelin hiç görmediği, politikanın hiç okutmadığı kolonlardır.
 
 WWI'nin iki sırrı (`Application.People.HashedPassword` ve `.Photo`) üç katmandan birden gizlenir:

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T174: M14 entegrasyonu — iki gerçek dünya, uçtan uca, elle yapılmış tek parça olmadan.
 
 Dünya gerçek ``load_dataset``ın kendi builder'ı, kapı gerçek ``open_session``ın gerçek yürütücüsü,

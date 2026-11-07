@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T140: WWI kuralları ve join profili (PLAN R4-9).
 
 Kural dosyası `rules.load_rules` ile Contracts varsayılanlarını alarak yüklenir, profil

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Model iki okunuşu ayıramayınca sorar (R5-10): seçeneklerden biri sorunun üstüne eklenir ve
 // soru yeniden koşulur (R5-11). Kart cevap değildir, o yüzden soruyu değiştirme yolu açık kalır.
 export default function ClarificationCard({ payload, onChoose, onChange }) {

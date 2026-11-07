@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Arayüzün tek ağ kapısı: her yol ya veri döner ya da ekranın okuyacağı ApiError yükseltir.
 
 export class ApiError extends Error {

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """LLM istemcisi: yanıt çözümlemesi, token/gecikme eşlemesi ve erişilemeyen endpoint.
 
 Ağ işi buraya kadar girmez: başarılı yanıtlar sahte completion nesneleriyle kurulur, HTTP

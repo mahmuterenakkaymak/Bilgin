@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T206: dışa aktarım TOP_N'de kesiliyordu (PLAN R5-16, Contracts export file).
 
 Politika her sorguya `TOP config.TOP_N` enjekte eder; bütçeyi genişletmek o tavanı değiştirmez,

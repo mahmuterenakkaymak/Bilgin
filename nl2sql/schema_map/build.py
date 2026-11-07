@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Dataset -> physical build targets: the SQLite file the executor queries and the T-SQL script for MSSQL."""
 
 from __future__ import annotations

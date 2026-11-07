@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``--dataset`` verildiğinde kurtarma cümlesi de o kümeyi söyler (PLAN R4-14).
 
 Eksik bir veritabanı ya da bayat bir indeks tek başına bir arıza değil; asıl kaybedilen, cümlenin

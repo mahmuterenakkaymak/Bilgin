@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T84: import-map komutu — öneriyi göster, eşlemeyi diske bırak, --accept ile şemayı yaz.
 
 Kitap da eşleme de şema da tmp klasörde, yani test repoya hiçbir şey yazmaz. Model burada FakeLLM

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """R2-9: indeks ya günceldir ya da hiç yüklenmemiş sayılır.
 
 Bayat bir indeksle arama yapmak, şemanın göremediği bir tabloyu modelin hatası gibi gösterir;

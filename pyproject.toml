@@ -3,6 +3,9 @@ name = "bilgin"
 version = "0.1.0"
 description = "Bilgin: local-first natural language -> T-SQL analyst for ERP databases (safe executor, agent loop, eval)"
 requires-python = ">=3.11"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE", "LICENSING.md"]
+authors = [{ name = "Mahmut Eren Akkaymak" }]
 dependencies = [
     "sqlglot==30.24.0",
     "openai==3.37.0",
@@ -13,7 +16,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``--embed`` ve ``--embed-model``: ölçümün hangi vektör uzayıyla yapıldığı komutun kendisinde.
 
 Model adı daha önce yalnız ``NL2SQL_EMBED_MODEL`` ile değişebiliyordu; iki modeli karşılaştırmanın

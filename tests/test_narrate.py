@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T179: Cümleyi LLM kurar, sayıları bekçi onaylar; olmazsa şablon konuşur (PLAN R5-9, Contracts Narration).
 
 İddia: anlatıcıya sonucun kendisi gösterilir (soru, kolonlar, satırlar, GERÇEKLER) ve ürettiği cümle

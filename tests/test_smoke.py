@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Baştan sona duman testi: üç komut da depo kökünden gerçek bir alt süreç olarak koşar.
 
 Burada hiçbir şey yer değiştirmez: ``python -m nl2sql`` gerçekten çalışır, veritabanı

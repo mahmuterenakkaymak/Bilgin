@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``eval --only Q03`` sonrası tam koşu: ``latest``te tek soru varken fark o bir sorudur.
 
 İki sahte koşu aynı dizinde: ilki yalnız Q03 (1/1), ikincisi dört soruluk tam koşu. Önceki

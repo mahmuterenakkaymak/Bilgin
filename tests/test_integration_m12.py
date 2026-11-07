@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T145: M12 entegrasyonu — wwi dünyası baştan sona, elle yapılmış tek parça olmadan.
 
 Dünya gerçek ``load_dataset("wwi")``nın kendi builder'ı, kapı gerçek ``LocalExecutor``, indeks gerçek

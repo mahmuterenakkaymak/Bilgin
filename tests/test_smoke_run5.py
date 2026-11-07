@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Run 5'in dumanı: ``serve`` gerçek bir sunucu olarak ayağa kalkıyor mu?
 
 ``scripts/smoke_serve.py`` depo kökünden çağrılır; ondan önce aynı kökte ``build-db`` ve

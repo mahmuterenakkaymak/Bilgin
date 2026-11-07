@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T210: dar ekranda sonuç tablosunun sayıları (M17 görsel incelemesi, 390px).
 
 Telefon genişliğinde ``white-space: nowrap`` olan hücreler tabloyu kutunun dışına taşıyor ve

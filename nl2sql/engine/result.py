@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Value types the execution layer passes around: what it may spend, what it got, what failed."""
 
 from __future__ import annotations

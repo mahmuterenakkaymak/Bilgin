@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T57: M5 entegrasyonu — diske yazılmış gerçek indeks, gerçek 40 altın soruyla aranır.
 
 Zincirin halkalarının hiçbiri taklit değil: gerçek schema.json + rules.json -> dokümanlar ->

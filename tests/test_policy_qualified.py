@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Nitelikli tablo adları (PLAN R4-5): allowlist `Schema.Table` da yazılabilir.
 
 İki parça şema ile ayrılır ve tam adın büyük hali allowlistteyse geçerlidir; üçüncü bir parça

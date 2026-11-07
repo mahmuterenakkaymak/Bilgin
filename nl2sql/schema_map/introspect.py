@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """Live database -> canonical schema doc: the skeleton the Excel map is merged and diffed against (PLAN R3-4)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """T171: kayıtlı sorular ve geçmiş (PLAN R5-16).
 
 Dünya ``test_web_api`` ile aynı: gerçek mini küme, sahte model, tmp yollar. Kayıtların dosyası

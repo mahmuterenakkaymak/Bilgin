@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Mahmut Eren Akkaymak
+
 // Soru kutusu: Enter gönderir, Shift+Enter alt satıra iner; boş metin ve koşan bir soru
 // düğmeyi kilitler (R5-18). Çipler kutunun altında durur, böylece cevaptan sonra da erişilir.
 export default function AskBox({ value, onChange, onAsk, loading = false, examples = [] }) {

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """``eval-retrieval --dataset X`` raporu kümenin kendi ``eval_out``una yazar (R4-3, R4-4).
 
 Rapor klasörü de kümenin tanımıdır: iki dünya aynı ``eval_out/retrieval/latest``i paylaşırsa

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2026 Mahmut Eren Akkaymak
+
 """`sample_values` tabloyu şemanın parçalarıyla yazar (T156, PLAN R4-5).
 
 İki iddia var: modele giden SQL SQL Server'ın okuyabileceği bir ad taşıyor — `[Sales].[Customers]`,
