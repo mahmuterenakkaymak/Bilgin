@@ -28,3 +28,7 @@ docs/*.pdf
 /data/visual/
 real_datasets/*
 !real_datasets/wwi_real/
+
+# pipeline run logs & UA map cache (2026-11-08)
+.hybrid/*.log
+.ua/
