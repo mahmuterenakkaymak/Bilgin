@@ -1,5 +1,303 @@
 English: [README.md](README.md)
 
+English: [README.md](README.md)
+
+<div align="center">
+
+# 📚 Bilgin
+
+**ERP veritabanları için tamamen yerel çalışan yapay zekâ veri analisti: Türkçe sor, kendi SQL Server'ından doğrulanmış cevabı al.**
+
+*Bilgin hem "öğrenmiş, ermiş" demek hem de "bilgin". Verinin senin kalır.*
+
+![Lisans: AGPL-3.0 veya ticari](https://img.shields.io/badge/license-AGPL--3.0%20%7C%20commercial-blue)
+![Platform: Windows 11](https://img.shields.io/badge/platform-Windows%2011-0078D6)
+![Test: RTX 5090 32 GB](https://img.shields.io/badge/tested%20on-RTX%205090%2032%20GB-76B900)
+![Model: Qwen3.8-27B · Flash-Next](https://img.shields.io/badge/model-Qwen3.8--27B%20%C2%B7%20Flash--Next-7B61FF)
+![Veritabanı: SQL Server](https://img.shields.io/badge/database-SQL%20Server-CC2927)
+![Gerçek WWI: 24/26](https://img.shields.io/badge/real%20WWI-24%2F26-brightgreen)
+![Test: 7.321 yeşil](https://img.shields.io/badge/tests-7%2C321%20green-success)
+![Veri: evde kalır](https://img.shields.io/badge/data-stays%20home-success)
+
+</div>
+
+Bilgin, ERP kullanıcısının SQL bilmeden Türkçe soru sorup kendi veritabanından cevap almasını sağlayan, tamamen
+yerel çalışan bir yapay zekâ veri analistidir. Soruyu T-SQL'e çevirir, sorguyu **salt-okur** bir girişle çalıştırır,
+sonucu tablo, grafik ve doğal Türkçe bir cümleyle gösterir. Model, veritabanı ve arayüz senin makinende kalır; ne
+veri ne soru buluta gider. Her sayıyı veritabanı hesaplar, model sayı üretmez; cevap cümlesindeki her sayıyı kod
+doğrular. Soru iki türlü okunabiliyorsa tahmin etmez, seçenek sunar. Microsoft'un gerçek WideWorldImporters
+veritabanında 26 iş sorusunun 24'ünü doğru cevaplıyor; 24 GB'lık bir ekrana sığan Qwen3.8-27B (16K bağlam) ile bile.
+Ayrıntılar: [teknik doküman](docs/BILGIN-TEKNIK-DOKUMAN.md) · [gerçek veritabanı testi](docs/GERCEK-WWI-TEST.md).
+
+<p align="center">
+  <img src="docs/img/real-shots/flash-next-Q12.png" width="49%" alt="Bilgin: ciroya göre en çok satan 5 ürün, grafikli">
+  <img src="docs/img/real-shots/qwen27b-16k-Q03.png" width="49%" alt="Bilgin: kredi notları düşülmüş net ciro, 16K pencerede 27B ile">
+</p>
+<p align="center"><sub>SQL Server'da gerçek WideWorldImporters: ciroya göre en çok satan 5 stok kalemi (Flash-Next) ve KDV ile kredi notları düşülmüş ciro (Qwen3.8-27B, 16K bağlam). Cümleler, tablolar ve grafikler arayüzün döndürdüğü hâliyle.</sub></p>
+
+## Nedir
+
+- **Sunucunda yaşayan bir veri analisti.** "Bu yıl en çok ciro yapan 5 ürün hangisi?" diye sor; Türkçe cümleyi,
+  sonuç tablosunu, grafiği ve CSV/Excel indirmeyi al. SQL yok, BT talebi yok, bulut yok.
+- **Güvenilir sayılar.** Model SQL'i yazar ve sonucu anlatır; asla sayı hesaplamaz. Cümledeki her sayı ya sonuçta
+  ya da kodun hesapladığı gerçeklerde bulunmak zorundadır; yoksa cümle reddedilir.
+- **İş kuralı katmanı.** "Ciro", "net satış" ya da "geciken teslimat" tanımların, modelin okuduğu ve değerlendirmenin
+  sınadığı bir kural dosyasında durur — "ciro" her zaman KDV hariç ve iade düşülmüş demektir.
+- **Bilmiyorsa sorar.** Soru iki türlü okunabiliyorsa Bilgin "Netleştirelim" kartıyla seçenek sunar.
+- **Güvenlik promptta değil, veritabanında.** Kolon düzeyli `DENY` ile salt-okur bir giriş gerçek sınırdır; SQL
+  politikası, kişisel veri maskesi ve denetim kaydı üstüne gelir.
+- **Gerçek ekip için.** Rollü adlandırılmış kullanıcılar, girişte zorlanan güçlü parolalar, konuşma geçmişi, canlı
+  sayılı sabit başlangıç kartları ve Türkçe/İngilizce geçişli arayüz.
+- **Bir ERP'yi bir öğleden sonra tanımla.** Veritabanının kopyasına bağlan: introspeksiyon gerçek şemayı okur,
+  Excel şema haritası Türkçe açıklamaları doldurur, sihirbaz bağlantıyı DPAPI ile mühürlü saklar.
+- **Demo değil, ölçüm.** Her veri kümesi tuzaklı altın sorular ve bağımsız bir Python referansı taşır;
+  `eval --compare` model × mod × tekrar koşup raporu yazar.
+
+## Ne gerekiyor
+
+| | |
+|---|---|
+| **Ekran kartı** | Önerilen kurulum (Qwen3.8-27B, 4-bit, 16K bağlam) için **24 GB VRAM**. RTX 5090 32 GB'de test edildi. |
+| **LLM sunucusu** | Araç çağrılı herhangi bir OpenAI-uyumlu uç: llama.cpp, vLLM, Unsloth Studio, ... |
+| **Veritabanı** | SQL Server (ERP veritabanının **kopyası**, asla canlısı değil) ve `SELECT` ile `DENY` verebileceğin bir giriş. Denemek için yerleşik SQLite test veritabanı var. |
+| **Sistem** | Python 3.11+, Node.js 20+ (yalnız arayüzü derlemek için), gerçek arka uç için ODBC Driver for SQL Server. Servis kurulumu Windows ister. |
+| **İsteğe bağlı** | Büyük şemalarda `rag` modu için bir gömme ucu (`/v1/embeddings`). |
+
+## Kurulum
+
+### Bırak yapay zekân kursun
+
+Bir yapay zekâ kodlama asistanı mı kullanıyorsun (Claude Code, Cursor, Codex, GitHub Copilot, ...)? Bunu yapıştır:
+
+```text
+Set up Bilgin on this PC for me: https://github.com/mahmuterenakkaymak/Bilgin — follow the "Do it yourself" steps below, verify with the fake LLM (eval must print 26/26) before connecting a real model, and ask me before anything that touches a database.
+```
+
+### Ya da kendin yap
+
+```bash
+# 1. install
+python -m venv .venv
+.venv/Scripts/activate                    # Linux/macOS: source .venv/bin/activate
+pip install -e . pytest httpx
+
+# 2. build the WideWorldImporters SQLite test database (the default dataset)
+python -m bilgin build-db
+
+# 3. check everything without a model: the fake LLM replays the golden SQL
+python -m bilgin eval --llm fake --mode full_rules       # Skor: 26/26
+
+# 4. point it at your local model and ask for real
+export BILGIN_LLM_BASE_URL=http://127.0.0.1:8080/v1      # PowerShell: $env:BILGIN_LLM_BASE_URL = "..."
+python -m bilgin ask "Bu yıl en çok ciro yapan 5 stok kalemi hangisi?"
+
+# 5. the web UI (Turkish or English, multi-user)
+python -m bilgin user add muhasebe                      # first user; login is then enforced
+npm --prefix web ci && npm --prefix web run build
+python -m bilgin serve                                  # http://127.0.0.1:8777
+```
+
+`rag` modu için önce arama indeksini kur: `python -m bilgin build-index`.
+Tüm ofis için Windows servisi olarak çalıştır: `python -m bilgin service-xml` WinSW tanımını üretir,
+`service-check` makine hesabının kayıtlı tüm veritabanlarına erişebildiğini kanıtlar, `secret-set` model
+anahtarlarını DPAPI ile mühürler — XML'e tek parola bile girmez.
+
+### Kendi ERP'n
+
+1. Veritabanının **kopyasını** geri yükle. Bilgin'i asla canlı sisteme bağlama.
+2. `python -m bilgin introspect` gerçek şemayı okur; `import-map` / `diff-map` / `merge-map` Excel şema
+   haritandaki açıklamaları ekler (model kolon eşlemesini önerir, kod dönüştürür). Web arayüzü aynı yolu programcı
+   olmayan biri için de yürür ve bağlantıyı sunucuda saklar.
+3. `python -m bilgin make-login-script` salt-okur girişi yazar: izin listesinde `SELECT`, kişisel kolonlarda
+   `DENY`, `DENY EXECUTE`, `DENY VIEW DEFINITION`. Yöneticiyle çalıştır, sonra yalnız o girişle bağlan.
+4. İş kurallarını ve 20-30 altın soruyu yaz; kimse bir cevaba güvenmeden önce `eval` koş.
+
+```powershell
+$env:BILGIN_BACKEND = "mssql"
+$env:BILGIN_MSSQL_CONN = "<ODBC connection string of the read-only login>"   # environment only, never in a file
+```
+
+## Mimari
+
+```mermaid
+flowchart LR
+    subgraph you[You]
+        U[Web UI<br/>React + ECharts<br/>TR / EN]
+        CLI[CLI / JSON API]
+    end
+    subgraph box[Your server - loopback only]
+        A[Agent loop<br/>tool calls]
+        L[Local LLM<br/>Qwen3.8-27B 16K<br/>or Flash-Next 256K]
+        R[(Schema + business rules<br/>hybrid search + join graph)]
+        P[SQL policy<br/>sqlglot]
+        X[Executor<br/>row + time budget]
+        M[PII mask<br/>+ audit log]
+        N[Report<br/>chart + facts + number guard]
+    end
+    DB[(SQL Server<br/>read-only login<br/>column DENY)]
+    U & CLI --> A
+    A <--> L
+    A <--> R
+    A -->|SQL| P --> X --> DB
+    X --> M --> N --> U & CLI
+```
+
+Her şey `127.0.0.1`'e bağlanır. Yolda tek bir bulut çağrısı yok: model de gömme de veritabanı da arayüz de yerel.
+
+## Cevap nasıl üretilir
+
+```mermaid
+flowchart TD
+    Q["'Bu yıl en çok ciro yapan 5 ürün?'"] --> C{Clear question?}
+    C -->|two readings| K[Netleştirelim card<br/>you pick an option]
+    K --> S
+    C -->|yes| S[Model finds tables, rules, sample values<br/>writes T-SQL]
+    S --> PO{Policy: one SELECT,<br/>allowlist, no PII filters?}
+    PO -->|no, with the reason| S
+    PO -->|yes| E[Run read-only, mask PII]
+    E --> F[Code: chart type + facts]
+    F --> T[Model: 1-3 Turkish sentences]
+    T --> G{Every number in the result<br/>or the facts? No column names?}
+    G -->|no, once| T
+    G -->|no, twice| TP[Template sentence built by code]
+    G -->|yes| OK[Answer: sentence, table, chart, CSV/Excel]
+    TP --> OK
+```
+
+Modelin etrafındaki döngü düz Python: politika, bütçeler, maskeleme, grafik seçimi, gerçekler ve sayı bekçisi kod.
+Model dil katmanı — soruyu okur, SQL'i yazar, sonucu anlatır.
+
+## Sonuçlar
+
+SQL Server'da Microsoft'un gerçek **WideWorldImporters**'ı, salt-okur giriş, 26 iş sorusu (7'si tuzak: kredi
+notları, faturalandırılmamış siparişler, stok bekletmeleri, geciken teslimler, ...), hücre başına 2 tekrar
+([ayrıntılar](docs/GERCEK-WWI-TEST.md)):
+
+| Model | Mod | Doğru (ort.) | min-maks | s / soru | Tepe istem |
+|---|---|---:|---:|---:|---:|
+| Qwen3.8-Flash-Next, 256K | `full_rules` | 24.0 / 26 | 24-24 | 4.3 | 9.1K |
+| Qwen3.8-Flash-Next, 256K | `rag` | **24.5 / 26** | 24-25 | 9.9 | 6.8K |
+| Qwen3.8-27B, 24K | `full_rules` | 24.0 / 26 | 24-24 | 4.4 | 9.1K |
+| Qwen3.8-27B, 24K | `rag` | 23.0 / 26 | 23-23 | 7.8 | 5.0K |
+| **Qwen3.8-27B, 16K** | `full_rules` | **24.0 / 26** | 24-24 | **4.1** | 9.1K |
+| Qwen3.8-27B, 16K | `rag` | 23.0 / 26 | 23-23 | 7.7 | 5.3K |
+
+<p align="center">
+  <img src="docs/img/real-compare/score.png" width="32%" alt="model ve moda göre doğru sayısı">
+  <img src="docs/img/real-compare/speed.png" width="32%" alt="soru başına saniye">
+  <img src="docs/img/real-compare/context.png" width="32%" alt="tepe istem boyutu">
+</p>
+
+- **7 tuzak gerçek veride de doğru.**
+- **İki kaçırma sorunun suçu, SQL'in değil.** Q01 ve Q25 her modelde düşüyor: ikisi de iki türlü okunuyor. Fatura
+  müşterisi açıkça sorulunca Q25 altın cevabı veriyor.
+- **24 GB kart yetiyor.** 16K penceredeki 27B, `full_rules` modunda 256K modeliyle aynı skoru alıyor. Önerilen:
+  **Qwen3.8-27B, 4-bit, 16K, `full_rules`**; `rag`'a yalnız şema pencereye sığmadığında geç.
+- **Her kilometre taşından sonra yeniden ölçüm.** Run 8 yeniden koşumu (28 Ekim 2026): yine 24/26; aynı veritabanının
+  SQLite kopyasında `rag` modu 26/26 — kaçırıklar sorularda, boru hattında değil.
+
+Gerçek veritabanının öğrettiği dersler (hepsi düzeltildi): ezberden yazılmış şemada 175 kolonun 44'ü yanlışmış —
+şemayı veritabanından oku; `ExtendedPrice` KDV dahil — kural katmanı bunun için; kolon düzeyli `DENY` `COUNT(*)`'ı
+kırıyor — politika artık anahtarı sayıyor; gerçek tutarlar `Decimal` gelir.
+
+**Test edilen kurulum**
+
+| Parça | Sürüm / değer |
+|---|---|
+| OS | Windows 11 Pro (+ 27B için WSL2 Ubuntu 24.04) |
+| Donanım | RTX 5090 32 GB · 96 GB DDR5-6400 · Ryzen 9 9950X3D |
+| Veritabanı | SQL Server Express, geri yüklenmiş WideWorldImporters, kolon `DENY`'li salt-okur giriş |
+| Modeller | Qwen3.8-Flash-Next UD-IQ4_XS (llama.cpp tabanlı sunucu, 256K) · Qwen3.8-27B Q4 GGUF, Unsloth Studio (24K / 16K) |
+| Python / Node | 3.11+ / 20+ |
+| Testler | 6.636 Python + 685 arayüz testi, hepsi yeşil |
+
+## Günlük kullanım
+
+| | |
+|---|---|
+| **Web arayüzü** (`python -m bilgin serve`) | adlandırılmış kullanıcılarla giriş, Türkçe/İngilizce geçişi, sabit **başlangıç kartları** ile soru kutusu (canlı KPI'lar, kendiliğinden yenilenen), konuşma geçmişi, cevap kartı (cümle, uyarılar, tablo, grafik, CSV/Excel), "Nasıl hesapladım" (SQL ve adımlar), koyu tema, telefon yerleşimi |
+| **Kurallar ekranı** | iş kurallarını düzenle: tanım, SQL ipucu, tablolar, doğrulama işaretleri |
+| **Şema ve bağlantılar ekranları** | tanıtma sihirbazı: canlı kopyayı introspekte et, Excel şema haritasını yükle, (DPAPI mühürlü) bağlantıyı kaydet ve test et |
+| **Kullanıcılar ekranı + `user` CLI** | rollü adlandırılmış hesaplar; parolalar uzunluktan denetlenir, tekrarlanan hatalarda hesap kilitlenir |
+| `ask "<soru>"` | uçbirimde tek cevap; `--json` web API'sinin verdiği aynı yükü basar |
+| `eval` | altın küme; gürültülü model × mod ızgarası için `--compare --models a,b --repeat 2` |
+| `eval-retrieval` | aramanın doğru tabloları bulma oranı, LLM gerekmez |
+| `python -m eval.review` | her altın sorunun niyetini onaylayacağın inceleme sayfası |
+
+Her komut `--dataset <ad>` ve `--model <profil>` (config/models.json'dan) alır;
+`python -m bilgin <command> --help` gerisini sayar. Bayrak referansının tamamı, ortam değişkenleri ve run run
+tasarım notları aşağıdaki **gelişim günlüğü**nde durur.
+
+## Promptun değil, kodun güvendiği güvenlik kuralları
+
+1. **Salt-okur, veritabanında** — izin listesinde `SELECT`, `DENY EXECUTE`, `DENY VIEW DEFINITION` veren özel bir
+   giriş ve her bağlantıda `ApplicationIntent=ReadOnly`.
+2. **Tek `SELECT`, başka hiçbir şey** — yazma, DDL, sistem şemaları, `OPENROWSET`, bağlantılı sunucu, veritabanı
+   arası erişim yok; her sorguda `TOP` tavanı.
+3. **Kişisel veri maskeli kalır** — sekiz sınıf (TCKN, VKN, IBAN, telefon, e-posta, adres, maaş, kişi adı) ifade ve
+   CTE'lerle maskelenir; üzerlerine filtre/sıralama yapılamaz; tek kişi üzerindeki toplulaştırmalar da maskelenir;
+   kolonlar veritabanında da `DENY`'lidir.
+4. **Sayının sahibi model değil** — cevaptaki her sayı kod tarafından sonuçla karşılaştırılır.
+5. **Veri evde kalır** — yolda hiçbir bulut API'si yok; sunucu yalnız loopback'e bağlanır.
+6. **Sırlar dosyaya değmez** — bağlantı dizeleri ortamda ya da DPAPI mühürlü kasada (`secret-set`) durur; Windows
+   servisi XML'i değişken *adlarını* taşır, değerleri asla.
+7. **Her şey denetlenir, kişisel hiçbir şey loglanmaz** — her sorgu maskelenen kolonların *adlarıyla* loglanır,
+   değerleriyle asla; soru günlüğü sonuç satırı saklamaz.
+
+## Depo
+
+| Yol | |
+|---|---|
+| [`bilgin/agent/`](bilgin/agent/) | agent döngüsü, araçlar, promptlar, LLM istemcisi, sahte LLM |
+| [`bilgin/policy/`](bilgin/policy/) | sqlglot politikası ve kişisel veri kuralları |
+| [`bilgin/engine/`](bilgin/engine/) | SQLite / SQL Server çalıştırıcıları, bütçeler, denetim, giriş betiği |
+| [`bilgin/index/`](bilgin/index/) · [`graph/`](bilgin/graph/) | gömmeler, BM25, hibrit arama, tablo özetleri; join grafiği |
+| [`bilgin/schema_map/`](bilgin/schema_map/) | şema dokümanı, introspeksiyon, Excel içe aktarma, fark/birleştirme, kurallar |
+| [`bilgin/report/`](bilgin/report/) | grafik seçimi, gerçekler, anlatım, sayı bekçisi |
+| [`bilgin/eval/`](bilgin/eval/) · [`eval/`](eval/) | altın koşucu, karşılaştırma, metrikler, raporlar; niyet inceleme sayfası |
+| [`bilgin/app/`](bilgin/app/) · [`bilgin/web/`](bilgin/web/) | soru oturumları, kullanıcılar, FastAPI uygulaması |
+| [`bilgin/service/`](bilgin/service/) | Windows servisi: WinSW XML, DPAPI sırları, bağlantı denetimleri |
+| [`web/`](web/) | React + ECharts arayüzü, TR/EN (`bilgin/web/static` içine derlenir) |
+| [`datasets/wwi/`](datasets/wwi/) | varsayılan küme: WideWorldImporters biçimli test DB, 26 altın soru, tuzaklar |
+| [`real_datasets/wwi_real/`](real_datasets/wwi_real/) | SQL Server'da geri yüklenmiş gerçek WideWorldImporters |
+| [`config/`](config/) | model profilleri (sır içermez) |
+| [`tests/`](tests/) | 6.636 Python testi; 685 arayüz testi `npm --prefix web test` |
+| [`docs/`](docs/) | [teknik doküman](docs/BILGIN-TEKNIK-DOKUMAN.md) · [gerçek veritabanı testi](docs/GERCEK-WWI-TEST.md) |
+
+Proje hibrit bir hatla kuruldu: bir bulut modeli planı yazdı ve her kilometre taşını gözden geçirdi; yerel bir Qwen
+modeli her görevi ve testini yazdı; determinik bir orkestratör kabul komutlarını, test-bozma muhafızlarını ve
+görsel denetimleri koştu. 576 commit, 8 kilometre taşı, uçtan uca.
+
+## Üzerinde yükseldiği
+
+[sqlglot](https://github.com/tobymao/sqlglot) (MIT) · [FastAPI](https://fastapi.tiangolo.com) (MIT) ·
+[Uvicorn](https://www.uvicorn.org) (BSD-3) · [openai-python](https://github.com/openai/openai-python) (Apache 2.0) ·
+[openpyxl](https://openpyxl.readthedocs.io) (MIT) · [pyodbc](https://github.com/mkleehammer/pyodbc) (MIT) ·
+[React](https://react.dev) (MIT) · [Apache ECharts](https://echarts.apache.org) (Apache 2.0) ·
+[Vite](https://vite.dev) (MIT) · Qwen ekibinin Qwen3.8 modelleri, GGUF'lar Unsloth'tan ·
+Microsoft'un [WideWorldImporters](https://github.com/microsoft/sql-server-samples)'ı (MIT). Hiçbiri burada
+yeniden dağıtılmaz; ticari kurulumdan önce her modelin lisansını denetle.
+
+## Lisans
+
+Copyright © 2026 Mahmut Eren Akkaymak. Bilgin **çift lisanslıdır**:
+
+- **[GNU AGPL-3.0](LICENSE)** — kullan, değiştir, paylaş ücretsiz; ağ üzerinden kullanıcıların çalıştırdığı
+  değiştirilmiş sürümün kaynağını aynı lisansla yayınlamak zorunludur.
+- **Ticari lisans** — kapalı kaynak ürünler, değişiklikleri kapalı tutan barındırılan servisler veya AGPL'yi
+  politika gereği kullanamayan şirketler için. Nasıl sorulacağı [LICENSING.md](LICENSING.md)'de.
+
+## Katkı
+
+Issue ve PR'lar beklenir. Katkılar, çift lisanslamayı mümkün tutan kısa bir Katkıcı Lisans Sözleşmesiyle kabul
+edilir; bkz. [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+# Gelişim günlüğü
+
+Her kilometre taşının tam ayrıntısı: bayraklar, ölçümler, varsayımlar — yukarıda tanıtılan aracın run run kaydı. Bu metin aynı zamanda bir test sözleşmesidir: `tests/test_readme_run*.py` belgelenen her bayrağın burada geçtiğini denetler.
+
 # Bilgin — Run 1
 
 Product, package and CLI all share one name: **Bilgin**.

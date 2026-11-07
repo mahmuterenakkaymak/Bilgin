@@ -24,7 +24,7 @@ from bilgin.schema_map import doc
 SCHEMA = doc.load_schema()
 ALLOWED = doc.allowlist(SCHEMA)
 MARKS = pii.column_map(SCHEMA)
-SCRIPT = login_script.readonly_login_sql(SCHEMA, "nl2sql_ro")
+SCRIPT = login_script.readonly_login_sql(SCHEMA, "bilgin_ro")
 
 # kolon listesi olan DENY'ler (cursor'daki "DENY SELECT ON" parantez olmadığı için buraya girmez)
 COLUMN_DENY = re.compile(r"DENY SELECT \(([^)]*)\) ON \[dbo\]\.\[(\w+)\] TO")
@@ -90,7 +90,7 @@ def test_the_password_is_only_the_placeholder():
 
 def test_the_login_name_is_used_throughout():
     script = login_script.readonly_login_sql(SCHEMA, "mergen_ro")
-    assert "[mergen_ro]" in script and "nl2sql_ro" not in script
+    assert "[mergen_ro]" in script and "bilgin_ro" not in script
 
 
 # ----------------------------------------------------------------- the CLI writes the file

@@ -43,7 +43,7 @@ MINI_RULES = {"rules": [{"term": "ciro", "text": "tohumların toplamı", "sql_hi
 MINI_GOLDEN = '{"id": "Q01", "question": "tohum kaç", "sql": "SELECT SUM(SEED) FROM TBLX"}\n'
 
 # __name__ üzerinden modül adını da döner: dosya gönderiminin hangi modül adıyla yüklendiği
-# sözleşmenin bir parçası (nl2sql_dataset_<name>_<stem>), başka türlü dışarıdan okunamıyor.
+# sözleşmenin bir parçası (bilgin_dataset_<name>_<stem>), başka türlü dışarıdan okunamıyor.
 MINI_BUILDER = '''"""Mini veri kümesi: builder, generator ve referans tek dosyada."""
 
 from pathlib import Path
@@ -162,9 +162,9 @@ def test_file_ref_dataset_gets_the_run4_defaults(tmp_path):
 def test_file_ref_generator_and_builder(tmp_path):
     write_mini(tmp_path)
     dataset = load_dataset("mini", root=tmp_path)
-    assert dataset.generate() == {"TBLX": [{"SEED": 42, "MODULE": "nl2sql_dataset_mini_builder"}]}
-    assert dataset.generate(seed=7) == {"TBLX": [{"SEED": 7, "MODULE": "nl2sql_dataset_mini_builder"}]}
-    assert dataset.references() == {"Q01": "nl2sql_dataset_mini_builder"}
+    assert dataset.generate() == {"TBLX": [{"SEED": 42, "MODULE": "bilgin_dataset_mini_builder"}]}
+    assert dataset.generate(seed=7) == {"TBLX": [{"SEED": 7, "MODULE": "bilgin_dataset_mini_builder"}]}
+    assert dataset.references() == {"Q01": "bilgin_dataset_mini_builder"}
     db, sql = tmp_path / "out.db", tmp_path / "out.sql"
     assert dataset.build_db(db_path=db, sql_path=sql) == "checksum"
     assert db.read_text(encoding="utf-8") == "db:42"

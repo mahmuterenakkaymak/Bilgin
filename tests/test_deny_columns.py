@@ -170,13 +170,13 @@ def test_a_named_column_of_the_same_table_still_passes(sql):
 
 
 def test_the_script_denies_both_secrets_on_their_own_table():
-    script = login_script.readonly_login_sql(SCHEMA, "nl2sql_ro")
+    script = login_script.readonly_login_sql(SCHEMA, "bilgin_ro")
     assert ("Application", "People", "HashedPassword") in denied_columns(script)
     assert ("Application", "People", "Photo") in denied_columns(script)
 
 
 def test_the_column_deny_set_is_the_pii_columns_plus_the_denied_ones():
-    script = login_script.readonly_login_sql(SCHEMA, "nl2sql_ro")
+    script = login_script.readonly_login_sql(SCHEMA, "bilgin_ro")
     assert denied_columns(script) == {
         (*doc.split_name(table["name"]), column["name"])
         for table in SCHEMA["tables"]
@@ -186,4 +186,4 @@ def test_the_column_deny_set_is_the_pii_columns_plus_the_denied_ones():
 
 
 def test_the_qualified_script_is_still_real_tsql():
-    sqlglot.parse(login_script.readonly_login_sql(SCHEMA, "nl2sql_ro"), read="tsql")
+    sqlglot.parse(login_script.readonly_login_sql(SCHEMA, "bilgin_ro"), read="tsql")

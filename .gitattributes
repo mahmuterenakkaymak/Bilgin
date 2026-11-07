@@ -1,0 +1,15 @@
+# Normalize line endings: the repo's blobs are LF and must materialize as LF on
+# every checkout regardless of core.autocrlf (byte-level digest tests depend on it).
+* text=auto eol=lf
+
+# Binary: never touch
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.bak-db binary

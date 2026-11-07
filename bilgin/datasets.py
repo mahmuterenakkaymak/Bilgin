@@ -306,7 +306,7 @@ def _resolve(name: str, ref: str, root: Path) -> Any:
 def _load_file(name: str, target: str, root: Path):
     """A dataset's own module, named so it can never shadow an installed package."""
     spec = importlib.util.spec_from_file_location(
-        f"nl2sql_dataset_{name}_{Path(target).stem}", root / target
+        f"bilgin_dataset_{name}_{Path(target).stem}", root / target
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

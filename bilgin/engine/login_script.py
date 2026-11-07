@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from bilgin.schema_map import doc
 
-DEFAULT_LOGIN = "nl2sql_ro"
+DEFAULT_LOGIN = "bilgin_ro"
 PASSWORD_PLACEHOLDER = "__DEGISTIR__"
 # The schema a bare table name lives in (PLAN R4-5): an ERP database keeps everything in dbo,
 # while a qualified name carries its own schema, and every DENY below targets that schema.
