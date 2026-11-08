@@ -140,8 +140,8 @@ UI are local.
 
 ```mermaid
 flowchart TD
-    Q["'Bu yıl en çok ciro yapan 5 ürün?'"] --> C{Clear question?}
-    C -->|two readings| K[Netleştirelim card<br/>you pick an option]
+    Q["'Which 5 products earned the most revenue this year?'"] --> C{Clear question?}
+    C -->|two readings| K[Clarification card<br/>you pick an option]
     K --> S
     C -->|yes| S[Model finds tables, rules, sample values<br/>writes T-SQL]
     S --> PO{Policy: one SELECT,<br/>allowlist, no PII filters?}
